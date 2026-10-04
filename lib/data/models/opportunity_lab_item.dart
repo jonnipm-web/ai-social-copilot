@@ -22,18 +22,18 @@ class OpportunityLabItem {
   final DateTime createdAt;
 
   // ── Audit fields ──────────────────────────────────────────────
-  final String         origin;
-  final List<String>   sources;
-  final String?        rationale;
-  final int            confidence;
-  final List<String>   risks;
-  final List<String>   actionSteps;
+  final String origin;
+  final List<String> sources;
+  final String? rationale;
+  final int confidence;
+  final List<String> risks;
+  final List<String> actionSteps;
 
   // COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 17/18) — ids of
   // knowledge_items the user explicitly linked to this opportunity, stored
   // as references (never duplicated content). See migration
   // 20260920000001_opportunity_knowledge_links.sql.
-  final List<String>   knowledgeItemIds;
+  final List<String> knowledgeItemIds;
 
   const OpportunityLabItem({
     required this.id,
@@ -81,9 +81,9 @@ class OpportunityLabItem {
   ];
 
   static const Map<String, String> originLabels = {
-    'manual':           'Adicionado manualmente',
-    'market_analysis':  'Análise de Mercado',
-    'auto_bootstrap':   'Bootstrap Automático',
+    'manual': 'Adicionado manualmente',
+    'market_analysis': 'Análise de Mercado',
+    'auto_bootstrap': 'Bootstrap Automático',
     'knowledge_engine': 'Knowledge Engine',
   };
 
@@ -98,12 +98,18 @@ class OpportunityLabItem {
 
   static String originLabelFor(String origin, AppLocalizations l10n) {
     switch (origin) {
-      case 'manual':           return l10n.uxOriginManual;
-      case 'opportunity_lab':  return 'Opportunity Lab';
-      case 'market_analysis':  return l10n.uxOriginMarketAnalysis;
-      case 'auto_bootstrap':   return l10n.uxOriginAutoBootstrap;
-      case 'knowledge_engine': return 'Knowledge Engine';
-      default:                 return origin;
+      case 'manual':
+        return l10n.uxOriginManual;
+      case 'opportunity_lab':
+        return 'Opportunity Lab';
+      case 'market_analysis':
+        return l10n.uxOriginMarketAnalysis;
+      case 'auto_bootstrap':
+        return l10n.uxOriginAutoBootstrap;
+      case 'knowledge_engine':
+        return 'Knowledge Engine';
+      default:
+        return origin;
     }
   }
 
@@ -115,52 +121,52 @@ class OpportunityLabItem {
 
   factory OpportunityLabItem.fromMap(Map<String, dynamic> map) =>
       OpportunityLabItem(
-        id:               map['id'] as String,
+        id: map['id'] as String,
         localizedFrom: map['r16_localized_from'] as String?,
-        userId:           map['user_id'] as String,
-        projectId:        map['project_id'] as String?,
+        userId: map['user_id'] as String,
+        projectId: map['project_id'] as String?,
         marketAnalysisId: map['market_analysis_id'] as String?,
-        opportunityType:  map['opportunity_type'] as String? ?? 'expansão',
-        title:            map['title'] as String? ?? '',
-        description:      map['description'] as String? ?? '',
-        marketScore:      map['market_score'] as int? ?? 0,
-        revenueScore:     map['revenue_score'] as int? ?? 0,
+        opportunityType: map['opportunity_type'] as String? ?? 'expansão',
+        title: map['title'] as String? ?? '',
+        description: map['description'] as String? ?? '',
+        marketScore: map['market_score'] as int? ?? 0,
+        revenueScore: map['revenue_score'] as int? ?? 0,
         competitionScore: map['competition_score'] as int? ?? 0,
-        synergyScore:     map['synergy_score'] as int? ?? 0,
-        strategicFit:     map['strategic_fit'] as int? ?? 0,
-        finalScore:       map['final_score'] as int? ?? 0,
-        status:           map['status'] as String? ?? 'pending',
-        createdAt:        DateTime.parse(map['created_at'] as String),
-        origin:           map['origin'] as String? ?? 'manual',
-        sources:          _parseList(map['sources']),
-        rationale:        map['rationale'] as String?,
-        confidence:       map['confidence'] as int? ?? 0,
-        risks:            _parseList(map['risks']),
-        actionSteps:      _parseList(map['action_steps']),
+        synergyScore: map['synergy_score'] as int? ?? 0,
+        strategicFit: map['strategic_fit'] as int? ?? 0,
+        finalScore: map['final_score'] as int? ?? 0,
+        status: map['status'] as String? ?? 'pending',
+        createdAt: DateTime.parse(map['created_at'] as String),
+        origin: map['origin'] as String? ?? 'manual',
+        sources: _parseList(map['sources']),
+        rationale: map['rationale'] as String?,
+        confidence: map['confidence'] as int? ?? 0,
+        risks: _parseList(map['risks']),
+        actionSteps: _parseList(map['action_steps']),
         knowledgeItemIds: _parseList(map['knowledge_item_ids']),
       );
 
   Map<String, dynamic> toInsertMap() => {
-        'user_id':             userId,
-        'project_id':          projectId,
-        'market_analysis_id':  marketAnalysisId,
-        'opportunity_type':    opportunityType,
-        'title':               title,
-        'description':         description,
-        'market_score':        marketScore,
-        'revenue_score':       revenueScore,
-        'competition_score':   competitionScore,
-        'synergy_score':       synergyScore,
-        'strategic_fit':       strategicFit,
-        'final_score':         finalScore,
-        'status':              status,
-        'origin':              origin,
-        'sources':             sources,
+        'user_id': userId,
+        'project_id': projectId,
+        'market_analysis_id': marketAnalysisId,
+        'opportunity_type': opportunityType,
+        'title': title,
+        'description': description,
+        'market_score': marketScore,
+        'revenue_score': revenueScore,
+        'competition_score': competitionScore,
+        'synergy_score': synergyScore,
+        'strategic_fit': strategicFit,
+        'final_score': finalScore,
+        'status': status,
+        'origin': origin,
+        'sources': sources,
         if (rationale != null) 'rationale': rationale,
-        'confidence':          confidence,
-        'risks':               risks,
-        'action_steps':        actionSteps,
-        'knowledge_item_ids':  knowledgeItemIds,
+        'confidence': confidence,
+        'risks': risks,
+        'action_steps': actionSteps,
+        'knowledge_item_ids': knowledgeItemIds,
       };
 
   OpportunityLabItem copyWith({
@@ -173,28 +179,28 @@ class OpportunityLabItem {
     String? origin,
   }) =>
       OpportunityLabItem(
-        id:               id,
+        id: id,
         localizedFrom: localizedFrom,
-        userId:           userId,
-        projectId:        projectId,
+        userId: userId,
+        projectId: projectId,
         marketAnalysisId: marketAnalysisId,
-        opportunityType:  opportunityType,
-        title:            title,
-        description:      description,
-        marketScore:      marketScore,
-        revenueScore:     revenueScore,
+        opportunityType: opportunityType,
+        title: title,
+        description: description,
+        marketScore: marketScore,
+        revenueScore: revenueScore,
         competitionScore: competitionScore,
-        synergyScore:     synergyScore,
-        strategicFit:     strategicFit,
-        finalScore:       finalScore,
-        status:           status ?? this.status,
-        createdAt:        createdAt,
-        origin:           origin ?? this.origin,
-        sources:          sources ?? this.sources,
-        rationale:        rationale ?? this.rationale,
-        confidence:       confidence ?? this.confidence,
-        risks:            risks ?? this.risks,
-        actionSteps:      actionSteps ?? this.actionSteps,
+        synergyScore: synergyScore,
+        strategicFit: strategicFit,
+        finalScore: finalScore,
+        status: status ?? this.status,
+        createdAt: createdAt,
+        origin: origin ?? this.origin,
+        sources: sources ?? this.sources,
+        rationale: rationale ?? this.rationale,
+        confidence: confidence ?? this.confidence,
+        risks: risks ?? this.risks,
+        actionSteps: actionSteps ?? this.actionSteps,
         knowledgeItemIds: knowledgeItemIds,
       );
 }

@@ -45,7 +45,8 @@ class DiagnosticLoggerService {
   /// collision on `id`, which is DB-generated and never client-supplied
   /// today, but Codex read-only audit flagged the bare error CODE alone
   /// as too broad a signal to act on).
-  static const _oneActiveSessionConstraint = 'diagnostic_sessions_one_active_per_user';
+  static const _oneActiveSessionConstraint =
+      'diagnostic_sessions_one_active_per_user';
 
   /// IVE-COMMERCIAL-OBSERVABILITY-07B — lets a recovered/adopted session
   /// (see [findMyActiveSession]) become the local active session without
@@ -89,7 +90,8 @@ class DiagnosticLoggerService {
   // users.
   static const _maxFailedEventBuffer = 50;
   final List<String> _failedEventDebugBuffer = [];
-  List<String> get failedEventDebugBuffer => List.unmodifiable(_failedEventDebugBuffer);
+  List<String> get failedEventDebugBuffer =>
+      List.unmodifiable(_failedEventDebugBuffer);
 
   /// Starts a new diagnostic session as the CURRENT authenticated user.
   /// Returns null (and logs nothing) if there is no session or the insert
@@ -108,7 +110,9 @@ class DiagnosticLoggerService {
           .from('diagnostic_sessions')
           .insert({
             'user_id': userId,
-            'label': label != null ? sanitizeSessionLabel(label, maxLength: 200) : null,
+            'label': label != null
+                ? sanitizeSessionLabel(label, maxLength: 200)
+                : null,
             'status': 'active',
             // IVE-COMMERCIAL-OBSERVABILITY-07A (Codex adversarial review,
             // P2, 2nd pass) — role_snapshot is app-controlled today
@@ -120,7 +124,9 @@ class DiagnosticLoggerService {
             // this mission already closed for every diagnostic_events
             // field). Every session-level free-text field now goes
             // through sanitizeText too, for the same reason.
-            'app_version': appVersion != null ? sanitizeText(appVersion, maxLength: 50) : null,
+            'app_version': appVersion != null
+                ? sanitizeText(appVersion, maxLength: 50)
+                : null,
             // IVE-COMMERCIAL-STABILITY-09O (discovered live in production;
             // Codex Gate 2nd pass, P2 ACCEPTED) — build_sha is intentionally
             // NOT a parameter of this method: it is always kBuildSha itself
@@ -136,7 +142,9 @@ class DiagnosticLoggerService {
             // rather than relying on callers to behave.
             'build_sha': sanitizeBuildSha(kBuildSha, maxLength: 100),
             'platform': kIsWeb ? 'web' : 'native',
-            'role_snapshot': roleSnapshot != null ? sanitizeText(roleSnapshot, maxLength: 50) : null,
+            'role_snapshot': roleSnapshot != null
+                ? sanitizeText(roleSnapshot, maxLength: 50)
+                : null,
           })
           .select('id')
           .single();
@@ -157,17 +165,20 @@ class DiagnosticLoggerService {
       // `id` isn't reachable today, but matching the constraint by name
       // removes the ambiguity entirely rather than relying on that being
       // permanently true.
-      if (e.code == '23505' && (e.message.contains(_oneActiveSessionConstraint))) {
+      if (e.code == '23505' &&
+          (e.message.contains(_oneActiveSessionConstraint))) {
         final existing = await findMyActiveSession();
         if (existing != null) {
           _activeSessionId = existing['id'] as String?;
           return _activeSessionId;
         }
       }
-      debugPrint('[diagnostics] falha ao iniciar sessão: ${sanitizeErrorMessage(e)}');
+      debugPrint(
+          '[diagnostics] falha ao iniciar sessão: ${sanitizeErrorMessage(e)}');
       return null;
     } catch (e) {
-      debugPrint('[diagnostics] falha ao iniciar sessão: ${sanitizeErrorMessage(e)}');
+      debugPrint(
+          '[diagnostics] falha ao iniciar sessão: ${sanitizeErrorMessage(e)}');
       return null;
     }
   }
@@ -195,7 +206,8 @@ class DiagnosticLoggerService {
       final list = List<Map<String, dynamic>>.from(rows as List);
       return list.isEmpty ? null : list.first;
     } catch (e) {
-      debugPrint('[diagnostics] falha ao recuperar sessão ativa: ${sanitizeErrorMessage(e)}');
+      debugPrint(
+          '[diagnostics] falha ao recuperar sessão ativa: ${sanitizeErrorMessage(e)}');
       return null;
     }
   }
@@ -215,7 +227,8 @@ class DiagnosticLoggerService {
     return List<Map<String, dynamic>>.from(rows as List);
   }
 
-  Future<List<Map<String, dynamic>>> fetchEventsForSession(String sessionId) async {
+  Future<List<Map<String, dynamic>>> fetchEventsForSession(
+      String sessionId) async {
     final rows = await _client
         .from('diagnostic_events')
         .select()
@@ -234,7 +247,8 @@ class DiagnosticLoggerService {
         'ended_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', sessionId);
     } catch (e) {
-      debugPrint('[diagnostics] falha ao encerrar sessão: ${sanitizeErrorMessage(e)}');
+      debugPrint(
+          '[diagnostics] falha ao encerrar sessão: ${sanitizeErrorMessage(e)}');
     }
   }
 
@@ -320,23 +334,25 @@ class DiagnosticLoggerService {
     // [buildDiagnosticEventPayload], a pure function tested directly in
     // test/core/diagnostics/diagnostic_logger_service_test.dart.
     try {
-      await _client.from('diagnostic_events').insert(buildDiagnosticEventPayload(
-        sessionId: sessionId,
-        userId: userId,
-        category: category,
-        eventName: eventName,
-        severity: severity,
-        module: module,
-        operation: operation,
-        route: route,
-        status: status,
-        durationMs: durationMs,
-        correlationId: correlationId,
-        metadata: metadata,
-        error: error,
-        stackTrace: stackTrace,
-        sourceComponent: sourceComponent,
-      ));
+      await _client
+          .from('diagnostic_events')
+          .insert(buildDiagnosticEventPayload(
+            sessionId: sessionId,
+            userId: userId,
+            category: category,
+            eventName: eventName,
+            severity: severity,
+            module: module,
+            operation: operation,
+            route: route,
+            status: status,
+            durationMs: durationMs,
+            correlationId: correlationId,
+            metadata: metadata,
+            error: error,
+            stackTrace: stackTrace,
+            sourceComponent: sourceComponent,
+          ));
     } catch (e) {
       // Never rethrow, never log-the-logger's-own-failure through this same
       // path (that would be the recursive loop mission section 14 forbids)
@@ -345,7 +361,8 @@ class DiagnosticLoggerService {
         _failedEventDebugBuffer.removeAt(0);
       }
       _failedEventDebugBuffer.add('$eventName: ${sanitizeErrorMessage(e)}');
-      debugPrint('[diagnostics] falha ao gravar evento "$eventName": ${sanitizeErrorMessage(e)}');
+      debugPrint(
+          '[diagnostics] falha ao gravar evento "$eventName": ${sanitizeErrorMessage(e)}');
     }
   }
 }
@@ -389,17 +406,25 @@ Map<String, Object?> buildDiagnosticEventPayload({
     'category': category.value,
     'build_sha': sanitizeBuildSha(kBuildSha, maxLength: 100),
     'module': module != null ? sanitizeText(module, maxLength: 100) : null,
-    'operation': operation != null ? sanitizeText(operation, maxLength: 100) : null,
+    'operation':
+        operation != null ? sanitizeText(operation, maxLength: 100) : null,
     'route': route != null ? sanitizeText(route, maxLength: 200) : null,
     'event_name': sanitizeEventName(eventName, maxLength: 200),
     'status': status != null ? sanitizeText(status, maxLength: 50) : null,
     'duration_ms': durationMs,
-    'correlation_id': correlationId != null ? sanitizeCorrelationId(correlationId, maxLength: 100) : null,
-    'metadata': buildSafeMetadata(metadata, allowedKeys: kDiagnosticMetadataKeys),
-    'error_type': error != null ? sanitizeText(error.runtimeType.toString(), maxLength: 100) : null,
+    'correlation_id': correlationId != null
+        ? sanitizeCorrelationId(correlationId, maxLength: 100)
+        : null,
+    'metadata':
+        buildSafeMetadata(metadata, allowedKeys: kDiagnosticMetadataKeys),
+    'error_type': error != null
+        ? sanitizeText(error.runtimeType.toString(), maxLength: 100)
+        : null,
     'error_message': error != null ? sanitizeErrorMessage(error) : null,
     'error_stack': stackTrace != null ? sanitizeStackTrace(stackTrace) : null,
-    'source_component': sourceComponent != null ? sanitizeText(sourceComponent, maxLength: 100) : null,
+    'source_component': sourceComponent != null
+        ? sanitizeText(sourceComponent, maxLength: 100)
+        : null,
   };
 }
 

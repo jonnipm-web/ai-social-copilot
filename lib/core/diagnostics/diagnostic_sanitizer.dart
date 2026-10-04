@@ -230,9 +230,11 @@ final RegExp _appCorrelationIdPattern = RegExp(r'^[0-9a-z]+-[0-9a-z]+$');
 /// (generic backstop included), since an unrecognized shape here gets no
 /// special trust.
 String sanitizeCorrelationId(String input, {int maxLength = 100}) {
-  final text = _stripControlChars(input.replaceAll(RegExp(r'[\r\n]+'), ' ')).trim();
+  final text =
+      _stripControlChars(input.replaceAll(RegExp(r'[\r\n]+'), ' ')).trim();
   final bounded = text.length > maxLength ? text.substring(0, maxLength) : text;
-  if (_uuidPattern.hasMatch(bounded) || _appCorrelationIdPattern.hasMatch(bounded)) {
+  if (_uuidPattern.hasMatch(bounded) ||
+      _appCorrelationIdPattern.hasMatch(bounded)) {
     return bounded;
   }
   return sanitizeText(input, maxLength: maxLength);
@@ -256,7 +258,8 @@ final RegExp _gitShaPattern = RegExp(r'^[0-9a-fA-F]{7,40}$');
 /// safe the same way the other typed sanitizers here do) falls back to
 /// full [sanitizeText].
 String sanitizeBuildSha(String input, {int maxLength = 100}) {
-  final text = _stripControlChars(input.replaceAll(RegExp(r'[\r\n]+'), ' ')).trim();
+  final text =
+      _stripControlChars(input.replaceAll(RegExp(r'[\r\n]+'), ' ')).trim();
   final bounded = text.length > maxLength ? text.substring(0, maxLength) : text;
   if (_gitShaPattern.hasMatch(bounded) || bounded == 'unknown') {
     return bounded;
@@ -334,7 +337,8 @@ const Set<String> kKnownDiagnosticEventNames = {
 /// field — this allowlist is narrower than all of them, scoped only to
 /// this one field. Adding a new real event name requires adding it here.
 String sanitizeEventName(String input, {int maxLength = 100}) {
-  final text = _stripControlChars(input.replaceAll(RegExp(r'[\r\n]+'), ' ')).trim();
+  final text =
+      _stripControlChars(input.replaceAll(RegExp(r'[\r\n]+'), ' ')).trim();
   if (text.isEmpty || text.length > maxLength) return '[redacted]';
   if (!kKnownDiagnosticEventNames.contains(text)) return '[redacted]';
   return text;

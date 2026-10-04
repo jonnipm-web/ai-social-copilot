@@ -20,16 +20,14 @@ import '../../l10n/app_localizations.dart';
 String normalizeAiEnum(String? raw) {
   if (raw == null) return '';
   const from = 'áàâãäéèêëíìîïóòôõöúùûüç';
-  const to   = 'aaaaaeeeeiiiiooooouuuuc';
+  const to = 'aaaaaeeeeiiiiooooouuuuc';
   final lower = raw.trim().toLowerCase();
   final sb = StringBuffer();
   for (final ch in lower.split('')) {
     final i = from.indexOf(ch);
     sb.write(i >= 0 ? to[i] : ch);
   }
-  return sb
-      .toString()
-      .replaceAll(RegExp(r'[\s\-]+'), '_');
+  return sb.toString().replaceAll(RegExp(r'[\s\-]+'), '_');
 }
 
 // ── Investment recommendation (market-analysis) ────────────────────────────
@@ -55,10 +53,14 @@ AiInvestmentVerdict aiInvestmentVerdict(String? raw) {
 /// "SIM"/"CONDICIONAL"/"NÃO" → localized label; unknown → raw.
 String aiInvestmentRecommendationLabel(String? raw, AppLocalizations l10n) {
   switch (aiInvestmentVerdict(raw)) {
-    case AiInvestmentVerdict.yes:         return l10n.uxAiInvestmentYes;
-    case AiInvestmentVerdict.conditional: return l10n.uxAiInvestmentConditional;
-    case AiInvestmentVerdict.no:          return l10n.uxAiInvestmentNo;
-    case AiInvestmentVerdict.unknown:     return raw ?? '';
+    case AiInvestmentVerdict.yes:
+      return l10n.uxAiInvestmentYes;
+    case AiInvestmentVerdict.conditional:
+      return l10n.uxAiInvestmentConditional;
+    case AiInvestmentVerdict.no:
+      return l10n.uxAiInvestmentNo;
+    case AiInvestmentVerdict.unknown:
+      return raw ?? '';
   }
 }
 
@@ -96,11 +98,16 @@ AiLevel aiLevel(String? raw) {
 /// → localized label (PT masculine form); unknown → raw.
 String aiLevelLabel(String? raw, AppLocalizations l10n) {
   switch (aiLevel(raw)) {
-    case AiLevel.low:      return l10n.uxAiLevelLow;
-    case AiLevel.medium:   return l10n.uxAiLevelMedium;
-    case AiLevel.high:     return l10n.uxAiLevelHigh;
-    case AiLevel.critical: return l10n.uxAiLevelCritical;
-    case AiLevel.unknown:  return raw ?? '';
+    case AiLevel.low:
+      return l10n.uxAiLevelLow;
+    case AiLevel.medium:
+      return l10n.uxAiLevelMedium;
+    case AiLevel.high:
+      return l10n.uxAiLevelHigh;
+    case AiLevel.critical:
+      return l10n.uxAiLevelCritical;
+    case AiLevel.unknown:
+      return raw ?? '';
   }
 }
 
@@ -108,11 +115,16 @@ String aiLevelLabel(String? raw, AppLocalizations l10n) {
 /// unknown → raw.
 String aiPriorityLabel(String? raw, AppLocalizations l10n) {
   switch (aiLevel(raw)) {
-    case AiLevel.low:      return l10n.uxAiPriorityLow;
-    case AiLevel.medium:   return l10n.uxAiPriorityMedium;
-    case AiLevel.high:     return l10n.uxAiPriorityHigh;
-    case AiLevel.critical: return l10n.uxAiPriorityCritical;
-    case AiLevel.unknown:  return raw ?? '';
+    case AiLevel.low:
+      return l10n.uxAiPriorityLow;
+    case AiLevel.medium:
+      return l10n.uxAiPriorityMedium;
+    case AiLevel.high:
+      return l10n.uxAiPriorityHigh;
+    case AiLevel.critical:
+      return l10n.uxAiPriorityCritical;
+    case AiLevel.unknown:
+      return raw ?? '';
   }
 }
 
@@ -206,7 +218,8 @@ String aiTimeframeLabel(String? raw, AppLocalizations l10n) {
     r'^(\d+(?:\s*(?:-|–|a|to)\s*\d+)?)\s+([A-Za-zÀ-ú]+)$',
   ).firstMatch(value);
   if (m == null) return value;
-  final range = m.group(1)!
+  final range = m
+      .group(1)!
       .replaceAll(RegExp(r'\s*(?:–|a|to)\s*'), '-')
       .replaceAll(RegExp(r'\s*-\s*'), '-');
   switch (normalizeAiEnum(m.group(2))) {
@@ -214,17 +227,23 @@ String aiTimeframeLabel(String? raw, AppLocalizations l10n) {
     case 'mes':
     case 'months':
     case 'month':
-      return range == '1' ? l10n.uxAiTimeframeOneMonth : l10n.uxAiTimeframeMonths(range);
+      return range == '1'
+          ? l10n.uxAiTimeframeOneMonth
+          : l10n.uxAiTimeframeMonths(range);
     case 'semanas':
     case 'semana':
     case 'weeks':
     case 'week':
-      return range == '1' ? l10n.uxAiTimeframeOneWeek : l10n.uxAiTimeframeWeeks(range);
+      return range == '1'
+          ? l10n.uxAiTimeframeOneWeek
+          : l10n.uxAiTimeframeWeeks(range);
     case 'dias':
     case 'dia':
     case 'days':
     case 'day':
-      return range == '1' ? l10n.uxAiTimeframeOneDay : l10n.uxAiTimeframeDays(range);
+      return range == '1'
+          ? l10n.uxAiTimeframeOneDay
+          : l10n.uxAiTimeframeDays(range);
     default:
       return value;
   }
@@ -236,9 +255,16 @@ String aiTimeframeLabel(String? raw, AppLocalizations l10n) {
 /// `campaigns.objective` and sent to generate-campaign — never translate the
 /// stored value, only the label shown.
 const List<String> kCampaignObjectives = [
-  'Venda', 'Autoridade', 'Leads', 'Engajamento',
-  'Lançamento', 'Tráfego', 'Venda Hotmart',
-  'Venda Shopify', 'Venda Amazon', 'Assinatura',
+  'Venda',
+  'Autoridade',
+  'Leads',
+  'Engajamento',
+  'Lançamento',
+  'Tráfego',
+  'Venda Hotmart',
+  'Venda Shopify',
+  'Venda Amazon',
+  'Assinatura',
 ];
 
 String campaignObjectiveLabel(String? raw, AppLocalizations l10n) {

@@ -68,19 +68,23 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
     // A fresh key per tap: retry-safe against a transport-level retry of
     // THIS attempt, mirroring the create-form's own idempotency key
     // (Codex adversarial review, 2nd re-verification).
-    await ref.read(strategyBuilderApiProvider).cloneReference(reference, idempotencyKey: newUuidV4());
+    await ref
+        .read(strategyBuilderApiProvider)
+        .cloneReference(reference, idempotencyKey: newUuidV4());
     if (!mounted) return;
     setState(() => _cloneBusy = false);
     await _refresh();
   }
 
   Future<void> _openNew() async {
-    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const StrategyBuilderFormScreen()));
+    final saved = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const StrategyBuilderFormScreen()));
     if (saved == true) _refresh();
   }
 
   void _openDetail(String strategyId) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => StrategyDetailScreen(strategyId: strategyId)));
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => StrategyDetailScreen(strategyId: strategyId)));
   }
 
   @override
@@ -97,7 +101,11 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
     if (profileAsync.hasError) {
       return Scaffold(
         appBar: AppBar(title: Text(l.strategyLabTitle)),
-        body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l.strategyLabAccessDenied, textAlign: TextAlign.center))),
+        body: Center(
+            child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(l.strategyLabAccessDenied,
+                    textAlign: TextAlign.center))),
       );
     }
 
@@ -105,7 +113,8 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
     Widget section(String title, List<Widget> children) => Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Semantics(header: true, child: Text(title, style: t.titleSmall)),
               const SizedBox(height: 8),
               ...children,
@@ -114,7 +123,12 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
         );
     Widget kv(String k, String v) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Text.rich(TextSpan(children: [TextSpan(text: '$k: ', style: const TextStyle(fontWeight: FontWeight.w600)), TextSpan(text: v)])),
+          child: Text.rich(TextSpan(children: [
+            TextSpan(
+                text: '$k: ',
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            TextSpan(text: v)
+          ])),
         );
 
     return Scaffold(
@@ -123,10 +137,10 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
         child: SingleChildScrollView(
           key: const Key('strategyLabScroll'),
           padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             _Banner(text: l.strategyLabBanner),
             const SizedBox(height: 16),
-
             Text(l.strategyBuilderMyStrategies, style: t.titleMedium),
             const SizedBox(height: 8),
             IveExclusionRegion(
@@ -151,9 +165,14 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
             ),
             const SizedBox(height: 12),
             if (_loading)
-              const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+              const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator()))
             else if (_strategies.isEmpty)
-              Padding(padding: const EdgeInsets.all(8), child: Text(l.strategyBuilderEmptyList))
+              Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(l.strategyBuilderEmptyList))
             else
               Card(
                 key: const Key('strategyLabList'),
@@ -161,29 +180,34 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
                   for (final s in _strategies)
                     ListTile(
                       title: Text(s['name'] as String),
-                      subtitle: Text('${s['status']} · v${s['currentVersion']}'),
+                      subtitle:
+                          Text('${s['status']} · v${s['currentVersion']}'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => _openDetail(s['id'] as String),
                     ),
                 ]),
               ),
-
             const SizedBox(height: 24),
             Text(V10ReferenceStrategy.name, style: t.titleMedium),
             const SizedBox(height: 4),
-            Text(l.strategyLabDisclaimer, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            Text(l.strategyLabDisclaimer,
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
             const SizedBox(height: 12),
             section(l.strategyLabStatusLabel, [
               kv(l.strategyLabStatusLabel, V10ReferenceStrategy.status),
-              kv(l.strategyLabPositionSize, '${V10ReferenceStrategy.instrumentSymbol} · ${V10ReferenceStrategy.signalTimeframe} · ${V10ReferenceStrategy.positionSizeQuantity}'),
+              kv(l.strategyLabPositionSize,
+                  '${V10ReferenceStrategy.instrumentSymbol} · ${V10ReferenceStrategy.signalTimeframe} · ${V10ReferenceStrategy.positionSizeQuantity}'),
             ]),
             section(l.strategyLabRulesSection, [
-              kv(l.strategyLabEntry, '${V10ReferenceStrategy.entry.summary} (${V10ReferenceStrategy.allowedDirections})'),
+              kv(l.strategyLabEntry,
+                  '${V10ReferenceStrategy.entry.summary} (${V10ReferenceStrategy.allowedDirections})'),
               kv(l.strategyLabStop, '${V10ReferenceStrategy.stopDistance} pts'),
-              kv(l.strategyLabTarget, '${V10ReferenceStrategy.targetDistance} pts'),
+              kv(l.strategyLabTarget,
+                  '${V10ReferenceStrategy.targetDistance} pts'),
               kv(l.strategyLabBreakEven,
                   '+${V10ReferenceStrategy.breakEvenTriggerDistance} → +${V10ReferenceStrategy.breakEvenInitialProtectedDistance}, step +${V10ReferenceStrategy.breakEvenStepDistance}'),
-              kv(l.strategyLabSession, '${V10ReferenceStrategy.sessionStart}–${V10ReferenceStrategy.sessionEnd} (${V10ReferenceStrategy.allowedWeekdays})'),
+              kv(l.strategyLabSession,
+                  '${V10ReferenceStrategy.sessionStart}–${V10ReferenceStrategy.sessionEnd} (${V10ReferenceStrategy.allowedWeekdays})'),
               kv(l.strategyLabForcedExit, V10ReferenceStrategy.forcedExitTime),
             ]),
             section(l.strategyLabHistoricalReference, [
@@ -213,7 +237,9 @@ class _Banner extends StatelessWidget {
       child: Row(children: [
         Icon(Icons.science_outlined, color: cs.onSecondaryContainer),
         const SizedBox(width: 8),
-        Expanded(child: Text(text, style: TextStyle(color: cs.onSecondaryContainer))),
+        Expanded(
+            child:
+                Text(text, style: TextStyle(color: cs.onSecondaryContainer))),
       ]),
     );
   }

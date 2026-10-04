@@ -19,9 +19,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ai_social_copilot/data/models/project.dart';
 
 Project _p(String id) => Project(
-      id:        id,
-      userId:    'uid',
-      name:      'Project $id',
+      id: id,
+      userId: 'uid',
+      name: 'Project $id',
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
     );
@@ -42,14 +42,18 @@ void main() {
       expect(_verify('proj-a', owned), 'proj-a');
     });
 
-    test('rejects a projectId not present in the current user\'s own project list', () {
+    test(
+        'rejects a projectId not present in the current user\'s own project list',
+        () {
       final owned = [_p('proj-a'), _p('proj-b')];
       // Simulates a tampered/forged route `extra` pointing at a project
       // the current user does not own.
       expect(_verify('someone-elses-project', owned), isNull);
     });
 
-    test('rejects (fails closed) when the owned-projects list has not loaded yet', () {
+    test(
+        'rejects (fails closed) when the owned-projects list has not loaded yet',
+        () {
       expect(_verify('proj-a', null), isNull);
     });
 

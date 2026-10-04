@@ -45,11 +45,11 @@ Future<KnowledgeAnalysis?> _confirmAndAnalyze(
     ref: ref,
     analysisLabel: AppLocalizations.of(context)!.knowledgeVaultAnalyzeWithAi,
     request: IveInteractionRequest(
-      projectId:        item.projectId,
-      sourceModule:     'knowledge_vault',
+      projectId: item.projectId,
+      sourceModule: 'knowledge_vault',
       sourceEntityType: 'knowledge_item',
-      sourceEntityId:   item.id,
-      operationType:    IveOperationType.analyze,
+      sourceEntityId: item.id,
+      operationType: IveOperationType.analyze,
     ),
     action: (idempotencyKey) => ref
         .read(knowledgeAnalysisNotifierProvider.notifier)
@@ -79,9 +79,9 @@ class _KnowledgeAnalysisScreenState
 
   @override
   Widget build(BuildContext context) {
-    final l10n           = AppLocalizations.of(context)!;
-    final itemId        = widget.itemId;
-    final itemAsync     = ref.watch(knowledgeItemByIdProvider(itemId));
+    final l10n = AppLocalizations.of(context)!;
+    final itemId = widget.itemId;
+    final itemAsync = ref.watch(knowledgeItemByIdProvider(itemId));
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(itemId));
 
     return Scaffold(
@@ -126,7 +126,9 @@ class _KnowledgeAnalysisScreenState
       body: itemAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: Text(l10n.knowledgeStrategyGenericError(extractErrorMessage(e, l10n)), style: const TextStyle(color: Colors.white70)),
+          child: Text(
+              l10n.knowledgeStrategyGenericError(extractErrorMessage(e, l10n)),
+              style: const TextStyle(color: Colors.white70)),
         ),
         data: (item) {
           if (item == null) {
@@ -137,7 +139,8 @@ class _KnowledgeAnalysisScreenState
           }
           return analysisAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => _NoAnalysis(item: item, exec: _exec, error: extractErrorMessage(e, l10n)),
+            error: (e, _) => _NoAnalysis(
+                item: item, exec: _exec, error: extractErrorMessage(e, l10n)),
             data: (analysis) => analysis == null
                 ? _NoAnalysis(item: item, exec: _exec)
                 : _AnalysisContent(item: item, analysis: analysis),
@@ -155,12 +158,14 @@ class _NoAnalysis extends ConsumerWidget {
 
   final KnowledgeItem item;
   final AiExecutionController exec;
-  final String?       error;
+  final String? error;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final isLoading = ref.watch(knowledgeAnalysisNotifierProvider) is AsyncLoading || exec.isBusy;
+    final isLoading =
+        ref.watch(knowledgeAnalysisNotifierProvider) is AsyncLoading ||
+            exec.isBusy;
 
     return Center(
       child: Padding(
@@ -216,7 +221,7 @@ class _NoAnalysis extends ConsumerWidget {
 class _AnalysisContent extends StatelessWidget {
   const _AnalysisContent({required this.item, required this.analysis});
 
-  final KnowledgeItem     item;
+  final KnowledgeItem item;
   final KnowledgeAnalysis analysis;
 
   @override
@@ -257,20 +262,22 @@ class _AnalysisContent extends StatelessWidget {
               _SectionTitle(l10n.knowledgeAnalysisSectionKeywords),
               const SizedBox(height: 8),
               if (analysis.keywordsPrimary.isNotEmpty)
-                _ChipSection(l10n.knowledgeAnalysisKeywordsPrimary, analysis.keywordsPrimary,
-                    const Color(0xFF6C63FF)),
+                _ChipSection(l10n.knowledgeAnalysisKeywordsPrimary,
+                    analysis.keywordsPrimary, const Color(0xFF6C63FF)),
               if (analysis.keywordsSecondary.isNotEmpty)
-                _ChipSection(l10n.knowledgeAnalysisKeywordsSecondary, analysis.keywordsSecondary,
-                    const Color(0xFF00BCD4)),
+                _ChipSection(l10n.knowledgeAnalysisKeywordsSecondary,
+                    analysis.keywordsSecondary, const Color(0xFF00BCD4)),
               if (analysis.keywordsLongtail.isNotEmpty)
-                _ChipSection(l10n.knowledgeAnalysisKeywordsLongtail, analysis.keywordsLongtail,
-                    const Color(0xFF4CAF50)),
+                _ChipSection(l10n.knowledgeAnalysisKeywordsLongtail,
+                    analysis.keywordsLongtail, const Color(0xFF4CAF50)),
               const SizedBox(height: 8),
 
               if (analysis.audiencePainPoints.isNotEmpty) ...[
                 _SectionTitle(l10n.knowledgeAnalysisSectionAudiencePainPoints),
-                _ListCards(analysis.audiencePainPoints,
-                    Icons.sentiment_dissatisfied_rounded, const Color(0xFFF44336)),
+                _ListCards(
+                    analysis.audiencePainPoints,
+                    Icons.sentiment_dissatisfied_rounded,
+                    const Color(0xFFF44336)),
                 const SizedBox(height: 12),
               ],
               if (analysis.audienceDesires.isNotEmpty) ...[
@@ -282,7 +289,8 @@ class _AnalysisContent extends StatelessWidget {
 
               if (analysis.contentPillars.isNotEmpty) ...[
                 _SectionTitle(l10n.knowledgeAnalysisSectionContentPillars),
-                _ChipSection('', analysis.contentPillars, const Color(0xFFFF9800)),
+                _ChipSection(
+                    '', analysis.contentPillars, const Color(0xFFFF9800)),
                 const SizedBox(height: 8),
               ],
               if (analysis.topics.isNotEmpty) ...[
@@ -297,24 +305,26 @@ class _AnalysisContent extends StatelessWidget {
                   title: l10n.knowledgeAnalysisSectionPostIdeas,
                   icon: Icons.chat_bubble_outline_rounded,
                   color: const Color(0xFF00BCD4),
-                  child: _ListCards(analysis.postIdeas,
-                      Icons.chat_bubble_outline_rounded, const Color(0xFF00BCD4)),
+                  child: _ListCards(
+                      analysis.postIdeas,
+                      Icons.chat_bubble_outline_rounded,
+                      const Color(0xFF00BCD4)),
                 ),
               if (analysis.campaignIdeas.isNotEmpty)
                 _CollapsibleSection(
                   title: l10n.knowledgeAnalysisSectionCampaignIdeas,
                   icon: Icons.campaign_rounded,
                   color: const Color(0xFFFF9800),
-                  child: _ListCards(analysis.campaignIdeas, Icons.campaign_rounded,
-                      const Color(0xFFFF9800)),
+                  child: _ListCards(analysis.campaignIdeas,
+                      Icons.campaign_rounded, const Color(0xFFFF9800)),
                 ),
               if (analysis.articleIdeas.isNotEmpty)
                 _CollapsibleSection(
                   title: l10n.knowledgeAnalysisSectionArticleIdeas,
                   icon: Icons.article_rounded,
                   color: const Color(0xFF4CAF50),
-                  child: _ListCards(analysis.articleIdeas, Icons.article_rounded,
-                      const Color(0xFF4CAF50)),
+                  child: _ListCards(analysis.articleIdeas,
+                      Icons.article_rounded, const Color(0xFF4CAF50)),
                 ),
               if (analysis.commercialAngles.isNotEmpty)
                 _CollapsibleSection(
@@ -329,7 +339,8 @@ class _AnalysisContent extends StatelessWidget {
                   title: l10n.knowledgeAnalysisSectionCtas,
                   icon: Icons.ads_click_rounded,
                   color: const Color(0xFFFFD700),
-                  child: _ChipSection('', analysis.ctas, const Color(0xFFFFD700)),
+                  child:
+                      _ChipSection('', analysis.ctas, const Color(0xFFFFD700)),
                 ),
 
               if (analysis.seoOpportunities.isNotEmpty) ...[
@@ -339,26 +350,32 @@ class _AnalysisContent extends StatelessWidget {
                 const SizedBox(height: 12),
               ],
               if (analysis.adsenseOpportunities.isNotEmpty) ...[
-                _SectionTitle(l10n.knowledgeAnalysisSectionAdsenseOpportunities),
-                _ListCards(analysis.adsenseOpportunities, Icons.attach_money_rounded,
-                    const Color(0xFF8BC34A)),
+                _SectionTitle(
+                    l10n.knowledgeAnalysisSectionAdsenseOpportunities),
+                _ListCards(analysis.adsenseOpportunities,
+                    Icons.attach_money_rounded, const Color(0xFF8BC34A)),
                 const SizedBox(height: 12),
               ],
               if (analysis.amazonKdpOpportunities.isNotEmpty) ...[
-                _SectionTitle(l10n.knowledgeAnalysisSectionAmazonKdpOpportunities),
+                _SectionTitle(
+                    l10n.knowledgeAnalysisSectionAmazonKdpOpportunities),
                 _ListCards(analysis.amazonKdpOpportunities, Icons.book_rounded,
                     const Color(0xFFFF5722)),
                 const SizedBox(height: 12),
               ],
 
-              if (analysis.scoreHotmart > 0 || analysis.hotmartData.isNotEmpty) ...[
+              if (analysis.scoreHotmart > 0 ||
+                  analysis.hotmartData.isNotEmpty) ...[
                 _SectionTitle(l10n.knowledgeAnalysisSectionHotmartEngine),
-                _HotmartCard(score: analysis.scoreHotmart, data: analysis.hotmartData),
+                _HotmartCard(
+                    score: analysis.scoreHotmart, data: analysis.hotmartData),
                 const SizedBox(height: 12),
               ],
-              if (analysis.scoreShopify > 0 || analysis.shopifyData.isNotEmpty) ...[
+              if (analysis.scoreShopify > 0 ||
+                  analysis.shopifyData.isNotEmpty) ...[
                 _SectionTitle(l10n.knowledgeAnalysisSectionShopifyEngine),
-                _ShopifyCard(score: analysis.scoreShopify, data: analysis.shopifyData),
+                _ShopifyCard(
+                    score: analysis.scoreShopify, data: analysis.shopifyData),
                 const SizedBox(height: 12),
               ],
 
@@ -391,7 +408,7 @@ class _AnalysisContent extends StatelessWidget {
 class _ActionButtons extends ConsumerWidget {
   const _ActionButtons({required this.item, required this.analysis});
 
-  final KnowledgeItem     item;
+  final KnowledgeItem item;
   final KnowledgeAnalysis analysis;
 
   @override
@@ -404,7 +421,7 @@ class _ActionButtons extends ConsumerWidget {
       runSpacing: 8,
       children: [
         _ActionChip(
-          icon:  Icons.rocket_launch_rounded,
+          icon: Icons.rocket_launch_rounded,
           label: l10n.uxKnowledgeActionGenerateStrategy,
           color: const Color(0xFF6C63FF),
           onTap: () => context.push(
@@ -412,7 +429,7 @@ class _ActionButtons extends ConsumerWidget {
           ),
         ),
         _ActionChip(
-          icon:  Icons.campaign_rounded,
+          icon: Icons.campaign_rounded,
           label: l10n.uxKnowledgeActionCreateCampaign,
           color: const Color(0xFF00BCD4),
           onTap: () => context.push(
@@ -421,55 +438,64 @@ class _ActionButtons extends ConsumerWidget {
           ),
         ),
         _ActionChip(
-          icon:  Icons.person_pin_rounded,
+          icon: Icons.person_pin_rounded,
           label: l10n.uxKnowledgeActionTrainPersona,
           color: const Color(0xFFFF9800),
           onTap: () => _trainPersona(context, ref, personas),
         ),
         IveInlineAskPresence(
           child: _ActionChip(
-            icon:  Icons.psychology_rounded,
+            icon: Icons.psychology_rounded,
             label: l10n.uxKnowledgeActionAskIve,
             color: const Color(0xFF6C63FF),
             onTap: () {
-              final ctx = ref
-                  .read(iveContextDataProvider(item.projectId))
-                  .valueOrNull;
+              final ctx =
+                  ref.read(iveContextDataProvider(item.projectId)).valueOrNull;
               final baseContext = ctx != null
                   ? CopilotContextData.fromIveContext(ctx)
                   : const CopilotContextData();
               // FIX-004: enrich context with the analysis currently on screen
               // so IVE can answer questions about summary, keywords, ideas, etc.
               final contextData = CopilotContextData(
-                project:          baseContext.project,
-                scores:           baseContext.scores,
-                opportunities:    baseContext.opportunities,
-                actions:          baseContext.actions,
-                documents:        baseContext.documents,
-                personas:         baseContext.personas,
-                revenue:          baseContext.revenue,
-                market:           baseContext.market,
+                project: baseContext.project,
+                scores: baseContext.scores,
+                opportunities: baseContext.opportunities,
+                actions: baseContext.actions,
+                documents: baseContext.documents,
+                personas: baseContext.personas,
+                revenue: baseContext.revenue,
+                market: baseContext.market,
                 documentCoverage: baseContext.documentCoverage,
                 documentWarnings: baseContext.documentWarnings,
                 analysis: {
-                  'item_title':           item.title,
+                  'item_title': item.title,
                   if (analysis.summary != null) 'summary': analysis.summary,
-                  if (analysis.keywordsPrimary.isNotEmpty)    'keywords_primary':    analysis.keywordsPrimary,
-                  if (analysis.keywordsSecondary.isNotEmpty)  'keywords_secondary':  analysis.keywordsSecondary,
-                  if (analysis.keywordsLongtail.isNotEmpty)   'keywords_longtail':   analysis.keywordsLongtail,
-                  if (analysis.topics.isNotEmpty)             'topics':              analysis.topics,
-                  if (analysis.contentPillars.isNotEmpty)     'content_pillars':     analysis.contentPillars,
-                  if (analysis.audiencePainPoints.isNotEmpty) 'audience_pain_points': analysis.audiencePainPoints,
-                  if (analysis.audienceDesires.isNotEmpty)    'audience_desires':    analysis.audienceDesires,
-                  if (analysis.commercialAngles.isNotEmpty)   'commercial_angles':   analysis.commercialAngles,
-                  if (analysis.postIdeas.isNotEmpty)          'post_ideas':          analysis.postIdeas,
-                  if (analysis.campaignIdeas.isNotEmpty)      'campaign_ideas':      analysis.campaignIdeas,
-                  if (analysis.seoOpportunities.isNotEmpty)   'seo_opportunities':   analysis.seoOpportunities,
+                  if (analysis.keywordsPrimary.isNotEmpty)
+                    'keywords_primary': analysis.keywordsPrimary,
+                  if (analysis.keywordsSecondary.isNotEmpty)
+                    'keywords_secondary': analysis.keywordsSecondary,
+                  if (analysis.keywordsLongtail.isNotEmpty)
+                    'keywords_longtail': analysis.keywordsLongtail,
+                  if (analysis.topics.isNotEmpty) 'topics': analysis.topics,
+                  if (analysis.contentPillars.isNotEmpty)
+                    'content_pillars': analysis.contentPillars,
+                  if (analysis.audiencePainPoints.isNotEmpty)
+                    'audience_pain_points': analysis.audiencePainPoints,
+                  if (analysis.audienceDesires.isNotEmpty)
+                    'audience_desires': analysis.audienceDesires,
+                  if (analysis.commercialAngles.isNotEmpty)
+                    'commercial_angles': analysis.commercialAngles,
+                  if (analysis.postIdeas.isNotEmpty)
+                    'post_ideas': analysis.postIdeas,
+                  if (analysis.campaignIdeas.isNotEmpty)
+                    'campaign_ideas': analysis.campaignIdeas,
+                  if (analysis.seoOpportunities.isNotEmpty)
+                    'seo_opportunities': analysis.seoOpportunities,
                   'scores': {
-                    'seo':         analysis.scoreSeo,
-                    'social':      analysis.scoreSocial,
+                    'seo': analysis.scoreSeo,
+                    'social': analysis.scoreSocial,
                     'opportunity': analysis.scoreOpportunity,
-                    'linkedin':    analysis.scoreLinkedin,
+                    'linkedin': analysis.scoreLinkedin,
                   },
                 },
               );
@@ -479,11 +505,11 @@ class _ActionButtons extends ConsumerWidget {
                 contextData: contextData,
                 initialMessage: l10n.uxKnowledgeAskIveMessage(item.title),
                 request: IveInteractionRequest(
-                  projectId:        item.projectId,
-                  sourceModule:     'knowledge_vault',
+                  projectId: item.projectId,
+                  sourceModule: 'knowledge_vault',
                   sourceEntityType: 'knowledge_item',
-                  sourceEntityId:   item.id,
-                  operationType:    IveOperationType.ask,
+                  sourceEntityId: item.id,
+                  operationType: IveOperationType.ask,
                 ),
               );
             },
@@ -493,7 +519,8 @@ class _ActionButtons extends ConsumerWidget {
     );
   }
 
-  Future<void> _trainPersona(BuildContext context, WidgetRef ref, List personas) async {
+  Future<void> _trainPersona(
+      BuildContext context, WidgetRef ref, List personas) async {
     final l10n = AppLocalizations.of(context)!;
     if (personas.isEmpty) {
       showErrorSnack(context, l10n.uxKnowledgeNoPersonas);
@@ -505,16 +532,20 @@ class _ActionButtons extends ConsumerWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setState) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A2E),
-          title: Text(l10n.uxKnowledgeActionTrainPersona, style: const TextStyle(color: Colors.white)),
+          title: Text(l10n.uxKnowledgeActionTrainPersona,
+              style: const TextStyle(color: Colors.white)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: personas.map((p) => RadioListTile<String>(
-              title: Text(p.name, style: const TextStyle(color: Colors.white70)),
-              value: p.id as String,
-              groupValue: selectedPersonaId,
-              onChanged: (v) => setState(() => selectedPersonaId = v),
-              activeColor: const Color(0xFF6C63FF),
-            )).toList(),
+            children: personas
+                .map((p) => RadioListTile<String>(
+                      title: Text(p.name,
+                          style: const TextStyle(color: Colors.white70)),
+                      value: p.id as String,
+                      groupValue: selectedPersonaId,
+                      onChanged: (v) => setState(() => selectedPersonaId = v),
+                      activeColor: const Color(0xFF6C63FF),
+                    ))
+                .toList(),
           ),
           actions: [
             TextButton(
@@ -535,7 +566,8 @@ class _ActionButtons extends ConsumerWidget {
                               analysis: analysis,
                             );
                         if (context.mounted) {
-                          showSuccessSnack(context, l10n.uxKnowledgePersonaTrained);
+                          showSuccessSnack(
+                              context, l10n.uxKnowledgePersonaTrained);
                         }
                       } catch (e) {
                         if (context.mounted) {
@@ -563,8 +595,8 @@ class _ActionChip extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
-  final Color    color;
+  final String label;
+  final Color color;
   final VoidCallback onTap;
 
   @override
@@ -585,9 +617,7 @@ class _ActionChip extends StatelessWidget {
             const SizedBox(width: 6),
             Text(label,
                 style: TextStyle(
-                    color: color,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600)),
+                    color: color, fontSize: 12, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -641,9 +671,7 @@ class _OpportunityScoreCard extends StatelessWidget {
               child: Text(
                 '$score',
                 style: TextStyle(
-                    color: _color,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold),
+                    color: _color, fontSize: 22, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -661,7 +689,9 @@ class _OpportunityScoreCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(_label(AppLocalizations.of(context)!),
-                    style: TextStyle(color: _color, fontSize: 12,
+                    style: TextStyle(
+                        color: _color,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
                 LinearProgressIndicator(
@@ -684,7 +714,7 @@ class _OpportunityScoreCard extends StatelessWidget {
 
 class _HotmartCard extends StatelessWidget {
   const _HotmartCard({required this.score, required this.data});
-  final int                  score;
+  final int score;
   final Map<String, dynamic> data;
 
   @override
@@ -718,12 +748,17 @@ class _HotmartCard extends StatelessWidget {
             const Divider(color: Colors.white12, height: 1),
             const SizedBox(height: 10),
             ...{
-              AppLocalizations.of(context)!.uxKnowledgeFieldProduct:  data['product_name'],
-              AppLocalizations.of(context)!.uxKnowledgeFieldPromise:  data['promise'],
-              AppLocalizations.of(context)!.uxKnowledgeFieldFormat:   data['format'],
-              AppLocalizations.of(context)!.uxKnowledgeFieldPrice:    data['price_range'],
-              'Upsell':     data['upsell'],
-            }.entries
+              AppLocalizations.of(context)!.uxKnowledgeFieldProduct:
+                  data['product_name'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldPromise:
+                  data['promise'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldFormat:
+                  data['format'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldPrice:
+                  data['price_range'],
+              'Upsell': data['upsell'],
+            }
+                .entries
                 .where((e) => e.value != null && e.value.toString().isNotEmpty)
                 .map((e) => _DataRow(e.key, e.value.toString())),
           ],
@@ -737,7 +772,7 @@ class _HotmartCard extends StatelessWidget {
 
 class _ShopifyCard extends StatelessWidget {
   const _ShopifyCard({required this.score, required this.data});
-  final int                  score;
+  final int score;
   final Map<String, dynamic> data;
 
   @override
@@ -771,10 +806,14 @@ class _ShopifyCard extends StatelessWidget {
             const Divider(color: Colors.white12, height: 1),
             const SizedBox(height: 10),
             ...{
-              AppLocalizations.of(context)!.uxKnowledgeFieldProduct:     data['product_name'],
-              AppLocalizations.of(context)!.uxKnowledgeFieldDescription: data['short_description'],
-              AppLocalizations.of(context)!.uxKnowledgeFieldPrice:       data['price_range'],
-            }.entries
+              AppLocalizations.of(context)!.uxKnowledgeFieldProduct:
+                  data['product_name'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldDescription:
+                  data['short_description'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldPrice:
+                  data['price_range'],
+            }
+                .entries
                 .where((e) => e.value != null && e.value.toString().isNotEmpty)
                 .map((e) => _DataRow(e.key, e.value.toString())),
             if (data['categories'] is List) ...[
@@ -789,12 +828,10 @@ class _ShopifyCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: color.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: color.withOpacity(0.3)),
+                            border: Border.all(color: color.withOpacity(0.3)),
                           ),
                           child: Text(c.toString(),
-                              style: TextStyle(
-                                  color: color, fontSize: 11)),
+                              style: TextStyle(color: color, fontSize: 11)),
                         ))
                     .toList(),
               ),
@@ -808,7 +845,7 @@ class _ShopifyCard extends StatelessWidget {
 
 class _ScoreBadge extends StatelessWidget {
   const _ScoreBadge(this.score, this.color);
-  final int   score;
+  final int score;
   final Color color;
 
   @override
@@ -822,8 +859,8 @@ class _ScoreBadge extends StatelessWidget {
       ),
       child: Text(
         '$score/100',
-        style: TextStyle(
-            color: color, fontSize: 12, fontWeight: FontWeight.bold),
+        style:
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -901,7 +938,8 @@ class _ItemHeader extends StatelessWidget {
                 ),
                 if (item.niche != null)
                   Text(item.niche!,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12)),
               ],
             ),
           ),
@@ -942,10 +980,10 @@ class _CollapsibleSection extends StatefulWidget {
     required this.child,
   });
 
-  final String   title;
+  final String title;
   final IconData icon;
-  final Color    color;
-  final Widget   child;
+  final Color color;
+  final Widget child;
 
   @override
   State<_CollapsibleSection> createState() => _CollapsibleSectionState();
@@ -979,7 +1017,9 @@ class _CollapsibleSectionState extends State<_CollapsibleSection> {
                   ),
                 ),
                 Icon(
-                  _expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                  _expanded
+                      ? Icons.expand_less_rounded
+                      : Icons.expand_more_rounded,
                   color: Colors.white38,
                   size: 18,
                 ),
@@ -1054,8 +1094,8 @@ class _ScoreGrid extends StatelessWidget {
           Icons.search_rounded),
       _ScoreData('AdSense', analysis.scoreAdsense, const Color(0xFF8BC34A),
           Icons.attach_money_rounded),
-      _ScoreData('Amazon KDP', analysis.scoreAmazonKdp,
-          const Color(0xFFFF5722), Icons.book_rounded),
+      _ScoreData('Amazon KDP', analysis.scoreAmazonKdp, const Color(0xFFFF5722),
+          Icons.book_rounded),
       _ScoreData('LinkedIn', analysis.scoreLinkedin, const Color(0xFF0077B5),
           Icons.business_rounded),
       _ScoreData('Social', analysis.scoreSocial, const Color(0xFFE91E63),
@@ -1072,9 +1112,9 @@ class _ScoreGrid extends StatelessWidget {
 
 class _ScoreData {
   _ScoreData(this.label, this.score, this.color, this.icon);
-  final String   label;
-  final int      score;
-  final Color    color;
+  final String label;
+  final int score;
+  final Color color;
   final IconData icon;
 }
 
@@ -1131,9 +1171,9 @@ class _ScoreCard extends StatelessWidget {
 class _ChipSection extends StatelessWidget {
   const _ChipSection(this.label, this.items, this.color);
 
-  final String       label;
+  final String label;
   final List<String> items;
-  final Color        color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -1145,9 +1185,7 @@ class _ChipSection extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(label,
                 style: TextStyle(
-                    color: color,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600)),
+                    color: color, fontSize: 11, fontWeight: FontWeight.w600)),
           ),
         Wrap(
           spacing: 6,
@@ -1159,15 +1197,16 @@ class _ChipSection extends StatelessWidget {
                     Clipboard.setData(ClipboardData(text: kw));
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(AppLocalizations.of(context)!.knowledgeAnalysisCopiedKeyword(kw)),
+                        content: Text(AppLocalizations.of(context)!
+                            .knowledgeAnalysisCopiedKeyword(kw)),
                         duration: const Duration(seconds: 1),
                         backgroundColor: const Color(0xFF1A1A2E),
                       ),
                     );
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
@@ -1193,8 +1232,8 @@ class _ListCards extends StatelessWidget {
   const _ListCards(this.items, this.icon, this.color);
 
   final List<String> items;
-  final IconData     icon;
-  final Color        color;
+  final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -1223,7 +1262,8 @@ class _ListCards extends StatelessWidget {
                       Clipboard.setData(ClipboardData(text: item));
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(AppLocalizations.of(context)!.knowledgeAnalysisCopied),
+                          content: Text(AppLocalizations.of(context)!
+                              .knowledgeAnalysisCopied),
                           duration: const Duration(seconds: 1),
                           backgroundColor: const Color(0xFF1A1A2E),
                         ),
@@ -1247,11 +1287,11 @@ class _ScoreDetailsSection extends StatelessWidget {
   final Map<String, dynamic> details;
 
   static const _channelLabels = {
-    'seo':        'SEO',
-    'adsense':    'AdSense',
+    'seo': 'SEO',
+    'adsense': 'AdSense',
     'amazon_kdp': 'Amazon KDP',
-    'linkedin':   'LinkedIn',
-    'social':     'Social Media',
+    'linkedin': 'LinkedIn',
+    'social': 'Social Media',
   };
 
   @override
@@ -1272,7 +1312,7 @@ class _ScoreDetailsSection extends StatelessWidget {
 class _ChannelDetail extends StatefulWidget {
   const _ChannelDetail({required this.label, required this.data});
 
-  final String               label;
+  final String label;
   final Map<String, dynamic> data;
 
   @override
@@ -1284,8 +1324,8 @@ class _ChannelDetailState extends State<_ChannelDetail> {
 
   @override
   Widget build(BuildContext context) {
-    final strengths    = _list(widget.data['strengths']);
-    final weaknesses   = _list(widget.data['weaknesses']);
+    final strengths = _list(widget.data['strengths']);
+    final weaknesses = _list(widget.data['weaknesses']);
     final improvements = _list(widget.data['improvements']);
 
     return Container(
@@ -1303,9 +1343,7 @@ class _ChannelDetailState extends State<_ChannelDetail> {
                     fontSize: 14,
                     fontWeight: FontWeight.w600)),
             trailing: Icon(
-              _expanded
-                  ? Icons.expand_less_rounded
-                  : Icons.expand_more_rounded,
+              _expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
               color: Colors.white38,
             ),
             onTap: () => setState(() => _expanded = !_expanded),
@@ -1317,18 +1355,27 @@ class _ChannelDetailState extends State<_ChannelDetail> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (strengths.isNotEmpty) ...[
-                    _SubLabel(AppLocalizations.of(context)!.uxKnowledgeStrengths, const Color(0xFF4CAF50)),
-                    ...strengths.map((s) => _DetailItem(s, const Color(0xFF4CAF50))),
+                    _SubLabel(
+                        AppLocalizations.of(context)!.uxKnowledgeStrengths,
+                        const Color(0xFF4CAF50)),
+                    ...strengths
+                        .map((s) => _DetailItem(s, const Color(0xFF4CAF50))),
                     const SizedBox(height: 6),
                   ],
                   if (weaknesses.isNotEmpty) ...[
-                    _SubLabel(AppLocalizations.of(context)!.uxKnowledgeWeaknesses, const Color(0xFFF44336)),
-                    ...weaknesses.map((s) => _DetailItem(s, const Color(0xFFF44336))),
+                    _SubLabel(
+                        AppLocalizations.of(context)!.uxKnowledgeWeaknesses,
+                        const Color(0xFFF44336)),
+                    ...weaknesses
+                        .map((s) => _DetailItem(s, const Color(0xFFF44336))),
                     const SizedBox(height: 6),
                   ],
                   if (improvements.isNotEmpty) ...[
-                    _SubLabel(AppLocalizations.of(context)!.uxKnowledgeImprovements, const Color(0xFF6C63FF)),
-                    ...improvements.map((s) => _DetailItem(s, const Color(0xFF6C63FF))),
+                    _SubLabel(
+                        AppLocalizations.of(context)!.uxKnowledgeImprovements,
+                        const Color(0xFF6C63FF)),
+                    ...improvements
+                        .map((s) => _DetailItem(s, const Color(0xFF6C63FF))),
                   ],
                 ],
               ),
@@ -1348,7 +1395,7 @@ class _SubLabel extends StatelessWidget {
   const _SubLabel(this.text, this.color);
 
   final String text;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -1365,7 +1412,7 @@ class _DetailItem extends StatelessWidget {
   const _DetailItem(this.text, this.color);
 
   final String text;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {

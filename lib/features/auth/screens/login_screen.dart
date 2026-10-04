@@ -4,7 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../../core/utils/snackbar_utils.dart' show showErrorSnack, extractErrorMessage;
+import '../../../core/utils/snackbar_utils.dart'
+    show showErrorSnack, extractErrorMessage;
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/widgets/app_text_field.dart';
@@ -52,7 +53,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final authState = ref.read(authNotifierProvider);
     authState.whenOrNull(
-      error: (e, _) => showErrorSnack(context, extractErrorMessage(e, AppLocalizations.of(context)!, AppLocalizations.of(context)!.uxAuthErrorGeneric)),
+      error: (e, _) => showErrorSnack(
+          context,
+          extractErrorMessage(e, AppLocalizations.of(context)!,
+              AppLocalizations.of(context)!.uxAuthErrorGeneric)),
       data: (_) => context.go(AppConstants.routeHome),
     );
   }
@@ -65,7 +69,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final authState = ref.read(authNotifierProvider);
     if (authState.hasError) {
-      showErrorSnack(context, extractErrorMessage(authState.error, AppLocalizations.of(context)!, AppLocalizations.of(context)!.uxAuthErrorGeneric));
+      showErrorSnack(
+          context,
+          extractErrorMessage(authState.error, AppLocalizations.of(context)!,
+              AppLocalizations.of(context)!.uxAuthErrorGeneric));
       return;
     }
 
@@ -147,7 +154,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ? const SizedBox(
                                 height: 18,
                                 width: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.g_mobiledata_rounded, size: 26),
                         const SizedBox(width: 8),

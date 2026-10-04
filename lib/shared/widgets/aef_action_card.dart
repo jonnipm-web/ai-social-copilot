@@ -15,7 +15,13 @@ import '../../l10n/app_localizations.dart';
 /// [AefRuntimeResult.isCompleted]; UNKNOWN_OUTCOME is visually distinct from
 /// FAILED and offers no retry.
 class AefActionCard extends StatefulWidget {
-  const AefActionCard({super.key, required this.intent, required this.api, this.initialValues = const {}, this.onResult, this.title});
+  const AefActionCard(
+      {super.key,
+      required this.intent,
+      required this.api,
+      this.initialValues = const {},
+      this.onResult,
+      this.title});
 
   final IveActionIntentData intent;
   final AefRuntimeApi api;
@@ -50,16 +56,20 @@ class _AefActionCardState extends State<AefActionCard> {
   final Map<String, TextEditingController> _text = {};
   final Map<String, String?> _choice = {};
   AefRuntimeResult? _result;
-  Map<String, Object>? _submitted; // frozen once proposed: approval binds this exact payload
+  Map<String, Object>?
+      _submitted; // frozen once proposed: approval binds this exact payload
   bool _busy = false;
 
-  List<AefLabField> get _fields => kAefLabActions[widget.intent.requestedAction] ?? const [];
+  List<AefLabField> get _fields =>
+      kAefLabActions[widget.intent.requestedAction] ?? const [];
 
   @override
   void initState() {
     super.initState();
     for (final f in _fields) {
-      if (f.options == null) _text[f.name] = TextEditingController(text: widget.initialValues[f.name] ?? '');
+      if (f.options == null)
+        _text[f.name] =
+            TextEditingController(text: widget.initialValues[f.name] ?? '');
     }
   }
 
@@ -76,7 +86,8 @@ class _AefActionCardState extends State<AefActionCard> {
   Map<String, Object>? _values() {
     final out = <String, Object>{};
     for (final f in _fields) {
-      final v = f.options != null ? _choice[f.name] : _text[f.name]!.text.trim();
+      final v =
+          f.options != null ? _choice[f.name] : _text[f.name]!.text.trim();
       if (v == null || v.isEmpty || v.length > f.maxLength) return null;
       out[f.name] = v;
     }
@@ -133,24 +144,35 @@ class _AefActionCardState extends State<AefActionCard> {
       AefPhase.awaitingApproval => l.aefLabPhaseAwaiting,
       AefPhase.authorized => l.aefLabPhaseAuthorized,
       AefPhase.executing => l.aefLabPhaseExecuting,
-      AefPhase.succeeded => (r != null && r.isCompleted) ? l.aefLabPhaseSucceeded : l.aefLabPhaseUnconfirmed,
+      AefPhase.succeeded => (r != null && r.isCompleted)
+          ? l.aefLabPhaseSucceeded
+          : l.aefLabPhaseUnconfirmed,
       AefPhase.failed => l.aefLabPhaseFailed,
       AefPhase.unknownOutcome => l.aefLabPhaseUnknown,
       AefPhase.rejected => l.aefLabPhaseRejected,
       AefPhase.expired => l.aefLabPhaseExpired,
       AefPhase.cancelled => l.aefLabPhaseCancelled,
       AefPhase.invalidated => l.aefLabPhaseInvalidated,
-      AefPhase.denied => (r?.denialCode == 'NETWORK_INTERRUPTED') ? l.aefLabPhaseNetwork : l.aefLabPhaseDenied,
+      AefPhase.denied => (r?.denialCode == 'NETWORK_INTERRUPTED')
+          ? l.aefLabPhaseNetwork
+          : l.aefLabPhaseDenied,
     };
   }
 
   (IconData, Color) _phaseStyle() {
     final r = _result;
     return switch (_phase) {
-      AefPhase.succeeded when r != null && r.isCompleted => (Icons.check_circle, Colors.greenAccent),
+      AefPhase.succeeded when r != null && r.isCompleted => (
+          Icons.check_circle,
+          Colors.greenAccent
+        ),
       AefPhase.unknownOutcome => (Icons.help, Colors.amberAccent),
       AefPhase.failed => (Icons.error, Colors.redAccent),
-      AefPhase.denied || AefPhase.rejected || AefPhase.expired || AefPhase.cancelled || AefPhase.invalidated =>
+      AefPhase.denied ||
+      AefPhase.rejected ||
+      AefPhase.expired ||
+      AefPhase.cancelled ||
+      AefPhase.invalidated =>
         (Icons.block, Colors.white70),
       _ => (Icons.hourglass_top, Colors.lightBlueAccent),
     };
@@ -181,15 +203,23 @@ class _AefActionCardState extends State<AefActionCard> {
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFF1E1C2E), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
+      decoration: BoxDecoration(
+          color: const Color(0xFF1E1C2E),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white24)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.title ?? l.aefLabTitle, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          Text(widget.title ?? l.aefLabTitle,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
-          Text('${l.aefLabActionLabel}: $actionLabel', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-          Text(l.aefLabRisk, style: const TextStyle(color: Colors.orangeAccent, fontSize: 12)),
-          Text(consequence, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text('${l.aefLabActionLabel}: $actionLabel',
+              style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(l.aefLabRisk,
+              style: const TextStyle(color: Colors.orangeAccent, fontSize: 12)),
+          Text(consequence,
+              style: const TextStyle(color: Colors.white70, fontSize: 12)),
           const SizedBox(height: 8),
           for (final f in _fields)
             Padding(
@@ -198,9 +228,15 @@ class _AefActionCardState extends State<AefActionCard> {
                   ? DropdownButtonFormField<String>(
                       key: Key('aef-field-${f.name}'),
                       initialValue: _choice[f.name],
-                      decoration: InputDecoration(labelText: _fieldLabel(l, f.name)),
-                      items: [for (final o in f.options!) DropdownMenuItem(value: o, child: Text(o))],
-                      onChanged: locked ? null : (v) => setState(() => _choice[f.name] = v),
+                      decoration:
+                          InputDecoration(labelText: _fieldLabel(l, f.name)),
+                      items: [
+                        for (final o in f.options!)
+                          DropdownMenuItem(value: o, child: Text(o))
+                      ],
+                      onChanged: locked
+                          ? null
+                          : (v) => setState(() => _choice[f.name] = v),
                     )
                   : TextField(
                       key: Key('aef-field-${f.name}'),
@@ -208,7 +244,8 @@ class _AefActionCardState extends State<AefActionCard> {
                       enabled: !locked,
                       maxLength: f.maxLength,
                       maxLines: f.maxLength > 200 ? 3 : 1,
-                      decoration: InputDecoration(labelText: _fieldLabel(l, f.name)),
+                      decoration:
+                          InputDecoration(labelText: _fieldLabel(l, f.name)),
                       onChanged: (_) => setState(() {}),
                     ),
             ),
@@ -217,11 +254,14 @@ class _AefActionCardState extends State<AefActionCard> {
             children: [
               Icon(icon, color: color, size: 18),
               const SizedBox(width: 6),
-              Expanded(child: Text(_phaseText(l), style: TextStyle(color: color, fontSize: 12))),
+              Expanded(
+                  child: Text(_phaseText(l),
+                      style: TextStyle(color: color, fontSize: 12))),
             ],
           ),
           if (_result?.receiptId != null && _result!.isCompleted)
-            Text(l.aefLabReceipt(_result!.receiptId!), style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(l.aefLabReceipt(_result!.receiptId!),
+                style: const TextStyle(color: Colors.white54, fontSize: 11)),
           const SizedBox(height: 8),
           if (_phase == AefPhase.proposed)
             ElevatedButton(
@@ -233,21 +273,28 @@ class _AefActionCardState extends State<AefActionCard> {
             Wrap(spacing: 12, children: [
               ElevatedButton.icon(
                 key: const Key('aef-approve'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade700, foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade700,
+                    foregroundColor: Colors.white),
                 icon: const Icon(Icons.check),
                 onPressed: _busy ? null : () => _decide(true),
                 label: Text(l.aefLabApprove),
               ),
               OutlinedButton.icon(
                 key: const Key('aef-reject'),
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent, side: const BorderSide(color: Colors.redAccent)),
+                style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent)),
                 icon: const Icon(Icons.close),
                 onPressed: _busy ? null : () => _decide(false),
                 label: Text(l.aefLabReject),
               ),
             ]),
           if (_phase == AefPhase.authorized)
-            ElevatedButton(key: const Key('aef-execute'), onPressed: _busy ? null : _execute, child: Text(l.aefLabExecute)),
+            ElevatedButton(
+                key: const Key('aef-execute'),
+                onPressed: _busy ? null : _execute,
+                child: Text(l.aefLabExecute)),
         ],
       ),
     );

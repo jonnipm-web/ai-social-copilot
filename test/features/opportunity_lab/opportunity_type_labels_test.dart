@@ -17,28 +17,30 @@ import 'package:ai_social_copilot/l10n/app_localizations.dart';
 // Explicit expected values side-step that ambiguity entirely.
 void main() {
   const expectedPt = {
-    'expansão':     'Expansão',
+    'expansão': 'Expansão',
     'novo produto': 'Novo Produto',
-    'novo nicho':   'Novo Nicho',
-    'afiliado':     'Afiliado',
-    'SaaS':         'SaaS',
-    'ebook':        'Ebook',
-    'curso':        'Curso',
-    'assinatura':   'Assinatura',
+    'novo nicho': 'Novo Nicho',
+    'afiliado': 'Afiliado',
+    'SaaS': 'SaaS',
+    'ebook': 'Ebook',
+    'curso': 'Curso',
+    'assinatura': 'Assinatura',
   };
 
   const expectedEn = {
-    'expansão':     'Expansion',
+    'expansão': 'Expansion',
     'novo produto': 'New Product',
-    'novo nicho':   'New Niche',
-    'afiliado':     'Affiliate',
-    'SaaS':         'SaaS',
-    'ebook':        'Ebook',
-    'curso':        'Course',
-    'assinatura':   'Subscription',
+    'novo nicho': 'New Niche',
+    'afiliado': 'Affiliate',
+    'SaaS': 'SaaS',
+    'ebook': 'Ebook',
+    'curso': 'Course',
+    'assinatura': 'Subscription',
   };
 
-  test('OpportunityLabItem.types is exactly the set this test covers (catches a future untranslated addition)', () {
+  test(
+      'OpportunityLabItem.types is exactly the set this test covers (catches a future untranslated addition)',
+      () {
     expect(OpportunityLabItem.types.toSet(), expectedPt.keys.toSet());
     expect(OpportunityLabItem.types.toSet(), expectedEn.keys.toSet());
   });
@@ -51,42 +53,52 @@ void main() {
     }
   });
 
-  test('every canonical type maps to the exact expected EN label (never the PT word)', () async {
+  test(
+      'every canonical type maps to the exact expected EN label (never the PT word)',
+      () async {
     final en = await AppLocalizations.delegate.load(const Locale('en'));
     for (final canonical in OpportunityLabItem.types) {
       expect(opportunityTypeLabel(canonical, en), expectedEn[canonical],
-          reason: 'unexpected EN label for "$canonical" -- if this shows a PT-BR word, '
+          reason:
+              'unexpected EN label for "$canonical" -- if this shows a PT-BR word, '
               'the untranslated string is leaking into the English UI');
     }
   });
 
-  test('unmapped/legacy value falls back to itself rather than throwing', () async {
+  test('unmapped/legacy value falls back to itself rather than throwing',
+      () async {
     final pt = await AppLocalizations.delegate.load(const Locale('pt'));
-    expect(opportunityTypeLabel('valor-legado-desconhecido', pt), 'valor-legado-desconhecido');
+    expect(opportunityTypeLabel('valor-legado-desconhecido', pt),
+        'valor-legado-desconhecido');
   });
 
   const expectedStatusPt = {
-    'pending':   'Pendente',
+    'pending': 'Pendente',
     'analyzing': 'Analisando',
-    'approved':  'Aprovada',
-    'rejected':  'Rejeitada',
+    'approved': 'Aprovada',
+    'rejected': 'Rejeitada',
     'executing': 'Em execução',
   };
 
   const expectedStatusEn = {
-    'pending':   'Pending',
+    'pending': 'Pending',
     'analyzing': 'Analyzing',
-    'approved':  'Approved',
-    'rejected':  'Rejected',
+    'approved': 'Approved',
+    'rejected': 'Rejected',
     'executing': 'Executing',
   };
 
-  test('OpportunityLabItem.statusValues is exactly the set this test covers (catches a future untranslated addition)', () {
-    expect(OpportunityLabItem.statusValues.toSet(), expectedStatusPt.keys.toSet());
-    expect(OpportunityLabItem.statusValues.toSet(), expectedStatusEn.keys.toSet());
+  test(
+      'OpportunityLabItem.statusValues is exactly the set this test covers (catches a future untranslated addition)',
+      () {
+    expect(
+        OpportunityLabItem.statusValues.toSet(), expectedStatusPt.keys.toSet());
+    expect(
+        OpportunityLabItem.statusValues.toSet(), expectedStatusEn.keys.toSet());
   });
 
-  test('every canonical status maps to the exact expected PT-BR label', () async {
+  test('every canonical status maps to the exact expected PT-BR label',
+      () async {
     final pt = await AppLocalizations.delegate.load(const Locale('pt'));
     for (final canonical in OpportunityLabItem.statusValues) {
       expect(opportunityStatusLabel(canonical, pt), expectedStatusPt[canonical],
@@ -94,17 +106,22 @@ void main() {
     }
   });
 
-  test('every canonical status maps to the exact expected EN label (never the raw enum value)', () async {
+  test(
+      'every canonical status maps to the exact expected EN label (never the raw enum value)',
+      () async {
     final en = await AppLocalizations.delegate.load(const Locale('en'));
     for (final canonical in OpportunityLabItem.statusValues) {
       expect(opportunityStatusLabel(canonical, en), expectedStatusEn[canonical],
-          reason: 'unexpected EN label for status "$canonical" -- if this shows the raw '
+          reason:
+              'unexpected EN label for status "$canonical" -- if this shows the raw '
               'value, the untranslated status is leaking into the UI');
     }
   });
 
-  test('unmapped/legacy status falls back to itself rather than throwing', () async {
+  test('unmapped/legacy status falls back to itself rather than throwing',
+      () async {
     final pt = await AppLocalizations.delegate.load(const Locale('pt'));
-    expect(opportunityStatusLabel('status-legado-desconhecido', pt), 'status-legado-desconhecido');
+    expect(opportunityStatusLabel('status-legado-desconhecido', pt),
+        'status-legado-desconhecido');
   });
 }

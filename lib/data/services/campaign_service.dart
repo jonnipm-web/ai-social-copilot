@@ -7,38 +7,45 @@ import '../models/knowledge_strategy.dart';
 import 'content_localization_service.dart';
 
 class CampaignService {
-  CampaignService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+  CampaignService({RowLocalizer? localizer})
+      : _localizer = localizer ?? identityLocalizer;
 
   // R16 — presentation localization of persisted content (never modifies the
   // stored row; see content_localization_service.dart).
   final RowLocalizer _localizer;
 
   Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
-      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+      _localizer(
+          table,
+          (rows as List)
+              .map((r) => Map<String, dynamic>.from(r as Map))
+              .toList());
 
-  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+  Future<Map<String, dynamic>> _locOne(
+          String table, Map<String, dynamic> row) async =>
       (await _localizer(table, [row])).first;
 
   final _client = Supabase.instance.client;
 
   static const _tableCampaigns = 'campaigns';
-  static const _edgeFunction   = 'generate-campaign';
+  static const _edgeFunction = 'generate-campaign';
 
   Future<List<Campaign>> fetchAll() async {
     final rows = await _client
         .from(_tableCampaigns)
         .select()
         .order('created_at', ascending: false);
-    return (await _loc('campaigns', rows)).map((r) => Campaign.fromMap(r)).toList();
+    return (await _loc('campaigns', rows))
+        .map((r) => Campaign.fromMap(r))
+        .toList();
   }
 
   Future<Campaign?> fetchById(String id) async {
-    final row = await _client
-        .from(_tableCampaigns)
-        .select()
-        .eq('id', id)
-        .maybeSingle();
-    return row == null ? null : Campaign.fromMap(await _locOne('campaigns', row));
+    final row =
+        await _client.from(_tableCampaigns).select().eq('id', id).maybeSingle();
+    return row == null
+        ? null
+        : Campaign.fromMap(await _locOne('campaigns', row));
   }
 
   Future<List<Campaign>> fetchByItemId(String itemId) async {
@@ -47,7 +54,9 @@ class CampaignService {
         .select()
         .eq('knowledge_item_id', itemId)
         .order('created_at', ascending: false);
-    return (await _loc('campaigns', rows)).map((r) => Campaign.fromMap(r)).toList();
+    return (await _loc('campaigns', rows))
+        .map((r) => Campaign.fromMap(r))
+        .toList();
   }
 
   Future<void> delete(String id) async {
@@ -72,16 +81,16 @@ class CampaignService {
     final response = await _client.functions.invoke(
       _edgeFunction,
       body: {
-        'title':             item.title,
-        'objective':         objective,
-        'duration_days':     durationDays,
-        'channels':          channels,
-        'niche':             item.niche ?? '',
-        'target_audience':   item.targetAudience ?? '',
-        'language':          outputLanguage,
-        'summary':           analysis.summary ?? '',
+        'title': item.title,
+        'objective': objective,
+        'duration_days': durationDays,
+        'channels': channels,
+        'niche': item.niche ?? '',
+        'target_audience': item.targetAudience ?? '',
+        'language': outputLanguage,
+        'summary': analysis.summary ?? '',
         'value_proposition': strategy?.valueProposition ?? '',
-        'keywords':          analysis.keywordsPrimary,
+        'keywords': analysis.keywordsPrimary,
         if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
       },
     );
@@ -98,13 +107,13 @@ class CampaignService {
     final row = await _client
         .from(_tableCampaigns)
         .insert({
-          'user_id':           uid,
+          'user_id': uid,
           'knowledge_item_id': item.id,
-          'title':             campaignName,
-          'objective':         objective,
-          'duration_days':     durationDays,
-          'channels':          channels,
-          'campaign_json':     data,
+          'title': campaignName,
+          'objective': objective,
+          'duration_days': durationDays,
+          'channels': channels,
+          'campaign_json': data,
         })
         .select()
         .single();

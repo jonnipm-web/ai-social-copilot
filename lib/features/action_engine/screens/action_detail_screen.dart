@@ -15,22 +15,23 @@ import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/context_copilot_widget.dart'
     show showCopilotChat, IveInlineAskPresence;
 import '../widgets/action_engine_execute_sheet.dart';
-import 'action_engine_screen.dart' show actionEngineStatusLabel, actionEngineTypeLabel;
+import 'action_engine_screen.dart'
+    show actionEngineStatusLabel, actionEngineTypeLabel;
 import '../../../shared/widgets/translated_content_notice.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGreen   = Color(0xFF4CAF50);
-const _kOrange  = Color(0xFFFF9800);
-const _kRed     = Color(0xFFF44336);
-const _kCyan    = Color(0xFF00BCD4);
+const _kGreen = Color(0xFF4CAF50);
+const _kOrange = Color(0xFFFF9800);
+const _kRed = Color(0xFFF44336);
+const _kCyan = Color(0xFF00BCD4);
 
 Color _statusColor(String s) {
   const m = {
-    'pending':   _kOrange,
-    'approved':  _kPrimary,
+    'pending': _kOrange,
+    'approved': _kPrimary,
     'executing': _kCyan,
     'completed': _kGreen,
     'cancelled': _kRed,
@@ -63,7 +64,8 @@ class ActionDetailScreen extends ConsumerWidget {
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeActionEngine),
@@ -104,7 +106,7 @@ class _StatusMenu extends StatelessWidget {
   const _StatusMenu({required this.item, required this.ref});
 
   final ActionQueueItem item;
-  final WidgetRef       ref;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -123,9 +125,10 @@ class _StatusMenu extends StatelessWidget {
           return;
         }
         try {
-          if (v == 'approve')  await notifier.approve(item.id,  title: item.title);
-          if (v == 'pause')    await notifier.pause(item.id,    title: item.title);
-          if (v == 'cancel')   await notifier.cancel(item.id,   title: item.title);
+          if (v == 'approve')
+            await notifier.approve(item.id, title: item.title);
+          if (v == 'pause') await notifier.pause(item.id, title: item.title);
+          if (v == 'cancel') await notifier.cancel(item.id, title: item.title);
           ref.invalidate(actionQueueItemByIdProvider(item.id));
           if (v == 'delete') {
             final ok = await showDialog<bool>(
@@ -164,22 +167,34 @@ class _StatusMenu extends StatelessWidget {
       },
       itemBuilder: (_) => [
         if (item.status == 'pending')
-          PopupMenuItem(value: 'approve',
-              child: Text(l10n.actionEngineApprove, style: const TextStyle(color: _kPrimary))),
+          PopupMenuItem(
+              value: 'approve',
+              child: Text(l10n.actionEngineApprove,
+                  style: const TextStyle(color: _kPrimary))),
         if (item.status == 'approved')
-          PopupMenuItem(value: 'execute',
-              child: Text(l10n.actionDetailExecuteWithApproval, style: const TextStyle(color: _kCyan))),
+          PopupMenuItem(
+              value: 'execute',
+              child: Text(l10n.actionDetailExecuteWithApproval,
+                  style: const TextStyle(color: _kCyan))),
         if (item.status == 'executing') ...[
-          PopupMenuItem(value: 'execute',
-              child: Text(l10n.actionDetailRecheck, style: const TextStyle(color: _kCyan))),
-          PopupMenuItem(value: 'pause',
-              child: Text(l10n.actionEnginePause, style: const TextStyle(color: _kOrange))),
+          PopupMenuItem(
+              value: 'execute',
+              child: Text(l10n.actionDetailRecheck,
+                  style: const TextStyle(color: _kCyan))),
+          PopupMenuItem(
+              value: 'pause',
+              child: Text(l10n.actionEnginePause,
+                  style: const TextStyle(color: _kOrange))),
         ],
         if (item.status != 'completed' && item.status != 'cancelled')
-          PopupMenuItem(value: 'cancel',
-              child: Text(l10n.commonCancel, style: const TextStyle(color: Colors.white54))),
-        PopupMenuItem(value: 'delete',
-            child: Text(l10n.actionEngineDelete, style: const TextStyle(color: _kRed))),
+          PopupMenuItem(
+              value: 'cancel',
+              child: Text(l10n.commonCancel,
+                  style: const TextStyle(color: Colors.white54))),
+        PopupMenuItem(
+            value: 'delete',
+            child: Text(l10n.actionEngineDelete,
+                style: const TextStyle(color: _kRed))),
       ],
     );
   }
@@ -190,7 +205,7 @@ class _DetailBody extends StatelessWidget {
   const _DetailBody({required this.item, required this.ref});
 
   final ActionQueueItem item;
-  final WidgetRef       ref;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -199,7 +214,10 @@ class _DetailBody extends StatelessWidget {
     final projects = projectsAsync.valueOrNull ?? [];
     final projectName = item.projectId == null
         ? null
-        : projects.where((p) => p.id == item.projectId).map((p) => p.name).firstOrNull;
+        : projects
+            .where((p) => p.id == item.projectId)
+            .map((p) => p.name)
+            .firstOrNull;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
@@ -289,7 +307,7 @@ class _HeroHeader extends StatelessWidget {
   const _HeroHeader({required this.item, this.projectName});
 
   final ActionQueueItem item;
-  final String?         projectName;
+  final String? projectName;
 
   @override
   Widget build(BuildContext context) {
@@ -317,13 +335,11 @@ class _HeroHeader extends StatelessWidget {
                     Text(
                       '${item.priority}',
                       style: TextStyle(
-                          color: sc,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
+                          color: sc, fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     Text(AppLocalizations.of(context)!.uxActionPriorityShort,
-                        style: TextStyle(
-                            color: sc.withOpacity(0.7), fontSize: 8)),
+                        style:
+                            TextStyle(color: sc.withOpacity(0.7), fontSize: 8)),
                   ],
                 ),
               ),
@@ -358,8 +374,8 @@ class _HeroHeader extends StatelessWidget {
                           color: _kPrimary, size: 12),
                       const SizedBox(width: 4),
                       Text(projectName!,
-                          style: const TextStyle(
-                              color: _kPrimary, fontSize: 11)),
+                          style:
+                              const TextStyle(color: _kPrimary, fontSize: 11)),
                     ],
                   ),
                 ],
@@ -375,7 +391,7 @@ class _HeroHeader extends StatelessWidget {
 class _RingPainter extends CustomPainter {
   const _RingPainter({required this.score, required this.color});
 
-  final int   score;
+  final int score;
   final Color color;
 
   @override
@@ -418,13 +434,25 @@ class _ScoreBreakdown extends StatelessWidget {
     final fromLab = item.origin == 'opportunity_lab';
     final dims = [
       if (fromLab && item.marketScore > 0)
-        (l10n.actionDetailScoreMarket,   item.marketScore, const Color(0xFF6C63FF)),
-      (l10n.actionDetailScoreRevenue,    item.impactScore, const Color(0xFF4CAF50)),
-      (l10n.actionDetailScoreRoiFinal,   item.roiScore,    const Color(0xFFB44FE8)),
-      (l10n.actionEngineScoreEffort,     item.effortScore, const Color(0xFFFF9800)),
-      (l10n.actionDetailScorePriority,   item.priority,    const Color(0xFF00BCD4)),
+        (
+          l10n.actionDetailScoreMarket,
+          item.marketScore,
+          const Color(0xFF6C63FF)
+        ),
+      (
+        l10n.actionDetailScoreRevenue,
+        item.impactScore,
+        const Color(0xFF4CAF50)
+      ),
+      (l10n.actionDetailScoreRoiFinal, item.roiScore, const Color(0xFFB44FE8)),
+      (l10n.actionEngineScoreEffort, item.effortScore, const Color(0xFFFF9800)),
+      (l10n.actionDetailScorePriority, item.priority, const Color(0xFF00BCD4)),
       if (fromLab && item.confidence > 0)
-        (l10n.actionDetailScoreConfidence, item.confidence, const Color(0xFFFFD700)),
+        (
+          l10n.actionDetailScoreConfidence,
+          item.confidence,
+          const Color(0xFFFFD700)
+        ),
     ];
     return Column(
       children: dims
@@ -435,11 +463,12 @@ class _ScoreBreakdown extends StatelessWidget {
 }
 
 class _ScoreRow extends StatelessWidget {
-  const _ScoreRow({required this.label, required this.value, required this.color});
+  const _ScoreRow(
+      {required this.label, required this.value, required this.color});
 
   final String label;
-  final int    value;
-  final Color  color;
+  final int value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -482,7 +511,7 @@ class _OriginSection extends StatelessWidget {
   const _OriginSection({required this.item, this.projectName});
 
   final ActionQueueItem item;
-  final String?         projectName;
+  final String? projectName;
 
   @override
   Widget build(BuildContext context) {
@@ -530,18 +559,18 @@ class _OriginSection extends StatelessWidget {
     );
   }
 
-  String _fmtDate(DateTime dt) =>
-      '${dt.day.toString().padLeft(2, '0')}/'
+  String _fmtDate(DateTime dt) => '${dt.day.toString().padLeft(2, '0')}/'
       '${dt.month.toString().padLeft(2, '0')}/'
       '${dt.year}';
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.icon, required this.label, required this.value});
+  const _InfoRow(
+      {required this.icon, required this.label, required this.value});
 
   final IconData icon;
-  final String   label;
-  final String   value;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
@@ -556,7 +585,9 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(value,
                 style: const TextStyle(
-                    color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500)),
           ),
         ],
       ),
@@ -577,7 +608,8 @@ class _SourcesList extends StatelessWidget {
       runSpacing: 8,
       children: sources
           .map((s) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: _kPrimary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -697,7 +729,9 @@ class _RisksList extends StatelessWidget {
                     Expanded(
                       child: Text(r,
                           style: const TextStyle(
-                              color: Colors.white70, fontSize: 12, height: 1.4)),
+                              color: Colors.white70,
+                              fontSize: 12,
+                              height: 1.4)),
                     ),
                   ],
                 ),
@@ -709,11 +743,12 @@ class _RisksList extends StatelessWidget {
 
 // ── Section wrapper ───────────────────────────────────────────────────────────
 class _Section extends StatelessWidget {
-  const _Section({required this.icon, required this.title, required this.child});
+  const _Section(
+      {required this.icon, required this.title, required this.child});
 
   final IconData icon;
-  final String   title;
-  final Widget   child;
+  final String title;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -786,8 +821,7 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(actionEngineStatusLabel(l10n, status),
-          style: TextStyle(
-              color: c, fontSize: 9, fontWeight: FontWeight.bold)),
+          style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.bold)),
     );
   }
 }
@@ -797,7 +831,7 @@ class _StatusButtons extends StatelessWidget {
   const _StatusButtons({required this.item, required this.ref});
 
   final ActionQueueItem item;
-  final WidgetRef       ref;
+  final WidgetRef ref;
 
   Future<void> _run(BuildContext context, Future<void> Function() fn) async {
     try {
@@ -825,7 +859,8 @@ class _StatusButtons extends StatelessWidget {
             label: l10n.actionDetailApproveAction,
             icon: Icons.check_circle_outline_rounded,
             color: _kPrimary,
-            onTap: () => _run(context, () => n.approve(item.id, title: item.title)),
+            onTap: () =>
+                _run(context, () => n.approve(item.id, title: item.title)),
           ),
 
         // INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — "execute"/"complete" are
@@ -840,8 +875,8 @@ class _StatusButtons extends StatelessWidget {
             label: l10n.actionDetailExecuteWithApproval,
             icon: Icons.play_arrow_rounded,
             color: _kCyan,
-            onTap: () => ActionEngineExecuteSheet.show(context, item)
-                .then((_) => ref.invalidate(actionQueueItemByIdProvider(item.id))),
+            onTap: () => ActionEngineExecuteSheet.show(context, item).then(
+                (_) => ref.invalidate(actionQueueItemByIdProvider(item.id))),
           ),
         ],
 
@@ -871,8 +906,8 @@ class _StatusButtons extends StatelessWidget {
             label: l10n.actionDetailRecheck,
             icon: Icons.refresh_rounded,
             color: _kCyan,
-            onTap: () => ActionEngineExecuteSheet.show(context, item)
-                .then((_) => ref.invalidate(actionQueueItemByIdProvider(item.id))),
+            onTap: () => ActionEngineExecuteSheet.show(context, item).then(
+                (_) => ref.invalidate(actionQueueItemByIdProvider(item.id))),
           ),
           const SizedBox(height: 8),
           _Btn(
@@ -880,7 +915,8 @@ class _StatusButtons extends StatelessWidget {
             icon: Icons.pause_rounded,
             color: _kOrange,
             outlined: true,
-            onTap: () => _run(context, () => n.pause(item.id, title: item.title)),
+            onTap: () =>
+                _run(context, () => n.pause(item.id, title: item.title)),
           ),
         ],
 
@@ -902,7 +938,8 @@ class _StatusButtons extends StatelessWidget {
                   item.isAefVerifiedComplete
                       ? l10n.actionDetailCompletedVerified
                       : l10n.actionDetailCompleted,
-                  style: const TextStyle(color: _kGreen, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: _kGreen, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -917,7 +954,8 @@ class _StatusButtons extends StatelessWidget {
               side: const BorderSide(color: _kPrimary),
               padding: const EdgeInsets.symmetric(vertical: 14),
               minimumSize: const Size(double.infinity, 0),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             icon: const Icon(Icons.auto_awesome_rounded),
             label: Text(l10n.actionDetailAskIve),
@@ -926,20 +964,23 @@ class _StatusButtons extends StatelessWidget {
               // a lista do Action Engine em vez de abrir um diálogo
               // contextual (confirmado quebrado em docs/commercial/
               // IVE_INTERACTION_AND_QUOTA_CONTRACT.md §1.1).
-              final ctx = ref.read(iveContextDataProvider(item.projectId)).valueOrNull;
-              final contextData =
-                  ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+              final ctx =
+                  ref.read(iveContextDataProvider(item.projectId)).valueOrNull;
+              final contextData = ctx != null
+                  ? CopilotContextData.fromIveContext(ctx)
+                  : const CopilotContextData();
               showCopilotChat(
                 context,
-                screenName: 'Ações', // canonical key (localized by the copilot widget)
+                screenName:
+                    'Ações', // canonical key (localized by the copilot widget)
                 contextData: contextData,
                 initialMessage: l10n.actionDetailAskIveMessage(item.title),
                 request: IveInteractionRequest(
-                  projectId:        item.projectId,
-                  sourceModule:     'action_engine',
+                  projectId: item.projectId,
+                  sourceModule: 'action_engine',
                   sourceEntityType: 'action',
-                  sourceEntityId:   item.id,
-                  operationType:    IveOperationType.ask,
+                  sourceEntityId: item.id,
+                  operationType: IveOperationType.ask,
                 ),
               );
             },
@@ -959,11 +1000,11 @@ class _Btn extends StatelessWidget {
     this.outlined = false,
   });
 
-  final String       label;
-  final IconData     icon;
-  final Color        color;
+  final String label;
+  final IconData icon;
+  final Color color;
   final VoidCallback onTap;
-  final bool         outlined;
+  final bool outlined;
 
   @override
   Widget build(BuildContext context) {
@@ -975,8 +1016,8 @@ class _Btn extends StatelessWidget {
             foregroundColor: color,
             side: BorderSide(color: color),
             padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           icon: Icon(icon),
           label: Text(label),
@@ -991,7 +1032,8 @@ class _Btn extends StatelessWidget {
           backgroundColor: color,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         icon: Icon(icon),
         label: Text(label),

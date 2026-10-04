@@ -26,17 +26,23 @@ class ValidationTest {
 
   String get statusLabel {
     switch (status) {
-      case ValidationStatus.pass:    return 'PASSOU';
-      case ValidationStatus.warning: return 'ATENÇÃO';
-      case ValidationStatus.fail:    return 'FALHOU';
+      case ValidationStatus.pass:
+        return 'PASSOU';
+      case ValidationStatus.warning:
+        return 'ATENÇÃO';
+      case ValidationStatus.fail:
+        return 'FALHOU';
     }
   }
 
   String get statusEmoji {
     switch (status) {
-      case ValidationStatus.pass:    return '✅';
-      case ValidationStatus.warning: return '⚠️';
-      case ValidationStatus.fail:    return '❌';
+      case ValidationStatus.pass:
+        return '✅';
+      case ValidationStatus.warning:
+        return '⚠️';
+      case ValidationStatus.fail:
+        return '❌';
     }
   }
 }
@@ -82,9 +88,12 @@ class ValidationReport {
     required this.intelligenceScoreAfter,
   });
 
-  int get passedTests    => tests.where((t) => t.status == ValidationStatus.pass).length;
-  int get warningTests   => tests.where((t) => t.status == ValidationStatus.warning).length;
-  int get failedTests    => tests.where((t) => t.status == ValidationStatus.fail).length;
+  int get passedTests =>
+      tests.where((t) => t.status == ValidationStatus.pass).length;
+  int get warningTests =>
+      tests.where((t) => t.status == ValidationStatus.warning).length;
+  int get failedTests =>
+      tests.where((t) => t.status == ValidationStatus.fail).length;
   double get healthRatio => tests.isEmpty ? 0 : passedTests / tests.length;
 
   String get overallLabel {

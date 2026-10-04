@@ -17,17 +17,28 @@ void main() {
     test('refuses to write AEF-governed-only statuses directly', () {
       final svc = ActionQueueService();
       for (final status in ['executing', 'completed']) {
-        expect(() => svc.updateStatus('a1', status), throwsA(isA<ArgumentError>()), reason: status);
+        expect(
+            () => svc.updateStatus('a1', status), throwsA(isA<ArgumentError>()),
+            reason: status);
       }
     });
 
     // Codex re-verification (Macro-03) — the first guard was an exact-string
     // Set.contains, so a case or whitespace variant of a governed-only
     // status would reach the raw Supabase update untouched.
-    test('refuses case and whitespace variants of AEF-governed-only statuses', () {
+    test('refuses case and whitespace variants of AEF-governed-only statuses',
+        () {
       final svc = ActionQueueService();
-      for (final status in ['Executing', 'COMPLETED', ' completed', 'completed ', 'ExEcUtInG']) {
-        expect(() => svc.updateStatus('a1', status), throwsA(isA<ArgumentError>()), reason: status);
+      for (final status in [
+        'Executing',
+        'COMPLETED',
+        ' completed',
+        'completed ',
+        'ExEcUtInG'
+      ]) {
+        expect(
+            () => svc.updateStatus('a1', status), throwsA(isA<ArgumentError>()),
+            reason: status);
       }
     });
 
@@ -37,8 +48,10 @@ void main() {
       // These still reach _client (a lazy getter) and would throw on the
       // network call itself in a plain test process; the point here is only
       // that they are NOT rejected by the guard before that.
-      expect(() => svc.updateStatus('a1', 'approved'), throwsA(isNot(isA<ArgumentError>())));
-      expect(() => svc.updateStatus('a1', 'cancelled'), throwsA(isNot(isA<ArgumentError>())));
+      expect(() => svc.updateStatus('a1', 'approved'),
+          throwsA(isNot(isA<ArgumentError>())));
+      expect(() => svc.updateStatus('a1', 'cancelled'),
+          throwsA(isNot(isA<ArgumentError>())));
     });
 
     // INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §26 -- the round-3
@@ -47,7 +60,9 @@ void main() {
     // width space appended) would not match the literal 'completed' and
     // could slip through. Fixed by stripping Unicode category Cf before
     // comparing.
-    test('refuses invisible-Unicode-format-character variants (zero-width space/joiner, BOM)', () {
+    test(
+        'refuses invisible-Unicode-format-character variants (zero-width space/joiner, BOM)',
+        () {
       final svc = ActionQueueService();
       final variants = [
         'completed​', // zero-width space
@@ -59,22 +74,35 @@ void main() {
         'completed⁠', // word joiner
       ];
       for (final status in variants) {
-        expect(() => svc.updateStatus('a1', status), throwsA(isA<ArgumentError>()), reason: status.codeUnits.toString());
+        expect(
+            () => svc.updateStatus('a1', status), throwsA(isA<ArgumentError>()),
+            reason: status.codeUnits.toString());
       }
     });
 
-    test('a legitimate status with no invisible characters is still not refused after the Cf-stripping change', () {
+    test(
+        'a legitimate status with no invisible characters is still not refused after the Cf-stripping change',
+        () {
       final svc = ActionQueueService();
-      expect(() => svc.updateStatus('a1', 'approved'), throwsA(isNot(isA<ArgumentError>())));
+      expect(() => svc.updateStatus('a1', 'approved'),
+          throwsA(isNot(isA<ArgumentError>())));
     });
   });
 
   group('ActionQueueService.create (authority boundary)', () {
-    test('refuses to insert an item already carrying an AEF-governed-only status', () {
+    test(
+        'refuses to insert an item already carrying an AEF-governed-only status',
+        () {
       final svc = ActionQueueService();
       for (final status in ['executing', 'completed', 'Completed']) {
-        final item = ActionQueueItem(id: '', userId: 'u1', title: 'x', status: status, createdAt: DateTime(2026, 1, 1));
-        expect(() => svc.create(item), throwsA(isA<ArgumentError>()), reason: status);
+        final item = ActionQueueItem(
+            id: '',
+            userId: 'u1',
+            title: 'x',
+            status: status,
+            createdAt: DateTime(2026, 1, 1));
+        expect(() => svc.create(item), throwsA(isA<ArgumentError>()),
+            reason: status);
       }
     });
   });

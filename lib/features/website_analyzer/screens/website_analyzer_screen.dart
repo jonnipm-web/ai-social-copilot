@@ -54,9 +54,9 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
         ref: ref,
         analysisLabel: l10n.websiteAnalyzerAnalyzeButton,
         request: IveInteractionRequest(
-          sourceModule:     'website_analyzer',
+          sourceModule: 'website_analyzer',
           sourceEntityType: 'website_analysis',
-          operationType:    IveOperationType.analyze,
+          operationType: IveOperationType.analyze,
         ),
         action: (idempotencyKey) => ref
             .read(websiteAnalyzerNotifierProvider.notifier)
@@ -69,7 +69,8 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.websiteAnalyzerAnalyzeError(extractErrorMessage(e, l10n))),
+            content: Text(
+                l10n.websiteAnalyzerAnalyzeError(extractErrorMessage(e, l10n))),
             backgroundColor: Colors.red,
           ),
         );
@@ -169,9 +170,11 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                     keyboardType: TextInputType.url,
                     decoration: InputDecoration(
                       labelText: l10n.websiteAnalyzerUrlLabel,
-                      labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+                      labelStyle:
+                          TextStyle(color: Colors.white.withOpacity(0.6)),
                       hintText: l10n.websiteAnalyzerUrlHint,
-                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                      hintStyle:
+                          TextStyle(color: Colors.white.withOpacity(0.3)),
                       prefixIcon: Icon(Icons.link, color: _accent),
                       filled: true,
                       fillColor: _cardColor,
@@ -189,7 +192,8 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Colors.red, width: 2),
+                        borderSide:
+                            const BorderSide(color: Colors.red, width: 2),
                       ),
                     ),
                     validator: (value) {
@@ -219,7 +223,9 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                             )
                           : const Icon(Icons.search),
                       label: Text(
-                        busy ? l10n.websiteAnalyzerAnalyzing : l10n.websiteAnalyzerAnalyzeButton,
+                        busy
+                            ? l10n.websiteAnalyzerAnalyzing
+                            : l10n.websiteAnalyzerAnalyzeButton,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -273,7 +279,8 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  l10n.websiteAnalyzerLoadError(extractErrorMessage(error, l10n)),
+                  l10n.websiteAnalyzerLoadError(
+                      extractErrorMessage(error, l10n)),
                   style: const TextStyle(color: Colors.red),
                 ),
               ),
@@ -330,7 +337,8 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                     final dateStr = _formatDate(analysis.createdAt);
 
                     return InkWell(
-                      onTap: () => context.go('/website-analyzer/${analysis.id}'),
+                      onTap: () =>
+                          context.go('/website-analyzer/${analysis.id}'),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         padding: const EdgeInsets.all(16),
@@ -360,12 +368,12 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                                   ),
                                 ),
                                 Text(
-                                    dateStr,
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.4),
-                                      fontSize: 12,
-                                    ),
+                                  dateStr,
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.4),
+                                    fontSize: 12,
                                   ),
+                                ),
                                 const SizedBox(width: 4),
                                 Icon(
                                   Icons.chevron_right,

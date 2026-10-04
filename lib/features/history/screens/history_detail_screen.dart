@@ -47,19 +47,20 @@ class HistoryDetailScreen extends ConsumerWidget {
         title: Text(l10n.projectCommandActionDetail),
         actions: [
           detailAsync.whenOrNull(
-            data: (gen) => TextButton.icon(
-              onPressed: () => _copyAll(context, gen),
-              icon: const Icon(Icons.copy_all_rounded, size: 16),
-              label: Text(l10n.uxCopyAll),
-              style: TextButton.styleFrom(foregroundColor: Colors.white70),
-            ),
-          ) ??
+                data: (gen) => TextButton.icon(
+                  onPressed: () => _copyAll(context, gen),
+                  icon: const Icon(Icons.copy_all_rounded, size: 16),
+                  label: Text(l10n.uxCopyAll),
+                  style: TextButton.styleFrom(foregroundColor: Colors.white70),
+                ),
+              ) ??
               const SizedBox.shrink(),
         ],
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+          constraints:
+              const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
           child: detailAsync.when(
             loading: () => _buildShimmer(),
             error: (e, _) => Center(
@@ -134,9 +135,14 @@ class HistoryDetailScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    ScoreChip(label: l10n.uxScoreClarity, score: gen.clarityScore),
-                    ScoreChip(label: l10n.actionEngineScoreImpact, score: gen.impactScore),
-                    ScoreChip(label: l10n.uxScoreEngagement, score: gen.engagementScore),
+                    ScoreChip(
+                        label: l10n.uxScoreClarity, score: gen.clarityScore),
+                    ScoreChip(
+                        label: l10n.actionEngineScoreImpact,
+                        score: gen.impactScore),
+                    ScoreChip(
+                        label: l10n.uxScoreEngagement,
+                        score: gen.engagementScore),
                   ],
                 ),
                 const SizedBox(height: 20),

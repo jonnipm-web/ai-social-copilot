@@ -19,7 +19,8 @@ import 'package:ai_social_copilot/shared/widgets/ive_intro_sheet.dart';
 // test/shared/widgets/ai_execution_confirmation_test.dart: its real
 // definition eagerly reads Supabase.instance.client, which throws in a
 // plain test process.
-class MockDiagnosticLoggerService extends Mock implements DiagnosticLoggerService {}
+class MockDiagnosticLoggerService extends Mock
+    implements DiagnosticLoggerService {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +32,8 @@ void main() {
   Widget harness({Locale locale = const Locale('pt')}) {
     return ProviderScope(
       overrides: [
-        diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+        diagnosticLoggerProvider
+            .overrideWithValue(MockDiagnosticLoggerService()),
       ],
       child: MaterialApp(
         locale: locale,
@@ -83,7 +85,8 @@ void main() {
     expect(find.text('Meet IVE'), findsOneWidget);
   });
 
-  testWidgets('Semantics carrega o rótulo de introdução para leitor de tela', (tester) async {
+  testWidgets('Semantics carrega o rótulo de introdução para leitor de tela',
+      (tester) async {
     await tester.pumpWidget(harness());
     await tester.tap(find.text('open'));
     // IveAvatar keeps a repeating pulse AnimationController alive even with
@@ -97,7 +100,9 @@ void main() {
     expect(find.bySemanticsLabel(l10n.ivIntroSemanticLabel), findsOneWidget);
   });
 
-  testWidgets('tocar em "Entendi" marca a introdução como completada e fecha o sheet', (tester) async {
+  testWidgets(
+      'tocar em "Entendi" marca a introdução como completada e fecha o sheet',
+      (tester) async {
     await tester.pumpWidget(harness());
     await tester.tap(find.text('open'));
     // IveAvatar keeps a repeating pulse AnimationController alive even with
@@ -122,7 +127,8 @@ void main() {
     expect(state.skipped, isFalse);
   });
 
-  testWidgets('tocar em "Pular" marca a introdução como pulada e fecha o sheet', (tester) async {
+  testWidgets('tocar em "Pular" marca a introdução como pulada e fecha o sheet',
+      (tester) async {
     await tester.pumpWidget(harness());
     await tester.tap(find.text('open'));
     // IveAvatar keeps a repeating pulse AnimationController alive even with
@@ -147,7 +153,9 @@ void main() {
     expect(state.completed, isFalse);
   });
 
-  testWidgets('nenhum widget/dependência de vídeo é referenciado (caminho sem vídeo)', (tester) async {
+  testWidgets(
+      'nenhum widget/dependência de vídeo é referenciado (caminho sem vídeo)',
+      (tester) async {
     await tester.pumpWidget(harness());
     await tester.tap(find.text('open'));
     // IveAvatar keeps a repeating pulse AnimationController alive even with

@@ -6,29 +6,30 @@ import '../../l10n/app_localizations.dart';
 
 // Private helpers for the 2-pass budget algorithm.
 class _ScoredChunk {
-  final int    chunkIndex;
+  final int chunkIndex;
   final String text;
   final double score;
-  const _ScoredChunk({required this.chunkIndex, required this.text, required this.score});
+  const _ScoredChunk(
+      {required this.chunkIndex, required this.text, required this.score});
 }
 
 class _ItemChunks {
-  final KnowledgeItem    item;
+  final KnowledgeItem item;
   final List<_ScoredChunk> chunks; // sorted by score desc
   const _ItemChunks({required this.item, required this.chunks});
 }
 
 class _Pass2Candidate {
   final KnowledgeItem item;
-  final _ScoredChunk  scored;
+  final _ScoredChunk scored;
   _Pass2Candidate(this.item, this.scored);
 }
 
 // Serviço de grounding: chunk → relevance → 2-pass adaptive budget → source manifest.
 // Não faz chamadas de rede. Determinístico e testável de forma isolada.
 class DocumentContextBuilder {
-  static const int maxChunkSize            = 800;
-  static const int chunkOverlap            = 100;
+  static const int maxChunkSize = 800;
+  static const int chunkOverlap = 100;
   static const int maxDocumentContextChars = 8000;
 
   // Divide content em janelas sobrepostas de tamanho fixo.
@@ -43,7 +44,7 @@ class DocumentContextBuilder {
     final chunks = <String>[];
     int start = 0;
     while (start < trimmed.length) {
-      final end  = min(start + maxSize, trimmed.length);
+      final end = min(start + maxSize, trimmed.length);
       final part = trimmed.substring(start, end).trim();
       if (part.isNotEmpty) chunks.add(part);
       if (end >= trimmed.length) break;
@@ -89,7 +90,7 @@ class DocumentContextBuilder {
   static DocumentGrounding buildGrounding(
     List<KnowledgeItem> items, {
     String projectContext = '',
-    int    maxChars       = maxDocumentContextChars,
+    int maxChars = maxDocumentContextChars,
     // R16 — warning messages are user-facing (they reach the IVE UI and the
     // AI grounding), so callers pass the presentation-language strings.
     // Without it (pure/unit usage) the message is a neutral technical line.
@@ -98,17 +99,17 @@ class DocumentContextBuilder {
     if (items.isEmpty) return DocumentGrounding.empty;
 
     // ── Fase 0: chunking + scoring de todos os itens ──────────────────────────
-    final warnings          = <GroundingWarning>[];
-    final itemChunks        = <_ItemChunks>[];
-    int   processed         = 0;
-    int   usable            = 0;
-    int   availableChars    = 0;
+    final warnings = <GroundingWarning>[];
+    final itemChunks = <_ItemChunks>[];
+    int processed = 0;
+    int usable = 0;
+    int availableChars = 0;
 
     for (final item in items) {
       processed++;
       if (item.content.trim().isEmpty) {
         warnings.add(GroundingWarning(
-          code:    'EMPTY_CONTENT',
+          code: 'EMPTY_CONTENT',
           message: l10n != null
               ? l10n.ctxGroundingEmptyContent(item.title)
               : 'EMPTY_CONTENT: "${item.title}"',
@@ -137,14 +138,14 @@ class DocumentContextBuilder {
     final sorted = [...itemChunks]
       ..sort((a, b) => b.chunks.first.score.compareTo(a.chunks.first.score));
 
-    int   charBudget        = maxChars;
-    final excerpts          = <DocumentExcerpt>[];
+    int charBudget = maxChars;
+    final excerpts = <DocumentExcerpt>[];
     final usedChunksByDocId = <String, Set<int>>{};
 
     for (final ic in sorted) {
       if (charBudget <= 0) {
         warnings.add(GroundingWarning(
-          code:    'BUDGET_EXCEEDED',
+          code: 'BUDGET_EXCEEDED',
           message: l10n != null
               ? l10n.ctxGroundingBudgetExceeded(maxChars)
               : 'BUDGET_EXCEEDED: $maxChars chars',
@@ -159,11 +160,11 @@ class DocumentContextBuilder {
       if (text.isEmpty) continue;
 
       excerpts.add(DocumentExcerpt(
-        documentId:    ic.item.id,
+        documentId: ic.item.id,
         documentTitle: ic.item.title,
-        chunkIndex:    best.chunkIndex,
-        text:          text,
-        charCount:     text.length,
+        chunkIndex: best.chunkIndex,
+        text: text,
+        charCount: text.length,
       ));
       usedChunksByDocId.putIfAbsent(ic.item.id, () => {}).add(best.chunkIndex);
       charBudget -= text.length;
@@ -190,11 +191,11 @@ class DocumentContextBuilder {
         if (text.isEmpty) continue;
 
         excerpts.add(DocumentExcerpt(
-          documentId:    c.item.id,
+          documentId: c.item.id,
           documentTitle: c.item.title,
-          chunkIndex:    c.scored.chunkIndex,
-          text:          text,
-          charCount:     text.length,
+          chunkIndex: c.scored.chunkIndex,
+          text: text,
+          charCount: text.length,
         ));
         usedChunksByDocId
             .putIfAbsent(c.item.id, () => {})
@@ -204,22 +205,22 @@ class DocumentContextBuilder {
     }
 
     // ── Coverage ──────────────────────────────────────────────────────────────
-    final usedDocIds       = excerpts.map((e) => e.documentId).toSet();
-    final used             = usedDocIds.length;
-    final selectedChars    = maxChars - charBudget;
-    final total            = items.length;
+    final usedDocIds = excerpts.map((e) => e.documentId).toSet();
+    final used = usedDocIds.length;
+    final selectedChars = maxChars - charBudget;
+    final total = items.length;
 
     final coverage = GroundingCoverage(
-      totalLinked:               total,
-      processed:                 processed,
-      usable:                    usable,
-      used:                      used,
-      documentUsageCoverage:     total > 0 ? used / total : 0.0,
-      selectedCharacterCount:    selectedChars,
+      totalLinked: total,
+      processed: processed,
+      usable: usable,
+      used: used,
+      documentUsageCoverage: total > 0 ? used / total : 0.0,
+      selectedCharacterCount: selectedChars,
       availableContentCharCount: availableChars,
       // O builder entrega integralmente o que selecionou.
       // A edge function usa GROUNDING_DELIVERY_BUDGET_CHARS para eventual cap downstream.
-      deliveredCharacterCount:   selectedChars,
+      deliveredCharacterCount: selectedChars,
     );
 
     return DocumentGrounding(

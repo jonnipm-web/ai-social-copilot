@@ -44,13 +44,15 @@ class IveIntroState {
   /// version exists than the one they last completed/skipped — the
   /// versioning hook mission Section 06/15 asks for.
   bool get shouldShow =>
-      !loading && (seenVersion == null || seenVersion! < kIveIntroCurrentVersion);
+      !loading &&
+      (seenVersion == null || seenVersion! < kIveIntroCurrentVersion);
 
-  IveIntroState copyWith({bool? loading, bool? completed, bool? skipped, int? seenVersion}) =>
+  IveIntroState copyWith(
+          {bool? loading, bool? completed, bool? skipped, int? seenVersion}) =>
       IveIntroState(
-        loading:     loading     ?? this.loading,
-        completed:   completed   ?? this.completed,
-        skipped:     skipped     ?? this.skipped,
+        loading: loading ?? this.loading,
+        completed: completed ?? this.completed,
+        skipped: skipped ?? this.skipped,
         seenVersion: seenVersion ?? this.seenVersion,
       );
 }
@@ -75,9 +77,9 @@ class IveIntroNotifier extends StateNotifier<IveIntroState> {
       // other's result with pre-write SharedPreferences values.
       if (!state.loading) return;
       state = IveIntroState(
-        loading:     false,
-        completed:   prefs.getBool(_kIntroCompletedKey) ?? false,
-        skipped:     prefs.getBool(_kIntroSkippedKey) ?? false,
+        loading: false,
+        completed: prefs.getBool(_kIntroCompletedKey) ?? false,
+        skipped: prefs.getBool(_kIntroSkippedKey) ?? false,
         seenVersion: prefs.getInt(_kIntroVersionKey),
       );
     } catch (_) {
@@ -89,7 +91,11 @@ class IveIntroNotifier extends StateNotifier<IveIntroState> {
   }
 
   Future<void> complete() async {
-    state = state.copyWith(loading: false, completed: true, skipped: false, seenVersion: kIveIntroCurrentVersion);
+    state = state.copyWith(
+        loading: false,
+        completed: true,
+        skipped: false,
+        seenVersion: kIveIntroCurrentVersion);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_kIntroCompletedKey, true);
@@ -101,7 +107,11 @@ class IveIntroNotifier extends StateNotifier<IveIntroState> {
   }
 
   Future<void> skip() async {
-    state = state.copyWith(loading: false, completed: false, skipped: true, seenVersion: kIveIntroCurrentVersion);
+    state = state.copyWith(
+        loading: false,
+        completed: false,
+        skipped: true,
+        seenVersion: kIveIntroCurrentVersion);
     try {
       final prefs = await SharedPreferences.getInstance();
       // IVE-EXPERIENCE-V1-06 (Codex Class B review, P2) — symmetric with

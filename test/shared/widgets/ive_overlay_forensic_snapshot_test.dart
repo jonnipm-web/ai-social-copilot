@@ -18,7 +18,8 @@ import 'package:ai_social_copilot/providers/diagnostic_session_provider.dart';
 import 'package:ai_social_copilot/providers/profile_provider.dart';
 import 'package:ai_social_copilot/shared/widgets/ive_overlay.dart';
 
-class MockDiagnosticLoggerService extends Mock implements DiagnosticLoggerService {}
+class MockDiagnosticLoggerService extends Mock
+    implements DiagnosticLoggerService {}
 
 class MockSession extends Mock implements Session {}
 
@@ -31,8 +32,9 @@ Profile _fakeProfile() => Profile(
       updatedAt: DateTime(2026, 1, 1),
     );
 
-AuthState _authState({Session? session}) =>
-    AuthState(session != null ? AuthChangeEvent.signedIn : AuthChangeEvent.signedOut, session);
+AuthState _authState({Session? session}) => AuthState(
+    session != null ? AuthChangeEvent.signedIn : AuthChangeEvent.signedOut,
+    session);
 
 void main() {
   setUp(() {
@@ -44,9 +46,11 @@ void main() {
 
   Widget harness() => ProviderScope(
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+          authStateProvider.overrideWith(
+              (ref) => Stream.value(_authState(session: MockSession()))),
         ],
         child: MaterialApp(
           locale: const Locale('pt'),
@@ -63,7 +67,8 @@ void main() {
         ),
       );
 
-  testWidgets('mounting the overlay sets overlayMounted; unmounting clears it', (tester) async {
+  testWidgets('mounting the overlay sets overlayMounted; unmounting clears it',
+      (tester) async {
     expect(IveForensicSnapshot.overlayMounted, isFalse);
     await tester.pumpWidget(harness());
     await tester.pump();
@@ -75,20 +80,24 @@ void main() {
     expect(IveForensicSnapshot.overlayMounted, isFalse);
   });
 
-  testWidgets('an authenticated, resolved profile sets profileResolved', (tester) async {
+  testWidgets('an authenticated, resolved profile sets profileResolved',
+      (tester) async {
     await tester.pumpWidget(harness());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
     expect(IveForensicSnapshot.profileResolved, isTrue);
   });
 
-  testWidgets('dragging the avatar sets overlayDragging true, then false on release', (tester) async {
+  testWidgets(
+      'dragging the avatar sets overlayDragging true, then false on release',
+      (tester) async {
     await tester.pumpWidget(harness());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
     final avatarFinder = find.byWidgetPredicate(
-      (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
+      (w) =>
+          w is Semantics && w.properties.label == 'IVE, assistente executiva',
     );
     expect(avatarFinder, findsOneWidget);
     expect(IveForensicSnapshot.overlayDragging, isFalse);

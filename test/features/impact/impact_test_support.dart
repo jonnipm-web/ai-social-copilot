@@ -17,15 +17,18 @@ import 'package:ai_social_copilot/providers/profile_provider.dart';
 /// guarded against drift by UI-FIX-01, so these tests exercise the true I4
 /// contract rather than a hand-written imitation.
 Map<String, dynamic> fixture(String name) =>
-    jsonDecode(File('test/fixtures/impact/$name.json').readAsStringSync()) as Map<String, dynamic>;
+    jsonDecode(File('test/fixtures/impact/$name.json').readAsStringSync())
+        as Map<String, dynamic>;
 
 /// Deep copy, for tests that derive a variant from a real fixture.
-Map<String, dynamic> copyOf(Map<String, dynamic> m) => jsonDecode(jsonEncode(m)) as Map<String, dynamic>;
+Map<String, dynamic> copyOf(Map<String, dynamic> m) =>
+    jsonDecode(jsonEncode(m)) as Map<String, dynamic>;
 
 const kInvestigationId = '00000000-0000-4000-8000-000000000001';
 
 class FakeImpactTransport implements ImpactTransport {
-  FakeImpactTransport({this.dossier, this.list, this.export, this.verify, this.error});
+  FakeImpactTransport(
+      {this.dossier, this.list, this.export, this.verify, this.error});
 
   Map<String, dynamic>? dossier;
   Map<String, dynamic>? list;
@@ -48,7 +51,8 @@ class FakeImpactTransport implements ImpactTransport {
       'verify_dossier' => verify,
       _ => null,
     };
-    if (res == null) throw const ImpactApiException(ImpactErrorKind.invalidRequest);
+    if (res == null)
+      throw const ImpactApiException(ImpactErrorKind.invalidRequest);
     return res;
   }
 }
@@ -88,7 +92,8 @@ Future<void> pumpImpact(
           final s = profileState;
           if (s == null) return Future.value(profile(admin: admin));
           if (s is AsyncError) return Future<Profile?>.error(s.error!);
-          if (s is AsyncLoading) return Completer<Profile?>().future; // never resolves
+          if (s is AsyncLoading)
+            return Completer<Profile?>().future; // never resolves
           return Future.value(s.value);
         }),
       ],
@@ -103,7 +108,8 @@ Future<void> pumpImpact(
         ],
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, w) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
           child: w!,
         ),
         home: child,

@@ -8,10 +8,9 @@ import '../../l10n/app_localizations.dart';
 class BusinessMemoryService {
   final _client = Supabase.instance.client;
 
-  Future<List<BusinessMemory>> fetchAll({String? projectId, String? memoryType}) async {
-    var filterBuilder = _client
-        .from(AppConstants.tableBusinessMemory)
-        .select();
+  Future<List<BusinessMemory>> fetchAll(
+      {String? projectId, String? memoryType}) async {
+    var filterBuilder = _client.from(AppConstants.tableBusinessMemory).select();
 
     if (projectId != null) {
       filterBuilder = filterBuilder.eq('project_id', projectId);
@@ -38,15 +37,15 @@ class BusinessMemoryService {
     final row = await _client
         .from(AppConstants.tableBusinessMemory)
         .insert(BusinessMemory(
-          id:              '',
-          userId:          uid,
-          projectId:       projectId,
-          memoryType:      memoryType,
-          title:           title,
-          content:         content,
+          id: '',
+          userId: uid,
+          projectId: projectId,
+          memoryType: memoryType,
+          title: title,
+          content: content,
           confidenceScore: confidenceScore,
-          source:          source,
-          createdAt:       DateTime.now(),
+          source: source,
+          createdAt: DateTime.now(),
         ).toInsertMap())
         .select()
         .single();
@@ -73,12 +72,12 @@ class BusinessMemoryService {
     String status = 'generated',
   }) async {
     await create(
-      memoryType:      'opportunity',
-      title:           title,
-      content:         content,
+      memoryType: 'opportunity',
+      title: title,
+      content: content,
       confidenceScore: 70,
-      source:          'opportunity_discovery',
-      projectId:       projectId,
+      source: 'opportunity_discovery',
+      projectId: projectId,
     );
   }
 
@@ -91,14 +90,14 @@ class BusinessMemoryService {
     String? projectId,
   }) async {
     await create(
-      memoryType:      success ? 'success' : 'failure',
-      title:           title,
-      content:         success
+      memoryType: success ? 'success' : 'failure',
+      title: title,
+      content: success
           ? l10n.uxMemoryCampaignSucceeded
           : l10n.uxMemoryCampaignFailed,
       confidenceScore: 80,
-      source:          'campaigns',
-      projectId:       projectId,
+      source: 'campaigns',
+      projectId: projectId,
     );
   }
 
@@ -111,12 +110,12 @@ class BusinessMemoryService {
     String? projectId,
   }) async {
     await create(
-      memoryType:      'revenue',
-      title:           l10n.uxMemoryRoiTitle(roiValue.toStringAsFixed(2)),
-      content:         description,
+      memoryType: 'revenue',
+      title: l10n.uxMemoryRoiTitle(roiValue.toStringAsFixed(2)),
+      content: description,
       confidenceScore: 90,
-      source:          'roi_tracker',
-      projectId:       projectId,
+      source: 'roi_tracker',
+      projectId: projectId,
     );
   }
 }

@@ -17,7 +17,7 @@ class Campaign {
     required this.title,
     required this.objective,
     required this.durationDays,
-    this.channels    = const [],
+    this.channels = const [],
     this.campaignJson = const {},
     required this.createdAt,
     required this.updatedAt,
@@ -31,14 +31,14 @@ class Campaign {
     }
 
     return Campaign(
-      id:               map['id'] as String,
-      userId:           map['user_id'] as String,
-      knowledgeItemId:  map['knowledge_item_id'] as String?,
-      title:            map['title'] as String? ?? '',
-      objective:        map['objective'] as String? ?? 'venda',
-      durationDays:     (map['duration_days'] as int?) ?? 30,
-      channels:         parseChannels(map['channels']),
-      campaignJson:     map['campaign_json'] is Map
+      id: map['id'] as String,
+      userId: map['user_id'] as String,
+      knowledgeItemId: map['knowledge_item_id'] as String?,
+      title: map['title'] as String? ?? '',
+      objective: map['objective'] as String? ?? 'venda',
+      durationDays: (map['duration_days'] as int?) ?? 30,
+      channels: parseChannels(map['channels']),
+      campaignJson: map['campaign_json'] is Map
           ? Map<String, dynamic>.from(map['campaign_json'] as Map)
           : {},
       createdAt: map['created_at'] != null
@@ -51,14 +51,14 @@ class Campaign {
   }
 
   Map<String, dynamic> toInsertMap() => {
-    'user_id':           userId,
-    'knowledge_item_id': knowledgeItemId,
-    'title':             title,
-    'objective':         objective,
-    'duration_days':     durationDays,
-    'channels':          channels,
-    'campaign_json':     campaignJson,
-  };
+        'user_id': userId,
+        'knowledge_item_id': knowledgeItemId,
+        'title': title,
+        'objective': objective,
+        'duration_days': durationDays,
+        'channels': channels,
+        'campaign_json': campaignJson,
+      };
 
   String get tagline => campaignJson['tagline'] as String? ?? '';
   String get overview => campaignJson['overview'] as String? ?? '';
@@ -66,7 +66,10 @@ class Campaign {
   List<Map<String, dynamic>> get calendar {
     final v = campaignJson['calendar'];
     if (v is List) {
-      return v.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      return v
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
     }
     return [];
   }

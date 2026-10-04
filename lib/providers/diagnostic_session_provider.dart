@@ -28,7 +28,8 @@ class DiagnosticSessionState {
 /// [start] simply gets `false` back (the insert is rejected server-side),
 /// exactly as if the control didn't exist for them.
 class DiagnosticSessionNotifier extends StateNotifier<DiagnosticSessionState> {
-  DiagnosticSessionNotifier(this._logger, this._ref) : super(const DiagnosticSessionState());
+  DiagnosticSessionNotifier(this._logger, this._ref)
+      : super(const DiagnosticSessionState());
 
   final DiagnosticLoggerService _logger;
   final Ref _ref;
@@ -44,7 +45,8 @@ class DiagnosticSessionNotifier extends StateNotifier<DiagnosticSessionState> {
   String? _recoveryAttemptedForUserId;
 
   Future<bool> start({String? label, String? roleSnapshot}) async {
-    final effectiveRole = roleSnapshot ?? _ref.read(currentProfileProvider).valueOrNull?.roleLabel;
+    final effectiveRole = roleSnapshot ??
+        _ref.read(currentProfileProvider).valueOrNull?.roleLabel;
     // IVE-COMMERCIAL-STABILITY-09O (Codex Gate 2nd pass, P2 ACCEPTED) —
     // build_sha is no longer passed in here at all: DiagnosticLoggerService
     // .startSession() always writes kBuildSha internally, so there is no
@@ -189,7 +191,8 @@ class DiagnosticSessionNotifier extends StateNotifier<DiagnosticSessionState> {
 }
 
 final diagnosticSessionProvider =
-    StateNotifierProvider<DiagnosticSessionNotifier, DiagnosticSessionState>((ref) {
+    StateNotifierProvider<DiagnosticSessionNotifier, DiagnosticSessionState>(
+        (ref) {
   return DiagnosticSessionNotifier(ref.watch(diagnosticLoggerProvider), ref);
 });
 
@@ -202,7 +205,7 @@ final diagnosticSessionsListProvider =
   return ref.watch(diagnosticLoggerProvider).fetchAllSessions();
 });
 
-final diagnosticEventsForSessionProvider =
-    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, sessionId) {
+final diagnosticEventsForSessionProvider = FutureProvider.autoDispose
+    .family<List<Map<String, dynamic>>, String>((ref, sessionId) {
   return ref.watch(diagnosticLoggerProvider).fetchEventsForSession(sessionId);
 });

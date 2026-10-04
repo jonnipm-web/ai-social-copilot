@@ -11,9 +11,13 @@ const List<String> kCompetitorTypes = ['direct', 'indirect', 'aspirational'];
 
 String competitorTypeLabel(String canonical, AppLocalizations l10n) {
   switch (canonical) {
-    case 'direct':       return l10n.miCompetitorTypeDirect;
-    case 'indirect':     return l10n.miCompetitorTypeIndirect;
-    case 'aspirational': return l10n.miCompetitorTypeAspirational;
-    default:              return canonical; // unmapped/legacy value -- show as-is, never crash
+    case 'direct':
+      return l10n.miCompetitorTypeDirect;
+    case 'indirect':
+      return l10n.miCompetitorTypeIndirect;
+    case 'aspirational':
+      return l10n.miCompetitorTypeAspirational;
+    default:
+      return canonical; // unmapped/legacy value -- show as-is, never crash
   }
 }

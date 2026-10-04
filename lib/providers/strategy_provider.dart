@@ -7,18 +7,17 @@ import '../data/models/knowledge_strategy.dart';
 import '../data/services/strategy_service.dart';
 import '../data/services/content_localization_service.dart';
 
-final strategyServiceProvider =
-    Provider<StrategyService>((ref) => StrategyService(localizer: ref.watch(rowLocalizerProvider)));
+final strategyServiceProvider = Provider<StrategyService>(
+    (ref) => StrategyService(localizer: ref.watch(rowLocalizerProvider)));
 
-final knowledgeStrategyProvider =
-    FutureProvider.autoDispose.family<KnowledgeStrategy?, String>(
-        (ref, itemId) {
+final knowledgeStrategyProvider = FutureProvider.autoDispose
+    .family<KnowledgeStrategy?, String>((ref, itemId) {
   return ref.watch(strategyServiceProvider).fetchByItemId(itemId);
 });
 
-class StrategyNotifier
-    extends StateNotifier<AsyncValue<KnowledgeStrategy?>> {
-  StrategyNotifier(this._service, this._ref) : super(const AsyncValue.data(null));
+class StrategyNotifier extends StateNotifier<AsyncValue<KnowledgeStrategy?>> {
+  StrategyNotifier(this._service, this._ref)
+      : super(const AsyncValue.data(null));
 
   final StrategyService _service;
   final Ref _ref;

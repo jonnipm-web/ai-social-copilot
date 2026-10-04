@@ -13,8 +13,8 @@ import '../l10n/app_localizations.dart';
 import '../data/services/content_localization_service.dart';
 import '../data/services/opportunity_lab_service.dart';
 
-final actionQueueServiceProvider =
-    Provider<ActionQueueService>((ref) => ActionQueueService(localizer: ref.watch(rowLocalizerProvider)));
+final actionQueueServiceProvider = Provider<ActionQueueService>(
+    (ref) => ActionQueueService(localizer: ref.watch(rowLocalizerProvider)));
 
 final actionQueueProvider =
     FutureProvider.autoDispose<List<ActionQueueItem>>((ref) {
@@ -37,8 +37,8 @@ final actionQueueItemByIdProvider =
 });
 
 // Action queue filtered by project_id (real Supabase filter)
-final actionQueueByProjectProvider =
-    FutureProvider.autoDispose.family<List<ActionQueueItem>, String>((ref, projectId) {
+final actionQueueByProjectProvider = FutureProvider.autoDispose
+    .family<List<ActionQueueItem>, String>((ref, projectId) {
   return ref.watch(actionQueueServiceProvider).fetchAll(projectId: projectId);
 });
 
@@ -64,6 +64,7 @@ class ActionQueueNotifier
     }
     return lookupAppLocalizations(const Locale('pt'));
   }
+
   String _titleOr(String? title) =>
       (title == null || title.isEmpty) ? _l10n.uxActionDefaultTitle : title;
   String? _activeProjectId;
@@ -86,7 +87,7 @@ class ActionQueueNotifier
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    item.title,
+          actionTitle: item.title,
           technicalError: e.toString(),
         ),
       );
@@ -101,7 +102,7 @@ class ActionQueueNotifier
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    _titleOr(title),
+          actionTitle: _titleOr(title),
           technicalError: e.toString(),
         ),
       );
@@ -117,14 +118,15 @@ class ActionQueueNotifier
   /// calls this only with the real, terminal, receipted result. This
   /// method never invents a status: it writes exactly what the receipt
   /// says (ActionQueueService.applyAefResult).
-  Future<void> applyGovernedResult(String id, AefRuntimeResult result, {String? title}) async {
+  Future<void> applyGovernedResult(String id, AefRuntimeResult result,
+      {String? title}) async {
     try {
       await _svc.applyAefResult(id, result);
       await load(projectId: _activeProjectId);
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    _titleOr(title),
+          actionTitle: _titleOr(title),
           technicalError: e.toString(),
         ),
       );
@@ -142,7 +144,7 @@ class ActionQueueNotifier
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    _titleOr(title),
+          actionTitle: _titleOr(title),
           technicalError: e.toString(),
         ),
       );
@@ -157,7 +159,7 @@ class ActionQueueNotifier
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    _titleOr(title),
+          actionTitle: _titleOr(title),
           technicalError: e.toString(),
         ),
       );
@@ -171,44 +173,44 @@ class ActionQueueNotifier
     String? projectId,
     String? opportunityLabId,
     String? marketAnalysisId,
-    int priority    = 50,
+    int priority = 50,
     int impactScore = 60,
     int effortScore = 50,
-    int roiScore    = 0,
+    int roiScore = 0,
     int marketScore = 0,
-    int confidence  = 0,
-    String       origin  = 'opportunity_lab',
+    int confidence = 0,
+    String origin = 'opportunity_lab',
     List<String> sources = const [],
-    String?      rationale,
-    List<String> plan    = const [],
-    List<String> risks   = const [],
+    String? rationale,
+    List<String> plan = const [],
+    List<String> risks = const [],
   }) async {
     final uid = _svc.currentUserId;
     if (uid == null) throw const NotAuthenticatedException();
     final item = ActionQueueItem(
-      id:               '',
-      userId:           uid,
-      projectId:        projectId,
+      id: '',
+      userId: uid,
+      projectId: projectId,
       opportunityLabId: opportunityLabId,
       marketAnalysisId: marketAnalysisId,
-      actionType:       'opportunity',
+      actionType: 'opportunity',
       // R16 — the stored title carries NO localized marker (formerly a
       // '[Lab] ' prefix); provenance is recorded in `origin` instead.
-      title:            title,
-      priority:         priority,
-      impactScore:      impactScore,
-      effortScore:      effortScore,
-      roiScore:         roiScore,
-      marketScore:      marketScore,
-      confidence:       confidence,
-      status:           'pending',
-      createdAt:        DateTime.now(),
-      description:      description.isNotEmpty ? description : null,
-      origin:           origin,
-      sources:          sources,
-      rationale:        rationale,
-      plan:             plan,
-      risks:            risks,
+      title: title,
+      priority: priority,
+      impactScore: impactScore,
+      effortScore: effortScore,
+      roiScore: roiScore,
+      marketScore: marketScore,
+      confidence: confidence,
+      status: 'pending',
+      createdAt: DateTime.now(),
+      description: description.isNotEmpty ? description : null,
+      origin: origin,
+      sources: sources,
+      rationale: rationale,
+      plan: plan,
+      risks: risks,
     );
     try {
       final created = await _svc.create(item);
@@ -217,7 +219,7 @@ class ActionQueueNotifier
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    title,
+          actionTitle: title,
           technicalError: e.toString(),
         ),
       );
@@ -225,7 +227,8 @@ class ActionQueueNotifier
     }
   }
 
-  Future<ActionQueueItem> addFromOpportunityItem(OpportunityLabItem shown) async {
+  Future<ActionQueueItem> addFromOpportunityItem(
+      OpportunityLabItem shown) async {
     // R16 §8 — the opportunity on screen may be a translated PRESENTATION.
     // A new action must be derived from the ORIGINAL stored text (the
     // action is then presented through the same localization layer), so
@@ -240,22 +243,22 @@ class ActionQueueNotifier
       }
     }
     return addFromOpportunity(
-      title:            opp.title,
-      description:      opp.description,
-      projectId:        opp.projectId,
+      title: opp.title,
+      description: opp.description,
+      projectId: opp.projectId,
       opportunityLabId: opp.id,
       marketAnalysisId: opp.marketAnalysisId,
-      priority:         opp.finalScore > 0 ? opp.finalScore : 50,
-      impactScore:      opp.revenueScore > 0 ? opp.revenueScore : 60,
-      effortScore:      50,
-      roiScore:         opp.finalScore,
-      marketScore:      opp.marketScore,
-      confidence:       opp.confidence,
-      origin:           'opportunity_lab',
-      sources:          opp.sources.isNotEmpty ? opp.sources : [opp.title],
-      rationale:        opp.rationale,
-      plan:             opp.actionSteps,
-      risks:            opp.risks,
+      priority: opp.finalScore > 0 ? opp.finalScore : 50,
+      impactScore: opp.revenueScore > 0 ? opp.revenueScore : 60,
+      effortScore: 50,
+      roiScore: opp.finalScore,
+      marketScore: opp.marketScore,
+      confidence: opp.confidence,
+      origin: 'opportunity_lab',
+      sources: opp.sources.isNotEmpty ? opp.sources : [opp.title],
+      rationale: opp.rationale,
+      plan: opp.actionSteps,
+      risks: opp.risks,
     );
   }
 
@@ -266,7 +269,7 @@ class ActionQueueNotifier
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    _titleOr(title),
+          actionTitle: _titleOr(title),
           technicalError: e.toString(),
         ),
       );

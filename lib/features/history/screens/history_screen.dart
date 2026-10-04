@@ -32,7 +32,8 @@ class HistoryScreen extends ConsumerWidget {
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+          constraints:
+              const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
           child: historyAsync.when(
             loading: () => _buildShimmer(),
             error: (e, _) => Center(
@@ -162,11 +163,18 @@ class _HistoryCard extends StatelessWidget {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  _ScoreBadge(label: AppLocalizations.of(context)!.uxScoreClarityShort, value: item.clarityScore),
+                  _ScoreBadge(
+                      label: AppLocalizations.of(context)!.uxScoreClarityShort,
+                      value: item.clarityScore),
                   const SizedBox(width: 6),
-                  _ScoreBadge(label: AppLocalizations.of(context)!.uxScoreImpactShort, value: item.impactScore),
+                  _ScoreBadge(
+                      label: AppLocalizations.of(context)!.uxScoreImpactShort,
+                      value: item.impactScore),
                   const SizedBox(width: 6),
-                  _ScoreBadge(label: AppLocalizations.of(context)!.uxScoreEngagementShort, value: item.engagementScore),
+                  _ScoreBadge(
+                      label:
+                          AppLocalizations.of(context)!.uxScoreEngagementShort,
+                      value: item.engagementScore),
                   const Spacer(),
                   Text(
                     _formatDateTime(item.createdAt),

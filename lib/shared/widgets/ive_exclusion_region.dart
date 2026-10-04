@@ -29,7 +29,8 @@ final Map<Object, Rect> _iveExclusionRegions = {};
 void _publishExclusionRegions() {
   // Defensive copy -- callers (the placement engine) must never be handed
   // a live reference into this private map.
-  iveExclusionRegionsNotifier.value = List.unmodifiable(_iveExclusionRegions.values);
+  iveExclusionRegionsNotifier.value =
+      List.unmodifiable(_iveExclusionRegions.values);
 }
 
 /// Wrap any widget the app needs the floating IVE avatar to never rest on
@@ -101,7 +102,8 @@ class _IveExclusionRegionState extends State<IveExclusionRegion> {
     if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle) {
       _publishExclusionRegions();
     } else {
-      SchedulerBinding.instance.addPostFrameCallback((_) => _publishExclusionRegions());
+      SchedulerBinding.instance
+          .addPostFrameCallback((_) => _publishExclusionRegions());
     }
   }
 

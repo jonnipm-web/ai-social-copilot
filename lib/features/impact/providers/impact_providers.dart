@@ -8,7 +8,9 @@ import '../domain/dossier_models.dart';
 final impactTransportProvider = Provider<ImpactTransport>((ref) {
   // Debug + loopback only (see impactDevBaseUrl): physical Lab validation.
   final dev = impactDevBaseUrl();
-  if (dev != null) return HttpImpactTransport(dev, () => Supabase.instance.client.auth.currentSession?.accessToken);
+  if (dev != null)
+    return HttpImpactTransport(
+        dev, () => Supabase.instance.client.auth.currentSession?.accessToken);
   return SupabaseImpactTransport(Supabase.instance.client);
 });
 
@@ -16,7 +18,8 @@ final impactLabApiProvider = Provider<ImpactLabApi>(
   (ref) => ImpactLabApi(ref.watch(impactTransportProvider)),
 );
 
-final impactInvestigationsProvider = FutureProvider.autoDispose<List<InvestigationSummary>>(
+final impactInvestigationsProvider =
+    FutureProvider.autoDispose<List<InvestigationSummary>>(
   (ref) => ref.watch(impactLabApiProvider).listInvestigations(),
 );
 
@@ -24,14 +27,16 @@ final impactInvestigationsProvider = FutureProvider.autoDispose<List<Investigati
 /// server; the UI keeps no copy that could drift from the source of truth.
 typedef DossierKey = ({String id, String lang});
 
-final impactDossierProvider = FutureProvider.autoDispose.family<DossierView, DossierKey>(
+final impactDossierProvider =
+    FutureProvider.autoDispose.family<DossierView, DossierKey>(
   (ref, key) => ref.watch(impactLabApiProvider).getDossier(key.id, key.lang),
 );
 
 /// Export + verify for one investigation. The snapshot held here is what the
 /// server issued; verification is always the server's answer.
 class ImpactExportState {
-  const ImpactExportState({this.snapshot, this.verify, this.busy = false, this.error});
+  const ImpactExportState(
+      {this.snapshot, this.verify, this.busy = false, this.error});
 
   final DossierView? snapshot;
   final VerifyResult? verify;
@@ -39,7 +44,8 @@ class ImpactExportState {
   final ImpactApiException? error;
 }
 
-class ImpactExportController extends AutoDisposeFamilyNotifier<ImpactExportState, DossierKey> {
+class ImpactExportController
+    extends AutoDisposeFamilyNotifier<ImpactExportState, DossierKey> {
   @override
   ImpactExportState build(DossierKey arg) => const ImpactExportState();
 
@@ -47,7 +53,8 @@ class ImpactExportController extends AutoDisposeFamilyNotifier<ImpactExportState
     if (state.busy) return; // no double submission
     state = ImpactExportState(snapshot: state.snapshot, busy: true);
     try {
-      final snap = await ref.read(impactLabApiProvider).exportDossier(arg.id, arg.lang);
+      final snap =
+          await ref.read(impactLabApiProvider).exportDossier(arg.id, arg.lang);
       state = ImpactExportState(snapshot: snap);
     } on ImpactApiException catch (e) {
       state = ImpactExportState(snapshot: state.snapshot, error: e);
@@ -59,7 +66,8 @@ class ImpactExportController extends AutoDisposeFamilyNotifier<ImpactExportState
     if (snap == null || state.busy) return;
     state = ImpactExportState(snapshot: snap, verify: state.verify, busy: true);
     try {
-      final v = await ref.read(impactLabApiProvider).verifyDossier(arg.id, snap);
+      final v =
+          await ref.read(impactLabApiProvider).verifyDossier(arg.id, snap);
       state = ImpactExportState(snapshot: snap, verify: v);
     } on ImpactApiException catch (e) {
       state = ImpactExportState(snapshot: snap, error: e);
@@ -67,7 +75,7 @@ class ImpactExportController extends AutoDisposeFamilyNotifier<ImpactExportState
   }
 }
 
-final impactExportProvider =
-    NotifierProvider.autoDispose.family<ImpactExportController, ImpactExportState, DossierKey>(
+final impactExportProvider = NotifierProvider.autoDispose
+    .family<ImpactExportController, ImpactExportState, DossierKey>(
   ImpactExportController.new,
 );

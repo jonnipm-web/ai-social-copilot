@@ -16,17 +16,17 @@ class PersonaFormScreen extends ConsumerStatefulWidget {
 }
 
 class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
-  final _formKey         = GlobalKey<FormState>();
-  final _nameCtrl        = TextEditingController();
-  final _nicheCtrl       = TextEditingController();
-  final _voiceToneCtrl   = TextEditingController();
-  final _descCtrl        = TextEditingController();
-  final _audienceCtrl    = TextEditingController();
-  final _wordsUseCtrl    = TextEditingController();
-  final _wordsAvoidCtrl  = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _nicheCtrl = TextEditingController();
+  final _voiceToneCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  final _audienceCtrl = TextEditingController();
+  final _wordsUseCtrl = TextEditingController();
+  final _wordsAvoidCtrl = TextEditingController();
 
-  bool _isGlobal   = false;
-  bool _loading    = false;
+  bool _isGlobal = false;
+  bool _loading = false;
   bool _initialized = false;
 
   bool get isEdit => widget.personaId != null;
@@ -44,21 +44,18 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
   }
 
   void _populateFromPersona(Persona p) {
-    _nameCtrl.text       = p.name;
-    _nicheCtrl.text      = p.niche ?? '';
-    _voiceToneCtrl.text  = p.voiceTone ?? '';
-    _descCtrl.text       = p.description ?? '';
-    _audienceCtrl.text   = p.targetAudience ?? '';
-    _wordsUseCtrl.text   = p.wordsToUse.join(', ');
+    _nameCtrl.text = p.name;
+    _nicheCtrl.text = p.niche ?? '';
+    _voiceToneCtrl.text = p.voiceTone ?? '';
+    _descCtrl.text = p.description ?? '';
+    _audienceCtrl.text = p.targetAudience ?? '';
+    _wordsUseCtrl.text = p.wordsToUse.join(', ');
     _wordsAvoidCtrl.text = p.wordsToAvoid.join(', ');
-    _isGlobal            = p.isGlobal;
+    _isGlobal = p.isGlobal;
   }
 
-  List<String> _splitWords(String text) => text
-      .split(',')
-      .map((e) => e.trim())
-      .where((e) => e.isNotEmpty)
-      .toList();
+  List<String> _splitWords(String text) =>
+      text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -67,30 +64,43 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
     try {
       if (isEdit) {
         final data = {
-          'name':           _nameCtrl.text.trim(),
-          'niche':          _nicheCtrl.text.trim().isEmpty ? null : _nicheCtrl.text.trim(),
-          'voice_tone':     _voiceToneCtrl.text.trim().isEmpty ? null : _voiceToneCtrl.text.trim(),
-          'description':    _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
-          'target_audience': _audienceCtrl.text.trim().isEmpty ? null : _audienceCtrl.text.trim(),
-          'words_to_use':   _splitWords(_wordsUseCtrl.text),
+          'name': _nameCtrl.text.trim(),
+          'niche':
+              _nicheCtrl.text.trim().isEmpty ? null : _nicheCtrl.text.trim(),
+          'voice_tone': _voiceToneCtrl.text.trim().isEmpty
+              ? null
+              : _voiceToneCtrl.text.trim(),
+          'description':
+              _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+          'target_audience': _audienceCtrl.text.trim().isEmpty
+              ? null
+              : _audienceCtrl.text.trim(),
+          'words_to_use': _splitWords(_wordsUseCtrl.text),
           'words_to_avoid': _splitWords(_wordsAvoidCtrl.text),
-          'is_global':      _isGlobal,
+          'is_global': _isGlobal,
         };
-        await ref.read(personaNotifierProvider.notifier).update(widget.personaId!, data);
+        await ref
+            .read(personaNotifierProvider.notifier)
+            .update(widget.personaId!, data);
       } else {
         final persona = Persona(
-          id:             '',
-          isGlobal:       _isGlobal,
-          name:           _nameCtrl.text.trim(),
-          niche:          _nicheCtrl.text.trim().isEmpty ? null : _nicheCtrl.text.trim(),
-          voiceTone:      _voiceToneCtrl.text.trim().isEmpty ? null : _voiceToneCtrl.text.trim(),
-          description:    _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
-          targetAudience: _audienceCtrl.text.trim().isEmpty ? null : _audienceCtrl.text.trim(),
-          wordsToUse:     _splitWords(_wordsUseCtrl.text),
-          wordsToAvoid:   _splitWords(_wordsAvoidCtrl.text),
-          isActive:       true,
-          createdAt:      DateTime.now(),
-          updatedAt:      DateTime.now(),
+          id: '',
+          isGlobal: _isGlobal,
+          name: _nameCtrl.text.trim(),
+          niche: _nicheCtrl.text.trim().isEmpty ? null : _nicheCtrl.text.trim(),
+          voiceTone: _voiceToneCtrl.text.trim().isEmpty
+              ? null
+              : _voiceToneCtrl.text.trim(),
+          description:
+              _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+          targetAudience: _audienceCtrl.text.trim().isEmpty
+              ? null
+              : _audienceCtrl.text.trim(),
+          wordsToUse: _splitWords(_wordsUseCtrl.text),
+          wordsToAvoid: _splitWords(_wordsAvoidCtrl.text),
+          isActive: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         );
         await ref.read(personaNotifierProvider.notifier).create(persona);
       }
@@ -99,7 +109,10 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix(extractErrorMessage(e, AppLocalizations.of(context)!))), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix(
+                  extractErrorMessage(e, AppLocalizations.of(context)!))),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -115,15 +128,16 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
       personaAsync.whenData((p) {
         if (p != null && !_initialized) {
           _initialized = true;
-          WidgetsBinding.instance.addPostFrameCallback(
-              (_) => _populateFromPersona(p));
+          WidgetsBinding.instance
+              .addPostFrameCallback((_) => _populateFromPersona(p));
         }
       });
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEdit ? l10n.personaFormEditTitle : l10n.personaFormNewTitle),
+        title:
+            Text(isEdit ? l10n.personaFormEditTitle : l10n.personaFormNewTitle),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -136,8 +150,9 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
                 controller: _nameCtrl,
                 label: l10n.personaFormNameLabel,
                 hint: l10n.personaFormNameHint,
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? l10n.personaFormRequired : null,
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? l10n.personaFormRequired
+                    : null,
               ),
               const SizedBox(height: 16),
               _Field(
@@ -218,7 +233,9 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
                         ),
                       )
                     : Text(
-                        isEdit ? l10n.personaFormSaveChanges : l10n.personaFormCreate,
+                        isEdit
+                            ? l10n.personaFormSaveChanges
+                            : l10n.personaFormCreate,
                         style: const TextStyle(
                             fontSize: 15, fontWeight: FontWeight.bold),
                       ),
@@ -241,25 +258,25 @@ class _Field extends StatelessWidget {
   });
 
   final TextEditingController controller;
-  final String                label;
-  final String?               hint;
-  final int                   maxLines;
+  final String label;
+  final String? hint;
+  final int maxLines;
   final String? Function(String?)? validator;
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
-      maxLines:   maxLines,
-      validator:  validator,
+      maxLines: maxLines,
+      validator: validator,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        hintText:  hint,
+        hintText: hint,
         labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-        hintStyle:  const TextStyle(color: Colors.white24, fontSize: 12),
-        filled:     true,
-        fillColor:  Colors.white.withOpacity(0.05),
+        hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.05),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Colors.white12),

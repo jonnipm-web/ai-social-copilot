@@ -36,7 +36,7 @@ class DashboardScreen extends ConsumerWidget {
     // purely by reading the code while building this mission's quota
     // instrumentation -- an undeniable, one-provider-swap fix, not a new
     // remediation effort.
-    final usageAsync   = ref.watch(currentQuotaProvider);
+    final usageAsync = ref.watch(currentQuotaProvider);
 
     // COMMERCIAL-V1-UX-RECONCILIATION (Section R6, Owner-approved Option C)
     // — the Business Dashboard stays the ONE canonical entry point
@@ -49,7 +49,7 @@ class DashboardScreen extends ConsumerWidget {
     // used; no new data source.
     final projectsAsync = ref.watch(projectsProvider);
     final analysesAsync = ref.watch(marketAnalysesProvider);
-    final pendingAsync  = ref.watch(pendingActionsProvider);
+    final pendingAsync = ref.watch(pendingActionsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -58,10 +58,10 @@ class DashboardScreen extends ConsumerWidget {
       drawer: const AppDrawer(),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error:   (e, _) => Center(child: Text(l10n.commonError)),
-        data:    (profile) {
+        error: (e, _) => Center(child: Text(l10n.commonError)),
+        data: (profile) {
           final isAdmin = profile?.isAdmin ?? false;
-          final isPro   = profile?.isPro ?? false;
+          final isPro = profile?.isPro ?? false;
 
           // COMMERCIAL-V1-UX-RECONCILIATION — Personas/Biblioteca/
           // Calendário/Campanhas/Performance were commercialEnabled:false
@@ -93,30 +93,34 @@ class DashboardScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(20),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+                constraints:
+                    const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Boas-vindas
                     Text(
                       l10n.dashWelcome,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       l10n.dashPlanLabel(profile?.roleLabel ?? 'Free'),
-                      style: const TextStyle(color: Colors.white54, fontSize: 14),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 14),
                     ),
                     const SizedBox(height: 24),
 
                     // Card de uso mensal
                     usageAsync.when(
                       loading: () => const SizedBox.shrink(),
-                      error:   (_, __) => const SizedBox.shrink(),
-                      data:    (quota) => _UsageCard(used: quota.used, limit: quota.limit, l10n: l10n),
+                      error: (_, __) => const SizedBox.shrink(),
+                      data: (quota) => _UsageCard(
+                          used: quota.used, limit: quota.limit, l10n: l10n),
                     ),
                     const SizedBox(height: 16),
 
@@ -132,18 +136,20 @@ class DashboardScreen extends ConsumerWidget {
                     if (projectsAsync.valueOrNull?.isNotEmpty ?? false) ...[
                       _PortfolioSummaryRow(
                         activeProjects: (projectsAsync.valueOrNull ?? const [])
-                            .where((p) => p.status == 'active' || p.status == 'executing')
+                            .where((p) =>
+                                p.status == 'active' || p.status == 'executing')
                             .length,
                         analysesCount: analysesAsync.valueOrNull?.length ?? 0,
-                        avgScore: _avgOpportunityScore(analysesAsync.valueOrNull ?? const []),
+                        avgScore: _avgOpportunityScore(
+                            analysesAsync.valueOrNull ?? const []),
                         l10n: l10n,
                       ),
                       const SizedBox(height: 16),
                     ],
                     _ExecutiveRecommendationsCard(
-                      projects:  projectsAsync.valueOrNull ?? const [],
-                      analyses:  analysesAsync.valueOrNull ?? const [],
-                      pending:   pendingAsync.valueOrNull ?? const [],
+                      projects: projectsAsync.valueOrNull ?? const [],
+                      analyses: analysesAsync.valueOrNull ?? const [],
+                      pending: pendingAsync.valueOrNull ?? const [],
                       l10n: l10n,
                     ),
                     const SizedBox(height: 16),
@@ -173,7 +179,8 @@ class DashboardScreen extends ConsumerWidget {
                             benefit: l10n.dashProBenefitPersonas,
                             hasAccess: isPro || isAdmin,
                             l10n: l10n,
-                            onTap: shortcutTap('personas', AppConstants.routePersonas),
+                            onTap: shortcutTap(
+                                'personas', AppConstants.routePersonas),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -184,7 +191,8 @@ class DashboardScreen extends ConsumerWidget {
                             benefit: l10n.dashProBenefitLibrary,
                             hasAccess: isPro || isAdmin,
                             l10n: l10n,
-                            onTap: shortcutTap('content-library', AppConstants.routeContent),
+                            onTap: shortcutTap(
+                                'content-library', AppConstants.routeContent),
                           ),
                         ),
                       ],
@@ -199,7 +207,8 @@ class DashboardScreen extends ConsumerWidget {
                             benefit: l10n.dashProBenefitCalendar,
                             hasAccess: isPro || isAdmin,
                             l10n: l10n,
-                            onTap: shortcutTap('calendar', AppConstants.routeCalendar),
+                            onTap: shortcutTap(
+                                'calendar', AppConstants.routeCalendar),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -207,7 +216,8 @@ class DashboardScreen extends ConsumerWidget {
                           child: _ShortcutCard(
                             icon: Icons.history_rounded,
                             label: l10n.dashShortcutHistory,
-                            onTap: () => context.push(AppConstants.routeHistory),
+                            onTap: () =>
+                                context.push(AppConstants.routeHistory),
                           ),
                         ),
                       ],
@@ -219,7 +229,8 @@ class DashboardScreen extends ConsumerWidget {
                           child: _ShortcutCard(
                             icon: Icons.auto_stories_rounded,
                             label: l10n.dashShortcutVault,
-                            onTap: () => context.go(AppConstants.routeKnowledge),
+                            onTap: () =>
+                                context.go(AppConstants.routeKnowledge),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -237,7 +248,8 @@ class DashboardScreen extends ConsumerWidget {
                               benefit: l10n.dashProBenefitCampaigns,
                               hasAccess: isPro || isAdmin,
                               l10n: l10n,
-                              onTap: shortcutTap('campaigns', AppConstants.routeCampaigns),
+                              onTap: shortcutTap(
+                                  'campaigns', AppConstants.routeCampaigns),
                             ),
                           ),
                         ),
@@ -250,7 +262,8 @@ class DashboardScreen extends ConsumerWidget {
                           child: _ShortcutCard(
                             icon: Icons.language_rounded,
                             label: l10n.dashShortcutWebsiteAnalyzer,
-                            onTap: () => context.go(AppConstants.routeWebsiteAnalyzer),
+                            onTap: () =>
+                                context.go(AppConstants.routeWebsiteAnalyzer),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -261,7 +274,8 @@ class DashboardScreen extends ConsumerWidget {
                             benefit: l10n.dashProBenefitPerformance,
                             hasAccess: isPro || isAdmin,
                             l10n: l10n,
-                            onTap: shortcutTap('performance', AppConstants.routePerformance),
+                            onTap: shortcutTap(
+                                'performance', AppConstants.routePerformance),
                           ),
                         ),
                       ],
@@ -306,7 +320,8 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 class _UsageCard extends StatelessWidget {
-  const _UsageCard({required this.used, required this.limit, required this.l10n});
+  const _UsageCard(
+      {required this.used, required this.limit, required this.l10n});
   final int used;
   final int limit;
   final AppLocalizations l10n;
@@ -347,7 +362,8 @@ class _UsageCard extends StatelessWidget {
                 child: Text(
                   isFull
                       ? l10n.dashUsageLimitReached
-                      : l10n.dashUsageRemaining(remaining.toString(), limit.toString()),
+                      : l10n.dashUsageRemaining(
+                          remaining.toString(), limit.toString()),
                   style: TextStyle(
                     color: isFull ? Colors.red : Colors.white,
                     fontWeight: FontWeight.w600,
@@ -392,9 +408,9 @@ class _ActionButton extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
-  final String   subtitle;
-  final Color    color;
+  final String label;
+  final String subtitle;
+  final Color color;
   final VoidCallback onTap;
 
   @override
@@ -429,7 +445,8 @@ class _ActionButton extends StatelessWidget {
                     ),
                     Text(
                       subtitle,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                   ],
                 ),
@@ -451,7 +468,7 @@ class _ShortcutCard extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
+  final String label;
   final VoidCallback onTap;
 
   @override
@@ -510,9 +527,9 @@ class _ProShortcutCard extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
-  final String   benefit;
-  final bool     hasAccess;
+  final String label;
+  final String benefit;
+  final bool hasAccess;
   final AppLocalizations l10n;
   final VoidCallback onTap;
 
@@ -544,7 +561,8 @@ class _ProShortcutCard extends StatelessWidget {
                   const Spacer(),
                   if (!hasAccess)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: proColor.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(6),
@@ -582,7 +600,9 @@ class _ProShortcutCard extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    hasAccess ? Icons.check_circle_rounded : Icons.lock_outline_rounded,
+                    hasAccess
+                        ? Icons.check_circle_rounded
+                        : Icons.lock_outline_rounded,
                     color: hasAccess ? const Color(0xFF4CAF50) : proColor,
                     size: 11,
                   ),
@@ -615,9 +635,9 @@ class _AdminStats extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final usersAsync    = ref.watch(allProfilesProvider);
+    final usersAsync = ref.watch(allProfilesProvider);
     final personasAsync = ref.watch(personasProvider);
-    final contentAsync  = ref.watch(contentItemsProvider);
+    final contentAsync = ref.watch(contentItemsProvider);
     final knowledgeAsync = ref.watch(knowledgeItemsProvider);
     final campaignsAsync = ref.watch(campaignsProvider);
 
@@ -709,8 +729,8 @@ class _StatTile extends StatelessWidget {
     required this.value,
     required this.icon,
   });
-  final String   label;
-  final String   value;
+  final String label;
+  final String value;
   final IconData icon;
 
   @override
@@ -749,7 +769,8 @@ class _StatTile extends StatelessWidget {
 // _DashboardBody._avgScore.
 int _avgOpportunityScore(List<MarketAnalysis> analyses) {
   if (analyses.isEmpty) return 0;
-  final sum = analyses.map((a) => a.opportunityScore).fold<int>(0, (s, v) => s + v);
+  final sum =
+      analyses.map((a) => a.opportunityScore).fold<int>(0, (s, v) => s + v);
   return (sum / analyses.length).round();
 }
 
@@ -779,7 +800,8 @@ class _PortfolioSummaryRow extends StatelessWidget {
           child: Column(
             children: [
               Text(value,
-                  style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: color, fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 2),
               Text(label,
                   style: const TextStyle(color: Colors.white38, fontSize: 10),
@@ -797,8 +819,10 @@ class _PortfolioSummaryRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          stat('$activeProjects', l10n.dashPortfolioActiveProjects, const Color(0xFF6C63FF)),
-          stat('$analysesCount', l10n.dashPortfolioAnalyses, const Color(0xFF00BCD4)),
+          stat('$activeProjects', l10n.dashPortfolioActiveProjects,
+              const Color(0xFF6C63FF)),
+          stat('$analysesCount', l10n.dashPortfolioAnalyses,
+              const Color(0xFF00BCD4)),
           stat(
             avgScore > 0 ? '$avgScore' : '—',
             l10n.dashPortfolioAvgScore,
@@ -837,13 +861,19 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
           l10n.dashRecEmptyProjectTitle, l10n.dashRecEmptyProjectBody));
     } else if (analyses.isEmpty) {
       final projectName = projects.first.name;
-      recs.add(_Rec(Icons.analytics_rounded, const Color(0xFF00BCD4),
-          l10n.dashRecEmptyAnalysisTitle, l10n.dashRecEmptyAnalysisBody(projectName)));
+      recs.add(_Rec(
+          Icons.analytics_rounded,
+          const Color(0xFF00BCD4),
+          l10n.dashRecEmptyAnalysisTitle,
+          l10n.dashRecEmptyAnalysisBody(projectName)));
     }
 
     if (pending.isNotEmpty) {
-      recs.add(_Rec(Icons.bolt_rounded, const Color(0xFFFFD700),
-          l10n.dashRecPendingActionsTitle(pending.length), l10n.dashRecPendingActionsBody));
+      recs.add(_Rec(
+          Icons.bolt_rounded,
+          const Color(0xFFFFD700),
+          l10n.dashRecPendingActionsTitle(pending.length),
+          l10n.dashRecPendingActionsBody));
     }
 
     final topAnalyses = analyses.where((a) => a.opportunityScore >= 75).toList()
@@ -872,13 +902,16 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.lightbulb_rounded, color: Color(0xFFFFD700), size: 18),
+              const Icon(Icons.lightbulb_rounded,
+                  color: Color(0xFFFFD700), size: 18),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(l10n.dashRecommendationsTitle,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -890,8 +923,9 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(6),
-                      decoration:
-                          BoxDecoration(color: r.color.withOpacity(0.12), shape: BoxShape.circle),
+                      decoration: BoxDecoration(
+                          color: r.color.withOpacity(0.12),
+                          shape: BoxShape.circle),
                       child: Icon(r.icon, color: r.color, size: 16),
                     ),
                     const SizedBox(width: 10),
@@ -901,11 +935,15 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
                         children: [
                           Text(r.title,
                               style: const TextStyle(
-                                  color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600)),
                           const SizedBox(height: 2),
                           Text(r.body,
                               style: const TextStyle(
-                                  color: Colors.white54, fontSize: 11, height: 1.4)),
+                                  color: Colors.white54,
+                                  fontSize: 11,
+                                  height: 1.4)),
                         ],
                       ),
                     ),
@@ -928,7 +966,8 @@ class _Rec {
 
 // ── R6: Pending actions (PRIORITY, feeds directly into ACTION) ─────────────
 class _DashboardPendingActionsCard extends StatelessWidget {
-  const _DashboardPendingActionsCard({required this.pending, required this.l10n});
+  const _DashboardPendingActionsCard(
+      {required this.pending, required this.l10n});
   final List<ActionQueueItem> pending;
   final AppLocalizations l10n;
 
@@ -946,19 +985,24 @@ class _DashboardPendingActionsCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.bolt_rounded, color: Color(0xFFFF9800), size: 18),
+              const Icon(Icons.bolt_rounded,
+                  color: Color(0xFFFF9800), size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(l10n.dashPendingActionsTitle,
                     style: const TextStyle(
-                        color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold)),
               ),
               TextButton(
                 onPressed: () => context.push(AppConstants.routeActionEngine),
                 style: TextButton.styleFrom(
-                    minimumSize: Size.zero, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 8)),
                 child: Text(l10n.dashPendingActionsViewAll,
-                    style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 12)),
+                    style: const TextStyle(
+                        color: Color(0xFF6C63FF), fontSize: 12)),
               ),
             ],
           ),
@@ -968,7 +1012,8 @@ class _DashboardPendingActionsCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 l10n.dashPendingActionsEmpty,
-                style: const TextStyle(color: Colors.white38, fontSize: 12, height: 1.5),
+                style: const TextStyle(
+                    color: Colors.white38, fontSize: 12, height: 1.5),
               ),
             )
           else
@@ -979,18 +1024,20 @@ class _DashboardPendingActionsCard extends StatelessWidget {
                       Container(
                         width: 6,
                         height: 6,
-                        decoration:
-                            const BoxDecoration(color: Color(0xFFFF9800), shape: BoxShape.circle),
+                        decoration: const BoxDecoration(
+                            color: Color(0xFFFF9800), shape: BoxShape.circle),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(item.title,
-                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 13),
                             overflow: TextOverflow.ellipsis),
                       ),
                       if (item.roiScore > 0)
                         Text('ROI: ${item.roiScore}',
-                            style: const TextStyle(color: Color(0xFFFFD700), fontSize: 10)),
+                            style: const TextStyle(
+                                color: Color(0xFFFFD700), fontSize: 10)),
                     ],
                   ),
                 )),

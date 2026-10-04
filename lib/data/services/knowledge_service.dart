@@ -19,32 +19,38 @@ Map<String, dynamic> buildExtractKnowledgeBody({
   String? idempotencyKey,
 }) =>
     {
-      'content':         content,
-      'source_url':      sourceUrl,
-      'niche':           niche,
+      'content': content,
+      'source_url': sourceUrl,
+      'niche': niche,
       'target_audience': targetAudience,
-      'language':        outputLanguage,
+      'language': outputLanguage,
       if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
     };
 
 class KnowledgeService {
-  KnowledgeService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+  KnowledgeService({RowLocalizer? localizer})
+      : _localizer = localizer ?? identityLocalizer;
 
   // R16 — presentation localization of persisted content (never modifies the
   // stored row; see content_localization_service.dart).
   final RowLocalizer _localizer;
 
   Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
-      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+      _localizer(
+          table,
+          (rows as List)
+              .map((r) => Map<String, dynamic>.from(r as Map))
+              .toList());
 
-  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+  Future<Map<String, dynamic>> _locOne(
+          String table, Map<String, dynamic> row) async =>
       (await _localizer(table, [row])).first;
 
   final _client = Supabase.instance.client;
 
-  static const _tableItems    = 'knowledge_items';
+  static const _tableItems = 'knowledge_items';
   static const _tableAnalysis = 'knowledge_analysis';
-  static const _edgeFunction  = 'extract-knowledge';
+  static const _edgeFunction = 'extract-knowledge';
 
   // ── Items ────────────────────────────────────────────────────
 
@@ -56,11 +62,8 @@ class KnowledgeService {
   }
 
   Future<KnowledgeItem?> fetchById(String id) async {
-    final row = await _client
-        .from(_tableItems)
-        .select()
-        .eq('id', id)
-        .maybeSingle();
+    final row =
+        await _client.from(_tableItems).select().eq('id', id).maybeSingle();
     return row == null ? null : KnowledgeItem.fromMap(row);
   }
 
@@ -95,16 +98,21 @@ class KnowledgeService {
         .select()
         .eq('knowledge_item_id', knowledgeItemId)
         .maybeSingle();
-    return row == null ? null : KnowledgeAnalysis.fromMap(await _locOne('knowledge_analysis', row));
+    return row == null
+        ? null
+        : KnowledgeAnalysis.fromMap(await _locOne('knowledge_analysis', row));
   }
 
-  Future<List<KnowledgeAnalysis>> fetchAnalysisByProject(String projectId) async {
+  Future<List<KnowledgeAnalysis>> fetchAnalysisByProject(
+      String projectId) async {
     final rows = await _client
         .from(_tableAnalysis)
         .select()
         .eq('project_id', projectId)
         .order('created_at', ascending: false);
-    return (await _loc('knowledge_analysis', rows)).map((r) => KnowledgeAnalysis.fromMap(r)).toList();
+    return (await _loc('knowledge_analysis', rows))
+        .map((r) => KnowledgeAnalysis.fromMap(r))
+        .toList();
   }
 
   Future<KnowledgeAnalysis> saveAnalysis(KnowledgeAnalysis analysis) async {
@@ -136,10 +144,10 @@ class KnowledgeService {
     final response = await _client.functions.invoke(
       _edgeFunction,
       body: buildExtractKnowledgeBody(
-        content:        content,
+        content: content,
         outputLanguage: outputLanguage,
-        sourceUrl:      sourceUrl,
-        niche:          niche,
+        sourceUrl: sourceUrl,
+        niche: niche,
         targetAudience: targetAudience,
         idempotencyKey: idempotencyKey,
       ),
@@ -177,50 +185,50 @@ class KnowledgeService {
 
     try {
       final aiData = await extractWithAI(
-        content:        item.content,
-        sourceUrl:      item.sourceType == 'url' ? item.sourceUrl : null,
-        niche:          item.niche,
+        content: item.content,
+        sourceUrl: item.sourceType == 'url' ? item.sourceUrl : null,
+        niche: item.niche,
         targetAudience: item.targetAudience,
         outputLanguage: outputLanguage,
         idempotencyKey: idempotencyKey,
       );
 
       final analysis = KnowledgeAnalysis(
-        id:                       '',
-        knowledgeItemId:          item.id,
-        userId:                   uid,
-        projectId:                item.projectId,
-        summary:                  aiData['summary'] as String?,
-        keywordsPrimary:          _list(aiData['keywords_primary']),
-        keywordsSecondary:        _list(aiData['keywords_secondary']),
-        keywordsLongtail:         _list(aiData['keywords_longtail']),
-        entities:                 _list(aiData['entities']),
-        topics:                   _list(aiData['topics']),
-        contentPillars:           _list(aiData['content_pillars']),
-        audiencePainPoints:       _list(aiData['audience_pain_points']),
-        audienceDesires:          _list(aiData['audience_desires']),
-        commercialAngles:         _list(aiData['commercial_angles']),
-        ctas:                     _list(aiData['ctas']),
-        campaignIdeas:            _list(aiData['campaign_ideas']),
-        postIdeas:                _list(aiData['post_ideas']),
-        articleIdeas:             _list(aiData['article_ideas']),
-        seoOpportunities:         _list(aiData['seo_opportunities']),
-        adsenseOpportunities:     _list(aiData['adsense_opportunities']),
-        amazonKdpOpportunities:   _list(aiData['amazon_kdp_opportunities']),
-        scoreSeo:                 _int(aiData['score_seo']),
-        scoreAdsense:             _int(aiData['score_adsense']),
-        scoreAmazonKdp:           _int(aiData['score_amazon_kdp']),
-        scoreLinkedin:            _int(aiData['score_linkedin']),
-        scoreSocial:              _int(aiData['score_social']),
-        scoreOpportunity:         _int(aiData['score_opportunity']),
-        scoreHotmart:             _int(aiData['score_hotmart']),
-        scoreShopify:             _int(aiData['score_shopify']),
-        scoreDetails:             _map(aiData['score_details']),
-        hotmartData:              _map(aiData['hotmart_data']),
-        shopifyData:              _map(aiData['shopify_data']),
-        personaTraining:          _map(aiData['persona_training']),
-        createdAt:                DateTime.now(),
-        updatedAt:                DateTime.now(),
+        id: '',
+        knowledgeItemId: item.id,
+        userId: uid,
+        projectId: item.projectId,
+        summary: aiData['summary'] as String?,
+        keywordsPrimary: _list(aiData['keywords_primary']),
+        keywordsSecondary: _list(aiData['keywords_secondary']),
+        keywordsLongtail: _list(aiData['keywords_longtail']),
+        entities: _list(aiData['entities']),
+        topics: _list(aiData['topics']),
+        contentPillars: _list(aiData['content_pillars']),
+        audiencePainPoints: _list(aiData['audience_pain_points']),
+        audienceDesires: _list(aiData['audience_desires']),
+        commercialAngles: _list(aiData['commercial_angles']),
+        ctas: _list(aiData['ctas']),
+        campaignIdeas: _list(aiData['campaign_ideas']),
+        postIdeas: _list(aiData['post_ideas']),
+        articleIdeas: _list(aiData['article_ideas']),
+        seoOpportunities: _list(aiData['seo_opportunities']),
+        adsenseOpportunities: _list(aiData['adsense_opportunities']),
+        amazonKdpOpportunities: _list(aiData['amazon_kdp_opportunities']),
+        scoreSeo: _int(aiData['score_seo']),
+        scoreAdsense: _int(aiData['score_adsense']),
+        scoreAmazonKdp: _int(aiData['score_amazon_kdp']),
+        scoreLinkedin: _int(aiData['score_linkedin']),
+        scoreSocial: _int(aiData['score_social']),
+        scoreOpportunity: _int(aiData['score_opportunity']),
+        scoreHotmart: _int(aiData['score_hotmart']),
+        scoreShopify: _int(aiData['score_shopify']),
+        scoreDetails: _map(aiData['score_details']),
+        hotmartData: _map(aiData['hotmart_data']),
+        shopifyData: _map(aiData['shopify_data']),
+        personaTraining: _map(aiData['persona_training']),
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
       final saved = await saveAnalysis(analysis);
@@ -229,30 +237,31 @@ class KnowledgeService {
       try {
         final detectedType = aiData['detected_type'] as String? ?? 'texto';
         await ContentService().upsertFromKnowledge(
-          userId:           uid,
-          projectId:        item.projectId,
-          knowledgeItemId:  item.id,
-          title:            (aiData['detected_title'] as String?)?.isNotEmpty == true
+          userId: uid,
+          projectId: item.projectId,
+          knowledgeItemId: item.id,
+          title: (aiData['detected_title'] as String?)?.isNotEmpty == true
               ? aiData['detected_title'] as String
               : item.title,
-          type:             _mapContentType(detectedType),
-          description:      aiData['summary'] as String?,
-          baseText:         item.content.isNotEmpty ? item.content : null,
-          niche:            (aiData['detected_niche'] as String?)?.isNotEmpty == true
+          type: _mapContentType(detectedType),
+          description: aiData['summary'] as String?,
+          baseText: item.content.isNotEmpty ? item.content : null,
+          niche: (aiData['detected_niche'] as String?)?.isNotEmpty == true
               ? aiData['detected_niche'] as String
               : item.niche,
-          targetAudience:   (aiData['detected_audience'] as String?)?.isNotEmpty == true
-              ? aiData['detected_audience'] as String
-              : item.targetAudience,
-          keywords:         _list(aiData['keywords_primary']),
+          targetAudience:
+              (aiData['detected_audience'] as String?)?.isNotEmpty == true
+                  ? aiData['detected_audience'] as String
+                  : item.targetAudience,
+          keywords: _list(aiData['keywords_primary']),
           opportunityScore: _int(aiData['score_opportunity']),
-          language:         item.language,
+          language: item.language,
         );
       } catch (e) {
         IveEventBus.instance.emit(
           IveEvent.knowledgeAnalysisFailed(
-            itemId:         item.id,
-            itemName:       item.title,
+            itemId: item.id,
+            itemName: item.title,
             technicalError: 'Sync to Library failed: $e',
           ),
         );
@@ -260,19 +269,19 @@ class KnowledgeService {
 
       // Marca como analisado — dentro do try para evitar inconsistência de status
       await update(item.id, {
-        'status':            'analyzed',
+        'status': 'analyzed',
         'opportunity_score': _int(aiData['score_opportunity']),
-        'auto_title':        aiData['detected_title'],
-        'auto_type':         aiData['detected_type'],
-        'auto_niche':        aiData['detected_niche'],
-        'auto_audience':     aiData['detected_audience'],
+        'auto_title': aiData['detected_title'],
+        'auto_type': aiData['detected_type'],
+        'auto_niche': aiData['detected_niche'],
+        'auto_audience': aiData['detected_audience'],
       });
 
       // Notifica IVE de conclusão
       IveEventBus.instance.emit(
         IveEvent.knowledgeAnalysisCompleted(
-          itemId:           item.id,
-          itemName:         item.title,
+          itemId: item.id,
+          itemName: item.title,
           opportunityScore: _int(aiData['score_opportunity']),
         ),
       );
@@ -284,8 +293,8 @@ class KnowledgeService {
       // Notifica IVE do erro
       IveEventBus.instance.emit(
         IveEvent.knowledgeAnalysisFailed(
-          itemId:         item.id,
-          itemName:       item.title,
+          itemId: item.id,
+          itemName: item.title,
           technicalError: e.toString(),
         ),
       );
@@ -315,16 +324,16 @@ class KnowledgeService {
 
   static String _mapContentType(String detected) {
     const map = {
-      'livro':   'livro',
-      'ebook':   'ebook',
-      'artigo':  'artigo',
-      'post':    'post',
-      'site':    'projeto',
+      'livro': 'livro',
+      'ebook': 'ebook',
+      'artigo': 'artigo',
+      'post': 'post',
+      'site': 'projeto',
       'produto': 'produto',
-      'marca':   'marca',
+      'marca': 'marca',
       'projeto': 'projeto',
-      'curso':   'produto',
-      'texto':   'texto',
+      'curso': 'produto',
+      'texto': 'texto',
     };
     return map[detected.toLowerCase()] ?? 'texto';
   }

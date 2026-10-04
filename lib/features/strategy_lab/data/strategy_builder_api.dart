@@ -18,7 +18,9 @@ class StrategyBuilderResult {
   final Map<String, dynamic>? data;
 
   bool get ok => status == 200 && data?['valid'] != false;
-  String? get errorCode => data?['error'] is Map ? (data!['error']['code'] as String?) : data?['error'] as String?;
+  String? get errorCode => data?['error'] is Map
+      ? (data!['error']['code'] as String?)
+      : data?['error'] as String?;
 
   /// Only meaningful when [errorCode] is `PLAN_UPGRADE_REQUIRED` -- the
   /// server's own structured denial (strategy-builder/index.ts's
@@ -31,19 +33,29 @@ class StrategyBuilderResult {
 abstract class StrategyBuilderApi {
   Future<StrategyBuilderResult> validate(Map<String, dynamic> spec);
   Future<StrategyBuilderResult> draftFromText(String text);
-  Future<StrategyBuilderResult> create(Map<String, dynamic> spec, {String? idempotencyKey});
+  Future<StrategyBuilderResult> create(Map<String, dynamic> spec,
+      {String? idempotencyKey});
   Future<StrategyBuilderResult> list();
   Future<StrategyBuilderResult> get(String strategyId);
-  Future<StrategyBuilderResult> createVersion(String strategyId, Map<String, dynamic> spec);
+  Future<StrategyBuilderResult> createVersion(
+      String strategyId, Map<String, dynamic> spec);
   Future<StrategyBuilderResult> listVersions(String strategyId);
-  Future<StrategyBuilderResult> runBacktest(String strategyVersionId, String datasetId, String engineId, {Map<String, dynamic>? costConfig});
-  Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId, {String? objective});
+  Future<StrategyBuilderResult> runBacktest(
+      String strategyVersionId, String datasetId, String engineId,
+      {Map<String, dynamic>? costConfig});
+  Future<StrategyBuilderResult> compareVersions(
+      String versionAId, String versionBId,
+      {String? objective});
   Future<StrategyBuilderResult> analyzeBacktestResult(String strategyVersionId);
-  Future<StrategyBuilderResult> cloneReference(String reference, {String? idempotencyKey});
+  Future<StrategyBuilderResult> cloneReference(String reference,
+      {String? idempotencyKey});
   Future<StrategyBuilderResult> engineStatus();
-  Future<StrategyBuilderResult> proposeVariants(String strategyVersionId, String datasetId);
-  Future<StrategyBuilderResult> runResearchLoop(String strategyVersionId, String datasetId);
-  Future<StrategyBuilderResult> runSimulation(String strategyVersionId, String datasetId);
+  Future<StrategyBuilderResult> proposeVariants(
+      String strategyVersionId, String datasetId);
+  Future<StrategyBuilderResult> runResearchLoop(
+      String strategyVersionId, String datasetId);
+  Future<StrategyBuilderResult> runSimulation(
+      String strategyVersionId, String datasetId);
   Future<StrategyBuilderResult> listExperiments(String strategyId);
   Future<StrategyBuilderResult> recordExperiment({
     required String strategyVersionId,
@@ -62,7 +74,8 @@ class SupabaseStrategyBuilderApi implements StrategyBuilderApi {
 
   Future<StrategyBuilderResult> _call(Map<String, dynamic> body) async {
     try {
-      final res = await _client.functions.invoke('strategy-builder', body: body);
+      final res =
+          await _client.functions.invoke('strategy-builder', body: body);
       return StrategyBuilderResult(res.status, _asMap(res.data));
     } on FunctionException catch (e) {
       return StrategyBuilderResult(e.status, _asMap(e.details));
@@ -85,48 +98,97 @@ class SupabaseStrategyBuilderApi implements StrategyBuilderApi {
   }
 
   @override
-  Future<StrategyBuilderResult> validate(Map<String, dynamic> spec) => _call({'op': 'validate', 'spec': spec});
+  Future<StrategyBuilderResult> validate(Map<String, dynamic> spec) =>
+      _call({'op': 'validate', 'spec': spec});
   @override
-  Future<StrategyBuilderResult> draftFromText(String text) => _call({'op': 'draft_from_text', 'text': text});
+  Future<StrategyBuilderResult> draftFromText(String text) =>
+      _call({'op': 'draft_from_text', 'text': text});
   @override
-  Future<StrategyBuilderResult> create(Map<String, dynamic> spec, {String? idempotencyKey}) =>
-      _call({'op': 'create', 'spec': spec, if (idempotencyKey != null) 'idempotencyKey': idempotencyKey});
+  Future<StrategyBuilderResult> create(Map<String, dynamic> spec,
+          {String? idempotencyKey}) =>
+      _call({
+        'op': 'create',
+        'spec': spec,
+        if (idempotencyKey != null) 'idempotencyKey': idempotencyKey
+      });
   @override
   Future<StrategyBuilderResult> list() => _call({'op': 'list'});
   @override
-  Future<StrategyBuilderResult> get(String strategyId) => _call({'op': 'get', 'strategyId': strategyId});
+  Future<StrategyBuilderResult> get(String strategyId) =>
+      _call({'op': 'get', 'strategyId': strategyId});
   @override
-  Future<StrategyBuilderResult> createVersion(String strategyId, Map<String, dynamic> spec) =>
+  Future<StrategyBuilderResult> createVersion(
+          String strategyId, Map<String, dynamic> spec) =>
       _call({'op': 'create_version', 'strategyId': strategyId, 'spec': spec});
   @override
-  Future<StrategyBuilderResult> listVersions(String strategyId) => _call({'op': 'list_versions', 'strategyId': strategyId});
+  Future<StrategyBuilderResult> listVersions(String strategyId) =>
+      _call({'op': 'list_versions', 'strategyId': strategyId});
   @override
-  Future<StrategyBuilderResult> runBacktest(String strategyVersionId, String datasetId, String engineId, {Map<String, dynamic>? costConfig}) => _call({
-        'op': 'run_backtest', 'strategyVersionId': strategyVersionId, 'datasetId': datasetId, 'engineId': engineId,
+  Future<StrategyBuilderResult> runBacktest(
+          String strategyVersionId, String datasetId, String engineId,
+          {Map<String, dynamic>? costConfig}) =>
+      _call({
+        'op': 'run_backtest',
+        'strategyVersionId': strategyVersionId,
+        'datasetId': datasetId,
+        'engineId': engineId,
         'costConfig': costConfig,
       });
   @override
-  Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId, {String? objective}) =>
-      _call({'op': 'compare_versions', 'versionAId': versionAId, 'versionBId': versionBId, if (objective != null) 'objective': objective});
+  Future<StrategyBuilderResult> compareVersions(
+          String versionAId, String versionBId,
+          {String? objective}) =>
+      _call({
+        'op': 'compare_versions',
+        'versionAId': versionAId,
+        'versionBId': versionBId,
+        if (objective != null) 'objective': objective
+      });
   @override
-  Future<StrategyBuilderResult> analyzeBacktestResult(String strategyVersionId) =>
-      _call({'op': 'analyze_backtest_result', 'strategyVersionId': strategyVersionId});
+  Future<StrategyBuilderResult> analyzeBacktestResult(
+          String strategyVersionId) =>
+      _call({
+        'op': 'analyze_backtest_result',
+        'strategyVersionId': strategyVersionId
+      });
   @override
-  Future<StrategyBuilderResult> cloneReference(String reference, {String? idempotencyKey}) =>
-      _call({'op': 'clone_reference', 'reference': reference, if (idempotencyKey != null) 'idempotencyKey': idempotencyKey});
+  Future<StrategyBuilderResult> cloneReference(String reference,
+          {String? idempotencyKey}) =>
+      _call({
+        'op': 'clone_reference',
+        'reference': reference,
+        if (idempotencyKey != null) 'idempotencyKey': idempotencyKey
+      });
   @override
-  Future<StrategyBuilderResult> engineStatus() => _call({'op': 'engine_status'});
+  Future<StrategyBuilderResult> engineStatus() =>
+      _call({'op': 'engine_status'});
   @override
-  Future<StrategyBuilderResult> proposeVariants(String strategyVersionId, String datasetId) =>
-      _call({'op': 'propose_variants', 'strategyVersionId': strategyVersionId, 'datasetId': datasetId});
+  Future<StrategyBuilderResult> proposeVariants(
+          String strategyVersionId, String datasetId) =>
+      _call({
+        'op': 'propose_variants',
+        'strategyVersionId': strategyVersionId,
+        'datasetId': datasetId
+      });
   @override
-  Future<StrategyBuilderResult> runResearchLoop(String strategyVersionId, String datasetId) =>
-      _call({'op': 'run_research_loop', 'strategyVersionId': strategyVersionId, 'datasetId': datasetId});
+  Future<StrategyBuilderResult> runResearchLoop(
+          String strategyVersionId, String datasetId) =>
+      _call({
+        'op': 'run_research_loop',
+        'strategyVersionId': strategyVersionId,
+        'datasetId': datasetId
+      });
   @override
-  Future<StrategyBuilderResult> runSimulation(String strategyVersionId, String datasetId) =>
-      _call({'op': 'run_simulation', 'strategyVersionId': strategyVersionId, 'datasetId': datasetId});
+  Future<StrategyBuilderResult> runSimulation(
+          String strategyVersionId, String datasetId) =>
+      _call({
+        'op': 'run_simulation',
+        'strategyVersionId': strategyVersionId,
+        'datasetId': datasetId
+      });
   @override
-  Future<StrategyBuilderResult> listExperiments(String strategyId) => _call({'op': 'list_experiments', 'strategyId': strategyId});
+  Future<StrategyBuilderResult> listExperiments(String strategyId) =>
+      _call({'op': 'list_experiments', 'strategyId': strategyId});
   @override
   Future<StrategyBuilderResult> recordExperiment({
     required String strategyVersionId,
@@ -138,12 +200,20 @@ class SupabaseStrategyBuilderApi implements StrategyBuilderApi {
     required String source,
   }) =>
       _call({
-        'op': 'record_experiment', 'strategyVersionId': strategyVersionId, 'category': category, 'datasetId': datasetId,
-        'segment': segment, 'parametersChanged': null, 'reason': reason, 'resultId': resultId, 'source': source,
+        'op': 'record_experiment',
+        'strategyVersionId': strategyVersionId,
+        'category': category,
+        'datasetId': datasetId,
+        'segment': segment,
+        'parametersChanged': null,
+        'reason': reason,
+        'resultId': resultId,
+        'source': source,
       });
 }
 
-final strategyBuilderApiProvider = Provider<StrategyBuilderApi>((ref) => SupabaseStrategyBuilderApi(Supabase.instance.client));
+final strategyBuilderApiProvider = Provider<StrategyBuilderApi>(
+    (ref) => SupabaseStrategyBuilderApi(Supabase.instance.client));
 
 /// Builds the exact JSON contract strategy_spec.ts's
 /// StrategySpecificationInput expects, from structured form state. This is
@@ -169,14 +239,32 @@ Map<String, dynamic> buildStrategySpecInput({
 }) {
   final marketProfile = useV10Entry
       ? {
-          'instrument': {'assetClass': 'FUTURE', 'symbol': 'WIN1!', 'currency': 'BRL', 'exchangeTimezone': 'America/Sao_Paulo'},
-          'tickSize': 5.0, 'tickValue': 1.0, 'contractMultiplier': 0.20,
-          'timezone': 'America/Sao_Paulo', 'sessionCalendarId': 'b3-win-2026', 'availableTimeframes': ['5min'],
+          'instrument': {
+            'assetClass': 'FUTURE',
+            'symbol': 'WIN1!',
+            'currency': 'BRL',
+            'exchangeTimezone': 'America/Sao_Paulo'
+          },
+          'tickSize': 5.0,
+          'tickValue': 1.0,
+          'contractMultiplier': 0.20,
+          'timezone': 'America/Sao_Paulo',
+          'sessionCalendarId': 'b3-win-2026',
+          'availableTimeframes': ['5min'],
         }
       : {
-          'instrument': {'assetClass': 'INDEX', 'symbol': 'SYNTH1', 'currency': 'USD', 'exchangeTimezone': 'UTC'},
-          'tickSize': 1.0, 'tickValue': 1.0, 'contractMultiplier': 1.0,
-          'timezone': 'UTC', 'sessionCalendarId': 'synthetic-fixture', 'availableTimeframes': ['5min'],
+          'instrument': {
+            'assetClass': 'INDEX',
+            'symbol': 'SYNTH1',
+            'currency': 'USD',
+            'exchangeTimezone': 'UTC'
+          },
+          'tickSize': 1.0,
+          'tickValue': 1.0,
+          'contractMultiplier': 1.0,
+          'timezone': 'UTC',
+          'sessionCalendarId': 'synthetic-fixture',
+          'availableTimeframes': ['5min'],
         };
   return {
     'name': name,
@@ -186,7 +274,9 @@ Map<String, dynamic> buildStrategySpecInput({
     'executionTimeframe': null,
     'allowedDirections': allowedDirections,
     'allowReversals': false,
-    'entry': {'ruleId': useV10Entry ? 'ENTRY.PULLBACK_IN_TREND' : 'ENTRY.SESSION_OPEN'},
+    'entry': {
+      'ruleId': useV10Entry ? 'ENTRY.PULLBACK_IN_TREND' : 'ENTRY.SESSION_OPEN'
+    },
     'stop': {'ruleId': 'STOP.FIXED_DISTANCE', 'distance': stopDistance},
     'target': {'ruleId': 'TARGET.FIXED_DISTANCE', 'distance': targetDistance},
     'breakEven': breakEvenEnabled
@@ -198,9 +288,17 @@ Map<String, dynamic> buildStrategySpecInput({
           }
         : null,
     'trailing': null,
-    'session': {'ruleId': 'SESSION.WINDOW', 'startTime': sessionStart, 'endTime': sessionEnd, 'allowedWeekdays': [1, 2, 3, 4, 5]},
+    'session': {
+      'ruleId': 'SESSION.WINDOW',
+      'startTime': sessionStart,
+      'endTime': sessionEnd,
+      'allowedWeekdays': [1, 2, 3, 4, 5]
+    },
     'forcedExit': {'ruleId': 'EXIT.FORCED_TIME', 'time': forcedExitTime},
-    'positionSize': {'ruleId': 'POSITION_SIZE.FIXED_CONTRACTS', 'quantity': quantity},
+    'positionSize': {
+      'ruleId': 'POSITION_SIZE.FIXED_CONTRACTS',
+      'quantity': quantity
+    },
     'riskLimits': null,
   };
 }
@@ -208,6 +306,11 @@ Map<String, dynamic> buildStrategySpecInput({
 /// The dataset/engine pair a given entry-rule mode must run against
 /// (mirrors engine_registry.ts's allowlist -- kept in lockstep by
 /// strategy_builder_contract_test.dart, not re-derived here).
-({String datasetId, String engineId}) datasetAndEngineFor({required bool useV10Entry}) => useV10Entry
-    ? (datasetId: 'win1-5min-qt01c3', engineId: 'PAULO_TREND_FIBONACCI_V10')
-    : (datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE');
+({String datasetId, String engineId}) datasetAndEngineFor(
+        {required bool useV10Entry}) =>
+    useV10Entry
+        ? (datasetId: 'win1-5min-qt01c3', engineId: 'PAULO_TREND_FIBONACCI_V10')
+        : (
+            datasetId: 'synthetic-fixture-5min-v1',
+            engineId: 'GENERIC_RULE_ENGINE'
+          );

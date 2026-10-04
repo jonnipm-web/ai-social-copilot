@@ -78,7 +78,8 @@ class IvePlacementInput {
 /// Minimal stand-in for Flutter's own EdgeInsets so this file has zero
 /// Flutter dependency and stays trivially testable in a plain Dart test.
 class IveSafeAreaInsets {
-  const IveSafeAreaInsets({this.top = 0, this.bottom = 0, this.left = 0, this.right = 0});
+  const IveSafeAreaInsets(
+      {this.top = 0, this.bottom = 0, this.left = 0, this.right = 0});
   final double top;
   final double bottom;
   final double left;
@@ -149,12 +150,12 @@ bool _collides(Rect a, List<Rect> exclusions) =>
 /// 5. Final clamp keeps the result inside the safe viewport regardless of
 ///    which path produced it.
 Offset computeRestingPosition(IvePlacementInput input) {
-  final candidates = _mobileCandidates(
-      input.screenSize, input.safeArea, input.avatarFootprint, input.verticalReserve);
+  final candidates = _mobileCandidates(input.screenSize, input.safeArea,
+      input.avatarFootprint, input.verticalReserve);
 
   if (input.previousPosition != null) {
-    final prevRect = _footprintRect(
-        input.previousPosition!, input.avatarFootprint, input.screenSize, input.footprintOffsetY);
+    final prevRect = _footprintRect(input.previousPosition!,
+        input.avatarFootprint, input.screenSize, input.footprintOffsetY);
     // Plain viewport bound on the REAL footprint rect (already correctly
     // offset by footprintOffsetY above) -- no separate verticalReserve
     // subtraction needed here; that would double-count the same margin
@@ -169,8 +170,8 @@ Offset computeRestingPosition(IvePlacementInput input) {
   }
 
   for (final candidate in candidates) {
-    final rect = _footprintRect(
-        candidate.offset, input.avatarFootprint, input.screenSize, input.footprintOffsetY);
+    final rect = _footprintRect(candidate.offset, input.avatarFootprint,
+        input.screenSize, input.footprintOffsetY);
     if (!_collides(rect, input.exclusions)) {
       return _clamp(candidate.offset, input);
     }
@@ -182,8 +183,8 @@ Offset computeRestingPosition(IvePlacementInput input) {
   var best = candidates.first;
   var bestOverlap = double.infinity;
   for (final candidate in candidates) {
-    final rect = _footprintRect(
-        candidate.offset, input.avatarFootprint, input.screenSize, input.footprintOffsetY);
+    final rect = _footprintRect(candidate.offset, input.avatarFootprint,
+        input.screenSize, input.footprintOffsetY);
     final overlap = input.exclusions.fold<double>(
       0,
       (sum, r) => sum + _intersectionArea(rect, r),
@@ -209,7 +210,9 @@ double _intersectionArea(Rect a, Rect b) {
 // budget _mobileCandidates used to generate maxY, or a short viewport
 // could clamp a candidate BACK DOWN past the reserved gap, defeating it.
 Offset _clamp(Offset offset, IvePlacementInput input) {
-  final maxDx = input.screenSize.width - input.avatarFootprint.width - input.safeArea.left;
+  final maxDx = input.screenSize.width -
+      input.avatarFootprint.width -
+      input.safeArea.left;
   final minDx = input.safeArea.right;
   final maxDy = input.screenSize.height -
       input.avatarFootprint.height -

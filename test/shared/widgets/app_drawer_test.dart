@@ -16,7 +16,8 @@ import 'package:ai_social_copilot/providers/diagnostic_session_provider.dart';
 import 'package:ai_social_copilot/providers/profile_provider.dart';
 import 'package:ai_social_copilot/shared/widgets/app_drawer.dart';
 
-class MockDiagnosticLoggerService extends Mock implements DiagnosticLoggerService {}
+class MockDiagnosticLoggerService extends Mock
+    implements DiagnosticLoggerService {}
 
 class MockSession extends Mock implements Session {}
 
@@ -127,14 +128,17 @@ void main() {
 
     test('a PRO (non-premium) user cannot see a PREMIUM-gated module', () {
       final m = premiumModule();
-      expect(m.visibleFor(isAdmin: false, isPro: true, isPremium: false), isFalse);
+      expect(
+          m.visibleFor(isAdmin: false, isPro: true, isPremium: false), isFalse);
       expect(m.visibleFor(isAdmin: false, isPro: true), isFalse,
-          reason: 'isPremium must default to false, never silently grant premium visibility');
+          reason:
+              'isPremium must default to false, never silently grant premium visibility');
     });
 
     test('a PREMIUM user sees a PREMIUM-gated module', () {
       final m = premiumModule();
-      expect(m.visibleFor(isAdmin: false, isPro: true, isPremium: true), isTrue);
+      expect(
+          m.visibleFor(isAdmin: false, isPro: true, isPremium: true), isTrue);
     });
 
     test(
@@ -144,15 +148,22 @@ void main() {
         final modules = [premiumModule()];
 
         expect(
-          visibleDrawerModules(isAdmin: false, isPro: true, isPremium: false, modules: modules),
+          visibleDrawerModules(
+              isAdmin: false, isPro: true, isPremium: false, modules: modules),
           isEmpty,
-          reason: 'a PRO (non-premium) user must not see the PREMIUM-gated module in the drawer',
+          reason:
+              'a PRO (non-premium) user must not see the PREMIUM-gated module in the drawer',
         );
         expect(
-          visibleDrawerModules(isAdmin: false, isPro: true, isPremium: true, modules: modules)
+          visibleDrawerModules(
+                  isAdmin: false,
+                  isPro: true,
+                  isPremium: true,
+                  modules: modules)
               .map((m) => m.moduleId),
           ['synthetic-premium'],
-          reason: 'a PREMIUM user must see the PREMIUM-gated module in the drawer',
+          reason:
+              'a PREMIUM user must see the PREMIUM-gated module in the drawer',
         );
       },
     );
@@ -165,7 +176,9 @@ void main() {
   // which replaces GoRouter's whole route stack), so the AppBar showed no
   // back arrow and the system back button closed the app instead of
   // returning to the previous screen.
-  group('drawer settings-style items push (Section 27/35 — Android back regression)', () {
+  group(
+      'drawer settings-style items push (Section 27/35 — Android back regression)',
+      () {
     Widget harness() {
       final router = GoRouter(
         initialLocation: AppConstants.routeHome,
@@ -190,7 +203,8 @@ void main() {
 
       return ProviderScope(
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
           authStateProvider.overrideWith((ref) => Stream.value(_authState())),
         ],
@@ -203,7 +217,9 @@ void main() {
       );
     }
 
-    testWidgets('opening "Conta e Configurações" from the drawer leaves a poppable back-stack entry', (tester) async {
+    testWidgets(
+        'opening "Conta e Configurações" from the drawer leaves a poppable back-stack entry',
+        (tester) async {
       // Tall enough that the drawer's full item list (7 modules + 5 fixed
       // items) actually lays out -- the default ~800x600 test surface is
       // too short, and a Sliver-based ListView never builds items outside
@@ -221,7 +237,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       // Open the drawer, then tap the Account item.
-      final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold).first);
+      final scaffoldState =
+          tester.state<ScaffoldState>(find.byType(Scaffold).first);
       scaffoldState.openDrawer();
       await tester.pumpAndSettle();
 

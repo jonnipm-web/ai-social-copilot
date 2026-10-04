@@ -18,22 +18,22 @@ class CopilotSession {
   });
 
   factory CopilotSession.fromMap(Map<String, dynamic> map) => CopilotSession(
-        id:          map['id'] as String,
-        userId:      map['user_id'] as String,
-        title:       map['title'] as String? ?? '',
+        id: map['id'] as String,
+        userId: map['user_id'] as String,
+        title: map['title'] as String? ?? '',
         contextJson: map['context_json'] is Map
             ? Map<String, dynamic>.from(map['context_json'] as Map)
             : {},
-        status:      map['status'] as String? ?? 'active',
-        createdAt:   DateTime.parse(map['created_at'] as String),
-        updatedAt:   DateTime.parse(map['updated_at'] as String),
+        status: map['status'] as String? ?? 'active',
+        createdAt: DateTime.parse(map['created_at'] as String),
+        updatedAt: DateTime.parse(map['updated_at'] as String),
       );
 
   Map<String, dynamic> toInsertMap() => {
-        'user_id':      userId,
-        'title':        title,
+        'user_id': userId,
+        'title': title,
         'context_json': contextJson,
-        'status':       status,
+        'status': status,
       };
 }
 
@@ -55,18 +55,18 @@ class CopilotMessage {
   });
 
   factory CopilotMessage.fromMap(Map<String, dynamic> map) => CopilotMessage(
-        id:        map['id'] as String,
+        id: map['id'] as String,
         sessionId: map['session_id'] as String,
-        userId:    map['user_id'] as String,
-        role:      map['role'] as String? ?? 'user',
-        content:   map['content'] as String? ?? '',
+        userId: map['user_id'] as String,
+        role: map['role'] as String? ?? 'user',
+        content: map['content'] as String? ?? '',
         createdAt: DateTime.parse(map['created_at'] as String),
       );
 
   Map<String, dynamic> toInsertMap() => {
         'session_id': sessionId,
-        'user_id':    userId,
-        'role':       role,
-        'content':    content,
+        'user_id': userId,
+        'role': role,
+        'content': content,
       };
 }

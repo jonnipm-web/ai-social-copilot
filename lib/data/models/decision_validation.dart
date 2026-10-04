@@ -6,7 +6,7 @@ class DecisionValidation {
   static const int minCoverage = 60;
   static const int minLearning = 50;
 
-  final String? projectId;   // null = portfolio-level
+  final String? projectId; // null = portfolio-level
   final String entityName;
   final DecisionValidationStatus status;
 
@@ -45,9 +45,8 @@ class DecisionValidation {
   bool get isStructuring => status == DecisionValidationStatus.structuring;
 
   // R16 — display labels take the presentation-language [AppLocalizations].
-  String blockMessage(AppLocalizations l10n) => isStructuring
-      ? l10n.ctxDvBlockStructuring
-      : l10n.ctxDvBlockInsufficient;
+  String blockMessage(AppLocalizations l10n) =>
+      isStructuring ? l10n.ctxDvBlockStructuring : l10n.ctxDvBlockInsufficient;
 
   String indexingStatus(AppLocalizations l10n) => documentCount == 0
       ? l10n.ctxDvNoDocuments

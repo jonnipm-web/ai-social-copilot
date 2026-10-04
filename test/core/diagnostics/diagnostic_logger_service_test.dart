@@ -29,7 +29,9 @@ void main() {
           stackTrace: stackTrace,
         );
 
-    test('every event gets the runtime\'s current build_sha (kBuildSha) — never absent', () {
+    test(
+        'every event gets the runtime\'s current build_sha (kBuildSha) — never absent',
+        () {
       final row = payload();
       // In a `flutter test` run, no --dart-define=BUILD_SHA is supplied,
       // so kBuildSha is the documented "unknown" fallback (see
@@ -71,7 +73,9 @@ void main() {
       },
     );
 
-    test('session build_sha and event build_sha are independent columns (no session dependency here)', () {
+    test(
+        'session build_sha and event build_sha are independent columns (no session dependency here)',
+        () {
       // buildDiagnosticEventPayload never reads or references
       // diagnostic_sessions.build_sha in any way -- sessionId is passed
       // through verbatim as the foreign key, nothing more. This is the
@@ -82,15 +86,20 @@ void main() {
       expect(row['build_sha'], isNotNull);
     });
 
-    test('build_sha survives serialization alongside the rest of the row unchanged', () {
-      final row = payload(error: Exception('boom'), stackTrace: StackTrace.current);
+    test(
+        'build_sha survives serialization alongside the rest of the row unchanged',
+        () {
+      final row =
+          payload(error: Exception('boom'), stackTrace: StackTrace.current);
       expect(row['build_sha'], 'unknown');
       expect(row['error_message'], contains('boom'));
       expect(row['route'], '/dashboard');
       expect(row['event_name'], 'uncaught_error');
     });
 
-    test('privacy sanitizer (sanitizeBuildSha, reused from STABILITY-09O) does not redact the valid fallback', () {
+    test(
+        'privacy sanitizer (sanitizeBuildSha, reused from STABILITY-09O) does not redact the valid fallback',
+        () {
       // "unknown" is explicitly allowlisted by sanitizeBuildSha (see its
       // own test suite in diagnostic_sanitizer_test.dart) -- this just
       // confirms that guarantee actually reaches the final row, not only
@@ -100,19 +109,22 @@ void main() {
     });
   });
 
-
   group(
     'newDiagnosticCorrelationId — IVE-COMMERCIAL-STABILITY-08 '
     '(RangeError "max ... was 0" root cause: 1 << 32 dart2js web trap, '
     'dart-lang/sdk#37569)',
     () {
-      test('never throws across many calls (regression for the proven RangeError)', () {
+      test(
+          'never throws across many calls (regression for the proven RangeError)',
+          () {
         for (var i = 0; i < 500; i++) {
           expect(() => newDiagnosticCorrelationId(), returnsNormally);
         }
       });
 
-      test('matches the app-generated correlation-id shape (two base36 runs, one hyphen)', () {
+      test(
+          'matches the app-generated correlation-id shape (two base36 runs, one hyphen)',
+          () {
         final id = newDiagnosticCorrelationId();
         expect(id, matches(RegExp(r'^[0-9a-z]+-[0-9a-z]+$')));
       });

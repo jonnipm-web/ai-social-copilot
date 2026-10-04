@@ -27,59 +27,63 @@ import 'package:ai_social_copilot/l10n/app_localizations.dart';
 
 // ── Fixture (user data is language-neutral on purpose) ─────────────────────
 final _recent = DateTime.now().subtract(const Duration(days: 1));
-final _old    = DateTime(2024, 1, 1);
+final _old = DateTime(2024, 1, 1);
 
-Project _p(String id, String name, {int priority = 0, String status = 'active'}) =>
+Project _p(String id, String name,
+        {int priority = 0, String status = 'active'}) =>
     Project(
-      id:            id,
-      userId:        'uid',
-      name:          name,
+      id: id,
+      userId: 'uid',
+      name: name,
       priorityScore: priority,
-      status:        status,
-      createdAt:     _old,
-      updatedAt:     _old,
+      status: status,
+      createdAt: _old,
+      updatedAt: _old,
     );
 
 ActionQueueItem _a(String id, String projectId,
-        {String status = 'pending', int impact = 50, int effort = 50, DateTime? at}) =>
+        {String status = 'pending',
+        int impact = 50,
+        int effort = 50,
+        DateTime? at}) =>
     ActionQueueItem(
-      id:          id,
-      userId:      'uid',
-      projectId:   projectId,
-      title:       'Task $id',
-      status:      status,
+      id: id,
+      userId: 'uid',
+      projectId: projectId,
+      title: 'Task $id',
+      status: status,
       impactScore: impact,
       effortScore: effort,
-      createdAt:   at ?? _recent,
+      createdAt: at ?? _recent,
     );
 
 OpportunityLabItem _o(String id, String projectId, int score,
         {String status = 'approved'}) =>
     OpportunityLabItem(
-      id:              id,
-      userId:          'uid',
-      projectId:       projectId,
-      title:           'Lab $id',
+      id: id,
+      userId: 'uid',
+      projectId: projectId,
+      title: 'Lab $id',
       opportunityType: 'content',
-      marketScore:     score,
-      revenueScore:    score,
-      strategicFit:    score,
-      finalScore:      score,
-      status:          status,
-      createdAt:       _recent,
+      marketScore: score,
+      revenueScore: score,
+      strategicFit: score,
+      finalScore: score,
+      status: status,
+      createdAt: _recent,
     );
 
 final _projects = [
   _p('p1', 'Alpha', priority: 90),
   _p('p2', 'Bravo', priority: 40),
-  _p('p3', 'Charlie', status: 'idea'),      // no data → incomplete analysis
+  _p('p3', 'Charlie', status: 'idea'), // no data → incomplete analysis
   _p('p4', 'Delta', priority: 10),
 ];
 
 final _actions = [
   _a('a1', 'p1', status: 'completed'),
   _a('a2', 'p1', status: 'completed'),
-  _a('a3', 'p1', impact: 90, effort: 20),   // quick win
+  _a('a3', 'p1', impact: 90, effort: 20), // quick win
   for (var i = 0; i < 7; i++) _a('b$i', 'p2', impact: 30, effort: 70),
   _a('d1', 'p4', at: _old),
 ];
@@ -92,8 +96,13 @@ final _lab = [
 ];
 
 final _roi = [
-  RoiMetric(id: 'r1', userId: 'uid', projectId: 'p1', metricType: 'revenue',
-      metricValue: 1500, createdAt: _recent),
+  RoiMetric(
+      id: 'r1',
+      userId: 'uid',
+      projectId: 'p1',
+      metricType: 'revenue',
+      metricValue: 1500,
+      createdAt: _recent),
 ];
 
 // ── Run the whole pipeline in one language ─────────────────────────────────
@@ -107,7 +116,12 @@ class _Run {
 
   List<String> get allText => [
         for (final s in scores) ...[...s.strengths, ...s.risks],
-        for (final r in recs) ...[r.title, r.reason, r.dataUsed, r.expectedImpact],
+        for (final r in recs) ...[
+          r.title,
+          r.reason,
+          r.dataUsed,
+          r.expectedImpact
+        ],
         briefing.executiveSummary,
         for (final i in [
           ...briefing.whatChanged,
@@ -125,22 +139,24 @@ class _Run {
 }
 
 _Run _run(Locale locale) {
-  final svc = EcosystemIntelligenceService(l10n: lookupAppLocalizations(locale));
+  final svc =
+      EcosystemIntelligenceService(l10n: lookupAppLocalizations(locale));
   final scores = svc.computeProjectScores(
-    projects:   _projects,
-    analyses:   const [],
-    actions:    _actions,
-    labItems:   _lab,
+    projects: _projects,
+    analyses: const [],
+    actions: _actions,
+    labItems: _lab,
     roiMetrics: _roi,
   );
   return _Run(
     scores,
-    svc.generateRecommendations(scores: scores, labItems: _lab, actions: _actions),
+    svc.generateRecommendations(
+        scores: scores, labItems: _lab, actions: _actions),
     svc.generateBriefing(
-      scores:     scores,
-      analyses:   const [],
-      actions:    _actions,
-      labItems:   _lab,
+      scores: scores,
+      analyses: const [],
+      actions: _actions,
+      labItems: _lab,
       roiMetrics: _roi,
     ),
     svc.allocateResources(scores: scores, budget: 40, budgetType: 'hours'),
@@ -149,8 +165,19 @@ _Run _run(Locale locale) {
 }
 
 const _ptMarkers = [
-  'ecossistema', 'projeto', 'Recomendação', 'recomendação', 'ção', 'ões',
-  'você', 'horas', 'Nenhum', 'Seu ', 'ações', 'análise', 'Priorize',
+  'ecossistema',
+  'projeto',
+  'Recomendação',
+  'recomendação',
+  'ção',
+  'ões',
+  'você',
+  'horas',
+  'Nenhum',
+  'Seu ',
+  'ações',
+  'análise',
+  'Priorize',
 ];
 
 void main() {
@@ -187,7 +214,8 @@ void main() {
         expect(b.executionScore, a.executionScore);
         expect(b.hasEnoughData, a.hasEnoughData);
         expect(b.recommendation, a.recommendation,
-            reason: 'verdict codes are logic keys and must never be translated');
+            reason:
+                'verdict codes are logic keys and must never be translated');
         expect(b.strengths.length, a.strengths.length);
         expect(b.risks.length, a.risks.length);
         expect(b.quickWins, a.quickWins);
@@ -210,13 +238,18 @@ void main() {
       expect(en.briefing.topPriorities.map((i) => i.title).toList(),
           pt.briefing.topPriorities.map((i) => i.title).toList());
       expect(en.briefing.risks.length, pt.briefing.risks.length);
-      for (final pair in [[pt.hours, en.hours], [pt.money, en.money]]) {
+      for (final pair in [
+        [pt.hours, en.hours],
+        [pt.money, en.money]
+      ]) {
         expect(pair[1].items.length, pair[0].items.length);
         for (var i = 0; i < pair[0].items.length; i++) {
-          expect(pair[1].items[i].score.project.id, pair[0].items[i].score.project.id);
+          expect(pair[1].items[i].score.project.id,
+              pair[0].items[i].score.project.id);
           expect(pair[1].items[i].allocation, pair[0].items[i].allocation);
           expect(pair[1].items[i].percentage, pair[0].items[i].percentage);
-          expect(pair[1].items[i].expectedRoiScore, pair[0].items[i].expectedRoiScore);
+          expect(pair[1].items[i].expectedRoiScore,
+              pair[0].items[i].expectedRoiScore);
         }
       }
     });
@@ -237,14 +270,22 @@ void main() {
       }
       // Verdict codes must not leak raw into EN prose either.
       for (final line in en.allText) {
-        for (final code in const ['ESCALAR', 'ACELERAR', 'MANTER', 'VALIDAR', 'PAUSAR', 'INCOMPLETA']) {
+        for (final code in const [
+          'ESCALAR',
+          'ACELERAR',
+          'MANTER',
+          'VALIDAR',
+          'PAUSAR',
+          'INCOMPLETA'
+        ]) {
           expect(line.contains(code), isFalse,
               reason: 'EN text "$line" shows raw verdict code "$code"');
         }
       }
     });
 
-    test('ecosystemVerdictLabel maps every code and passes unknowns through', () {
+    test('ecosystemVerdictLabel maps every code and passes unknowns through',
+        () {
       final enL = lookupAppLocalizations(const Locale('en'));
       final ptL = lookupAppLocalizations(const Locale('pt'));
       expect(ecosystemVerdictLabel('ESCALAR', enL), 'SCALE');
@@ -252,18 +293,24 @@ void main() {
       expect(ecosystemVerdictLabel('MANTER', enL), 'MAINTAIN');
       expect(ecosystemVerdictLabel('VALIDAR', enL), 'VALIDATE');
       expect(ecosystemVerdictLabel('PAUSAR', enL), 'PAUSE');
-      expect(ecosystemVerdictLabel('ANÁLISE INCOMPLETA', enL), 'INCOMPLETE ANALYSIS');
+      expect(ecosystemVerdictLabel('ANÁLISE INCOMPLETA', enL),
+          'INCOMPLETE ANALYSIS');
       expect(ecosystemVerdictLabel('MANTER', ptL), 'MANTER');
-      expect(ecosystemVerdictLabel('ANÁLISE INCOMPLETA', ptL), 'ANÁLISE INCOMPLETA');
+      expect(ecosystemVerdictLabel('ANÁLISE INCOMPLETA', ptL),
+          'ANÁLISE INCOMPLETA');
       expect(ecosystemVerdictLabel('SOMETHING_ELSE', enL), 'SOMETHING_ELSE');
     });
 
     test('default constructor keeps legacy Portuguese output', () {
       final legacy = EcosystemIntelligenceService().generateBriefing(
-        scores: const [], analyses: const [], actions: const [],
-        labItems: const [], roiMetrics: const [],
+        scores: const [],
+        analyses: const [],
+        actions: const [],
+        labItems: const [],
+        roiMetrics: const [],
       );
-      expect(legacy.whatChanged.single.title, 'Nenhuma atividade nova esta semana');
+      expect(legacy.whatChanged.single.title,
+          'Nenhuma atividade nova esta semana');
     });
   });
 }

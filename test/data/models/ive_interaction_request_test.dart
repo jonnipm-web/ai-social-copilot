@@ -30,12 +30,15 @@ void main() {
     });
 
     test('duas requests sucessivas geram correlationIds diferentes', () {
-      final a = IveInteractionRequest(sourceModule: 'x', operationType: IveOperationType.ask);
-      final b = IveInteractionRequest(sourceModule: 'x', operationType: IveOperationType.ask);
+      final a = IveInteractionRequest(
+          sourceModule: 'x', operationType: IveOperationType.ask);
+      final b = IveInteractionRequest(
+          sourceModule: 'x', operationType: IveOperationType.ask);
       expect(a.correlationId, isNot(b.correlationId));
     });
 
-    test('preserva um correlationId explicitamente passado, sem gerar outro', () {
+    test('preserva um correlationId explicitamente passado, sem gerar outro',
+        () {
       final req = IveInteractionRequest(
         sourceModule: 'x',
         operationType: IveOperationType.ask,
@@ -44,7 +47,9 @@ void main() {
       expect(req.correlationId, 'fixed-correlation-id');
     });
 
-    test('projectId null é preservado como null (não confundido com ausência de campo)', () {
+    test(
+        'projectId null é preservado como null (não confundido com ausência de campo)',
+        () {
       final req = IveInteractionRequest(
         sourceModule: 'global_overlay',
         operationType: IveOperationType.ask,
@@ -57,7 +62,8 @@ void main() {
       r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
     );
 
-    test('gera um idempotencyKey automaticamente, com forma de UUID v4 real', () {
+    test('gera um idempotencyKey automaticamente, com forma de UUID v4 real',
+        () {
       final req = IveInteractionRequest(
         sourceModule: 'global_overlay',
         operationType: IveOperationType.ask,
@@ -66,12 +72,15 @@ void main() {
     });
 
     test('duas requests sucessivas geram idempotencyKeys diferentes', () {
-      final a = IveInteractionRequest(sourceModule: 'x', operationType: IveOperationType.ask);
-      final b = IveInteractionRequest(sourceModule: 'x', operationType: IveOperationType.ask);
+      final a = IveInteractionRequest(
+          sourceModule: 'x', operationType: IveOperationType.ask);
+      final b = IveInteractionRequest(
+          sourceModule: 'x', operationType: IveOperationType.ask);
       expect(a.idempotencyKey, isNot(b.idempotencyKey));
     });
 
-    test('preserva um idempotencyKey explicitamente passado, sem gerar outro', () {
+    test('preserva um idempotencyKey explicitamente passado, sem gerar outro',
+        () {
       final req = IveInteractionRequest(
         sourceModule: 'x',
         operationType: IveOperationType.ask,
@@ -116,7 +125,8 @@ void main() {
   // serializing to the wire all carry the SAME identity, so this specific
   // regression cannot reappear silently.
   group('CopilotContextData.toMap() — propagação de identidade (P1 fix)', () {
-    test('toMap() inclui todos os campos de identidade sob a chave "identity"', () {
+    test('toMap() inclui todos os campos de identidade sob a chave "identity"',
+        () {
       final req = IveInteractionRequest(
         projectId: 'project-1',
         sourceModule: 'website_analyzer',
@@ -135,7 +145,9 @@ void main() {
       expect(map['identity']['correlation_id'], 'corr-xyz');
     });
 
-    test('a mesma correlationId de IveInteractionRequest sobrevive request → CopilotContextData → toMap()', () {
+    test(
+        'a mesma correlationId de IveInteractionRequest sobrevive request → CopilotContextData → toMap()',
+        () {
       final req = IveInteractionRequest(
         sourceModule: 'market_intelligence',
         operationType: IveOperationType.compare,
@@ -152,7 +164,9 @@ void main() {
       expect(map.containsKey('identity'), isFalse);
     });
 
-    test('toMap() preserva as seções de grounding existentes junto da identidade (não substitui)', () {
+    test(
+        'toMap() preserva as seções de grounding existentes junto da identidade (não substitui)',
+        () {
       final req = IveInteractionRequest(
         projectId: 'project-2',
         sourceModule: 'knowledge_vault',

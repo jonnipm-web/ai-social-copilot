@@ -63,10 +63,11 @@ class _ContentGenerationScreenState
       return;
     }
 
-    final quota   = ref.read(currentQuotaProvider).valueOrNull;
+    final quota = ref.read(currentQuotaProvider).valueOrNull;
     final profile = ref.read(currentProfileProvider).valueOrNull;
-    final usage   = quota?.used ?? 0;
-    final limit   = quota?.limit ?? profile?.monthlyLimit ?? AppConstants.freeTierLimit;
+    final usage = quota?.used ?? 0;
+    final limit =
+        quota?.limit ?? profile?.monthlyLimit ?? AppConstants.freeTierLimit;
     if (usage >= limit) {
       showErrorSnack(
         context,
@@ -81,9 +82,9 @@ class _ContentGenerationScreenState
       ref: ref,
       analysisLabel: l10n.improvePostAnalysisLabel,
       request: IveInteractionRequest(
-        sourceModule:     'content_generation',
+        sourceModule: 'content_generation',
         sourceEntityType: 'post_generation',
-        operationType:    IveOperationType.analyze,
+        operationType: IveOperationType.analyze,
       ),
       action: (idempotencyKey) => ref
           .read(postNotifierProvider.notifier)
@@ -94,7 +95,8 @@ class _ContentGenerationScreenState
 
     final state = ref.read(postNotifierProvider);
     if (state.hasError) {
-      showErrorSnack(context, extractErrorMessage(state.error, AppLocalizations.of(context)));
+      showErrorSnack(context,
+          extractErrorMessage(state.error, AppLocalizations.of(context)));
       return;
     }
 
@@ -104,25 +106,26 @@ class _ContentGenerationScreenState
           ? DateTime.now().difference(_startTime!).inMilliseconds / 1000
           : null;
       if (mounted) {
-        showSuccessSnack(context, AppLocalizations.of(context)!.improvePostSuccess);
+        showSuccessSnack(
+            context, AppLocalizations.of(context)!.improvePostSuccess);
       }
       context.push(AppConstants.routeResult, extra: {
-        'originalText':     text,
-        'result':           _generationToMap(result),
+        'originalText': text,
+        'result': _generationToMap(result),
         'processingSeconds': elapsed,
       });
     }
   }
 
   Map<String, dynamic> _generationToMap(PostGeneration g) => {
-        'improved_text':        g.improvedText,
+        'improved_text': g.improvedText,
         'professional_version': g.professionalVersion,
-        'casual_version':       g.casualVersion,
-        'persuasive_version':   g.persuasiveVersion,
-        'comment_reply':        g.commentReply,
+        'casual_version': g.casualVersion,
+        'persuasive_version': g.persuasiveVersion,
+        'comment_reply': g.commentReply,
         'scores': {
-          'clarity':    g.clarityScore,
-          'impact':     g.impactScore,
+          'clarity': g.clarityScore,
+          'impact': g.impactScore,
           'engagement': g.engagementScore,
         },
         '_generation': g,
@@ -201,12 +204,12 @@ class _ContentGenerationScreenState
             onPressed: () => context.push(AppConstants.routeUpgrade),
             style: TextButton.styleFrom(
               foregroundColor: color,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              textStyle: const TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w700),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              textStyle:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
-            child: Text(isFull ? l10n.improvePostUpgradeCta : l10n.improvePostSeePlans),
+            child: Text(
+                isFull ? l10n.improvePostUpgradeCta : l10n.improvePostSeePlans),
           ),
         ],
       ),
@@ -223,8 +226,8 @@ class _ContentGenerationScreenState
 
   Widget _buildScaffold(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final postState  = ref.watch(postNotifierProvider);
-    final isLoading  = postState.isLoading || _exec.isBusy;
+    final postState = ref.watch(postNotifierProvider);
+    final isLoading = postState.isLoading || _exec.isBusy;
     final usageAsync = ref.watch(currentQuotaProvider);
 
     return Scaffold(
@@ -232,8 +235,9 @@ class _ContentGenerationScreenState
         title: Text(l10n.improvePostTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppConstants.routeHome),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppConstants.routeHome),
         ),
         actions: [
           IconButton(
@@ -266,7 +270,7 @@ class _ContentGenerationScreenState
                     ],
                   ),
                   loading: () => const SizedBox.shrink(),
-                  error:   (_, __) => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
                 ),
                 Text(
                   l10n.improvePostHeading,
@@ -283,7 +287,8 @@ class _ContentGenerationScreenState
                     expands: true,
                     textAlignVertical: TextAlignVertical.top,
                     maxLength: AppConstants.maxTextLength,
-                    buildCounter: (_, {required currentLength,
+                    buildCounter: (_,
+                            {required currentLength,
                             required isFocused,
                             maxLength}) =>
                         const SizedBox.shrink(),
@@ -298,9 +303,9 @@ class _ContentGenerationScreenState
                 Row(
                   children: [
                     Text(
-                      l10n.improvePostCharCount(_charCount, AppConstants.maxTextLength),
-                      style:
-                          TextStyle(fontSize: 12, color: _counterColor()),
+                      l10n.improvePostCharCount(
+                          _charCount, AppConstants.maxTextLength),
+                      style: TextStyle(fontSize: 12, color: _counterColor()),
                     ),
                     const Spacer(),
                     if (_charCount > 0)
@@ -321,8 +326,9 @@ class _ContentGenerationScreenState
                   label: l10n.improvePostButtonLabel,
                   loadingLabel: l10n.improvePostButtonLoading,
                   isLoading: isLoading,
-                  onPressed:
-                      (usageAsync.valueOrNull?.remaining ?? 1) <= 0 ? null : _improve,
+                  onPressed: (usageAsync.valueOrNull?.remaining ?? 1) <= 0
+                      ? null
+                      : _improve,
                 ),
                 const SizedBox(height: 12),
               ],

@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/profile.dart';
 import '../data/services/profile_service.dart';
 
-final profileServiceProvider = Provider<ProfileService>((_) => ProfileService());
+final profileServiceProvider =
+    Provider<ProfileService>((_) => ProfileService());
 
 // Perfil do usuário logado
 final currentProfileProvider = FutureProvider.autoDispose<Profile?>((ref) {

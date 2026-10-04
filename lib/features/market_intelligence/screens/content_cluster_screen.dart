@@ -15,7 +15,8 @@ class ContentClusterScreen extends ConsumerStatefulWidget {
   final String analysisId;
 
   @override
-  ConsumerState<ContentClusterScreen> createState() => _ContentClusterScreenState();
+  ConsumerState<ContentClusterScreen> createState() =>
+      _ContentClusterScreenState();
 }
 
 // IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 finding) — see
@@ -39,41 +40,43 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
     if (kw.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(AppLocalizations.of(context)!.miClusterKeywordRequired),
+            content:
+                Text(AppLocalizations.of(context)!.miClusterKeywordRequired),
             backgroundColor: Colors.orange),
       );
       return;
     }
     setState(() => _error = null);
     try {
-      final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      final analysis =
+          await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
       if (!mounted) return;
       await _exec.run<void>(
         context: context,
         ref: ref,
         analysisLabel: AppLocalizations.of(context)!.miClusterTitle,
         request: IveInteractionRequest(
-          projectId:        analysis.projectId,
-          sourceModule:     'market_intelligence',
+          projectId: analysis.projectId,
+          sourceModule: 'market_intelligence',
           sourceEntityType: 'content_cluster',
-          sourceEntityId:   widget.analysisId,
-          operationType:    IveOperationType.analyze,
+          sourceEntityId: widget.analysisId,
+          operationType: IveOperationType.analyze,
         ),
-        action: (idempotencyKey) => ref
-            .read(marketAnalysisServiceProvider)
-            .buildContentCluster(
-              widget.analysisId,
-              analysis.input,
-              kw,
-              language: backendLanguageCode(context),
-              idempotencyKey: idempotencyKey,
-            ),
+        action: (idempotencyKey) =>
+            ref.read(marketAnalysisServiceProvider).buildContentCluster(
+                  widget.analysisId,
+                  analysis.input,
+                  kw,
+                  language: backendLanguageCode(context),
+                  idempotencyKey: idempotencyKey,
+                ),
       );
       if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(contentClusterByAnalysisProvider(widget.analysisId));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
+      setState(
+          () => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
     } finally {
       if (mounted) setState(() {});
     }
@@ -89,23 +92,27 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
 
   Widget _buildScaffold(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final asyncCluster = ref.watch(contentClusterByAnalysisProvider(widget.analysisId));
+    final asyncCluster =
+        ref.watch(contentClusterByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
-        title: Text(l10n.miClusterTitle, style: const TextStyle(color: Colors.white)),
+        title: Text(l10n.miClusterTitle,
+            style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go(
-            AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', widget.analysisId),
+            AppConstants.routeMarketIntelligenceHub
+                .replaceFirst(':id', widget.analysisId),
           ),
         ),
       ),
       body: asyncCluster.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFFAB83FF))),
+        loading: () => const Center(
+            child: CircularProgressIndicator(color: Color(0xFFAB83FF))),
         error: (e, _) => Center(
             child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: Colors.redAccent))),
@@ -114,13 +121,16 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    const Icon(Icons.account_tree_outlined, color: Colors.white24, size: 64),
+                    const Icon(Icons.account_tree_outlined,
+                        color: Colors.white24, size: 64),
                     const SizedBox(height: 16),
-                    Text(l10n.miClusterEmptyTitle, style: const TextStyle(color: Colors.white38)),
+                    Text(l10n.miClusterEmptyTitle,
+                        style: const TextStyle(color: Colors.white38)),
                     const SizedBox(height: 8),
                     Text(l10n.miClusterEmptyBody,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white24, fontSize: 12, height: 1.4)),
+                        style: const TextStyle(
+                            color: Colors.white24, fontSize: 12, height: 1.4)),
                     const SizedBox(height: 24),
                     TextField(
                       controller: _keywordCtrl,
@@ -130,14 +140,17 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                         labelStyle: const TextStyle(color: Colors.white54),
                         filled: true,
                         fillColor: const Color(0xFF1A1A2E),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF333355)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFF333355)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFAB83FF)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFAB83FF)),
                         ),
                       ),
                     ),
@@ -145,7 +158,9 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                     if (_error != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+                        child: Text(_error!,
+                            style: const TextStyle(
+                                color: Colors.redAccent, fontSize: 13)),
                       ),
                     SizedBox(
                       width: double.infinity,
@@ -153,13 +168,20 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _running ? null : _build,
                         icon: _running
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2))
                             : const Icon(Icons.account_tree_rounded),
-                        label: Text(_running ? l10n.miClusterGenerating : l10n.miClusterGenerateButton),
+                        label: Text(_running
+                            ? l10n.miClusterGenerating
+                            : l10n.miClusterGenerateButton),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFAB83FF),
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                     ),
@@ -176,20 +198,35 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFF1A1A2E),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFAB83FF).withOpacity(0.3)),
+                        border: Border.all(
+                            color: const Color(0xFFAB83FF).withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.key_rounded, color: Color(0xFFAB83FF), size: 18),
+                          const Icon(Icons.key_rounded,
+                              color: Color(0xFFAB83FF), size: 18),
                           const SizedBox(width: 8),
-                          Text(l10n.miClusterKeywordDisplay(cluster.mainKeyword),
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          Text(
+                              l10n.miClusterKeywordDisplay(cluster.mainKeyword),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _ClusterSection(title: l10n.miClusterSectionClusters, color: const Color(0xFFAB83FF), items: cluster.clusters, labelKey: 'name', descKey: 'description'),
-                    _ClusterSection(title: l10n.miClusterSectionSilos, color: const Color(0xFF4D96FF), items: cluster.silos, labelKey: 'name', descKey: 'description'),
+                    _ClusterSection(
+                        title: l10n.miClusterSectionClusters,
+                        color: const Color(0xFFAB83FF),
+                        items: cluster.clusters,
+                        labelKey: 'name',
+                        descKey: 'description'),
+                    _ClusterSection(
+                        title: l10n.miClusterSectionSilos,
+                        color: const Color(0xFF4D96FF),
+                        items: cluster.silos,
+                        labelKey: 'name',
+                        descKey: 'description'),
                     _ArticleSection(articles: cluster.articles),
                     _RoadmapSection(roadmap: cluster.editorialRoadmap),
                   ],
@@ -221,7 +258,9 @@ class _ClusterSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.bold)),
+        Text(title,
+            style: TextStyle(
+                color: color, fontSize: 14, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         ...items.map(
           (item) => Container(
@@ -236,11 +275,15 @@ class _ClusterSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(item[labelKey]?.toString() ?? '',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13)),
                 if ((item[descKey]?.toString() ?? '').isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(item[descKey].toString(),
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis),
                 ],
@@ -265,49 +308,63 @@ class _ArticleSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.miClusterSectionArticles, style: const TextStyle(color: Color(0xFF6BCB77), fontSize: 14, fontWeight: FontWeight.bold)),
+        Text(l10n.miClusterSectionArticles,
+            style: const TextStyle(
+                color: Color(0xFF6BCB77),
+                fontSize: 14,
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         ...articles.asMap().entries.map(
-          (e) => Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A2E),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF6BCB77).withOpacity(0.15)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6BCB77).withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text('${e.key + 1}',
-                        style: const TextStyle(color: Color(0xFF6BCB77), fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
+              (e) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A2E),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: const Color(0xFF6BCB77).withOpacity(0.15)),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(e.value['title']?.toString() ?? '',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                      if (e.value['keyword'] != null)
-                        Text(l10n.miClusterArticleKeyword('${e.value['keyword']}'),
-                            style: const TextStyle(color: Colors.white38, fontSize: 11)),
-                    ],
-                  ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6BCB77).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text('${e.key + 1}',
+                            style: const TextStyle(
+                                color: Color(0xFF6BCB77),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(e.value['title']?.toString() ?? '',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13)),
+                          if (e.value['keyword'] != null)
+                            Text(
+                                l10n.miClusterArticleKeyword(
+                                    '${e.value['keyword']}'),
+                                style: const TextStyle(
+                                    color: Colors.white38, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
         const SizedBox(height: 16),
       ],
     );
@@ -325,7 +382,11 @@ class _RoadmapSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.miClusterSectionRoadmap, style: const TextStyle(color: Color(0xFFFFD93D), fontSize: 14, fontWeight: FontWeight.bold)),
+        Text(l10n.miClusterSectionRoadmap,
+            style: const TextStyle(
+                color: Color(0xFFFFD93D),
+                fontSize: 14,
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         ...roadmap.map(
           (item) => Container(
@@ -334,15 +395,22 @@ class _RoadmapSection extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFF1A1A2E),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFFFD93D).withOpacity(0.15)),
+              border:
+                  Border.all(color: const Color(0xFFFFD93D).withOpacity(0.15)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (item['month'] != null)
-                  Text(l10n.miClusterRoadmapMonth('${item['month']}'), style: const TextStyle(color: Color(0xFFFFD93D), fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(l10n.miClusterRoadmapMonth('${item['month']}'),
+                      style: const TextStyle(
+                          color: Color(0xFFFFD93D),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold)),
                 if (item['focus'] != null)
-                  Text(item['focus'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13)),
+                  Text(item['focus'].toString(),
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 13)),
               ],
             ),
           ),

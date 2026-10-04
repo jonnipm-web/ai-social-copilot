@@ -16,9 +16,9 @@ import 'package:ai_social_copilot/data/models/project.dart';
 import 'package:ai_social_copilot/data/services/ecosystem_intelligence_service.dart';
 
 Project _p(String id, String name) => Project(
-      id:        id,
-      userId:    'uid',
-      name:      name,
+      id: id,
+      userId: 'uid',
+      name: name,
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
     );
@@ -29,21 +29,21 @@ EcosystemScore _score(
   String recommendation = 'ESCALAR',
 }) =>
     EcosystemScore(
-      project:          p,
+      project: p,
       opportunityScore: ecoScore,
-      strategicFit:     50,
-      synergyScore:     50,
-      roiScore:         50,
-      momentumScore:    50,
-      ecosystemScore:   ecoScore,
-      recommendation:   recommendation,
-      strengths:        const ['Forte diferencial'],
-      risks:            const ['Concorrência alta'],
-      quickWins:        const [],
-      totalRoi:         0,
-      actionCount:      0,
+      strategicFit: 50,
+      synergyScore: 50,
+      roiScore: 50,
+      momentumScore: 50,
+      ecosystemScore: ecoScore,
+      recommendation: recommendation,
+      strengths: const ['Forte diferencial'],
+      risks: const ['Concorrência alta'],
+      quickWins: const [],
+      totalRoi: 0,
+      actionCount: 0,
       completedActions: 0,
-      labItemCount:     0,
+      labItemCount: 0,
     );
 
 final _service = EcosystemIntelligenceService();
@@ -59,14 +59,13 @@ void main() {
         _score(b, 90, recommendation: 'ESCALAR'),
       ];
 
-      final scopedToA =
-          allScores.where((s) => s.project.id == a.id).toList();
+      final scopedToA = allScores.where((s) => s.project.id == a.id).toList();
 
       final briefing = _service.generateBriefing(
-        scores:     scopedToA,
-        analyses:   const [],
-        actions:    const [],
-        labItems:   const [],
+        scores: scopedToA,
+        analyses: const [],
+        actions: const [],
+        labItems: const [],
         roiMetrics: const [],
       );
 
@@ -78,20 +77,21 @@ void main() {
       );
     });
 
-    test('projeto sem scores próprios recebe briefing vazio, não o de outro projeto', () {
+    test(
+        'projeto sem scores próprios recebe briefing vazio, não o de outro projeto',
+        () {
       final a = _p('proj-a', 'Projeto Alfa');
       final c = _p('proj-c', 'Projeto Gama (sem dados ainda)');
 
       final allScores = [_score(a, 95, recommendation: 'ESCALAR')];
 
-      final scopedToC =
-          allScores.where((s) => s.project.id == c.id).toList();
+      final scopedToC = allScores.where((s) => s.project.id == c.id).toList();
 
       final briefing = _service.generateBriefing(
-        scores:     scopedToC,
-        analyses:   const [],
-        actions:    const [],
-        labItems:   const [],
+        scores: scopedToC,
+        analyses: const [],
+        actions: const [],
+        labItems: const [],
         roiMetrics: const [],
       );
 
@@ -107,7 +107,9 @@ void main() {
       );
     });
 
-    test('projeto deletado/inexistente (id sem correspondência) não quebra e não vaza dados', () {
+    test(
+        'projeto deletado/inexistente (id sem correspondência) não quebra e não vaza dados',
+        () {
       final a = _p('proj-a', 'Projeto Alfa');
       final allScores = [_score(a, 95, recommendation: 'ESCALAR')];
 
@@ -118,10 +120,10 @@ void main() {
       expect(scoped, isEmpty);
 
       final briefing = _service.generateBriefing(
-        scores:     scoped,
-        analyses:   const [],
-        actions:    const [],
-        labItems:   const [],
+        scores: scoped,
+        analyses: const [],
+        actions: const [],
+        labItems: const [],
         roiMetrics: const [],
       );
       expect(briefing.whatGrew, isEmpty);
@@ -137,14 +139,13 @@ void main() {
         _score(b, 15, recommendation: 'PAUSAR'),
       ];
 
-      final scopedToB =
-          allScores.where((s) => s.project.id == b.id).toList();
+      final scopedToB = allScores.where((s) => s.project.id == b.id).toList();
 
       final briefing = _service.generateBriefing(
-        scores:     scopedToB,
-        analyses:   const [],
-        actions:    const [],
-        labItems:   const [],
+        scores: scopedToB,
+        analyses: const [],
+        actions: const [],
+        labItems: const [],
         roiMetrics: const [],
       );
 

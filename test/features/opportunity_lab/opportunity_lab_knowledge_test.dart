@@ -30,22 +30,26 @@ import 'package:ai_social_copilot/providers/profile_provider.dart';
 //       dialog's Knowledge picker reads from) since the dialog's own
 //       picker UI is behind the same pre-existing constructor blocker.
 void main() {
-  KnowledgeItem fakeItem(String id, String projectId, String title) => KnowledgeItem(
-        id:        id,
-        userId:    'user-1',
+  KnowledgeItem fakeItem(String id, String projectId, String title) =>
+      KnowledgeItem(
+        id: id,
+        userId: 'user-1',
         projectId: projectId,
-        title:     title,
+        title: title,
         createdAt: DateTime(2026, 1, 1),
         updatedAt: DateTime(2026, 1, 1),
       );
 
   group('New Opportunity dialog -- no active project', () {
-    testWidgets('shows a truthful "select a project" hint and no checklist, when no project is active', (tester) async {
+    testWidgets(
+        'shows a truthful "select a project" hint and no checklist, when no project is active',
+        (tester) async {
       await tester.pumpWidget(ProviderScope(
         overrides: [
           // Keeps _LabBody (and opportunityLabNotifierProvider) from ever
           // building -- the FAB that opens the dialog is unconditional.
-          featureFlagProvider(FeatureFlag.opportunityLabEnabled).overrideWith((ref) async => false),
+          featureFlagProvider(FeatureFlag.opportunityLabEnabled)
+              .overrideWith((ref) async => false),
           // AppDrawer (unconditionally part of this Scaffold) watches this
           // -- its real implementation touches Supabase, same class of
           // issue as everywhere else in this suite.
@@ -72,11 +76,17 @@ void main() {
     });
   });
 
-  group('knowledgeItemsByProjectProvider -- project isolation (Section 19)', () {
-    test('project A and project B resolve independently, never leaking into each other', () async {
+  group('knowledgeItemsByProjectProvider -- project isolation (Section 19)',
+      () {
+    test(
+        'project A and project B resolve independently, never leaking into each other',
+        () async {
       final container = ProviderContainer(overrides: [
         knowledgeItemsByProjectProvider('proj-a').overrideWith(
-          (ref) async => [fakeItem('k1', 'proj-a', 'Documento A1'), fakeItem('k2', 'proj-a', 'Documento A2')],
+          (ref) async => [
+            fakeItem('k1', 'proj-a', 'Documento A1'),
+            fakeItem('k2', 'proj-a', 'Documento A2')
+          ],
         ),
         knowledgeItemsByProjectProvider('proj-b').overrideWith(
           (ref) async => [fakeItem('k3', 'proj-b', 'Documento B1')],
@@ -84,14 +94,17 @@ void main() {
       ]);
       addTearDown(container.dispose);
 
-      final itemsA = await container.read(knowledgeItemsByProjectProvider('proj-a').future);
-      final itemsB = await container.read(knowledgeItemsByProjectProvider('proj-b').future);
+      final itemsA = await container
+          .read(knowledgeItemsByProjectProvider('proj-a').future);
+      final itemsB = await container
+          .read(knowledgeItemsByProjectProvider('proj-b').future);
 
       expect(itemsA.map((i) => i.id), ['k1', 'k2']);
       expect(itemsB.map((i) => i.id), ['k3']);
       // The isolation guarantee this test exists to prove: neither list
       // contains an id or title that belongs to the other project.
-      expect(itemsA.any((i) => itemsB.map((b) => b.id).contains(i.id)), isFalse);
+      expect(
+          itemsA.any((i) => itemsB.map((b) => b.id).contains(i.id)), isFalse);
       expect(itemsA.every((i) => i.projectId == 'proj-a'), isTrue);
       expect(itemsB.every((i) => i.projectId == 'proj-b'), isTrue);
     });

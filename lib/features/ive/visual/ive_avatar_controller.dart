@@ -11,12 +11,12 @@ import 'ive_visual_config.dart';
 
 class IveAvatarController extends ChangeNotifier {
   IveRiveRuntime? _riveRuntime;
-  IveVisualState  _currentState   = IveVisualState.idle;
-  bool            _riveReady      = false;
-  bool            _disposed       = false;
+  IveVisualState _currentState = IveVisualState.idle;
+  bool _riveReady = false;
+  bool _disposed = false;
 
   IveVisualState get currentState => _currentState;
-  bool           get isRiveReady  => _riveReady;
+  bool get isRiveReady => _riveReady;
 
   /// Returns the Rive runtime (for the Rive widget to access the artboard).
   IveRiveRuntime? get riveRuntime => _riveRuntime;
@@ -29,7 +29,7 @@ class IveAvatarController extends ChangeNotifier {
     // failure to wait for. See IveRiveFeatureGate.
     if (!IveRiveFeatureGate.enabled) {
       _riveRuntime = null;
-      _riveReady   = false;
+      _riveReady = false;
       return false;
     }
     try {
@@ -43,7 +43,7 @@ class IveAvatarController extends ChangeNotifier {
     } catch (_) {
       // .riv asset missing or malformed — fallback will be used
       _riveRuntime = null;
-      _riveReady   = false;
+      _riveReady = false;
       return false;
     }
   }

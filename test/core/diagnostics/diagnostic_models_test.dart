@@ -9,40 +9,64 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ai_social_copilot/core/diagnostics/diagnostic_models.dart';
 
 void main() {
-  test('DiagnosticSeverity values match the diagnostic_events.severity CHECK constraint', () {
+  test(
+      'DiagnosticSeverity values match the diagnostic_events.severity CHECK constraint',
+      () {
     final values = DiagnosticSeverity.values.map((s) => s.value).toSet();
     expect(values, {'DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'});
   });
 
-  test('DiagnosticCategory values match the diagnostic_events.category CHECK constraint', () {
+  test(
+      'DiagnosticCategory values match the diagnostic_events.category CHECK constraint',
+      () {
     final values = DiagnosticCategory.values.map((c) => c.value).toSet();
     expect(values, {
-      'NAVIGATION', 'AUTH', 'QUOTA', 'AI', 'KNOWLEDGE', 'DRIVE', 'IVE', 'RUNTIME',
+      'NAVIGATION',
+      'AUTH',
+      'QUOTA',
+      'AI',
+      'KNOWLEDGE',
+      'DRIVE',
+      'IVE',
+      'RUNTIME',
     });
   });
 
-  test('kDiagnosticMetadataKeys includes the STABILITY-09O forensic context keys', () {
-    expect(kDiagnosticMetadataKeys, containsAll({
-      'previous_route',
-      'lifecycle_state',
-      'overlay_mounted',
-      'overlay_interaction_active',
-      'issue_present',
-      'project_context_present',
-      'builder_child_was_null',
-      'profile_resolved',
-    }));
+  test(
+      'kDiagnosticMetadataKeys includes the STABILITY-09O forensic context keys',
+      () {
+    expect(
+        kDiagnosticMetadataKeys,
+        containsAll({
+          'previous_route',
+          'lifecycle_state',
+          'overlay_mounted',
+          'overlay_interaction_active',
+          'issue_present',
+          'project_context_present',
+          'builder_child_was_null',
+          'profile_resolved',
+        }));
   });
 
   test('kDiagnosticMetadataKeys contains no forbidden-shaped key name', () {
-    const forbiddenFragments = ['password', 'token', 'secret', 'authorization', 'cookie', 'api_key', 'apikey'];
+    const forbiddenFragments = [
+      'password',
+      'token',
+      'secret',
+      'authorization',
+      'cookie',
+      'api_key',
+      'apikey'
+    ];
     for (final key in kDiagnosticMetadataKeys) {
       final lower = key.toLowerCase();
       for (final fragment in forbiddenFragments) {
         expect(
           lower.contains(fragment),
           isFalse,
-          reason: 'kDiagnosticMetadataKeys contains "$key", which looks like a secret field name',
+          reason:
+              'kDiagnosticMetadataKeys contains "$key", which looks like a secret field name',
         );
       }
     }

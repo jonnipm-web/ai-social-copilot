@@ -16,17 +16,17 @@ import 'knowledge_provider.dart';
 // ── IveContextData — dados em tempo real do ecossistema para a IVE ────────────
 
 class IveContextData {
-  final int    healthScore;
-  final int    projectCount;
-  final int    pendingActionsCount;
-  final int    pendingOpportunitiesCount;
+  final int healthScore;
+  final int projectCount;
+  final int pendingActionsCount;
+  final int pendingOpportunitiesCount;
   final String? topProjectName;
   final String? topProjectDescription;
   final String? topProjectType;
-  final int?    topProjectScore;
+  final int? topProjectScore;
   final String? mainBottleneckName;
-  final int?    mainBottleneckScore;
-  final bool   hasAlert;
+  final int? mainBottleneckScore;
+  final bool hasAlert;
   final String alertMessage;
   final String alertId;
   // Snapshot das top 3 projetos para contexto rico no chat
@@ -55,27 +55,27 @@ class IveContextData {
   final bool projectUnavailable;
 
   const IveContextData({
-    this.healthScore                = 0,
-    this.projectCount               = 0,
-    this.pendingActionsCount        = 0,
-    this.pendingOpportunitiesCount  = 0,
+    this.healthScore = 0,
+    this.projectCount = 0,
+    this.pendingActionsCount = 0,
+    this.pendingOpportunitiesCount = 0,
     this.topProjectName,
     this.topProjectDescription,
     this.topProjectType,
     this.topProjectScore,
     this.mainBottleneckName,
     this.mainBottleneckScore,
-    this.hasAlert                   = false,
-    this.alertMessage               = '',
-    this.alertId                    = '',
-    this.topProjectsSnapshot        = const [],
-    this.knowledgeItemsSummary      = const [],
-    this.documentCoverage           = const {},
-    this.documentWarnings           = const [],
+    this.hasAlert = false,
+    this.alertMessage = '',
+    this.alertId = '',
+    this.topProjectsSnapshot = const [],
+    this.knowledgeItemsSummary = const [],
+    this.documentCoverage = const {},
+    this.documentWarnings = const [],
     this.pendingOpportunitiesSummary = const [],
-    this.pendingActionsSummary       = const [],
+    this.pendingActionsSummary = const [],
     this.scopedProjectId,
-    this.projectUnavailable          = false,
+    this.projectUnavailable = false,
   });
 }
 
@@ -158,7 +158,8 @@ ProjectFocusResult selectProjectFocus(
 // diretamente (test/providers/ive_project_context_test.dart), sem mockar
 // a cadeia de providers de ecossistema.
 class EcosystemWideFields {
-  const EcosystemWideFields({required this.topProjectsSnapshot, required this.bottleneck});
+  const EcosystemWideFields(
+      {required this.topProjectsSnapshot, required this.bottleneck});
   final List<Map<String, dynamic>> topProjectsSnapshot;
   final EcosystemScore? bottleneck;
 }
@@ -174,18 +175,22 @@ EcosystemWideFields selectEcosystemWideFields(
   }
   final sorted = [...scores]
     ..sort((a, b) => b.ecosystemScore.compareTo(a.ecosystemScore));
-  final topThree = sorted.take(3).map((s) => {
-        'name':        s.project.name,
-        'description': s.project.presentedDescription,
-        'type':        s.project.type,
-        'status':      s.project.status,
-        'score':       s.ecosystemScore,
-        'opportunity': s.project.opportunityScore,
-      }).toList();
+  final topThree = sorted
+      .take(3)
+      .map((s) => {
+            'name': s.project.name,
+            'description': s.project.presentedDescription,
+            'type': s.project.type,
+            'status': s.project.status,
+            'score': s.ecosystemScore,
+            'opportunity': s.project.opportunityScore,
+          })
+      .toList();
   final bottleneck = scores.isNotEmpty
       ? scores.reduce((a, b) => a.executionScore < b.executionScore ? a : b)
       : null;
-  return EcosystemWideFields(topProjectsSnapshot: topThree, bottleneck: bottleneck);
+  return EcosystemWideFields(
+      topProjectsSnapshot: topThree, bottleneck: bottleneck);
 }
 
 // IVE-COMMERCIAL-FOUNDATION-11 (Codex Gate 2, P1, ACCEPTED) —
@@ -217,8 +222,9 @@ int selectPendingOpportunitiesCount({
 // Um score genuinamente zerado (projetos reais, todos com ecosystemScore
 // 0) continua dessa forma corretamente reportado como alerta real.
 class EcosystemAlert {
-  const EcosystemAlert({this.hasAlert = false, this.alertId = '', this.alertMessage = ''});
-  final bool   hasAlert;
+  const EcosystemAlert(
+      {this.hasAlert = false, this.alertId = '', this.alertMessage = ''});
+  final bool hasAlert;
   final String alertId;
   final String alertMessage;
 }
@@ -236,7 +242,7 @@ EcosystemAlert selectEcosystemAlert({
   if (scores.isNotEmpty && health < 40) {
     return EcosystemAlert(
       hasAlert: true,
-      alertId:  'health_low_$health',
+      alertId: 'health_low_$health',
       alertMessage: l10n.ctxAlertHealthLow(health),
     );
   }
@@ -244,14 +250,15 @@ EcosystemAlert selectEcosystemAlert({
     final c = criticals.first;
     return EcosystemAlert(
       hasAlert: true,
-      alertId:  'score_critical_${c.project.id}',
-      alertMessage: l10n.ctxAlertProjectCritical(c.project.name, c.ecosystemScore),
+      alertId: 'score_critical_${c.project.id}',
+      alertMessage:
+          l10n.ctxAlertProjectCritical(c.project.name, c.ecosystemScore),
     );
   }
   if (pending.length > 5) {
     return EcosystemAlert(
       hasAlert: true,
-      alertId:  'actions_overdue_${pending.length}',
+      alertId: 'actions_overdue_${pending.length}',
       alertMessage: l10n.ctxAlertActionsOverdue(pending.length),
     );
   }
@@ -288,15 +295,15 @@ EcosystemAlert selectEcosystemAlert({
 //     ecossistema — não é o mesmo bug que motivou esta mudança (que era
 //     usar esse mesmo valor como se fosse "o projeto que o usuário está
 //     vendo" quando na verdade é um projeto diferente).
-final iveContextDataProvider =
-    FutureProvider.autoDispose.family<IveContextData, String?>((ref, projectId) async {
+final iveContextDataProvider = FutureProvider.autoDispose
+    .family<IveContextData, String?>((ref, projectId) async {
   // R16 — presentation-language strings; watching recomputes on a language
   // switch so no stale-language alert/warning survives a PT↔EN change.
-  final l10n       = ref.watch(appL10nProvider);
+  final l10n = ref.watch(appL10nProvider);
   // Lê dados existentes — não cria nova lógica, apenas agrega
-  final health     = await ref.watch(ecosystemHealthProvider.future);
-  final scores     = await ref.watch(ecosystemScoresProvider.future);
-  final pending    = await ref.watch(pendingActionsProvider.future);
+  final health = await ref.watch(ecosystemHealthProvider.future);
+  final scores = await ref.watch(ecosystemScoresProvider.future);
+  final pending = await ref.watch(pendingActionsProvider.future);
   final labSummary = await ref.watch(opportunityLabSummaryProvider.future);
 
   final focusResult = selectProjectFocus(scores, projectId);
@@ -305,9 +312,9 @@ final iveContextDataProvider =
 
   // ── Knowledge items — filtrados pelo projeto ativo quando disponível ──────────
   final knowledgeRaw = await ref.watch(knowledgeItemsProvider.future).then(
-    (v) => v,
-    onError: (_, __) => <KnowledgeItem>[],
-  );
+        (v) => v,
+        onError: (_, __) => <KnowledgeItem>[],
+      );
 
   // Quando um projectId explícito foi pedido, o escopo é SEMPRE esse
   // projectId (mesmo que `top` seja null por projectUnavailable — nesse
@@ -315,7 +322,8 @@ final iveContextDataProvider =
   // nenhum item, retornando lista vazia, o que é o resultado seguro
   // correto, não um erro).
   final effectiveProjectId = projectId ?? top?.project.id;
-  final knowledgeForGrounding = selectKnowledgeForGrounding(knowledgeRaw, effectiveProjectId);
+  final knowledgeForGrounding =
+      selectKnowledgeForGrounding(knowledgeRaw, effectiveProjectId);
 
   final knowledgeSorted = [...knowledgeForGrounding]
     ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
@@ -337,7 +345,7 @@ final iveContextDataProvider =
   final grounding = DocumentContextBuilder.buildGrounding(
     topItems.cast<KnowledgeItem>(),
     projectContext: projectContext,
-    l10n:           l10n,
+    l10n: l10n,
   );
 
   // Mapa documentId → texto concatenado de todos os excerpts (Pass 2 pode gerar
@@ -361,11 +369,11 @@ final iveContextDataProvider =
         .where((e) => e.documentId == k.id)
         .fold(0, (sum, e) => sum + e.charCount);
     return <String, dynamic>{
-      'title':           k.title,
-      'score':           k.opportunityScore,
-      'status':          k.status,
-      'source_id':       k.id,
-      'grounded':        excerptText != null,
+      'title': k.title,
+      'score': k.opportunityScore,
+      'status': k.status,
+      'source_id': k.id,
+      'grounded': excerptText != null,
       'delivered_chars': deliveredChars,
       if (k.niche != null) 'niche': k.niche,
       if (excerptText != null) 'content_excerpt': excerptText,
@@ -374,12 +382,13 @@ final iveContextDataProvider =
 
   // Coverage: total_linked reflete TODOS os docs do projeto, não só os top-5.
   // used_ids e not_used_count habilitam auditoria de quais docs foram excluídos.
-  final usedDocIds = grounding.excerpts.map((e) => e.documentId).toSet().toList();
+  final usedDocIds =
+      grounding.excerpts.map((e) => e.documentId).toSet().toList();
   final notUsedCount = totalLinkedCount - topItems.length;
   final documentCoverage = {
     ...grounding.coverage.toMap(),
     'total_linked': totalLinkedCount,
-    'used_ids':     usedDocIds,
+    'used_ids': usedDocIds,
     'not_used_count': notUsedCount,
   };
 
@@ -388,7 +397,8 @@ final iveContextDataProvider =
   if (totalLinkedCount > topItems.length) {
     mutableWarnings.insert(
       0,
-      l10n.ctxDocCoverageWarning(totalLinkedCount, topItems.length, notUsedCount),
+      l10n.ctxDocCoverageWarning(
+          totalLinkedCount, topItems.length, notUsedCount),
     );
   }
   final documentWarnings = mutableWarnings;
@@ -400,26 +410,31 @@ final iveContextDataProvider =
   // usuário no grounding. Quando projectId é null (resumo ecosystem-wide),
   // mantém o comportamento original (top 3 do sistema todo).
   final opportunities = await ref.watch(opportunityLabProvider.future).then(
-    (v) => v,
-    onError: (_, __) => <OpportunityLabItem>[],
-  );
+        (v) => v,
+        onError: (_, __) => <OpportunityLabItem>[],
+      );
   final opportunitiesInScope = projectId != null
       ? opportunities.where((o) => o.projectId == projectId)
       : opportunities;
-  final pendingOpportunities = [...opportunitiesInScope.where((o) => o.status == 'pending')]
-    ..sort((a, b) => b.finalScore.compareTo(a.finalScore));
-  final opportunitiesSummary = pendingOpportunities.take(3).map((o) => {
-    'title':        o.title,
-    'description':  o.description,
-    'score':        o.finalScore,
-    'type':         o.opportunityType,
-    'origin':       o.localizedOriginLabel(l10n),
-    'confidence':   o.confidence,
-    if (o.rationale != null && o.rationale!.isNotEmpty)
-      'rationale': o.rationale,
-    if (o.risks.isNotEmpty)        'risks':      o.risks.take(3).toList(),
-    if (o.actionSteps.isNotEmpty)  'next_steps': o.actionSteps.take(3).toList(),
-  }).toList();
+  final pendingOpportunities = [
+    ...opportunitiesInScope.where((o) => o.status == 'pending')
+  ]..sort((a, b) => b.finalScore.compareTo(a.finalScore));
+  final opportunitiesSummary = pendingOpportunities
+      .take(3)
+      .map((o) => {
+            'title': o.title,
+            'description': o.description,
+            'score': o.finalScore,
+            'type': o.opportunityType,
+            'origin': o.localizedOriginLabel(l10n),
+            'confidence': o.confidence,
+            if (o.rationale != null && o.rationale!.isNotEmpty)
+              'rationale': o.rationale,
+            if (o.risks.isNotEmpty) 'risks': o.risks.take(3).toList(),
+            if (o.actionSteps.isNotEmpty)
+              'next_steps': o.actionSteps.take(3).toList(),
+          })
+      .toList();
 
   // ── Ações pendentes — top 3 por prioridade com campos de auditoria ───────────
   // Mesma lógica de escopo por projeto que as oportunidades acima.
@@ -428,16 +443,19 @@ final iveContextDataProvider =
       : pending;
   final pendingActionsSorted = [...pendingInScope]
     ..sort((a, b) => b.priority.compareTo(a.priority));
-  final actionsSummary = pendingActionsSorted.take(3).map((a) => {
-    'title':    a.title,
-    'priority': a.priority,
-    'impact':   a.impactScore,
-    'origin':   a.localizedOriginLabel(l10n),
-    if (a.rationale != null && a.rationale!.isNotEmpty)
-      'rationale': a.rationale,
-    if (a.plan.isNotEmpty)   'plan':  a.plan.take(2).toList(),
-    if (a.risks.isNotEmpty)  'risks': a.risks.take(2).toList(),
-  }).toList();
+  final actionsSummary = pendingActionsSorted
+      .take(3)
+      .map((a) => {
+            'title': a.title,
+            'priority': a.priority,
+            'impact': a.impactScore,
+            'origin': a.localizedOriginLabel(l10n),
+            if (a.rationale != null && a.rationale!.isNotEmpty)
+              'rationale': a.rationale,
+            if (a.plan.isNotEmpty) 'plan': a.plan.take(2).toList(),
+            if (a.risks.isNotEmpty) 'risks': a.risks.take(2).toList(),
+          })
+      .toList();
 
   // ── Campos comparativos cross-project (ver selectEcosystemWideFields) ────────
   final ecosystemWideFields = selectEcosystemWideFields(scores, projectId);
@@ -456,26 +474,26 @@ final iveContextDataProvider =
   final topThree = ecosystemWideFields.topProjectsSnapshot;
 
   return IveContextData(
-    healthScore:                 health,
-    projectCount:                scores.length,
-    pendingActionsCount:         pendingInScope.length,
-    pendingOpportunitiesCount:   pendingLab,
-    topProjectName:              top?.project.name,
-    topProjectDescription:       top?.project.presentedDescription,
-    topProjectType:              top?.project.type,
-    topProjectScore:             top?.ecosystemScore,
-    mainBottleneckName:          bottleneck?.project.name,
-    mainBottleneckScore:         bottleneck?.executionScore,
-    hasAlert:                    alert.hasAlert,
-    alertMessage:                alert.alertMessage,
-    alertId:                     alert.alertId,
-    topProjectsSnapshot:         topThree,
-    knowledgeItemsSummary:       knowledgeSummary,
-    documentCoverage:            documentCoverage,
-    documentWarnings:            documentWarnings,
+    healthScore: health,
+    projectCount: scores.length,
+    pendingActionsCount: pendingInScope.length,
+    pendingOpportunitiesCount: pendingLab,
+    topProjectName: top?.project.name,
+    topProjectDescription: top?.project.presentedDescription,
+    topProjectType: top?.project.type,
+    topProjectScore: top?.ecosystemScore,
+    mainBottleneckName: bottleneck?.project.name,
+    mainBottleneckScore: bottleneck?.executionScore,
+    hasAlert: alert.hasAlert,
+    alertMessage: alert.alertMessage,
+    alertId: alert.alertId,
+    topProjectsSnapshot: topThree,
+    knowledgeItemsSummary: knowledgeSummary,
+    documentCoverage: documentCoverage,
+    documentWarnings: documentWarnings,
     pendingOpportunitiesSummary: opportunitiesSummary,
-    pendingActionsSummary:       actionsSummary,
-    scopedProjectId:             projectId,
-    projectUnavailable:          projectUnavailable,
+    pendingActionsSummary: actionsSummary,
+    scopedProjectId: projectId,
+    projectUnavailable: projectUnavailable,
   );
 });

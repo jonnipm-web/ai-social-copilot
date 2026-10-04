@@ -83,8 +83,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
             height: 48,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               children: [
                 _TypeChip(
                   label: l10n.commonAll,
@@ -102,8 +101,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
 
           Expanded(
             child: itemsAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
                 child: Text(l10n.commonError,
                     style: const TextStyle(color: Colors.white54)),
@@ -127,8 +125,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                               : _projectId != null
                                   ? l10n.contentLibraryEmptyProject
                                   : l10n.contentLibraryEmpty,
-                          style:
-                              const TextStyle(color: Colors.white54),
+                          style: const TextStyle(color: Colors.white54),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -142,8 +139,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                 }
 
                 return ListView.builder(
-                  padding:
-                      const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
                   itemCount: filtered.length,
                   itemBuilder: (_, i) => _ContentCard(
                     item: filtered[i],
@@ -151,14 +147,13 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                     projectName: _projectId != null
                         ? null
                         : projects
-                            .where((p) =>
-                                p.id == filtered[i].projectId)
+                            .where((p) => p.id == filtered[i].projectId)
                             .map((p) => p.name)
                             .firstOrNull,
                     onDeleted: () {
                       if (_projectId != null) {
-                        ref.invalidate(contentItemsByProjectProvider(
-                            _projectId!));
+                        ref.invalidate(
+                            contentItemsByProjectProvider(_projectId!));
                       } else {
                         ref.invalidate(contentItemsProvider);
                       }
@@ -183,8 +178,8 @@ class _FilterChip extends StatelessWidget {
     required this.onTap,
   });
 
-  final String       label;
-  final bool         selected;
+  final String label;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
@@ -203,9 +198,7 @@ class _FilterChip extends StatelessWidget {
               ? const Color(0xFF6C63FF)
               : Colors.white.withOpacity(0.07),
           side: BorderSide(
-              color: selected
-                  ? const Color(0xFF6C63FF)
-                  : Colors.white12),
+              color: selected ? const Color(0xFF6C63FF) : Colors.white12),
           padding: const EdgeInsets.symmetric(horizontal: 4),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
@@ -223,8 +216,8 @@ class _TypeChip extends StatelessWidget {
     required this.onTap,
   });
 
-  final String       label;
-  final bool         selected;
+  final String label;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
@@ -245,8 +238,7 @@ class _TypeChip extends StatelessWidget {
               ? const Color(0xFF9C27B0)
               : Colors.white.withOpacity(0.07),
           side: BorderSide(
-            color:
-                selected ? const Color(0xFF9C27B0) : Colors.white12,
+            color: selected ? const Color(0xFF9C27B0) : Colors.white12,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 4),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -266,10 +258,10 @@ class _ContentCard extends StatelessWidget {
     this.projectName,
   });
 
-  final ContentItem  item;
-  final WidgetRef    ref;
+  final ContentItem item;
+  final WidgetRef ref;
   final VoidCallback onDeleted;
-  final String?      projectName;
+  final String? projectName;
 
   @override
   Widget build(BuildContext context) {
@@ -297,13 +289,12 @@ class _ContentCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: typeColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8),
-                      border:
-                          Border.all(color: typeColor.withOpacity(0.3)),
+                      border: Border.all(color: typeColor.withOpacity(0.3)),
                     ),
                     child: Text(
                       typeLabel,
@@ -323,21 +314,18 @@ class _ContentCard extends StatelessWidget {
                         color: const Color(0xFF6C63FF).withOpacity(0.12),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                            color: const Color(0xFF6C63FF)
-                                .withOpacity(0.25)),
+                            color: const Color(0xFF6C63FF).withOpacity(0.25)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(Icons.folder_rounded,
-                              size: 10,
-                              color: Color(0xFF6C63FF)),
+                              size: 10, color: Color(0xFF6C63FF)),
                           const SizedBox(width: 3),
                           Text(
                             projectName!,
                             style: const TextStyle(
-                                color: Color(0xFF6C63FF),
-                                fontSize: 10),
+                                color: Color(0xFF6C63FF), fontSize: 10),
                           ),
                         ],
                       ),
@@ -358,16 +346,13 @@ class _ContentCard extends StatelessWidget {
                                 l10n.contentLibraryDeleteConfirm(item.title)),
                             actions: [
                               TextButton(
-                                onPressed: () =>
-                                    Navigator.pop(ctx, false),
+                                onPressed: () => Navigator.pop(ctx, false),
                                 child: Text(l10n.commonCancel),
                               ),
                               TextButton(
-                                onPressed: () =>
-                                    Navigator.pop(ctx, true),
+                                onPressed: () => Navigator.pop(ctx, true),
                                 child: Text(l10n.commonDelete,
-                                    style:
-                                        const TextStyle(color: Colors.red)),
+                                    style: const TextStyle(color: Colors.red)),
                               ),
                             ],
                           ),
@@ -382,9 +367,9 @@ class _ContentCard extends StatelessWidget {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context)
                                   .showSnackBar(SnackBar(
-                                content: Text(l10n.contentLibraryDeleteError(extractErrorMessage(e, l10n))),
-                                backgroundColor:
-                                    const Color(0xFFF44336),
+                                content: Text(l10n.contentLibraryDeleteError(
+                                    extractErrorMessage(e, l10n))),
+                                backgroundColor: const Color(0xFFF44336),
                               ));
                             }
                           }
@@ -409,13 +394,11 @@ class _ContentCard extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     fontSize: 14),
               ),
-              if (item.description != null &&
-                  item.description!.isNotEmpty) ...[
+              if (item.description != null && item.description!.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
                   item.description!,
-                  style: const TextStyle(
-                      color: Colors.white54, fontSize: 12),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -429,8 +412,8 @@ class _ContentCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       item.niche!,
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 11),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 11),
                     ),
                   ],
                 ),
@@ -444,12 +427,17 @@ class _ContentCard extends StatelessWidget {
 
   Color _typeColor(String type) {
     switch (type) {
-      case 'produto':  return const Color(0xFF6C63FF);
-      case 'campanha': return const Color(0xFFB44FE8);
-      case 'marca':    return const Color(0xFFFFD700);
+      case 'produto':
+        return const Color(0xFF6C63FF);
+      case 'campanha':
+        return const Color(0xFFB44FE8);
+      case 'marca':
+        return const Color(0xFFFFD700);
       case 'livro':
-      case 'ebook':    return Colors.teal;
-      default:         return Colors.white54;
+      case 'ebook':
+        return Colors.teal;
+      default:
+        return Colors.white54;
     }
   }
 }

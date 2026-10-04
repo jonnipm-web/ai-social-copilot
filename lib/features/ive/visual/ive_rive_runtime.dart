@@ -16,7 +16,7 @@ class IveRiveRuntime implements IveVisualRuntime {
 
   IveRiveRuntime({this.artboardName = IveRiveInputs.artboardCompact});
 
-  Artboard?               _artboard;
+  Artboard? _artboard;
   StateMachineController? _smCtrl;
 
   // Boolean inputs
@@ -80,7 +80,7 @@ class IveRiveRuntime implements IveVisualRuntime {
   @override
   Future<void> initialize() async {
     final bytes = await rootBundle.load(IveAssetPaths.riveAsset);
-    final file  = RiveFile.import(bytes);
+    final file = RiveFile.import(bytes);
 
     final artboard = file.artboardByName(artboardName) ?? file.mainArtboard;
 
@@ -99,27 +99,27 @@ class IveRiveRuntime implements IveVisualRuntime {
 
     artboard.addController(ctrl);
 
-    _isListening        = _findBool(ctrl,   IveRiveInputs.isListening);
-    _isThinking         = _findBool(ctrl,   IveRiveInputs.isThinking);
-    _isSpeaking         = _findBool(ctrl,   IveRiveInputs.isSpeaking);
-    _isVisible          = _findBool(ctrl,   IveRiveInputs.isVisible);
-    _hasUnreadInsight   = _findBool(ctrl,   IveRiveInputs.hasUnreadInsight);
-    _stateIndex         = _findNumber(ctrl, IveRiveInputs.stateIndex);
-    _attentionLevel     = _findNumber(ctrl, IveRiveInputs.attentionLevel);
+    _isListening = _findBool(ctrl, IveRiveInputs.isListening);
+    _isThinking = _findBool(ctrl, IveRiveInputs.isThinking);
+    _isSpeaking = _findBool(ctrl, IveRiveInputs.isSpeaking);
+    _isVisible = _findBool(ctrl, IveRiveInputs.isVisible);
+    _hasUnreadInsight = _findBool(ctrl, IveRiveInputs.hasUnreadInsight);
+    _stateIndex = _findNumber(ctrl, IveRiveInputs.stateIndex);
+    _attentionLevel = _findNumber(ctrl, IveRiveInputs.attentionLevel);
     _expressionIntensity = _findNumber(ctrl, IveRiveInputs.expressionIntensity);
-    _speechActivity     = _findNumber(ctrl, IveRiveInputs.speechActivity);
-    _wave               = _findTrigger(ctrl, IveRiveInputs.wave);
-    _notify             = _findTrigger(ctrl, IveRiveInputs.notify);
-    _successTrigger     = _findTrigger(ctrl, IveRiveInputs.success);
-    _warningTrigger     = _findTrigger(ctrl, IveRiveInputs.warning);
-    _errorTrigger       = _findTrigger(ctrl, IveRiveInputs.error);
+    _speechActivity = _findNumber(ctrl, IveRiveInputs.speechActivity);
+    _wave = _findTrigger(ctrl, IveRiveInputs.wave);
+    _notify = _findTrigger(ctrl, IveRiveInputs.notify);
+    _successTrigger = _findTrigger(ctrl, IveRiveInputs.success);
+    _warningTrigger = _findTrigger(ctrl, IveRiveInputs.warning);
+    _errorTrigger = _findTrigger(ctrl, IveRiveInputs.error);
     _opportunityTrigger = _findTrigger(ctrl, IveRiveInputs.opportunity);
-    _focus              = _findTrigger(ctrl, IveRiveInputs.focus);
-    _reset              = _findTrigger(ctrl, IveRiveInputs.reset);
+    _focus = _findTrigger(ctrl, IveRiveInputs.focus);
+    _reset = _findTrigger(ctrl, IveRiveInputs.reset);
 
     _artboard = artboard;
-    _smCtrl   = ctrl;
-    _ready    = true;
+    _smCtrl = ctrl;
+    _ready = true;
 
     _isVisible?.value = true;
   }
@@ -129,35 +129,83 @@ class IveRiveRuntime implements IveVisualRuntime {
   @override
   void setState(IveVisualState state) {
     if (!_ready) return;
-    _stateIndex?.value = IveVisualStateConfig.forState(state).stateIndex.toDouble();
+    _stateIndex?.value =
+        IveVisualStateConfig.forState(state).stateIndex.toDouble();
     _isListening?.value = state == IveVisualState.listening;
-    _isThinking?.value  = state == IveVisualState.thinking;
-    _isSpeaking?.value  = state == IveVisualState.speaking;
+    _isThinking?.value = state == IveVisualState.thinking;
+    _isSpeaking?.value = state == IveVisualState.speaking;
   }
 
   @override
   void trigger(IveVisualTrigger t) {
     if (!_ready) return;
     switch (t) {
-      case IveVisualTrigger.wave:        _wave?.fire();               break;
-      case IveVisualTrigger.notify:      _notify?.fire();             break;
-      case IveVisualTrigger.success:     _successTrigger?.fire();     break;
-      case IveVisualTrigger.warning:     _warningTrigger?.fire();     break;
-      case IveVisualTrigger.error:       _errorTrigger?.fire();       break;
-      case IveVisualTrigger.opportunity: _opportunityTrigger?.fire(); break;
-      case IveVisualTrigger.focus:       _focus?.fire();              break;
-      case IveVisualTrigger.reset:       _reset?.fire();              break;
+      case IveVisualTrigger.wave:
+        _wave?.fire();
+        break;
+      case IveVisualTrigger.notify:
+        _notify?.fire();
+        break;
+      case IveVisualTrigger.success:
+        _successTrigger?.fire();
+        break;
+      case IveVisualTrigger.warning:
+        _warningTrigger?.fire();
+        break;
+      case IveVisualTrigger.error:
+        _errorTrigger?.fire();
+        break;
+      case IveVisualTrigger.opportunity:
+        _opportunityTrigger?.fire();
+        break;
+      case IveVisualTrigger.focus:
+        _focus?.fire();
+        break;
+      case IveVisualTrigger.reset:
+        _reset?.fire();
+        break;
     }
   }
 
-  @override void setListening(bool v)            { _isListening?.value = v; }
-  @override void setThinking(bool v)             { _isThinking?.value  = v; }
-  @override void setSpeaking(bool v)             { _isSpeaking?.value  = v; }
-  @override void setVisible(bool v)              { _isVisible?.value   = v; }
-  @override void setHasUnreadInsight(bool v)     { _hasUnreadInsight?.value = v; }
-  @override void setAttentionLevel(double v)     { _attentionLevel?.value = v; }
-  @override void setExpressionIntensity(double v){ _expressionIntensity?.value = v; }
-  @override void setSpeechActivity(double v)     { _speechActivity?.value = v; }
+  @override
+  void setListening(bool v) {
+    _isListening?.value = v;
+  }
+
+  @override
+  void setThinking(bool v) {
+    _isThinking?.value = v;
+  }
+
+  @override
+  void setSpeaking(bool v) {
+    _isSpeaking?.value = v;
+  }
+
+  @override
+  void setVisible(bool v) {
+    _isVisible?.value = v;
+  }
+
+  @override
+  void setHasUnreadInsight(bool v) {
+    _hasUnreadInsight?.value = v;
+  }
+
+  @override
+  void setAttentionLevel(double v) {
+    _attentionLevel?.value = v;
+  }
+
+  @override
+  void setExpressionIntensity(double v) {
+    _expressionIntensity?.value = v;
+  }
+
+  @override
+  void setSpeechActivity(double v) {
+    _speechActivity?.value = v;
+  }
 
   @override
   void dispose() {

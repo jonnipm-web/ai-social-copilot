@@ -29,12 +29,16 @@ class AefRuntimeService implements AefRuntimeApi {
     try {
       final res = await _client.functions.invoke(functionName, body: body);
       final data = res.data;
-      if (data is Map && data['result'] != null) return AefRuntimeResult.fromMap(data['result']);
+      if (data is Map && data['result'] != null)
+        return AefRuntimeResult.fromMap(data['result']);
       return AefRuntimeResult.unreadable;
     } on FunctionException catch (e) {
       final details = e.details;
-      if (details is Map && details['result'] != null) return AefRuntimeResult.fromMap(details['result']);
-      final code = details is Map && details['error'] is String ? details['error'] as String : 'UNAVAILABLE';
+      if (details is Map && details['result'] != null)
+        return AefRuntimeResult.fromMap(details['result']);
+      final code = details is Map && details['error'] is String
+          ? details['error'] as String
+          : 'UNAVAILABLE';
       return AefRuntimeResult.denied(code);
     } catch (_) {
       return AefRuntimeResult.denied('NETWORK_INTERRUPTED');
@@ -42,29 +46,38 @@ class AefRuntimeService implements AefRuntimeApi {
   }
 
   @override
-  Future<AefRuntimeResult> propose(Map<String, dynamic> proposal) => _call({'op': 'propose', 'intent': proposal});
+  Future<AefRuntimeResult> propose(Map<String, dynamic> proposal) =>
+      _call({'op': 'propose', 'intent': proposal});
 
   @override
-  Future<AefRuntimeResult> execute(Map<String, dynamic> proposal) => _call({'op': 'execute', 'intent': proposal});
+  Future<AefRuntimeResult> execute(Map<String, dynamic> proposal) =>
+      _call({'op': 'execute', 'intent': proposal});
 
   @override
-  Future<AefRuntimeResult> decide(AefGate gate, {required bool approve}) => _call({
+  Future<AefRuntimeResult> decide(AefGate gate, {required bool approve}) =>
+      _call({
         'op': 'decide',
-        'gate': {'gateId': gate.gateId, 'decision': approve ? 'APPROVE' : 'REJECT', 'bindingHash': gate.bindingHash},
+        'gate': {
+          'gateId': gate.gateId,
+          'decision': approve ? 'APPROVE' : 'REJECT',
+          'bindingHash': gate.bindingHash
+        },
       });
 
   @override
-  Future<AefRuntimeResult> status(String operationId) => _call({'op': 'status', 'operationId': operationId});
+  Future<AefRuntimeResult> status(String operationId) =>
+      _call({'op': 'status', 'operationId': operationId});
 }
 
 /// Overridable in tests; the LAB card reads it only when [kAefRuntimeLabEnabled].
-final aefRuntimeApiProvider = Provider<AefRuntimeApi>((ref) => AefRuntimeService());
+final aefRuntimeApiProvider =
+    Provider<AefRuntimeApi>((ref) => AefRuntimeService());
 
 /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — Action Engine's own governed
 /// runtime client, pointed at action-engine-runtime instead of aef-runtime.
 /// Overridable in tests.
-final actionEngineRuntimeApiProvider =
-    Provider<AefRuntimeApi>((ref) => AefRuntimeService(functionName: 'action-engine-runtime'));
+final actionEngineRuntimeApiProvider = Provider<AefRuntimeApi>(
+    (ref) => AefRuntimeService(functionName: 'action-engine-runtime'));
 
 /// INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08 continuation §5-8 — Strategy
 /// Simulation's own governed approval step, pointed at
@@ -73,5 +86,5 @@ final actionEngineRuntimeApiProvider =
 /// [kAefRuntimeLabEnabled] and the caller is a real beta_tester with
 /// sufficient plan (module 'ive-strategy-simulation', BETA). Overridable in
 /// tests.
-final strategySimulationRuntimeApiProvider =
-    Provider<AefRuntimeApi>((ref) => AefRuntimeService(functionName: 'strategy-simulation-runtime'));
+final strategySimulationRuntimeApiProvider = Provider<AefRuntimeApi>(
+    (ref) => AefRuntimeService(functionName: 'strategy-simulation-runtime'));

@@ -33,27 +33,39 @@ class _Body extends ConsumerWidget {
     final list = ref.watch(impactInvestigationsProvider);
     return list.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => ImpactErrorView(error: e, onRetry: () => ref.invalidate(impactInvestigationsProvider)),
+      error: (e, _) => ImpactErrorView(
+          error: e,
+          onRetry: () => ref.invalidate(impactInvestigationsProvider)),
       data: (items) => ImpactPage(
         maxWidth: 840,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            ImpactLine(t.impactNoScoreNote, icon: Icons.info_outline, muted: true),
+            ImpactLine(t.impactNoScoreNote,
+                icon: Icons.info_outline, muted: true),
             const SizedBox(height: 8),
-            Semantics(header: true, child: Text(t.impactInvestigations, style: Theme.of(context).textTheme.titleLarge)),
+            Semantics(
+                header: true,
+                child: Text(t.impactInvestigations,
+                    style: Theme.of(context).textTheme.titleLarge)),
             const SizedBox(height: 8),
-            if (items.isEmpty) ImpactLine(t.impactInvestigationsEmpty, icon: Icons.inbox_outlined),
+            if (items.isEmpty)
+              ImpactLine(t.impactInvestigationsEmpty,
+                  icon: Icons.inbox_outlined),
             for (final inv in items)
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.folder_open_outlined),
                   title: Text('«${displaySafe(inv.subjectOrgRef)}»'),
-                  subtitle: Text('${inv.status == 'ACTIVE' ? t.uxImpactInvestigationActive : inv.status == 'ARCHIVED' ? t.uxImpactInvestigationArchived : inv.status} · ${inv.id}', maxLines: 2, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(
+                      '${inv.status == 'ACTIVE' ? t.uxImpactInvestigationActive : inv.status == 'ARCHIVED' ? t.uxImpactInvestigationArchived : inv.status} · ${inv.id}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
                   trailing: const Icon(Icons.chevron_right),
                   // push (not go): the dossier keeps a back arrow and system Back returns
                   // here instead of leaving the app (physical finding PF-03).
-                  onTap: () => context.push('/impact/${Uri.encodeComponent(inv.id)}'),
+                  onTap: () =>
+                      context.push('/impact/${Uri.encodeComponent(inv.id)}'),
                 ),
               ),
           ],

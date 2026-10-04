@@ -73,15 +73,19 @@ const Map<AefPhase, Set<String>> _validOutcomesForPhase = {
 /// compatibility table, not just "some receipt exists".
 String aefReceiptOutcomeToActionStatus(AefRuntimeResult result) {
   final outcome = result.receiptOutcome;
-  if (outcome == null || result.receiptId == null || result.operationId == null) {
-    throw ArgumentError('aefReceiptOutcomeToActionStatus requires a terminal, receipted result');
+  if (outcome == null ||
+      result.receiptId == null ||
+      result.operationId == null) {
+    throw ArgumentError(
+        'aefReceiptOutcomeToActionStatus requires a terminal, receipted result');
   }
   final validOutcomes = _validOutcomesForPhase[result.phase];
   if (validOutcomes == null || !validOutcomes.contains(outcome)) {
     throw ArgumentError('phase ${result.phase} cannot carry outcome $outcome');
   }
   if (outcome == 'SUCCESS' && !result.isCompleted) {
-    throw ArgumentError('a SUCCESS receipt requires phase SUCCEEDED and server-confirmed completion');
+    throw ArgumentError(
+        'a SUCCESS receipt requires phase SUCCEEDED and server-confirmed completion');
   }
   return switch (outcome) {
     'SUCCESS' => 'completed',
@@ -101,11 +105,16 @@ bool isTerminalPhase(AefPhase p) => const {
       AefPhase.denied,
     }.contains(p);
 
-final RegExp _uuid = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false);
+final RegExp _uuid = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    caseSensitive: false);
 final RegExp _hex64 = RegExp(r'^[0-9a-f]{64}$');
 
 class AefGate {
-  const AefGate({required this.gateId, required this.bindingHash, required this.expiresAt});
+  const AefGate(
+      {required this.gateId,
+      required this.bindingHash,
+      required this.expiresAt});
   final String gateId;
   final String bindingHash;
   final String expiresAt;
@@ -134,7 +143,10 @@ class AefRuntimeResult {
 
   /// The ONLY condition under which the UI may say the action was done.
   bool get isCompleted =>
-      phase == AefPhase.succeeded && serverCompleted && receiptId != null && receiptOutcome == 'SUCCESS';
+      phase == AefPhase.succeeded &&
+      serverCompleted &&
+      receiptId != null &&
+      receiptOutcome == 'SUCCESS';
 
   /// A malformed or unexpected reply: shown as a failure to get a trustworthy
   /// answer, never as progress.
@@ -165,14 +177,19 @@ class AefRuntimeResult {
     final phase = _serverPhases[raw['phase']];
     if (phase == null) return unreadable;
     final opId = raw['operationId'];
-    if (opId != null && (opId is! String || !_uuid.hasMatch(opId))) return unreadable;
+    if (opId != null && (opId is! String || !_uuid.hasMatch(opId)))
+      return unreadable;
     AefGate? gate;
     final g = raw['gate'];
     if (g is Map) {
       final id = g['gateId'];
       final bh = g['bindingHash'];
       final exp = g['expiresAt'];
-      if (id is! String || !_uuid.hasMatch(id) || bh is! String || !_hex64.hasMatch(bh) || exp is! String) return unreadable;
+      if (id is! String ||
+          !_uuid.hasMatch(id) ||
+          bh is! String ||
+          !_hex64.hasMatch(bh) ||
+          exp is! String) return unreadable;
       gate = AefGate(gateId: id, bindingHash: bh, expiresAt: exp);
     } else if (g != null) {
       return unreadable;
@@ -187,8 +204,18 @@ class AefRuntimeResult {
       final id = r['receiptId'];
       final hash = r['receiptHash'];
       final out = r['outcome'];
-      if (id is! String || !_uuid.hasMatch(id) || hash is! String || !_hex64.hasMatch(hash) ||
-          out is! String || !const {'SUCCESS', 'FAILURE', 'PARTIAL', 'NOT_EXECUTED', 'UNKNOWN_OUTCOME'}.contains(out)) {
+      if (id is! String ||
+          !_uuid.hasMatch(id) ||
+          hash is! String ||
+          !_hex64.hasMatch(hash) ||
+          out is! String ||
+          !const {
+            'SUCCESS',
+            'FAILURE',
+            'PARTIAL',
+            'NOT_EXECUTED',
+            'UNKNOWN_OUTCOME'
+          }.contains(out)) {
         return unreadable;
       }
       receiptId = id;
@@ -199,9 +226,11 @@ class AefRuntimeResult {
     return AefRuntimeResult._(
       phase: phase,
       serverCompleted: raw['completed'] == true,
-      reconciliationRequired: raw['reconciliationRequired'] == true || phase == AefPhase.unknownOutcome,
+      reconciliationRequired: raw['reconciliationRequired'] == true ||
+          phase == AefPhase.unknownOutcome,
       operationId: opId as String?,
-      denialCode: raw['denialCode'] is String ? raw['denialCode'] as String : null,
+      denialCode:
+          raw['denialCode'] is String ? raw['denialCode'] as String : null,
       gate: gate,
       receiptId: receiptId,
       receiptOutcome: outcome,
@@ -232,11 +261,15 @@ class IveActionIntentData {
     final risk = raw['riskClass'];
     final cap = raw['capabilityId'];
     final project = raw['projectId'];
-    if (action is! String || !RegExp(r'^[a-z][a-z0-9_]{0,63}$').hasMatch(action)) return null;
+    if (action is! String ||
+        !RegExp(r'^[a-z][a-z0-9_]{0,63}$').hasMatch(action)) return null;
     if (ref is! String || !_uuid.hasMatch(ref)) return null;
-    if (risk is! String || !const {'READ_ONLY', 'REVERSIBLE', 'CONSEQUENTIAL'}.contains(risk)) return null;
+    if (risk is! String ||
+        !const {'READ_ONLY', 'REVERSIBLE', 'CONSEQUENTIAL'}.contains(risk))
+      return null;
     if (cap != null && cap is! String) return null;
-    if (project != null && (project is! String || !_uuid.hasMatch(project))) return null;
+    if (project != null && (project is! String || !_uuid.hasMatch(project)))
+      return null;
     return IveActionIntentData(
       capabilityId: cap as String?,
       requestedAction: action,
@@ -270,11 +303,13 @@ class AefLabField {
 
 const Map<String, List<AefLabField>> kAefLabActions = {
   'publish_content': [
-    AefLabField('channel', options: ['instagram', 'linkedin', 'x', 'blog'], maxLength: 16),
+    AefLabField('channel',
+        options: ['instagram', 'linkedin', 'x', 'blog'], maxLength: 16),
     AefLabField('text', maxLength: 280),
   ],
   'send_message': [
-    AefLabField('audience', options: ['customers', 'leads', 'team'], maxLength: 16),
+    AefLabField('audience',
+        options: ['customers', 'leads', 'team'], maxLength: 16),
     AefLabField('subject', maxLength: 120),
     AefLabField('body', maxLength: 2000),
   ],

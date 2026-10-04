@@ -185,15 +185,21 @@ class ModuleDefinition {
     if (override != null) return override;
     if (commercialEnabled) return ModuleLifecycle.commercial;
     return switch (status) {
-      ModuleStatus.planned || ModuleStatus.inDevelopment => ModuleLifecycle.experimental,
+      ModuleStatus.planned ||
+      ModuleStatus.inDevelopment =>
+        ModuleLifecycle.experimental,
       ModuleStatus.disabled => ModuleLifecycle.deprecated,
-      ModuleStatus.active || ModuleStatus.beta || ModuleStatus.internal => ModuleLifecycle.internal,
+      ModuleStatus.active ||
+      ModuleStatus.beta ||
+      ModuleStatus.internal =>
+        ModuleLifecycle.internal,
     };
   }
 
   /// Visibilidade no drawer (apresentação, não autorização — o servidor
   /// decide o acesso real, supabase/functions/_shared/entitlement.ts).
-  bool visibleFor({required bool isAdmin, required bool isPro, bool isPremium = false}) {
+  bool visibleFor(
+      {required bool isAdmin, required bool isPro, bool isPremium = false}) {
     if (isAdmin) return adminVisible;
     if (!commercialEnabled) return false;
     return switch (minimumPlan) {

@@ -25,21 +25,21 @@ class RoiMetric {
     }
 
     return RoiMetric(
-      id:          map['id'] as String,
-      userId:      map['user_id'] as String,
-      projectId:   map['project_id'] as String?,
-      metricType:  map['metric_type'] as String,
+      id: map['id'] as String,
+      userId: map['user_id'] as String,
+      projectId: map['project_id'] as String?,
+      metricType: map['metric_type'] as String,
       metricValue: _d(map['metric_value']),
-      notes:       map['notes'] as String?,
-      createdAt:   DateTime.parse(map['created_at'] as String),
+      notes: map['notes'] as String?,
+      createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
 
   Map<String, dynamic> toInsertMap() => {
-    'user_id':      userId,
-    'project_id':   projectId,
-    'metric_type':  metricType,
-    'metric_value': metricValue,
-    'notes':        notes,
-  };
+        'user_id': userId,
+        'project_id': projectId,
+        'metric_type': metricType,
+        'metric_value': metricValue,
+        'notes': notes,
+      };
 }

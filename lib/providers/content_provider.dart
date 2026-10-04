@@ -3,14 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/content_item.dart';
 import '../data/services/content_service.dart';
 
-final contentServiceProvider = Provider<ContentService>((_) => ContentService());
+final contentServiceProvider =
+    Provider<ContentService>((_) => ContentService());
 
-final contentItemsProvider = FutureProvider.autoDispose<List<ContentItem>>((ref) {
+final contentItemsProvider =
+    FutureProvider.autoDispose<List<ContentItem>>((ref) {
   return ref.watch(contentServiceProvider).fetchAll();
 });
 
-final contentItemsByProjectProvider =
-    FutureProvider.autoDispose.family<List<ContentItem>, String>((ref, projectId) {
+final contentItemsByProjectProvider = FutureProvider.autoDispose
+    .family<List<ContentItem>, String>((ref, projectId) {
   return ref.watch(contentServiceProvider).fetchAll(projectId: projectId);
 });
 
@@ -49,6 +51,6 @@ class ContentNotifier extends StateNotifier<AsyncValue<ContentItem?>> {
   }
 }
 
-final contentNotifierProvider =
-    StateNotifierProvider.autoDispose<ContentNotifier, AsyncValue<ContentItem?>>(
-        (ref) => ContentNotifier(ref.watch(contentServiceProvider)));
+final contentNotifierProvider = StateNotifierProvider.autoDispose<
+        ContentNotifier, AsyncValue<ContentItem?>>(
+    (ref) => ContentNotifier(ref.watch(contentServiceProvider)));

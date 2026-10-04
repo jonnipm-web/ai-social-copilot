@@ -21,13 +21,13 @@ List<String> _actionStepsFromSuggestion(CopilotActionSuggestion? s) {
 OpportunityLabItem _makeItem({
   String id = 'fake-id',
   String origin = AppConstants.originIveAnalysis,
-  String title  = 'Fake insight',
+  String title = 'Fake insight',
 }) =>
     OpportunityLabItem(
-      id:        id,
-      userId:    'uid',
-      title:     title,
-      origin:    origin,
+      id: id,
+      userId: 'uid',
+      title: title,
+      origin: origin,
       createdAt: DateTime(2026, 10, 3),
     );
 
@@ -62,9 +62,9 @@ void main() {
 
     test('suggestion with label produces single-element list', () {
       final s = CopilotActionSuggestion(
-        type:  'create_action',
+        type: 'create_action',
         label: 'Criar plano de expansão',
-        data:  {},
+        data: {},
       );
       expect(_actionStepsFromSuggestion(s), ['Criar plano de expansão']);
     });
@@ -95,11 +95,11 @@ void main() {
   group('CopilotTurn model for insight creation', () {
     test('turn without action suggestion: actionSuggestion is null', () {
       final turn = CopilotTurn(
-        role:       'assistant',
-        content:    'Análise concluída.',
+        role: 'assistant',
+        content: 'Análise concluída.',
         confidence: 85,
-        sources:    ['doc-1'],
-        timestamp:  DateTime(2026, 10, 3),
+        sources: ['doc-1'],
+        timestamp: DateTime(2026, 10, 3),
       );
       expect(turn.actionSuggestion, isNull);
       expect(turn.confidence, 85);
@@ -108,12 +108,12 @@ void main() {
 
     test('turn with action suggestion exposes label', () {
       final turn = CopilotTurn(
-        role:    'assistant',
+        role: 'assistant',
         content: 'Análise com ação.',
         actionSuggestion: CopilotActionSuggestion(
-          type:  'add_to_actions',
+          type: 'add_to_actions',
           label: 'Lançar campanha de email',
-          data:  {'priority': 'high'},
+          data: {'priority': 'high'},
         ),
         timestamp: DateTime(2026, 10, 3),
       );
@@ -133,8 +133,8 @@ void main() {
 
     test('prepending new item puts it first', () {
       final existing = _makeItem(id: 'old', title: 'Old insight');
-      final fresh    = _makeItem(id: 'new', title: 'New insight');
-      final updated  = [fresh, existing];
+      final fresh = _makeItem(id: 'new', title: 'New insight');
+      final updated = [fresh, existing];
       expect(updated.first.id, 'new');
       expect(updated.last.id, 'old');
     });
@@ -162,14 +162,15 @@ void main() {
     });
 
     test('free user above limit is blocked', () {
-      expect(isBlocked(AppConstants.insightFreeMonthlyLimit + 1, false), isTrue);
+      expect(
+          isBlocked(AppConstants.insightFreeMonthlyLimit + 1, false), isTrue);
     });
   });
 
   group('monthCount increment/decrement logic', () {
     test('save increments monthCount', () {
       const before = 3;
-      const after  = before + 1;
+      const after = before + 1;
       expect(after, 4);
     });
 
@@ -183,11 +184,13 @@ void main() {
 
   group('server quota_exceeded error handling (P1-Q1/Q2)', () {
     // Mirrors InsightNotifier.save() catch block logic.
-    ({int monthCount, String? error}) handleSaveError(Object e, int currentCount) {
+    ({int monthCount, String? error}) handleSaveError(
+        Object e, int currentCount) {
       final isQuota = e.toString().contains('quota_exceeded');
       return (
-        monthCount: isQuota ? AppConstants.insightFreeMonthlyLimit : currentCount,
-        error:      isQuota ? 'quota_exceeded' : e.toString(),
+        monthCount:
+            isQuota ? AppConstants.insightFreeMonthlyLimit : currentCount,
+        error: isQuota ? 'quota_exceeded' : e.toString(),
       );
     }
 
@@ -212,7 +215,9 @@ void main() {
       expect(result.error, 'quota_exceeded');
     });
 
-    test('project_not_found error (cross-tenant SECURITY DEFINER guard) is NOT treated as quota_exceeded', () {
+    test(
+        'project_not_found error (cross-tenant SECURITY DEFINER guard) is NOT treated as quota_exceeded',
+        () {
       final result = handleSaveError(Exception('project_not_found'), 3);
       expect(result.monthCount, 3); // count unchanged
       expect(result.error, isNot('quota_exceeded'));

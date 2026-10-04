@@ -7,32 +7,39 @@ import '../../core/utils/app_exceptions.dart';
 import 'content_localization_service.dart';
 
 class ActionQueueService {
-  ActionQueueService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+  ActionQueueService({RowLocalizer? localizer})
+      : _localizer = localizer ?? identityLocalizer;
 
   // R16 — presentation localization of persisted content (never modifies the
   // stored row; see content_localization_service.dart).
   final RowLocalizer _localizer;
 
   Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
-      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+      _localizer(
+          table,
+          (rows as List)
+              .map((r) => Map<String, dynamic>.from(r as Map))
+              .toList());
 
-  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+  Future<Map<String, dynamic>> _locOne(
+          String table, Map<String, dynamic> row) async =>
       (await _localizer(table, [row])).first;
 
   SupabaseClient get _client => Supabase.instance.client;
 
   String? get currentUserId => _client.auth.currentUser?.id;
 
-  Future<List<ActionQueueItem>> fetchAll({String? projectId, String? status}) async {
-    var filter = _client
-        .from(AppConstants.tableActionQueue)
-        .select();
+  Future<List<ActionQueueItem>> fetchAll(
+      {String? projectId, String? status}) async {
+    var filter = _client.from(AppConstants.tableActionQueue).select();
 
     if (projectId != null) filter = filter.eq('project_id', projectId);
-    if (status != null)    filter = filter.eq('status', status);
+    if (status != null) filter = filter.eq('status', status);
 
     final rows = await filter.order('priority', ascending: true);
-    return (await _loc('action_queue', rows)).map((r) => ActionQueueItem.fromMap(r)).toList();
+    return (await _loc('action_queue', rows))
+        .map((r) => ActionQueueItem.fromMap(r))
+        .toList();
   }
 
   Future<ActionQueueItem> create(ActionQueueItem item) async {
@@ -83,9 +90,11 @@ class ActionQueueService {
   static final RegExp _invisibleFormatChars = RegExp(r'\p{Cf}', unicode: true);
 
   void _refuseIfAefGovernedOnly(String status) {
-    final normalized = status.trim().toLowerCase().replaceAll(_invisibleFormatChars, '');
+    final normalized =
+        status.trim().toLowerCase().replaceAll(_invisibleFormatChars, '');
     if (_aefGovernedOnlyStatuses.contains(normalized)) {
-      throw ArgumentError('"$status" is AEF-governed-only -- use applyAefResult, which requires a real AEF receipt');
+      throw ArgumentError(
+          '"$status" is AEF-governed-only -- use applyAefResult, which requires a real AEF receipt');
     }
   }
 
@@ -109,7 +118,8 @@ class ActionQueueService {
   ///                          says nothing happened; the user may retry)
   ///   PARTIAL/UNKNOWN_OUTCOME -> 'executing' (reconciliation required,
   ///                          never silently shown as done or failed)
-  Future<ActionQueueItem> applyAefResult(String id, AefRuntimeResult result) async {
+  Future<ActionQueueItem> applyAefResult(
+      String id, AefRuntimeResult result) async {
     final status = aefReceiptOutcomeToActionStatus(result);
     final row = await _client
         .from(AppConstants.tableActionQueue)
@@ -131,21 +141,22 @@ class ActionQueueService {
         .select()
         .eq('id', id)
         .maybeSingle();
-    return row == null ? null : ActionQueueItem.fromMap(await _locOne('action_queue', row));
+    return row == null
+        ? null
+        : ActionQueueItem.fromMap(await _locOne('action_queue', row));
   }
 
   Future<void> delete(String id) async {
     await _client.from(AppConstants.tableActionQueue).delete().eq('id', id);
   }
 
-  Future<List<ActionQueueItem>> fetchPending() =>
-      fetchAll(status: 'pending');
+  Future<List<ActionQueueItem>> fetchPending() => fetchAll(status: 'pending');
 
   Future<Map<String, int>> summary() async {
     final list = await fetchAll();
     return {
-      'total':     list.length,
-      'pending':   list.where((i) => i.status == 'pending').length,
+      'total': list.length,
+      'pending': list.where((i) => i.status == 'pending').length,
       'executing': list.where((i) => i.status == 'executing').length,
       'completed': list.where((i) => i.status == 'completed').length,
     };

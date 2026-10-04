@@ -24,14 +24,24 @@ final _hash = 'a' * 64;
 const _rid = '0e000000-0000-4000-8000-00000000000e';
 final _rh = 'c' * 64;
 
-Map<String, dynamic> _reply(String phase, {bool completed = false, Map<String, dynamic>? receipt, bool gate = false}) => {
+Map<String, dynamic> _reply(String phase,
+        {bool completed = false,
+        Map<String, dynamic>? receipt,
+        bool gate = false}) =>
+    {
       'phase': phase,
       'completed': completed,
       'reconciliationRequired': phase == 'UNKNOWN_OUTCOME',
       'retryAllowed': false,
       'operationId': _op,
       'denialCode': null,
-      'gate': gate ? {'gateId': _gate, 'bindingHash': _hash, 'expiresAt': '2026-01-01T00:00:00Z'} : null,
+      'gate': gate
+          ? {
+              'gateId': _gate,
+              'bindingHash': _hash,
+              'expiresAt': '2026-01-01T00:00:00Z'
+            }
+          : null,
       'receipt': receipt,
       'replayed': false,
     };
@@ -52,7 +62,8 @@ class FakeApi implements AefRuntimeApi {
   @override
   Future<AefRuntimeResult> decide(AefGate gate, {required bool approve}) async {
     calls.add(approve ? 'approve' : 'reject');
-    return AefRuntimeResult.fromMap(_reply(approve ? 'AUTHORIZED' : 'REJECTED'));
+    return AefRuntimeResult.fromMap(
+        _reply(approve ? 'AUTHORIZED' : 'REJECTED'));
   }
 
   @override
@@ -60,12 +71,18 @@ class FakeApi implements AefRuntimeApi {
     calls.add('execute');
     proposals.add(proposal);
     return AefRuntimeResult.fromMap(
-      executeReply ?? _reply('SUCCEEDED', completed: true, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'SUCCESS'}),
+      executeReply ??
+          _reply('SUCCEEDED', completed: true, receipt: {
+            'receiptId': _rid,
+            'receiptHash': _rh,
+            'outcome': 'SUCCESS'
+          }),
     );
   }
 
   @override
-  Future<AefRuntimeResult> status(String operationId) async => AefRuntimeResult.unreadable;
+  Future<AefRuntimeResult> status(String operationId) async =>
+      AefRuntimeResult.unreadable;
 }
 
 /// Same technique as action_queue_provider_test.dart: extend the real
@@ -76,21 +93,33 @@ class FakeActionQueueService extends ActionQueueService {
   final List<String> calls = [];
 
   @override
-  Future<List<ActionQueueItem>> fetchAll({String? projectId, String? status}) async {
+  Future<List<ActionQueueItem>> fetchAll(
+      {String? projectId, String? status}) async {
     calls.add('fetchAll');
     return [];
   }
 
   @override
-  Future<ActionQueueItem> applyAefResult(String id, AefRuntimeResult result) async {
+  Future<ActionQueueItem> applyAefResult(
+      String id, AefRuntimeResult result) async {
     calls.add('applyAefResult:${result.receiptOutcome}');
-    return ActionQueueItem(id: id, userId: 'u1', title: 'Publicar post', status: 'completed', createdAt: DateTime(2026, 1, 1));
+    return ActionQueueItem(
+        id: id,
+        userId: 'u1',
+        title: 'Publicar post',
+        status: 'completed',
+        createdAt: DateTime(2026, 1, 1));
   }
 
   @override
   Future<ActionQueueItem> updateStatus(String id, String status) async {
     calls.add('updateStatus:$status');
-    return ActionQueueItem(id: id, userId: 'u1', title: 'Publicar post', status: status, createdAt: DateTime(2026, 1, 1));
+    return ActionQueueItem(
+        id: id,
+        userId: 'u1',
+        title: 'Publicar post',
+        status: status,
+        createdAt: DateTime(2026, 1, 1));
   }
 }
 
@@ -103,7 +132,9 @@ final _item = ActionQueueItem(
   createdAt: DateTime(2026, 1, 1),
 );
 
-Widget _app(Widget child, {required FakeApi api, required FakeActionQueueService svc}) => ProviderScope(
+Widget _app(Widget child,
+        {required FakeApi api, required FakeActionQueueService svc}) =>
+    ProviderScope(
       overrides: [
         actionEngineRuntimeApiProvider.overrideWithValue(api),
         actionQueueServiceProvider.overrideWithValue(svc),
@@ -130,7 +161,9 @@ Widget _app(Widget child, {required FakeApi api, required FakeActionQueueService
 
 void main() {
   group('ActionEngineExecuteSheet (authority boundary)', () {
-    testWidgets('shows no internal jargon -- no "IVE" misattribution, no "(LAB)"/AEF acronym, no raw action id', (t) async {
+    testWidgets(
+        'shows no internal jargon -- no "IVE" misattribution, no "(LAB)"/AEF acronym, no raw action id',
+        (t) async {
       // UX review (§18): AefActionCard's default title says "proposta pela
       // IVE (LAB)" -- wrong here (Action Engine's own self-attestation was
       // never proposed by IVE) and exposes internal build-status jargon to
@@ -139,7 +172,8 @@ void main() {
       // actual rendered text, don't just trust the wiring compiled.
       final api = FakeApi();
       final svc = FakeActionQueueService();
-      await t.pumpWidget(_app(ActionEngineExecuteSheet(item: _item), api: api, svc: svc));
+      await t.pumpWidget(
+          _app(ActionEngineExecuteSheet(item: _item), api: api, svc: svc));
       await t.pumpAndSettle();
 
       expect(find.textContaining('IVE'), findsNothing);
@@ -150,15 +184,28 @@ void main() {
       expect(find.textContaining('Concluir ação'), findsOneWidget);
     });
 
-    testWidgets('drives the action-engine capability/tool, not IVE\'s -- and pre-fills the real item', (t) async {
+    testWidgets(
+        'drives the action-engine capability/tool, not IVE\'s -- and pre-fills the real item',
+        (t) async {
       final api = FakeApi();
       final svc = FakeActionQueueService();
-      await t.pumpWidget(_app(ActionEngineExecuteSheet(item: _item), api: api, svc: svc));
+      await t.pumpWidget(
+          _app(ActionEngineExecuteSheet(item: _item), api: api, svc: svc));
       await t.pumpAndSettle();
 
       // action_id/summary are pre-filled from the item, not retyped.
-      expect(t.widget<TextField>(find.byKey(const Key('aef-field-action_id'))).controller!.text, 'a1');
-      expect(t.widget<TextField>(find.byKey(const Key('aef-field-summary'))).controller!.text, _item.title);
+      expect(
+          t
+              .widget<TextField>(find.byKey(const Key('aef-field-action_id')))
+              .controller!
+              .text,
+          'a1');
+      expect(
+          t
+              .widget<TextField>(find.byKey(const Key('aef-field-summary')))
+              .controller!
+              .text,
+          _item.title);
 
       await t.tap(find.byKey(const Key('aef-request')));
       await t.pumpAndSettle();
@@ -171,10 +218,13 @@ void main() {
       expect(proposal['contextRef'], 'a1');
     });
 
-    testWidgets('a real SUCCESS receipt persists via applyAefResult, never a direct status write', (t) async {
+    testWidgets(
+        'a real SUCCESS receipt persists via applyAefResult, never a direct status write',
+        (t) async {
       final api = FakeApi();
       final svc = FakeActionQueueService();
-      await t.pumpWidget(_app(ActionEngineExecuteSheet(item: _item), api: api, svc: svc));
+      await t.pumpWidget(
+          _app(ActionEngineExecuteSheet(item: _item), api: api, svc: svc));
       await t.pumpAndSettle();
 
       await t.tap(find.byKey(const Key('aef-request')));
@@ -188,10 +238,13 @@ void main() {
       expect(svc.calls.any((c) => c.startsWith('updateStatus')), isFalse);
     });
 
-    testWidgets('rejection persists nothing -- no receipt means no write at all', (t) async {
+    testWidgets(
+        'rejection persists nothing -- no receipt means no write at all',
+        (t) async {
       final api = FakeApi();
       final svc = FakeActionQueueService();
-      await t.pumpWidget(_app(ActionEngineExecuteSheet(item: _item), api: api, svc: svc));
+      await t.pumpWidget(
+          _app(ActionEngineExecuteSheet(item: _item), api: api, svc: svc));
       await t.pumpAndSettle();
 
       await t.tap(find.byKey(const Key('aef-request')));
@@ -199,13 +252,24 @@ void main() {
       await t.tap(find.byKey(const Key('aef-reject')));
       await t.pumpAndSettle();
 
-      expect(svc.calls.any((c) => c.startsWith('applyAefResult') || c.startsWith('updateStatus')), isFalse);
+      expect(
+          svc.calls.any((c) =>
+              c.startsWith('applyAefResult') || c.startsWith('updateStatus')),
+          isFalse);
     });
 
-    testWidgets('an UNKNOWN_OUTCOME receipt still persists -- as executing, not silently dropped', (t) async {
-      final api = FakeApi(executeReply: _reply('UNKNOWN_OUTCOME', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'UNKNOWN_OUTCOME'}));
+    testWidgets(
+        'an UNKNOWN_OUTCOME receipt still persists -- as executing, not silently dropped',
+        (t) async {
+      final api = FakeApi(
+          executeReply: _reply('UNKNOWN_OUTCOME', receipt: {
+        'receiptId': _rid,
+        'receiptHash': _rh,
+        'outcome': 'UNKNOWN_OUTCOME'
+      }));
       final svc = FakeActionQueueService();
-      await t.pumpWidget(_app(ActionEngineExecuteSheet(item: _item), api: api, svc: svc));
+      await t.pumpWidget(
+          _app(ActionEngineExecuteSheet(item: _item), api: api, svc: svc));
       await t.pumpAndSettle();
 
       await t.tap(find.byKey(const Key('aef-request')));

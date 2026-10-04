@@ -11,16 +11,22 @@ import '../../core/utils/app_exceptions.dart';
 import 'content_localization_service.dart';
 
 class MarketAnalysisService {
-  MarketAnalysisService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+  MarketAnalysisService({RowLocalizer? localizer})
+      : _localizer = localizer ?? identityLocalizer;
 
   // R16 — presentation localization of persisted content (never modifies the
   // stored row; see content_localization_service.dart).
   final RowLocalizer _localizer;
 
   Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
-      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+      _localizer(
+          table,
+          (rows as List)
+              .map((r) => Map<String, dynamic>.from(r as Map))
+              .toList());
 
-  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+  Future<Map<String, dynamic>> _locOne(
+          String table, Map<String, dynamic> row) async =>
       (await _localizer(table, [row])).first;
 
   // Lazy getter, not an eager field initializer: MarketAnalysisNotifier's
@@ -35,12 +41,12 @@ class MarketAnalysisService {
   SupabaseClient get _client => Supabase.instance.client;
 
   Future<List<MarketAnalysis>> fetchAll({String? projectId}) async {
-    var query = _client
-        .from(AppConstants.tableMarketAnalyses)
-        .select();
+    var query = _client.from(AppConstants.tableMarketAnalyses).select();
     if (projectId != null) query = query.eq('project_id', projectId);
     final rows = await query.order('created_at', ascending: false);
-    return (await _loc('market_analyses', rows)).map((r) => MarketAnalysis.fromMap(r)).toList();
+    return (await _loc('market_analyses', rows))
+        .map((r) => MarketAnalysis.fromMap(r))
+        .toList();
   }
 
   Future<MarketAnalysis?> fetchById(String id) async {
@@ -49,7 +55,9 @@ class MarketAnalysisService {
         .select()
         .eq('id', id)
         .maybeSingle();
-    return row == null ? null : MarketAnalysis.fromMap(await _locOne('market_analyses', row));
+    return row == null
+        ? null
+        : MarketAnalysis.fromMap(await _locOne('market_analyses', row));
   }
 
   Future<void> delete(String id) async {
@@ -76,27 +84,28 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
+    if (response.data == null)
+      throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
     final row = await _client
         .from(AppConstants.tableMarketAnalyses)
         .insert({
-          'user_id':            uid,
+          'user_id': uid,
           if (projectId != null) 'project_id': projectId,
-          'input':              input,
-          'input_type':         inputType,
-          'niche':              data['niche'] as String?,
-          'sub_niche':          data['sub_niche'] as String?,
-          'target_audience':    data['target_audience'] as String?,
-          'business_type':      data['business_type'] as String?,
-          'value_proposition':  data['value_proposition'] as String?,
-          'positioning':        data['positioning'] as String?,
+          'input': input,
+          'input_type': inputType,
+          'niche': data['niche'] as String?,
+          'sub_niche': data['sub_niche'] as String?,
+          'target_audience': data['target_audience'] as String?,
+          'business_type': data['business_type'] as String?,
+          'value_proposition': data['value_proposition'] as String?,
+          'positioning': data['positioning'] as String?,
           'monetization_model': data['monetization_model'] as String?,
-          'opportunity_score':  _int(data['opportunity_score']),
-          'status':             'completed',
-          'analysis_json':      data,
+          'opportunity_score': _int(data['opportunity_score']),
+          'status': 'completed',
+          'analysis_json': data,
         })
         .select()
         .single();
@@ -111,7 +120,9 @@ class MarketAnalysisService {
         .select()
         .eq('market_analysis_id', marketAnalysisId)
         .order('relevance_score', ascending: false);
-    return (await _loc('competitors', rows)).map((r) => Competitor.fromMap(r)).toList();
+    return (await _loc('competitors', rows))
+        .map((r) => Competitor.fromMap(r))
+        .toList();
   }
 
   Future<List<Competitor>> discoverCompetitors(
@@ -133,7 +144,8 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
+    if (response.data == null)
+      throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
@@ -144,15 +156,15 @@ class MarketAnalysisService {
       final row = await _client
           .from(AppConstants.tableCompetitors)
           .insert({
-            'user_id':            uid,
+            'user_id': uid,
             'market_analysis_id': marketAnalysisId,
-            'name':               m['name'] as String? ?? '',
-            'url':                m['url'] as String? ?? '',
-            'type':               m['type'] as String? ?? 'direct',
-            'similarity_score':   _int(m['similarity_score']),
-            'authority_score':    _int(m['authority_score']),
-            'relevance_score':    _int(m['relevance_score']),
-            'details_json':       m,
+            'name': m['name'] as String? ?? '',
+            'url': m['url'] as String? ?? '',
+            'type': m['type'] as String? ?? 'direct',
+            'similarity_score': _int(m['similarity_score']),
+            'authority_score': _int(m['authority_score']),
+            'relevance_score': _int(m['relevance_score']),
+            'details_json': m,
           })
           .select()
           .single();
@@ -184,7 +196,10 @@ class MarketAnalysisService {
         .order('created_at', ascending: false)
         .limit(1);
     final list = rows as List;
-    return list.isEmpty ? null : GapAnalysis.fromMap(await _locOne('gap_analyses', list.first as Map<String, dynamic>));
+    return list.isEmpty
+        ? null
+        : GapAnalysis.fromMap(
+            await _locOne('gap_analyses', list.first as Map<String, dynamic>));
   }
 
   Future<GapAnalysis> runGapAnalysis(
@@ -206,7 +221,8 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
+    if (response.data == null)
+      throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
@@ -223,14 +239,14 @@ class MarketAnalysisService {
     final row = await _client
         .from(AppConstants.tableGapAnalyses)
         .upsert({
-          'user_id':            uid,
+          'user_id': uid,
           'market_analysis_id': marketAnalysisId,
-          'content_gaps':       data['content_gaps'] ?? [],
-          'seo_gaps':           data['seo_gaps'] ?? [],
-          'authority_gaps':     data['authority_gaps'] ?? [],
-          'monetization_gaps':  data['monetization_gaps'] ?? [],
-          'product_gaps':       data['product_gaps'] ?? [],
-          'analysis_json':      data,
+          'content_gaps': data['content_gaps'] ?? [],
+          'seo_gaps': data['seo_gaps'] ?? [],
+          'authority_gaps': data['authority_gaps'] ?? [],
+          'monetization_gaps': data['monetization_gaps'] ?? [],
+          'product_gaps': data['product_gaps'] ?? [],
+          'analysis_json': data,
         }, onConflict: 'market_analysis_id')
         .select()
         .single();
@@ -245,7 +261,9 @@ class MarketAnalysisService {
         .select()
         .eq('market_analysis_id', marketAnalysisId)
         .order('opportunity_score', ascending: false);
-    return (await _loc('opportunities', rows)).map((r) => Opportunity.fromMap(r)).toList();
+    return (await _loc('opportunities', rows))
+        .map((r) => Opportunity.fromMap(r))
+        .toList();
   }
 
   Future<List<Opportunity>> discoverOpportunities(
@@ -267,7 +285,8 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
+    if (response.data == null)
+      throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
@@ -278,18 +297,18 @@ class MarketAnalysisService {
       final row = await _client
           .from(AppConstants.tableOpportunities)
           .insert({
-            'user_id':            uid,
+            'user_id': uid,
             'market_analysis_id': marketAnalysisId,
-            'title':              m['title'] as String? ?? '',
-            'type':               m['type'] as String? ?? 'content',
-            'description':        m['description'] as String? ?? '',
-            'opportunity_score':  _int(m['opportunity_score']),
-            'market_score':       _int(m['market_score']),
-            'growth_score':       _int(m['growth_score']),
-            'competition_score':  _int(m['competition_score']),
+            'title': m['title'] as String? ?? '',
+            'type': m['type'] as String? ?? 'content',
+            'description': m['description'] as String? ?? '',
+            'opportunity_score': _int(m['opportunity_score']),
+            'market_score': _int(m['market_score']),
+            'growth_score': _int(m['growth_score']),
+            'competition_score': _int(m['competition_score']),
             'monetization_score': _int(m['monetization_score']),
-            'difficulty_score':   _int(m['difficulty_score']),
-            'details_json':       m,
+            'difficulty_score': _int(m['difficulty_score']),
+            'details_json': m,
           })
           .select()
           .single();
@@ -305,7 +324,9 @@ class MarketAnalysisService {
         .select()
         .eq('market_analysis_id', marketAnalysisId)
         .order('overall_score', ascending: false);
-    return (await _loc('niche_rankings', rows)).map((r) => NicheRanking.fromMap(r)).toList();
+    return (await _loc('niche_rankings', rows))
+        .map((r) => NicheRanking.fromMap(r))
+        .toList();
   }
 
   Future<List<NicheRanking>> discoverNiches(
@@ -327,7 +348,8 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
+    if (response.data == null)
+      throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
@@ -338,19 +360,19 @@ class MarketAnalysisService {
       final row = await _client
           .from(AppConstants.tableNicheRankings)
           .insert({
-            'user_id':            uid,
+            'user_id': uid,
             'market_analysis_id': marketAnalysisId,
-            'name':               m['name'] as String? ?? '',
-            'level':              m['level'] as String? ?? 'niche',
-            'description':        m['description'] as String? ?? '',
-            'competition_score':  _int(m['competition_score']),
-            'potential_score':    _int(m['potential_score']),
-            'growth_score':       _int(m['growth_score']),
+            'name': m['name'] as String? ?? '',
+            'level': m['level'] as String? ?? 'niche',
+            'description': m['description'] as String? ?? '',
+            'competition_score': _int(m['competition_score']),
+            'potential_score': _int(m['potential_score']),
+            'growth_score': _int(m['growth_score']),
             'monetization_score': _int(m['monetization_score']),
-            'difficulty_score':   _int(m['difficulty_score']),
-            'trend_score':        _int(m['trend_score']),
-            'overall_score':      _int(m['overall_score']),
-            'details_json':       m,
+            'difficulty_score': _int(m['difficulty_score']),
+            'trend_score': _int(m['trend_score']),
+            'overall_score': _int(m['overall_score']),
+            'details_json': m,
           })
           .select()
           .single();
@@ -368,7 +390,10 @@ class MarketAnalysisService {
         .order('created_at', ascending: false)
         .limit(1);
     final list = rows as List;
-    return list.isEmpty ? null : ContentCluster.fromMap(await _locOne('content_clusters', list.first as Map<String, dynamic>));
+    return list.isEmpty
+        ? null
+        : ContentCluster.fromMap(await _locOne(
+            'content_clusters', list.first as Map<String, dynamic>));
   }
 
   Future<ContentCluster> buildContentCluster(
@@ -392,7 +417,8 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
+    if (response.data == null)
+      throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
@@ -402,14 +428,14 @@ class MarketAnalysisService {
     final row = await _client
         .from(AppConstants.tableContentClusters)
         .upsert({
-          'user_id':            uid,
+          'user_id': uid,
           'market_analysis_id': marketAnalysisId,
-          'main_keyword':       mainKeyword,
-          'clusters':           data['clusters'] ?? [],
-          'silos':              data['silos'] ?? [],
-          'articles':           data['articles'] ?? [],
-          'editorial_roadmap':  data['editorial_roadmap'] ?? [],
-          'seo_structure':      data['seo_structure'] ?? {},
+          'main_keyword': mainKeyword,
+          'clusters': data['clusters'] ?? [],
+          'silos': data['silos'] ?? [],
+          'articles': data['articles'] ?? [],
+          'editorial_roadmap': data['editorial_roadmap'] ?? [],
+          'seo_structure': data['seo_structure'] ?? {},
         }, onConflict: 'market_analysis_id')
         .select()
         .single();
@@ -422,7 +448,9 @@ class MarketAnalysisService {
     var query = _client.from(AppConstants.tableRevenuePlans).select();
     if (projectId != null) query = query.eq('project_id', projectId);
     final rows = await query.order('created_at', ascending: false);
-    return (await _loc('revenue_plans', rows)).map((r) => RevenuePlan.fromMap(r)).toList();
+    return (await _loc('revenue_plans', rows))
+        .map((r) => RevenuePlan.fromMap(r))
+        .toList();
   }
 
   // Revenue Plan — same current-state reasoning as fetchGapAnalysis above.
@@ -434,7 +462,10 @@ class MarketAnalysisService {
         .order('created_at', ascending: false)
         .limit(1);
     final list = rows as List;
-    return list.isEmpty ? null : RevenuePlan.fromMap(await _locOne('revenue_plans', list.first as Map<String, dynamic>));
+    return list.isEmpty
+        ? null
+        : RevenuePlan.fromMap(
+            await _locOne('revenue_plans', list.first as Map<String, dynamic>));
   }
 
   Future<RevenuePlan> buildRevenuePlan(
@@ -459,7 +490,8 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
+    if (response.data == null)
+      throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
@@ -479,17 +511,17 @@ class MarketAnalysisService {
     final row = await _client
         .from(AppConstants.tableRevenuePlans)
         .upsert({
-          'user_id':              uid,
+          'user_id': uid,
           if (projectId != null) 'project_id': projectId,
-          'market_analysis_id':   marketAnalysisId,
-          'project_name':         projectName,
+          'market_analysis_id': marketAnalysisId,
+          'project_name': projectName,
           'monthly_conservative': _d(data['monthly_conservative']),
-          'monthly_moderate':     _d(data['monthly_moderate']),
-          'monthly_aggressive':   _d(data['monthly_aggressive']),
-          'annual_conservative':  _d(data['annual_conservative']),
-          'annual_moderate':      _d(data['annual_moderate']),
-          'annual_aggressive':    _d(data['annual_aggressive']),
-          'plan_json':            data,
+          'monthly_moderate': _d(data['monthly_moderate']),
+          'monthly_aggressive': _d(data['monthly_aggressive']),
+          'annual_conservative': _d(data['annual_conservative']),
+          'annual_moderate': _d(data['annual_moderate']),
+          'annual_aggressive': _d(data['annual_aggressive']),
+          'plan_json': data,
         }, onConflict: 'market_analysis_id')
         .select()
         .single();

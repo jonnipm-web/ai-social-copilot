@@ -32,25 +32,33 @@ class SupportScreen extends StatelessWidget {
           // (does not read/write ive_intro_provider's shouldShow) — replay
           // is a deliberate re-watch, not a first-use trigger.
           ListTile(
-            leading: const Icon(Icons.auto_awesome_rounded, color: Colors.white70),
+            leading:
+                const Icon(Icons.auto_awesome_rounded, color: Colors.white70),
             title: Text(t.ivIntroReplayLabel),
             onTap: () => showIveIntroSheet(context, trigger: 'replay'),
           ),
           ListTile(
-            leading: const Icon(Icons.mail_outline_rounded, color: Colors.white70),
+            leading:
+                const Icon(Icons.mail_outline_rounded, color: Colors.white70),
             title: Text(t.supportContact),
-            subtitle: Text(AppConstants.supportEmail, style: const TextStyle(color: Colors.white38)),
-            onTap: () => launchUrl(Uri.parse('mailto:${AppConstants.supportEmail}')),
+            subtitle: Text(AppConstants.supportEmail,
+                style: const TextStyle(color: Colors.white38)),
+            onTap: () =>
+                launchUrl(Uri.parse('mailto:${AppConstants.supportEmail}')),
           ),
           ListTile(
-            leading: const Icon(Icons.bug_report_outlined, color: Colors.white70),
+            leading:
+                const Icon(Icons.bug_report_outlined, color: Colors.white70),
             title: Text(t.supportReportProblem),
-            onTap: () => launchUrl(Uri.parse('mailto:${AppConstants.supportEmail}?subject=$subjectReport')),
+            onTap: () => launchUrl(Uri.parse(
+                'mailto:${AppConstants.supportEmail}?subject=$subjectReport')),
           ),
           ListTile(
-            leading: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white70),
+            leading: const Icon(Icons.chat_bubble_outline_rounded,
+                color: Colors.white70),
             title: Text(t.supportSendFeedback),
-            onTap: () => launchUrl(Uri.parse('mailto:${AppConstants.supportEmail}?subject=$subjectFeedback')),
+            onTap: () => launchUrl(Uri.parse(
+                'mailto:${AppConstants.supportEmail}?subject=$subjectFeedback')),
           ),
         ],
       ),

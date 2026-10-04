@@ -59,8 +59,8 @@ class AppDrawer extends ConsumerWidget {
       backgroundColor: const Color(0xFF0F0F1A),
       child: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error:   (_, __) => _DrawerContent(profile: null),
-        data:    (profile) => _DrawerContent(profile: profile),
+        error: (_, __) => _DrawerContent(profile: null),
+        data: (profile) => _DrawerContent(profile: profile),
       ),
     );
   }
@@ -75,15 +75,16 @@ class _DrawerContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppLocalizations.of(context)!;
     final isEnglish = Localizations.localeOf(context).languageCode == 'en';
-    final isAdmin   = profile?.isAdmin   ?? false;
-    final isPro     = profile?.isPro     ?? false;
+    final isAdmin = profile?.isAdmin ?? false;
+    final isPro = profile?.isPro ?? false;
     final isPremium = profile?.isPremium ?? false;
     final current = GoRouterState.of(context).fullPath ?? '';
 
     // Navegação comercial: só módulos habilitados para o plano do usuário,
     // com rota própria. Ver visibleDrawerModules() acima para a razão de
     // routeUpgrade ser excluído deste loop.
-    final visibleModules = visibleDrawerModules(isAdmin: false, isPro: isPro, isPremium: isPremium);
+    final visibleModules = visibleDrawerModules(
+        isAdmin: false, isPro: isPro, isPremium: isPremium);
 
     return SafeArea(
       child: Column(
@@ -119,7 +120,8 @@ class _DrawerContent extends ConsumerWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
@@ -214,7 +216,8 @@ class _DrawerContent extends ConsumerWidget {
           // Sair
           const Divider(color: Colors.white12, height: 1),
           ListTile(
-            leading: const Icon(Icons.logout_rounded, color: Colors.white54, size: 20),
+            leading: const Icon(Icons.logout_rounded,
+                color: Colors.white54, size: 20),
             title: Text(
               t.authSignOut,
               style: const TextStyle(color: Colors.white54, fontSize: 14),
@@ -297,15 +300,15 @@ class _NavItem extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
-  final String   route;
-  final String   current;
-  final bool     isAdmin;
+  final String label;
+  final String route;
+  final String current;
+  final bool isAdmin;
   // See the call-site comment above (Section 27/35) -- true for drill-in
   // destinations that must leave a back-stack entry so the AppBar shows a
   // back arrow and Android's system back button returns here instead of
   // exiting the app.
-  final bool     push;
+  final bool push;
 
   @override
   Widget build(BuildContext context) {

@@ -18,13 +18,13 @@ import 'opportunity_detail_screen.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGreen   = Color(0xFF4CAF50);
-const _kOrange  = Color(0xFFFF9800);
-const _kRed     = Color(0xFFF44336);
-const _kGold    = Color(0xFFFFD700);
+const _kGreen = Color(0xFF4CAF50);
+const _kOrange = Color(0xFFFF9800);
+const _kRed = Color(0xFFF44336);
+const _kGold = Color(0xFFFFD700);
 
 Color _scoreColor(int s) {
   if (s >= 80) return _kGreen;
@@ -39,7 +39,8 @@ class OpportunityLabScreen extends ConsumerStatefulWidget {
   const OpportunityLabScreen({super.key});
 
   @override
-  ConsumerState<OpportunityLabScreen> createState() => _OpportunityLabScreenState();
+  ConsumerState<OpportunityLabScreen> createState() =>
+      _OpportunityLabScreenState();
 }
 
 class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
@@ -54,14 +55,16 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
     showDialog(
       context: context,
       builder: (ctx) => Consumer(
-        builder: (ctx, r, _) => _AddOpportunityDialog(ref: r, projectId: _projectId),
+        builder: (ctx, r, _) =>
+            _AddOpportunityDialog(ref: r, projectId: _projectId),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final flagAsync = ref.watch(featureFlagProvider(FeatureFlag.opportunityLabEnabled));
+    final flagAsync =
+        ref.watch(featureFlagProvider(FeatureFlag.opportunityLabEnabled));
     // 'Opportunity Lab' is intentionally identical in PT/EN -- matches the
     // product's own naming decision already recorded in module_registry.dart
     // (namePt == nameEn for this module), not an untranslated string.
@@ -73,13 +76,16 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppConstants.routeDashboard),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppConstants.routeDashboard),
         ),
         title: const Text(
           'Opportunity Lab',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
       drawer: const AppDrawer(),
@@ -93,7 +99,8 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
       body: flagAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
-        error: (_, __) => _LabBody(projectId: _projectId, onProjectChange: _setProject),
+        error: (_, __) =>
+            _LabBody(projectId: _projectId, onProjectChange: _setProject),
         data: (enabled) => enabled
             ? _LabBody(projectId: _projectId, onProjectChange: _setProject)
             : const _FeatureGated(),
@@ -118,12 +125,15 @@ class _FeatureGated extends StatelessWidget {
             const Text(
               'Opportunity Lab',
               style: TextStyle(
-                  color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Text(
               AppLocalizations.of(context)!.oppLabFeatureGatedBody,
-              style: const TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+              style: const TextStyle(
+                  color: Colors.white54, fontSize: 13, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -155,8 +165,8 @@ class _FeatureGated extends StatelessWidget {
 
 class _LabBody extends ConsumerWidget {
   const _LabBody({required this.projectId, required this.onProjectChange});
-  final String?                 projectId;
-  final void Function(String?)  onProjectChange;
+  final String? projectId;
+  final void Function(String?) onProjectChange;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -168,14 +178,16 @@ class _LabBody extends ConsumerWidget {
     // resolved from the user's own RLS-scoped list, same as
     // opportunity_detail_screen.dart's _OriginSection.
     final projects = ref.watch(projectsProvider).valueOrNull ?? const [];
-    String? projectNameFor(String? id) =>
-        id == null ? null : projects.where((p) => p.id == id).map((p) => p.name).firstOrNull;
+    String? projectNameFor(String? id) => id == null
+        ? null
+        : projects.where((p) => p.id == id).map((p) => p.name).firstOrNull;
 
     return itemsAsync.when(
       loading: () =>
           const Center(child: CircularProgressIndicator(color: _kPrimary)),
       error: (e, _) => Center(
-        child: Text(l10n.opportunityDetailGenericError(extractErrorMessage(e, l10n)),
+        child: Text(
+            l10n.opportunityDetailGenericError(extractErrorMessage(e, l10n)),
             style: const TextStyle(color: Colors.white54)),
       ),
       data: (items) {
@@ -188,7 +200,8 @@ class _LabBody extends ConsumerWidget {
                   onAdd: () => showDialog(
                     context: context,
                     builder: (ctx) => Consumer(
-                      builder: (ctx, r, _) => _AddOpportunityDialog(ref: r, projectId: projectId),
+                      builder: (ctx, r, _) =>
+                          _AddOpportunityDialog(ref: r, projectId: projectId),
                     ),
                   ),
                 ),
@@ -210,7 +223,8 @@ class _LabBody extends ConsumerWidget {
                     projectName: projectNameFor(items[i].projectId),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => OpportunityDetailScreen(itemId: items[i].id),
+                        builder: (_) =>
+                            OpportunityDetailScreen(itemId: items[i].id),
                       ),
                     ),
                     onApprove: () {
@@ -234,14 +248,16 @@ class _LabBody extends ConsumerWidget {
                               .markExecuting(opp.id);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(l10n.opportunityDetailApprovedSentTitle),
+                              content:
+                                  Text(l10n.opportunityDetailApprovedSentTitle),
                               backgroundColor: const Color(0xFF4CAF50),
                               action: SnackBarAction(
                                 label: l10n.opportunityDetailViewAction,
                                 textColor: Colors.white,
                                 onPressed: () => Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) => ActionDetailScreen(itemId: action.id),
+                                    builder: (_) =>
+                                        ActionDetailScreen(itemId: action.id),
                                   ),
                                 ),
                               ),
@@ -251,7 +267,9 @@ class _LabBody extends ConsumerWidget {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(l10n.opportunityDetailApprovedCreateActionError(extractErrorMessage(e, l10n))),
+                                content: Text(l10n
+                                    .opportunityDetailApprovedCreateActionError(
+                                        extractErrorMessage(e, l10n))),
                                 backgroundColor: Colors.orange,
                               ),
                             );
@@ -259,8 +277,9 @@ class _LabBody extends ConsumerWidget {
                         }
                       });
                     },
-                    onDelete: () =>
-                        ref.read(opportunityLabNotifierProvider.notifier).delete(items[i].id),
+                    onDelete: () => ref
+                        .read(opportunityLabNotifierProvider.notifier)
+                        .delete(items[i].id),
                     onConvertToAction: items[i].status == 'approved'
                         ? () async {
                             try {
@@ -273,15 +292,18 @@ class _LabBody extends ConsumerWidget {
                                   .read(opportunityLabNotifierProvider.notifier)
                                   .markExecuting(items[i].id);
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: Text(l10n.opportunityDetailActionCreatedTitle),
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text(
+                                      l10n.opportunityDetailActionCreatedTitle),
                                   backgroundColor: const Color(0xFF4CAF50),
                                   action: SnackBarAction(
                                     label: l10n.oppLabViewActionShort,
                                     textColor: Colors.white,
                                     onPressed: () => Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (_) => ActionDetailScreen(itemId: action.id),
+                                        builder: (_) => ActionDetailScreen(
+                                            itemId: action.id),
                                       ),
                                     ),
                                   ),
@@ -290,7 +312,11 @@ class _LabBody extends ConsumerWidget {
                             } catch (e) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(l10n.opportunityDetailGenericError(extractErrorMessage(e, l10n))), backgroundColor: Colors.red),
+                                  SnackBar(
+                                      content: Text(
+                                          l10n.opportunityDetailGenericError(
+                                              extractErrorMessage(e, l10n))),
+                                      backgroundColor: Colors.red),
                                 );
                               }
                             }
@@ -317,17 +343,17 @@ class _LabItemCard extends StatelessWidget {
     this.projectName,
   });
   final OpportunityLabItem item;
-  final VoidCallback        onTap;
-  final VoidCallback        onApprove;
-  final VoidCallback        onDelete;
-  final VoidCallback?       onConvertToAction;
-  final String?             projectName;
+  final VoidCallback onTap;
+  final VoidCallback onApprove;
+  final VoidCallback onDelete;
+  final VoidCallback? onConvertToAction;
+  final String? projectName;
 
   static Color _statusColor(String s) {
     const m = {
-      'approved':  Color(0xFF4CAF50),
+      'approved': Color(0xFF4CAF50),
       'executing': Color(0xFF00BCD4),
-      'rejected':  Color(0xFFF44336),
+      'rejected': Color(0xFFF44336),
     };
     return m[s] ?? const Color(0xFFFF9800);
   }
@@ -335,134 +361,147 @@ class _LabItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final score = item.finalScore;
-    final c     = _scoreColor(score);
-    final l10n  = AppLocalizations.of(context)!;
+    final c = _scoreColor(score);
+    final l10n = AppLocalizations.of(context)!;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _kPrimary.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  opportunityTypeLabel(item.opportunityType, AppLocalizations.of(context)!).toUpperCase(),
-                  style: const TextStyle(
-                      color: _kPrimary, fontSize: 9, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  item.title,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (score > 0) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: c.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text('$score',
-                      style: TextStyle(
-                          color: c,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ],
-          ),
-          if (item.description.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(item.description,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis),
-          ],
-          if (projectName != null) ...[
-            const SizedBox(height: 6),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.07)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               children: [
-                const Icon(Icons.folder_outlined, size: 12, color: Colors.white38),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(projectName!,
-                      style: const TextStyle(color: Colors.white38, fontSize: 11),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _kPrimary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    opportunityTypeLabel(
+                            item.opportunityType, AppLocalizations.of(context)!)
+                        .toUpperCase(),
+                    style: const TextStyle(
+                        color: _kPrimary,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold),
+                  ),
                 ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (score > 0) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: c.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text('$score',
+                        style: TextStyle(
+                            color: c,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ],
+            ),
+            if (item.description.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(item.description,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+            ],
+            if (projectName != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.folder_outlined,
+                      size: 12, color: Colors.white38),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(projectName!,
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _statusColor(item.status).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    opportunityStatusLabel(item.status, l10n),
+                    style: TextStyle(
+                        color: _statusColor(item.status),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const Spacer(),
+                if (item.status == 'pending')
+                  TextButton(
+                    onPressed: onApprove,
+                    style: TextButton.styleFrom(
+                        foregroundColor: _kGreen,
+                        minimumSize: Size.zero,
+                        padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    child: Text(l10n.oppLabApprove,
+                        style: const TextStyle(fontSize: 12)),
+                  ),
+                if (item.status == 'approved' && onConvertToAction != null)
+                  TextButton(
+                    onPressed: onConvertToAction,
+                    style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF00BCD4),
+                        minimumSize: Size.zero,
+                        padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    child: Text(l10n.oppLabConvertToAction,
+                        style: const TextStyle(fontSize: 12)),
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: Colors.white24, size: 18),
+                  onPressed: onDelete,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right_rounded,
+                    color: Colors.white24, size: 18),
               ],
             ),
           ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _statusColor(item.status).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  opportunityStatusLabel(item.status, l10n),
-                  style: TextStyle(
-                      color: _statusColor(item.status),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600),
-                ),
-              ),
-              const Spacer(),
-              if (item.status == 'pending')
-                TextButton(
-                  onPressed: onApprove,
-                  style: TextButton.styleFrom(
-                      foregroundColor: _kGreen,
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(horizontal: 8)),
-                  child: Text(l10n.oppLabApprove, style: const TextStyle(fontSize: 12)),
-                ),
-              if (item.status == 'approved' && onConvertToAction != null)
-                TextButton(
-                  onPressed: onConvertToAction,
-                  style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF00BCD4),
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(horizontal: 8)),
-                  child: Text(l10n.oppLabConvertToAction, style: const TextStyle(fontSize: 12)),
-                ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: Colors.white24, size: 18),
-                onPressed: onDelete,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right_rounded,
-                  color: Colors.white24, size: 18),
-            ],
-          ),
-        ],
+        ),
       ),
-    ),
     );
   }
 }
@@ -521,7 +560,7 @@ class _EmptyLab extends StatelessWidget {
 
 class _ProjectFilter extends ConsumerWidget {
   const _ProjectFilter({required this.selected, required this.onSelect});
-  final String?                selected;
+  final String? selected;
   final void Function(String?) onSelect;
 
   @override
@@ -556,9 +595,10 @@ class _ProjectFilter extends ConsumerWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.selected, required this.onTap});
-  final String       label;
-  final bool         selected;
+  const _Chip(
+      {required this.label, required this.selected, required this.onTap});
+  final String label;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
@@ -604,17 +644,16 @@ class _Chip extends StatelessWidget {
 class _AddOpportunityDialog extends ConsumerStatefulWidget {
   const _AddOpportunityDialog({required this.ref, required this.projectId});
   final WidgetRef ref;
-  final String?   projectId;
+  final String? projectId;
 
   @override
   ConsumerState<_AddOpportunityDialog> createState() =>
       _AddOpportunityDialogState();
 }
 
-class _AddOpportunityDialogState
-    extends ConsumerState<_AddOpportunityDialog> {
+class _AddOpportunityDialogState extends ConsumerState<_AddOpportunityDialog> {
   final _titleCtrl = TextEditingController();
-  final _descCtrl  = TextEditingController();
+  final _descCtrl = TextEditingController();
   String _type = OpportunityLabItem.types.first;
   bool _saving = false;
   final Set<String> _selectedKnowledgeIds = {};
@@ -637,7 +676,8 @@ class _AddOpportunityDialogState
     final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
       backgroundColor: _kCard,
-      title: Text(l10n.oppNewTitle, style: const TextStyle(color: Colors.white)),
+      title:
+          Text(l10n.oppNewTitle, style: const TextStyle(color: Colors.white)),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
@@ -695,7 +735,8 @@ class _AddOpportunityDialogState
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(l10n.oppCancel, style: const TextStyle(color: Colors.white54)),
+          child: Text(l10n.oppCancel,
+              style: const TextStyle(color: Colors.white54)),
         ),
         ElevatedButton(
           onPressed: _saving || _titleCtrl.text.trim().isEmpty
@@ -703,13 +744,13 @@ class _AddOpportunityDialogState
               : () async {
                   setState(() => _saving = true);
                   final item = OpportunityLabItem(
-                    id:               '',
-                    userId:           '',
-                    projectId:        widget.projectId,
-                    opportunityType:  _type,
-                    title:            _titleCtrl.text.trim(),
-                    description:      _descCtrl.text.trim(),
-                    createdAt:        DateTime.now(),
+                    id: '',
+                    userId: '',
+                    projectId: widget.projectId,
+                    opportunityType: _type,
+                    title: _titleCtrl.text.trim(),
+                    description: _descCtrl.text.trim(),
+                    createdAt: DateTime.now(),
                     knowledgeItemIds: _selectedKnowledgeIds.toList(),
                   );
                   await ref
@@ -745,14 +786,16 @@ class _AddOpportunityDialogState
       );
     }
 
-    final knowledgeAsync = ref.watch(knowledgeItemsByProjectProvider(widget.projectId!));
+    final knowledgeAsync =
+        ref.watch(knowledgeItemsByProjectProvider(widget.projectId!));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           l10n.oppKnowledgeSectionTitle,
-          style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+              color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 4),
         Text(
@@ -763,7 +806,9 @@ class _AddOpportunityDialogState
         knowledgeAsync.when(
           loading: () => const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: _kPrimary)),
+            child: Center(
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: _kPrimary)),
           ),
           error: (_, __) => const SizedBox.shrink(),
           data: (items) {
@@ -785,7 +830,7 @@ class _AddOpportunityDialogState
                     shrinkWrap: true,
                     itemCount: items.length,
                     itemBuilder: (_, i) => _KnowledgeCheckTile(
-                      item:     items[i],
+                      item: items[i],
                       selected: _selectedKnowledgeIds.contains(items[i].id),
                       onChanged: (v) => setState(() {
                         if (v) {
@@ -812,23 +857,26 @@ class _AddOpportunityDialogState
 }
 
 class _KnowledgeCheckTile extends StatelessWidget {
-  const _KnowledgeCheckTile({required this.item, required this.selected, required this.onChanged});
-  final KnowledgeItem                item;
-  final bool                         selected;
-  final ValueChanged<bool>           onChanged;
+  const _KnowledgeCheckTile(
+      {required this.item, required this.selected, required this.onChanged});
+  final KnowledgeItem item;
+  final bool selected;
+  final ValueChanged<bool> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return CheckboxListTile(
-      dense:           true,
-      value:           selected,
-      onChanged:       (v) => onChanged(v ?? false),
-      activeColor:     _kPrimary,
-      checkColor:      Colors.white,
+      dense: true,
+      value: selected,
+      onChanged: (v) => onChanged(v ?? false),
+      activeColor: _kPrimary,
+      checkColor: Colors.white,
       controlAffinity: ListTileControlAffinity.leading,
-      contentPadding:  EdgeInsets.zero,
+      contentPadding: EdgeInsets.zero,
       title: Text(
-        item.title.isEmpty ? (item.fileName ?? item.sourceUrl ?? item.id) : item.title,
+        item.title.isEmpty
+            ? (item.fileName ?? item.sourceUrl ?? item.id)
+            : item.title,
         style: const TextStyle(color: Colors.white, fontSize: 13),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,

@@ -16,7 +16,8 @@ abstract class ProjectResourceAllocationServiceInterface {
 /// migration) is the sole authorization boundary; this class never
 /// second-guesses ownership client-side, exactly like every other
 /// service in this codebase.
-class ProjectResourceAllocationService implements ProjectResourceAllocationServiceInterface {
+class ProjectResourceAllocationService
+    implements ProjectResourceAllocationServiceInterface {
   ProjectResourceAllocationService([SupabaseClient? client])
       : _client = client ?? Supabase.instance.client;
 
@@ -35,7 +36,8 @@ class ProjectResourceAllocationService implements ProjectResourceAllocationServi
         .limit(1);
     final list = rows as List;
     if (list.isEmpty) return ProjectResourceAllocation.empty(projectId);
-    return ProjectResourceAllocation.fromMap(list.first as Map<String, dynamic>);
+    return ProjectResourceAllocation.fromMap(
+        list.first as Map<String, dynamic>);
   }
 
   /// Upserts the current allocation for one project. `onConflict:
@@ -43,7 +45,8 @@ class ProjectResourceAllocationService implements ProjectResourceAllocationServi
   /// migration to already exist in the target environment — same
   /// deploy-ordering rule as the Stability-08 migration.
   @override
-  Future<ProjectResourceAllocation> save(ProjectResourceAllocation allocation) async {
+  Future<ProjectResourceAllocation> save(
+      ProjectResourceAllocation allocation) async {
     final row = await _client
         .from(_table)
         .upsert(allocation.toUpsertMap(), onConflict: 'project_id')

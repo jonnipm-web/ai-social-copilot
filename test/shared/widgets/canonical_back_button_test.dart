@@ -11,21 +11,28 @@ import 'package:ai_social_copilot/shared/widgets/canonical_back_button.dart';
 // every entry point used `context.go()` (replacing history), so even a
 // default back arrow would have had nothing to pop.
 void main() {
-  Widget appWithRouter(GoRouter router) => MaterialApp.router(routerConfig: router);
+  Widget appWithRouter(GoRouter router) =>
+      MaterialApp.router(routerConfig: router);
 
-  testWidgets('quando há histórico para voltar (canPop), usa pop()', (tester) async {
+  testWidgets('quando há histórico para voltar (canPop), usa pop()',
+      (tester) async {
     final router = GoRouter(
       initialLocation: '/a',
       routes: [
-        GoRoute(path: '/a', builder: (_, __) => const Scaffold(body: Text('Tela A'))),
+        GoRoute(
+            path: '/a',
+            builder: (_, __) => const Scaffold(body: Text('Tela A'))),
         GoRoute(
           path: '/a/detail',
           builder: (_, __) => Scaffold(
-            appBar: AppBar(leading: const CanonicalBackButton(fallbackRoute: '/fallback')),
+            appBar: AppBar(
+                leading: const CanonicalBackButton(fallbackRoute: '/fallback')),
             body: const Text('Detalhe'),
           ),
         ),
-        GoRoute(path: '/fallback', builder: (_, __) => const Scaffold(body: Text('Fallback'))),
+        GoRoute(
+            path: '/fallback',
+            builder: (_, __) => const Scaffold(body: Text('Fallback'))),
       ],
     );
 
@@ -48,15 +55,21 @@ void main() {
       final router = GoRouter(
         initialLocation: '/a/detail',
         routes: [
-          GoRoute(path: '/a', builder: (_, __) => const Scaffold(body: Text('Tela A'))),
+          GoRoute(
+              path: '/a',
+              builder: (_, __) => const Scaffold(body: Text('Tela A'))),
           GoRoute(
             path: '/a/detail',
             builder: (_, __) => Scaffold(
-              appBar: AppBar(leading: const CanonicalBackButton(fallbackRoute: '/fallback')),
+              appBar: AppBar(
+                  leading:
+                      const CanonicalBackButton(fallbackRoute: '/fallback')),
               body: const Text('Detalhe'),
             ),
           ),
-          GoRoute(path: '/fallback', builder: (_, __) => const Scaffold(body: Text('Fallback'))),
+          GoRoute(
+              path: '/fallback',
+              builder: (_, __) => const Scaffold(body: Text('Fallback'))),
         ],
       );
 

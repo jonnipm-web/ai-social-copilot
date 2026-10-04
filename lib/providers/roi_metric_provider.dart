@@ -2,13 +2,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/roi_metric.dart';
 import '../data/services/roi_metric_service.dart';
 
-final roiMetricServiceProvider = Provider<RoiMetricService>((_) => RoiMetricService());
+final roiMetricServiceProvider =
+    Provider<RoiMetricService>((_) => RoiMetricService());
 
 final roiMetricsProvider = FutureProvider.autoDispose<List<RoiMetric>>((ref) {
   return ref.read(roiMetricServiceProvider).fetchAll();
 });
 
-final roiSummaryProvider = FutureProvider.autoDispose<Map<String, double>>((ref) {
+final roiSummaryProvider =
+    FutureProvider.autoDispose<Map<String, double>>((ref) {
   return ref.read(roiMetricServiceProvider).summary();
 });
 
@@ -50,7 +52,7 @@ class RoiMetricsNotifier extends StateNotifier<AsyncValue<List<RoiMetric>>> {
   }
 }
 
-final roiMetricsNotifierProvider =
-    StateNotifierProvider.autoDispose<RoiMetricsNotifier, AsyncValue<List<RoiMetric>>>(
+final roiMetricsNotifierProvider = StateNotifierProvider.autoDispose<
+    RoiMetricsNotifier, AsyncValue<List<RoiMetric>>>(
   (ref) => RoiMetricsNotifier(ref.read(roiMetricServiceProvider)),
 );

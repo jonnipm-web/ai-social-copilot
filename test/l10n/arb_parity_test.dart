@@ -31,8 +31,10 @@ void main() {
     final onlyInEn = enKeys.difference(ptKeys);
 
     expect(onlyInPt, isEmpty,
-        reason: 'Keys present in app_pt.arb but missing from app_en.arb: $onlyInPt');
+        reason:
+            'Keys present in app_pt.arb but missing from app_en.arb: $onlyInPt');
     expect(onlyInEn, isEmpty,
-        reason: 'Keys present in app_en.arb but missing from app_pt.arb: $onlyInEn');
+        reason:
+            'Keys present in app_en.arb but missing from app_pt.arb: $onlyInEn');
   });
 }

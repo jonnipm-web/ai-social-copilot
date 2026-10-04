@@ -7,19 +7,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/ive_memory.dart';
 
 // ── Chaves SharedPreferences ───────────────────────────────────────────────────
-const _kLastRoute        = 'ive_last_route';
-const _kLastProjectId    = 'ive_last_project_id';
-const _kLastProjectName  = 'ive_last_project_name';
-const _kRecentQuestions  = 'ive_recent_questions';
+const _kLastRoute = 'ive_last_route';
+const _kLastProjectId = 'ive_last_project_id';
+const _kLastProjectName = 'ive_last_project_name';
+const _kRecentQuestions = 'ive_recent_questions';
 const _kInteractionCount = 'ive_interaction_count';
 // IVE-INTELLIGENCE-CORE-01 (IVE-F01) — which user the device-local IVE
 // memory belongs to. SharedPreferences is per DEVICE, not per user: without
 // this, a second person signing in on the same phone/browser inherited the
 // previous user's recent questions and last project name.
-const _kOwnerUserId      = 'ive_memory_owner';
+const _kOwnerUserId = 'ive_memory_owner';
 const _kAllIveKeys = [
-  _kLastRoute, _kLastProjectId, _kLastProjectName, _kRecentQuestions,
-  _kInteractionCount, _kOwnerUserId,
+  _kLastRoute,
+  _kLastProjectId,
+  _kLastProjectName,
+  _kRecentQuestions,
+  _kInteractionCount,
+  _kOwnerUserId,
 ];
 
 class IveMemoryNotifier extends StateNotifier<IveMemory> {
@@ -39,11 +43,11 @@ class IveMemoryNotifier extends StateNotifier<IveMemory> {
       if (_loaded.isCompleted) return;
       final prefs = await SharedPreferences.getInstance();
       state = state.copyWith(
-        lastRoute:        prefs.getString(_kLastRoute)        ?? '',
-        lastProjectId:    prefs.getString(_kLastProjectId),
-        lastProjectName:  prefs.getString(_kLastProjectName),
-        recentQuestions:  prefs.getStringList(_kRecentQuestions) ?? [],
-        interactionCount: prefs.getInt(_kInteractionCount)    ?? 0,
+        lastRoute: prefs.getString(_kLastRoute) ?? '',
+        lastProjectId: prefs.getString(_kLastProjectId),
+        lastProjectName: prefs.getString(_kLastProjectName),
+        recentQuestions: prefs.getStringList(_kRecentQuestions) ?? [],
+        interactionCount: prefs.getInt(_kInteractionCount) ?? 0,
       );
     } catch (_) {
       // SharedPreferences pode falhar em ambiente de teste — ignora
@@ -90,9 +94,8 @@ class IveMemoryNotifier extends StateNotifier<IveMemory> {
 
   Future<void> addQuestion(String question) async {
     if (question.trim().isEmpty) return;
-    final updated = [question.trim(), ...state.recentQuestions]
-        .take(5)
-        .toList();
+    final updated =
+        [question.trim(), ...state.recentQuestions].take(5).toList();
     state = state.copyWith(recentQuestions: updated);
     _persist((prefs) => prefs.setStringList(_kRecentQuestions, updated));
   }
@@ -103,7 +106,7 @@ class IveMemoryNotifier extends StateNotifier<IveMemory> {
   }) {
     state = state.copyWith(
       overallHealthScore: health,
-      ecosystemSnapshot:  scores,
+      ecosystemSnapshot: scores,
     );
     // health e snapshot são sessão apenas — não persistem
   }

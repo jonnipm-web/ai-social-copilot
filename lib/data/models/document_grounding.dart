@@ -17,12 +17,12 @@ class DocumentExcerpt {
   });
 
   Map<String, dynamic> toMap() => {
-    'doc_id':          documentId,
-    'title':           documentTitle,
-    'content_excerpt': text,
-    'chunk_index':     chunkIndex,
-    'chars':           charCount,
-  };
+        'doc_id': documentId,
+        'title': documentTitle,
+        'content_excerpt': text,
+        'chunk_index': chunkIndex,
+        'chars': charCount,
+      };
 }
 
 class GroundingCoverage {
@@ -45,31 +45,31 @@ class GroundingCoverage {
     required this.usable,
     required this.used,
     required this.documentUsageCoverage,
-    this.selectedCharacterCount    = 0,
+    this.selectedCharacterCount = 0,
     this.availableContentCharCount = 0,
-    this.deliveredCharacterCount   = 0,
+    this.deliveredCharacterCount = 0,
   });
 
   Map<String, dynamic> toMap() => {
-    'total_linked':              totalLinked,
-    'processed':                 processed,
-    'usable':                    usable,
-    'used':                      used,
-    'document_usage_coverage':   documentUsageCoverage,
-    'selected_char_count':       selectedCharacterCount,
-    'available_content_chars':   availableContentCharCount,
-    'delivered_char_count':      deliveredCharacterCount,
-  };
+        'total_linked': totalLinked,
+        'processed': processed,
+        'usable': usable,
+        'used': used,
+        'document_usage_coverage': documentUsageCoverage,
+        'selected_char_count': selectedCharacterCount,
+        'available_content_chars': availableContentCharCount,
+        'delivered_char_count': deliveredCharacterCount,
+      };
 
   static const GroundingCoverage empty = GroundingCoverage(
-    totalLinked:               0,
-    processed:                 0,
-    usable:                    0,
-    used:                      0,
-    documentUsageCoverage:     0.0,
-    selectedCharacterCount:    0,
+    totalLinked: 0,
+    processed: 0,
+    usable: 0,
+    used: 0,
+    documentUsageCoverage: 0.0,
+    selectedCharacterCount: 0,
     availableContentCharCount: 0,
-    deliveredCharacterCount:   0,
+    deliveredCharacterCount: 0,
   );
 }
 

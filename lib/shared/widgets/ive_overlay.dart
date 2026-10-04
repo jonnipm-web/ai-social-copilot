@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -387,7 +388,8 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     // was actually laid out for. ref.read is safe here: postFrameCallbacks
     // run outside build, so this is an ordinary read, not a subscription.
     final measuredForKey = _bubbleContentKey(ref.read(iveProvider));
-    if (_measuredBubbleSize == size && _measuredBubbleContentKey == measuredForKey) {
+    if (_measuredBubbleSize == size &&
+        _measuredBubbleContentKey == measuredForKey) {
       return; // no-op, avoid churn/loops
     }
     _measuredBubbleSize = size;
@@ -423,7 +425,9 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
   double _bubbleLayoutHeight(Object currentContentKey) {
     final measurementIsCurrent = _measuredBubbleSize != null &&
         _measuredBubbleContentKey == currentContentKey;
-    return (measurementIsCurrent ? _measuredBubbleSize! : _kFallbackBubbleFootprint)
+    return (measurementIsCurrent
+            ? _measuredBubbleSize!
+            : _kFallbackBubbleFootprint)
         .height;
   }
 
@@ -499,8 +503,9 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     // so the two were equivalent in practice, but a real desktop target
     // added later would have silently inherited this Android-only guard
     // too. `defaultTargetPlatform` names the actual platform instead.
-    final inlineAskRedundant = defaultTargetPlatform == TargetPlatform.android &&
-        iveInlineAskVisibleNotifier.value;
+    final inlineAskRedundant =
+        defaultTargetPlatform == TargetPlatform.android &&
+            iveInlineAskVisibleNotifier.value;
     if (iveChatOpenNotifier.value ||
         iveModalOpenNotifier.value ||
         keyboardOpen ||
@@ -674,7 +679,8 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
                     opacity: bubbleActive ? 1.0 : 0.0,
                     child: AnimatedSlide(
                       duration: const Duration(milliseconds: 350),
-                      offset: bubbleActive ? Offset.zero : const Offset(0, 0.15),
+                      offset:
+                          bubbleActive ? Offset.zero : const Offset(0, 0.15),
                       curve: Curves.easeOut,
                       // COMMERCIAL-EXPERIENCE-CLOSURE-17A — this key is
                       // what `_measureBubble` reads via

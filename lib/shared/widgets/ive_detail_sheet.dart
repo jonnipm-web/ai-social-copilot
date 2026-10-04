@@ -34,7 +34,7 @@ class IveDetailSheet extends ConsumerWidget {
     required this.title,
     required this.emoji,
     required this.humanExplanation,
-    this.evidence       = const [],
+    this.evidence = const [],
     this.suggestedActions = const [],
     this.expandedData,
     this.screenName = '',
@@ -57,20 +57,20 @@ class IveDetailSheet extends ConsumerWidget {
     String? sourceEntityId,
   }) {
     showModalBottomSheet(
-      context:             context,
-      isScrollControlled:  true,
-      backgroundColor:     Colors.transparent,
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => IveDetailSheet(
-        title:            title,
-        emoji:            emoji,
+        title: title,
+        emoji: emoji,
         humanExplanation: humanExplanation,
-        evidence:         evidence,
+        evidence: evidence,
         suggestedActions: suggestedActions,
-        expandedData:     expandedData,
-        screenName:       screenName,
-        projectId:        projectId,
+        expandedData: expandedData,
+        screenName: screenName,
+        projectId: projectId,
         sourceEntityType: sourceEntityType,
-        sourceEntityId:   sourceEntityId,
+        sourceEntityId: sourceEntityId,
       ),
     );
   }
@@ -80,11 +80,11 @@ class IveDetailSheet extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     return DraggableScrollableSheet(
       initialChildSize: 0.60,
-      minChildSize:     0.40,
-      maxChildSize:     0.92,
+      minChildSize: 0.40,
+      maxChildSize: 0.92,
       builder: (_, ctrl) => Container(
         decoration: const BoxDecoration(
-          color:        Color(0xFF1A1635),
+          color: Color(0xFF1A1635),
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -125,7 +125,8 @@ class IveDetailSheet extends ConsumerWidget {
   Widget _handle() => Center(
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 10),
-          width: 40, height: 4,
+          width: 40,
+          height: 4,
           decoration: BoxDecoration(
             color: Colors.white24,
             borderRadius: BorderRadius.circular(2),
@@ -169,13 +170,17 @@ class IveDetailSheet extends ConsumerWidget {
               const SizedBox(width: 6),
               Text(
                 l10n.ctxIveDetailExplanation,
-                style: const TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.bold, fontSize: 13),
+                style: const TextStyle(
+                    color: Color(0xFF6C63FF),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13),
               ),
             ]),
             const SizedBox(height: 8),
             Text(
               humanExplanation,
-              style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.5),
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 14, height: 1.5),
             ),
           ],
         ),
@@ -186,7 +191,10 @@ class IveDetailSheet extends ConsumerWidget {
         children: [
           Text(
             l10n.impactEvidence,
-            style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           ...evidence.map((e) => _evidenceCard(e)),
@@ -210,10 +218,14 @@ class IveDetailSheet extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(e.label,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                      style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
                   Text(e.value,
-                      style: const TextStyle(color: Colors.white, fontSize: 13)),
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 13)),
                 ],
               ),
             ),
@@ -229,15 +241,22 @@ class IveDetailSheet extends ConsumerWidget {
         iconColor: Colors.white38,
         collapsedIconColor: Colors.white24,
         tilePadding: EdgeInsets.zero,
-        children: expandedData!.entries.map((e) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 3),
-          child: Row(
-            children: [
-              Expanded(child: Text(e.key, style: const TextStyle(color: Colors.white38, fontSize: 12))),
-              Text(e.value.toString(), style: const TextStyle(color: Colors.white60, fontSize: 12)),
-            ],
-          ),
-        )).toList(),
+        children: expandedData!.entries
+            .map((e) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    children: [
+                      Expanded(
+                          child: Text(e.key,
+                              style: const TextStyle(
+                                  color: Colors.white38, fontSize: 12))),
+                      Text(e.value.toString(),
+                          style: const TextStyle(
+                              color: Colors.white60, fontSize: 12)),
+                    ],
+                  ),
+                ))
+            .toList(),
       );
 
   Widget _actionsSection(BuildContext context, AppLocalizations l10n) => Column(
@@ -245,7 +264,10 @@ class IveDetailSheet extends ConsumerWidget {
         children: [
           Text(
             l10n.ctxIveDetailSuggestedActions,
-            style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           ...suggestedActions.map((a) => _actionTile(context, a)),
@@ -263,7 +285,8 @@ class IveDetailSheet extends ConsumerWidget {
             : null,
         trailing: action.onTap != null
             ? IconButton(
-                icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF6C63FF)),
+                icon: const Icon(Icons.arrow_forward_ios_rounded,
+                    size: 14, color: Color(0xFF6C63FF)),
                 onPressed: () {
                   Navigator.of(context).pop();
                   action.onTap!();
@@ -279,31 +302,36 @@ class IveDetailSheet extends ConsumerWidget {
   // mesmo grounding rico disponível (e já usado) pelo avatar global.
   // Mesma fonte (iveContextDataProvider) e mesma conversão
   // (CopilotContextData.fromIveContext) usadas em ive_overlay.dart.
-  Widget _askIveButton(BuildContext context, WidgetRef ref, AppLocalizations l10n) => SizedBox(
+  Widget _askIveButton(
+          BuildContext context, WidgetRef ref, AppLocalizations l10n) =>
+      SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
             foregroundColor: const Color(0xFF6C63FF),
             side: const BorderSide(color: Color(0xFF6C63FF)),
             padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           icon: const Text('💬', style: TextStyle(fontSize: 16)),
           label: Text(l10n.iveChatAskLabel),
           onPressed: () {
             Navigator.of(context).pop();
             final ctx = ref.read(iveContextDataProvider(projectId)).valueOrNull;
-            final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+            final contextData = ctx != null
+                ? CopilotContextData.fromIveContext(ctx)
+                : const CopilotContextData();
             showCopilotChat(
               context,
-              screenName:  screenName.isNotEmpty ? screenName : title,
+              screenName: screenName.isNotEmpty ? screenName : title,
               contextData: contextData,
               request: IveInteractionRequest(
-                projectId:        projectId,
-                sourceModule:     screenName.isNotEmpty ? screenName : title,
+                projectId: projectId,
+                sourceModule: screenName.isNotEmpty ? screenName : title,
                 sourceEntityType: sourceEntityType,
-                sourceEntityId:   sourceEntityId,
-                operationType:    IveOperationType.ask,
+                sourceEntityId: sourceEntityId,
+                operationType: IveOperationType.ask,
               ),
             );
           },

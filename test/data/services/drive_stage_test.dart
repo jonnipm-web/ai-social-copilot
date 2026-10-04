@@ -15,7 +15,8 @@ void main() {
       expect(result, 'ok');
     });
 
-    test('wraps a thrown error with the stage tag, never losing the message', () async {
+    test('wraps a thrown error with the stage tag, never losing the message',
+        () async {
       await expectLater(
         () => runDriveStage('token', () async => throw StateError('boom')),
         throwsA(
@@ -26,7 +27,8 @@ void main() {
       );
     });
 
-    test('never double-wraps a DriveStageException raised deeper in the chain', () async {
+    test('never double-wraps a DriveStageException raised deeper in the chain',
+        () async {
       const inner = DriveStageException('download', 'original');
       await expectLater(
         () => runDriveStage('extract', () async => throw inner),
@@ -34,7 +36,8 @@ void main() {
       );
     });
 
-    test('surfaces a stage-tagged timeout instead of hanging forever', () async {
+    test('surfaces a stage-tagged timeout instead of hanging forever',
+        () async {
       await expectLater(
         () => runDriveStage(
           'signin',
@@ -49,7 +52,9 @@ void main() {
       );
     });
 
-    test('toString() includes the stage tag for diagnostics without exposing secrets', () {
+    test(
+        'toString() includes the stage tag for diagnostics without exposing secrets',
+        () {
       const e = DriveStageException('list', 'Drive API erro 401');
       expect(e.toString(), '[drive:list] Drive API erro 401');
       expect(e.toString(), isNot(contains('Bearer')));
@@ -85,7 +90,9 @@ void main() {
     // "Entrar com Google" button do nothing (never reaching the
     // interactive consent screen that grants drive.readonly again).
 
-    test('reuses the silent account when its token is usable, without going interactive', () async {
+    test(
+        'reuses the silent account when its token is usable, without going interactive',
+        () async {
       var interactiveCalls = 0;
       final result = await resolveUsableAccount<String>(
         silentSignIn: () async => 'silent-account',
@@ -99,7 +106,8 @@ void main() {
       expect(interactiveCalls, 0);
     });
 
-    test('falls through to interactive sign-in when there is no silent account', () async {
+    test('falls through to interactive sign-in when there is no silent account',
+        () async {
       final result = await resolveUsableAccount<String>(
         silentSignIn: () async => null,
         tokenFor: (account) async => 'a-real-token',
@@ -121,7 +129,9 @@ void main() {
       },
     );
 
-    test('falls through to interactive sign-in when checking the silent account\'s token throws', () async {
+    test(
+        'falls through to interactive sign-in when checking the silent account\'s token throws',
+        () async {
       final result = await resolveUsableAccount<String>(
         silentSignIn: () async => 'silent-account',
         tokenFor: (account) async => throw StateError('boom'),

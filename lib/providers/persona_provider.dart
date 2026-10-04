@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/persona.dart';
 import '../data/services/persona_service.dart';
 
-final personaServiceProvider = Provider<PersonaService>((_) => PersonaService());
+final personaServiceProvider =
+    Provider<PersonaService>((_) => PersonaService());
 
 final personasProvider = FutureProvider.autoDispose<List<Persona>>((ref) {
   return ref.watch(personaServiceProvider).fetchAll();

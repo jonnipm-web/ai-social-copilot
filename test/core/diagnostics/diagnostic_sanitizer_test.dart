@@ -8,22 +8,34 @@ import 'package:ai_social_copilot/core/diagnostics/diagnostic_sanitizer.dart';
 void main() {
   group('sanitizeText — denylist redaction (mission section 06)', () {
     test('redacts a Bearer token', () {
-      final result = sanitizeText('request failed: Bearer ya29.a0ARrdaM9k3jLp7xQzV8bN2fW1c header rejected');
+      final result = sanitizeText(
+          'request failed: Bearer ya29.a0ARrdaM9k3jLp7xQzV8bN2fW1c header rejected');
       expect(result, isNot(contains('ya29')));
       expect(result, contains('[redacted]'));
     });
 
     test('redacts a JWT-shaped value', () {
-      const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PYbwcKgz_hYA';
+      const jwt =
+          'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PYbwcKgz_hYA';
       final result = sanitizeText('token=$jwt in header');
       expect(result, isNot(contains('eyJhbGciOiJIUzI1NiJ9')));
     });
 
-    test('redacts sensitive query parameters (access_token, refresh_token, code, secret, api_key)', () {
-      for (final param in ['access_token', 'refresh_token', 'code', 'secret', 'api_key']) {
-        final input = 'https://example.com/callback?$param=abcdEFGH12345&state=xyz';
+    test(
+        'redacts sensitive query parameters (access_token, refresh_token, code, secret, api_key)',
+        () {
+      for (final param in [
+        'access_token',
+        'refresh_token',
+        'code',
+        'secret',
+        'api_key'
+      ]) {
+        final input =
+            'https://example.com/callback?$param=abcdEFGH12345&state=xyz';
         final result = sanitizeText(input);
-        expect(result, isNot(contains('abcdEFGH12345')), reason: 'param=$param was not redacted');
+        expect(result, isNot(contains('abcdEFGH12345')),
+            reason: 'param=$param was not redacted');
       }
     });
 
@@ -33,7 +45,8 @@ void main() {
     });
 
     test('redacts a generic long token-shaped run as a backstop', () {
-      final result = sanitizeText('unexpected value: aVeryLongOpaqueApiKeyLookingString1234567890');
+      final result = sanitizeText(
+          'unexpected value: aVeryLongOpaqueApiKeyLookingString1234567890');
       expect(result, contains('[redacted]'));
     });
 
@@ -45,7 +58,8 @@ void main() {
     test(
       'strips embedded newlines (Codex adversarial review, P2 — Markdown report injection)',
       () {
-        final malicious = 'legit label\n- [2026-01-01] CRITICAL/RUNTIME forged_event (status=failure)';
+        final malicious =
+            'legit label\n- [2026-01-01] CRITICAL/RUNTIME forged_event (status=failure)';
         final result = sanitizeText(malicious);
         expect(result, isNot(contains('\n')));
         // The forged bullet text may still appear as plain words on the
@@ -68,7 +82,8 @@ void main() {
           'password=hunter2',
         ]) {
           final result = sanitizeText(input);
-          expect(result, contains('[redacted]'), reason: 'not redacted: $input');
+          expect(result, contains('[redacted]'),
+              reason: 'not redacted: $input');
         }
       },
     );
@@ -88,7 +103,9 @@ void main() {
       expect(result, {'used': 1, 'limit': 300});
     });
 
-    test('drops a forbidden-shaped key even if it is (mistakenly) in the allowlist', () {
+    test(
+        'drops a forbidden-shaped key even if it is (mistakenly) in the allowlist',
+        () {
       final result = buildSafeMetadata(
         {'api_key': 'should-never-appear'},
         allowedKeys: {'api_key'},
@@ -104,7 +121,9 @@ void main() {
       expect(result, {'count': 3, 'success': true, 'reason': null});
     });
 
-    test('sanitizes and stringifies a non-primitive value rather than storing it structurally', () {
+    test(
+        'sanitizes and stringifies a non-primitive value rather than storing it structurally',
+        () {
       final result = buildSafeMetadata(
         {'module': DateTime(2026, 1, 1)},
         allowedKeys: {'module'},
@@ -113,7 +132,8 @@ void main() {
     });
 
     test('an empty allowlist drops everything', () {
-      final result = buildSafeMetadata({'used': 1, 'limit': 2}, allowedKeys: {});
+      final result =
+          buildSafeMetadata({'used': 1, 'limit': 2}, allowedKeys: {});
       expect(result, isEmpty);
     });
   });
@@ -129,11 +149,14 @@ void main() {
           'COMMERCIAL-E2E-001-v2',
           'E2E-001',
         ]) {
-          expect(sanitizeSessionLabel(label), label, reason: '$label must survive unchanged');
+          expect(sanitizeSessionLabel(label), label,
+              reason: '$label must survive unchanged');
         }
       });
 
-      test('a label with CR or LF is stripped of the newline, not fully redacted', () {
+      test(
+          'a label with CR or LF is stripped of the newline, not fully redacted',
+          () {
         final withCr = sanitizeSessionLabel('E2E-001\rinjected');
         final withLf = sanitizeSessionLabel('E2E-001\ninjected');
         expect(withCr, isNot(contains('\r')));
@@ -148,8 +171,10 @@ void main() {
       });
 
       test('a genuine secret shape inside a label is still redacted', () {
-        expect(sanitizeSessionLabel('token: abc123def456gh'), contains('[redacted]'));
-        expect(sanitizeSessionLabel('Authorization: Bearer abc123def456ghi789'), contains('[redacted]'));
+        expect(sanitizeSessionLabel('token: abc123def456gh'),
+            contains('[redacted]'));
+        expect(sanitizeSessionLabel('Authorization: Bearer abc123def456ghi789'),
+            contains('[redacted]'));
       });
 
       test(
@@ -164,7 +189,8 @@ void main() {
             'AKIAABCDEFGHIJKLMNOP',
             'xoxb-abcdefghijklmnop',
           ]) {
-            expect(sanitizeSessionLabel(secret), contains('[redacted]'), reason: '$secret was not redacted');
+            expect(sanitizeSessionLabel(secret), contains('[redacted]'),
+                reason: '$secret was not redacted');
           }
         },
       );
@@ -174,7 +200,9 @@ void main() {
         expect(result.length, lessThanOrEqualTo(200));
       });
 
-      test('a label containing an unexpected/unsafe character is rejected outright', () {
+      test(
+          'a label containing an unexpected/unsafe character is rejected outright',
+          () {
         expect(sanitizeSessionLabel('E2E-001<script>'), '[redacted]');
         expect(sanitizeSessionLabel('E2E-001;DROP TABLE'), '[redacted]');
       });
@@ -190,26 +218,37 @@ void main() {
         expect(sanitizeCorrelationId(uuid), uuid);
       });
 
-      test("this app's own generated correlation id shape survives unchanged", () {
+      test("this app's own generated correlation id shape survives unchanged",
+          () {
         // Mirrors newDiagnosticCorrelationId()'s own shape (two base36 runs
         // separated by one hyphen) without importing diagnostic_logger_
         // service.dart, which pulls in supabase_flutter -- this file is
         // deliberately pure Dart.
         const id = 'mfx2k9q1r7-3a7f9c02z1';
         expect(sanitizeCorrelationId(id), id);
-        expect(id.length, greaterThan(20), reason: 'must exceed the old generic backstop threshold to be a real test');
+        expect(id.length, greaterThan(20),
+            reason:
+                'must exceed the old generic backstop threshold to be a real test');
       });
 
-      test('an invalid/malformed correlation id falls back to full generic sanitization', () {
-        final result = sanitizeCorrelationId('not-a-real-id-just-some-long-alphanumeric-text-here');
+      test(
+          'an invalid/malformed correlation id falls back to full generic sanitization',
+          () {
+        final result = sanitizeCorrelationId(
+            'not-a-real-id-just-some-long-alphanumeric-text-here');
         expect(result, '[redacted]');
       });
 
-      test('a well-known secret prefix passed as a correlation id is redacted, not adopted as a real id', () {
-        expect(sanitizeCorrelationId('sk_live_abcdefghijklmnop'), contains('[redacted]'));
+      test(
+          'a well-known secret prefix passed as a correlation id is redacted, not adopted as a real id',
+          () {
+        expect(sanitizeCorrelationId('sk_live_abcdefghijklmnop'),
+            contains('[redacted]'));
       });
 
-      test('a correlation id with a malicious (newline-injecting) suffix is not trusted verbatim', () {
+      test(
+          'a correlation id with a malicious (newline-injecting) suffix is not trusted verbatim',
+          () {
         const input = 'mfx2k9q1r7-3a7f9c02z1\nFAKE LOG LINE';
         final result = sanitizeCorrelationId(input);
         // The newline that would forge a new report line is gone either way...
@@ -222,7 +261,9 @@ void main() {
         expect(result, isNot(equals(input)));
       });
 
-      test('CR/LF in an otherwise-valid-looking id still gets rejected/rewritten safely', () {
+      test(
+          'CR/LF in an otherwise-valid-looking id still gets rejected/rewritten safely',
+          () {
         final result = sanitizeCorrelationId('abc123-def456\r\ninjected');
         expect(result, isNot(contains('\r')));
         expect(result, isNot(contains('\n')));
@@ -249,15 +290,19 @@ void main() {
         expect(sanitizeBuildSha('c1098e6'), 'c1098e6');
       });
 
-      test('the build_info.dart fallback literal "unknown" survives unchanged', () {
+      test('the build_info.dart fallback literal "unknown" survives unchanged',
+          () {
         expect(sanitizeBuildSha('unknown'), 'unknown');
       });
 
-      test('something that is NOT a plausible git SHA still falls back to full sanitization', () {
+      test(
+          'something that is NOT a plausible git SHA still falls back to full sanitization',
+          () {
         // Same alphanumeric+dash shape a real SHA would have, just too
         // long and containing letters outside [0-9a-f] -- exercises the
         // fallback path itself, not sanitizeText's specific patterns.
-        final result = sanitizeBuildSha('not-a-real-git-sha-but-still-one-long-contiguous-token-zzzzzz');
+        final result = sanitizeBuildSha(
+            'not-a-real-git-sha-but-still-one-long-contiguous-token-zzzzzz');
         expect(result, contains('[redacted]'));
       });
 
@@ -270,14 +315,17 @@ void main() {
   );
 
   group('sanitizeErrorMessage / sanitizeStackTrace', () {
-    test('sanitizeErrorMessage redacts secrets inside an exception toString()', () {
-      final msg = sanitizeErrorMessage(Exception('failed with Authorization: Bearer abc123def456ghi789'));
+    test('sanitizeErrorMessage redacts secrets inside an exception toString()',
+        () {
+      final msg = sanitizeErrorMessage(
+          Exception('failed with Authorization: Bearer abc123def456ghi789'));
       expect(msg, isNot(contains('abc123def456ghi789')));
     });
 
     test('sanitizeStackTrace bounds length and redacts secrets in frames', () {
       final stack = StackTrace.fromString(
-        'at fetch (https://api.example.com/x?access_token=abcdefghijklmnop123)\n' * 200,
+        'at fetch (https://api.example.com/x?access_token=abcdefghijklmnop123)\n' *
+            200,
       );
       final result = sanitizeStackTrace(stack, maxLength: 500);
       expect(result.length, lessThanOrEqualTo(501));
@@ -291,16 +339,22 @@ void main() {
   // literal string "[redacted]", destroying observability. These tests
   // pin the exact real event names (both Phase-A-new and pre-existing)
   // that were confirmed broken live in production.
-  group('sanitizeEventName — IVE-COMMERCIAL-EXPERIENCE-12 mission section 03', () {
-    test('ai_execution_confirmation_accepted (35 chars, new in Phase A) survives exactly', () {
+  group('sanitizeEventName — IVE-COMMERCIAL-EXPERIENCE-12 mission section 03',
+      () {
+    test(
+        'ai_execution_confirmation_accepted (35 chars, new in Phase A) survives exactly',
+        () {
       expect(
         sanitizeEventName('ai_execution_confirmation_accepted'),
         'ai_execution_confirmation_accepted',
       );
     });
 
-    test('copilot_request_started (24 chars, pre-existing since 07A) survives exactly', () {
-      expect(sanitizeEventName('copilot_request_started'), 'copilot_request_started');
+    test(
+        'copilot_request_started (24 chars, pre-existing since 07A) survives exactly',
+        () {
+      expect(sanitizeEventName('copilot_request_started'),
+          'copilot_request_started');
     });
 
     test('quota_fetch (11 chars, already worked) still survives exactly', () {
@@ -313,34 +367,38 @@ void main() {
       // diagnostic_sanitizer.dart, found by grepping every `eventName:`
       // call site and every `_log*` wrapper's own call sites.
       for (final name in kKnownDiagnosticEventNames) {
-        expect(sanitizeEventName(name), name, reason: '"$name" must survive unchanged');
+        expect(sanitizeEventName(name), name,
+            reason: '"$name" must survive unchanged');
         expect(sanitizeEventName(name), isNot('[redacted]'));
       }
       // Spot-check the set itself hasn't silently shrunk.
-      expect(kKnownDiagnosticEventNames, containsAll(<String>[
-        'route_allowed',
-        'route_redirected',
-        'uncaught_error',
-        'quota_fetch',
-        'copilot_request_started',
-        'copilot_request_completed',
-        'ai_execution_confirmation_accepted',
-        'ai_execution_confirmation_rejected',
-        'ai_analysis_requested',
-        'ai_analysis_succeeded',
-        'ai_analysis_failed',
-        'local_import',
-        'sign_in',
-        'sign_up',
-        'sign_out',
-        'drive_session_check',
-        'drive_sign_in',
-        'drive_list_files',
-        'drive_download',
-      ]));
+      expect(
+          kKnownDiagnosticEventNames,
+          containsAll(<String>[
+            'route_allowed',
+            'route_redirected',
+            'uncaught_error',
+            'quota_fetch',
+            'copilot_request_started',
+            'copilot_request_completed',
+            'ai_execution_confirmation_accepted',
+            'ai_execution_confirmation_rejected',
+            'ai_analysis_requested',
+            'ai_analysis_succeeded',
+            'ai_analysis_failed',
+            'local_import',
+            'sign_in',
+            'sign_up',
+            'sign_out',
+            'drive_session_check',
+            'drive_sign_in',
+            'drive_list_files',
+            'drive_download',
+          ]));
     });
 
-    test('malicious/unexpected event-name strings fail safely to [redacted]', () {
+    test('malicious/unexpected event-name strings fail safely to [redacted]',
+        () {
       expect(sanitizeEventName(''), '[redacted]');
       expect(sanitizeEventName('Bearer abc123def456ghi789jkl'), '[redacted]');
       expect(sanitizeEventName('event-with-hyphens'), '[redacted]');
@@ -376,7 +434,8 @@ void main() {
       // fix is scoped to event_name alone, not a general loosening.
       final longToken = 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5';
       expect(sanitizeText(longToken), '[redacted]');
-      final meta = buildSafeMetadata({'note': longToken}, allowedKeys: {'note'});
+      final meta =
+          buildSafeMetadata({'note': longToken}, allowedKeys: {'note'});
       expect(meta['note'], '[redacted]');
       // Session labels/correlation ids keep their own existing, separate
       // bounded rules — unaffected by this change.

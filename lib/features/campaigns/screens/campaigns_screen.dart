@@ -53,8 +53,7 @@ class CampaignsScreen extends ConsumerWidget {
         ),
         data: (campaigns) => campaigns.isEmpty
             ? _EmptyState(
-                onTap: () =>
-                    context.push(AppConstants.routeKnowledge),
+                onTap: () => context.push(AppConstants.routeKnowledge),
               )
             : _CampaignList(campaigns: campaigns),
       ),
@@ -96,8 +95,8 @@ class _EmptyState extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00BCD4),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
               icon: const Icon(Icons.auto_stories_rounded),
               label: Text(l10n.campaignsGoToVault),
@@ -179,14 +178,15 @@ class _CampaignCard extends ConsumerWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: color.withOpacity(0.4)),
                     ),
-                    child: Text(campaignObjectiveLabel(campaign.objective, l10n),
+                    child: Text(
+                        campaignObjectiveLabel(campaign.objective, l10n),
                         style: TextStyle(
                             color: color,
                             fontSize: 10,
@@ -211,16 +211,15 @@ class _CampaignCard extends ConsumerWidget {
                       color: Colors.white24, size: 12),
                   const SizedBox(width: 4),
                   Text(l10n.campaignsDurationDays(campaign.durationDays),
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 11)),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 11)),
                   const SizedBox(width: 12),
                   const Icon(Icons.broadcast_on_personal_rounded,
                       color: Colors.white24, size: 12),
                   const SizedBox(width: 4),
                   Text(
                     campaign.channels.take(3).join(', '),
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 11),
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
                     overflow: TextOverflow.ellipsis,
                   ),
                   const Spacer(),
@@ -240,7 +239,8 @@ class _CampaignCard extends ConsumerWidget {
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
                               child: Text(l10n.commonCancel,
-                                  style: const TextStyle(color: Colors.white54)),
+                                  style:
+                                      const TextStyle(color: Colors.white54)),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(context, true),

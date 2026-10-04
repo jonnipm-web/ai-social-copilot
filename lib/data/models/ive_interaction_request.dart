@@ -1,4 +1,5 @@
-import '../../core/diagnostics/diagnostic_logger_service.dart' show newDiagnosticCorrelationId;
+import '../../core/diagnostics/diagnostic_logger_service.dart'
+    show newDiagnosticCorrelationId;
 import '../../core/utils/uuid_v4.dart';
 
 // IVE-COMMERCIAL-FOUNDATION-11 — canonical contract for every "Perguntar/

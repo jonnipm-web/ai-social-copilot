@@ -18,7 +18,8 @@ void main() {
     expect(AppConstants.planLimits['free'], 15);
   });
 
-  test('limitForRole falls back to the FREE limit (15) for an unmapped role', () {
+  test('limitForRole falls back to the FREE limit (15) for an unmapped role',
+      () {
     expect(AppConstants.limitForRole('unknown_future_role'), 15);
   });
 

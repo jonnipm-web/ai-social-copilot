@@ -41,17 +41,18 @@ class InsightService {
     required String question,
     required CopilotTurn turn,
   }) async {
-    if (_client.auth.currentUser?.id == null) throw Exception('Não autenticado');
+    if (_client.auth.currentUser?.id == null)
+      throw Exception('Não autenticado');
 
     // P1-Q1/Q2: quota enforced server-side via SECURITY DEFINER RPC.
     // Throws 'quota_exceeded' when the free monthly limit is reached.
     final rows = await _client.rpc('save_insight_quota_checked', params: {
-      'p_project_id':       projectId,
-      'p_title':            _titleFromQuestion(question),
-      'p_description':      turn.content,
-      'p_confidence':       turn.confidence,
-      'p_sources':          turn.sources,
-      'p_action_steps':     _actionStepsFromSuggestion(turn.actionSuggestion),
+      'p_project_id': projectId,
+      'p_title': _titleFromQuestion(question),
+      'p_description': turn.content,
+      'p_confidence': turn.confidence,
+      'p_sources': turn.sources,
+      'p_action_steps': _actionStepsFromSuggestion(turn.actionSuggestion),
       'p_opportunity_type': 'expansão',
     });
     if (rows == null || (rows as List).isEmpty) {
@@ -74,10 +75,7 @@ class InsightService {
   }
 
   Future<void> delete(String id) async {
-    await _client
-        .from(AppConstants.tableOpportunityLab)
-        .delete()
-        .eq('id', id);
+    await _client.from(AppConstants.tableOpportunityLab).delete().eq('id', id);
   }
 
   Future<ActionQueueItem> addToActions(OpportunityLabItem insight) async {
@@ -85,19 +83,19 @@ class InsightService {
     if (uid == null) throw Exception('Não autenticado');
 
     final action = ActionQueueItem(
-      id:              '',
-      userId:          uid,
-      projectId:       insight.projectId,
+      id: '',
+      userId: uid,
+      projectId: insight.projectId,
       opportunityLabId: insight.id.isNotEmpty ? insight.id : null,
-      actionType:      'task',
-      title:           insight.title,
-      description:     insight.description,
-      confidence:      insight.confidence,
-      sources:         insight.sources,
-      plan:            insight.actionSteps,
-      origin:          'ive_analysis',
-      status:          'pending',
-      createdAt:       DateTime.now(),
+      actionType: 'task',
+      title: insight.title,
+      description: insight.description,
+      confidence: insight.confidence,
+      sources: insight.sources,
+      plan: insight.actionSteps,
+      origin: 'ive_analysis',
+      status: 'pending',
+      createdAt: DateTime.now(),
     );
     final map = action.toInsertMap();
     map['user_id'] = uid;

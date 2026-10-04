@@ -4,8 +4,8 @@ import '../data/models/website_analysis.dart';
 import '../data/services/website_analyzer_service.dart';
 import '../data/services/content_localization_service.dart';
 
-final websiteAnalyzerServiceProvider =
-    Provider<WebsiteAnalyzerService>((ref) => WebsiteAnalyzerService(localizer: ref.watch(rowLocalizerProvider)));
+final websiteAnalyzerServiceProvider = Provider<WebsiteAnalyzerService>((ref) =>
+    WebsiteAnalyzerService(localizer: ref.watch(rowLocalizerProvider)));
 
 final websiteAnalysesProvider =
     FutureProvider.autoDispose<List<WebsiteAnalysis>>((ref) {
@@ -14,7 +14,8 @@ final websiteAnalysesProvider =
 
 class WebsiteAnalyzerNotifier
     extends StateNotifier<AsyncValue<WebsiteAnalysis?>> {
-  WebsiteAnalyzerNotifier(this._service, this._ref) : super(const AsyncValue.data(null));
+  WebsiteAnalyzerNotifier(this._service, this._ref)
+      : super(const AsyncValue.data(null));
 
   final WebsiteAnalyzerService _service;
   final Ref _ref;
@@ -39,7 +40,8 @@ class WebsiteAnalyzerNotifier
 
 final websiteAnalyzerNotifierProvider = StateNotifierProvider.autoDispose<
     WebsiteAnalyzerNotifier, AsyncValue<WebsiteAnalysis?>>(
-  (ref) => WebsiteAnalyzerNotifier(ref.watch(websiteAnalyzerServiceProvider), ref),
+  (ref) =>
+      WebsiteAnalyzerNotifier(ref.watch(websiteAnalyzerServiceProvider), ref),
 );
 
 final websiteAnalysisByIdProvider =

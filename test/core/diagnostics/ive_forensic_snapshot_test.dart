@@ -25,7 +25,8 @@ void _resetSnapshot() {
 void main() {
   setUp(_resetSnapshot);
 
-  group('recordRoute — route + previous-route capture (mission section 06)', () {
+  group('recordRoute — route + previous-route capture (mission section 06)',
+      () {
     test('first call sets currentRoute and leaves previousRoute empty', () {
       IveForensicSnapshot.recordRoute(AppConstants.routeDashboard);
       expect(IveForensicSnapshot.currentRoute, AppConstants.routeDashboard);
@@ -39,7 +40,9 @@ void main() {
       expect(IveForensicSnapshot.previousRoute, AppConstants.routeDashboard);
     });
 
-    test('re-recording the SAME route is a no-op (does not clobber previousRoute)', () {
+    test(
+        're-recording the SAME route is a no-op (does not clobber previousRoute)',
+        () {
       IveForensicSnapshot.recordRoute(AppConstants.routeDashboard);
       IveForensicSnapshot.recordRoute(AppConstants.routeHome);
       IveForensicSnapshot.recordRoute(AppConstants.routeHome);
@@ -47,7 +50,8 @@ void main() {
       expect(IveForensicSnapshot.previousRoute, AppConstants.routeDashboard);
     });
 
-    test('STABILITY-09-FIX (Codex Gate round 3) — recordRoute alone never touches '
+    test(
+        'STABILITY-09-FIX (Codex Gate round 3) — recordRoute alone never touches '
         'settledRouteNotifier: attempted-path recording and settled-route recording '
         'are independent signals', () {
       IveForensicSnapshot.recordRoute(AppConstants.routeLogin);
@@ -56,12 +60,14 @@ void main() {
     });
   });
 
-  group('recordSettledRoute — settled-destination signal (Codex Gate round 3)', () {
+  group('recordSettledRoute — settled-destination signal (Codex Gate round 3)',
+      () {
     test('sets settledRoute and notifies listeners on a genuine change', () {
       var notifyCount = 0;
       void listener() => notifyCount++;
       IveForensicSnapshot.settledRouteNotifier.addListener(listener);
-      addTearDown(() => IveForensicSnapshot.settledRouteNotifier.removeListener(listener));
+      addTearDown(() =>
+          IveForensicSnapshot.settledRouteNotifier.removeListener(listener));
 
       IveForensicSnapshot.recordSettledRoute(AppConstants.routeDashboard);
       expect(IveForensicSnapshot.settledRoute, AppConstants.routeDashboard);
@@ -76,7 +82,8 @@ void main() {
       expect(notifyCount, 2);
     });
 
-    test('does not affect currentRoute/previousRoute (the separate, pre-existing '
+    test(
+        'does not affect currentRoute/previousRoute (the separate, pre-existing '
         'attempted-path forensic signal)', () {
       IveForensicSnapshot.recordRoute(AppConstants.routeLogin);
       IveForensicSnapshot.recordSettledRoute(AppConstants.routeDashboard);
@@ -96,7 +103,8 @@ void main() {
       var notifyCount = 0;
       void listener() => notifyCount++;
       IveForensicSnapshot.settledRouteNotifier.addListener(listener);
-      addTearDown(() => IveForensicSnapshot.settledRouteNotifier.removeListener(listener));
+      addTearDown(() =>
+          IveForensicSnapshot.settledRouteNotifier.removeListener(listener));
 
       IveForensicSnapshot.recordSettledRoute(AppConstants.routeDashboard);
       expect(notifyCount, 1);
@@ -104,18 +112,22 @@ void main() {
       expect(notifyCount, 2);
     });
 
-    test('clearing an already-empty settledRoute is a no-op (no redundant notification)', () {
+    test(
+        'clearing an already-empty settledRoute is a no-op (no redundant notification)',
+        () {
       var notifyCount = 0;
       void listener() => notifyCount++;
       IveForensicSnapshot.settledRouteNotifier.addListener(listener);
-      addTearDown(() => IveForensicSnapshot.settledRouteNotifier.removeListener(listener));
+      addTearDown(() =>
+          IveForensicSnapshot.settledRouteNotifier.removeListener(listener));
 
       IveForensicSnapshot.clearSettledRoute();
       expect(notifyCount, 0);
     });
   });
 
-  group('projectContextPresent — derived from the already-captured route only', () {
+  group('projectContextPresent — derived from the already-captured route only',
+      () {
     test('false for the bare projects list route', () {
       IveForensicSnapshot.recordRoute(AppConstants.routeProjects);
       expect(IveForensicSnapshot.projectContextPresent, isFalse);
@@ -138,14 +150,18 @@ void main() {
     expect(IveForensicSnapshot.builderChildWasNull, isTrue);
   });
 
-  test('lifecycleState survives an unknown/null state as "unknown" in metadata form', () {
+  test(
+      'lifecycleState survives an unknown/null state as "unknown" in metadata form',
+      () {
     expect(IveForensicSnapshot.toMetadata()['lifecycle_state'], 'unknown');
     IveForensicSnapshot.lifecycleState = AppLifecycleState.resumed;
     expect(IveForensicSnapshot.toMetadata()['lifecycle_state'], 'resumed');
   });
 
   group('toMetadata — shape and privacy (mission section 05/11)', () {
-    test('every key is a plain primitive (bool/String/null), never a nested object', () {
+    test(
+        'every key is a plain primitive (bool/String/null), never a nested object',
+        () {
       IveForensicSnapshot.recordRoute(AppConstants.routeDashboard);
       IveForensicSnapshot.lifecycleState = AppLifecycleState.resumed;
       IveForensicSnapshot.overlayMounted = true;
@@ -156,7 +172,8 @@ void main() {
       final metadata = IveForensicSnapshot.toMetadata();
       for (final value in metadata.values) {
         expect(value == null || value is bool || value is String, isTrue,
-            reason: 'forensic metadata value "$value" is not a plain primitive');
+            reason:
+                'forensic metadata value "$value" is not a plain primitive');
       }
     });
 
@@ -174,15 +191,19 @@ void main() {
       });
     });
 
-    test('never contains project/knowledge/prompt CONTENT — only booleans/ids/routes', () {
-      IveForensicSnapshot.recordRoute('${AppConstants.routeProjects}/some-project-id');
+    test(
+        'never contains project/knowledge/prompt CONTENT — only booleans/ids/routes',
+        () {
+      IveForensicSnapshot.recordRoute(
+          '${AppConstants.routeProjects}/some-project-id');
       final metadata = IveForensicSnapshot.toMetadata();
       // The route itself is an app-controlled path, never user-entered
       // text — this documents the invariant rather than re-testing
       // sanitizeText (already covered in diagnostic_sanitizer_test.dart),
       // since this map is what actually reaches buildSafeMetadata.
       expect(metadata['project_context_present'], isTrue);
-      expect(metadata.values.whereType<String>(), everyElement(isNot(contains(' '))));
+      expect(metadata.values.whereType<String>(),
+          everyElement(isNot(contains(' '))));
     });
   });
 }

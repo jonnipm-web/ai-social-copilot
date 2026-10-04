@@ -6,18 +6,20 @@ import '../models/knowledge_strategy.dart';
 import 'content_localization_service.dart';
 
 class StrategyService {
-  StrategyService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+  StrategyService({RowLocalizer? localizer})
+      : _localizer = localizer ?? identityLocalizer;
 
   // R16 — presentation localization of persisted content (never modifies the
   // stored row; see content_localization_service.dart).
   final RowLocalizer _localizer;
 
-  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+  Future<Map<String, dynamic>> _locOne(
+          String table, Map<String, dynamic> row) async =>
       (await _localizer(table, [row])).first;
 
   final _client = Supabase.instance.client;
 
-  static const _table        = 'knowledge_strategies';
+  static const _table = 'knowledge_strategies';
   static const _edgeFunction = 'generate-strategy';
 
   Future<KnowledgeStrategy?> fetchByItemId(String itemId) async {
@@ -28,7 +30,9 @@ class StrategyService {
         .order('created_at', ascending: false)
         .limit(1)
         .maybeSingle();
-    return row == null ? null : KnowledgeStrategy.fromMap(await _locOne('knowledge_strategies', row));
+    return row == null
+        ? null
+        : KnowledgeStrategy.fromMap(await _locOne('knowledge_strategies', row));
   }
 
   Future<KnowledgeStrategy> save(KnowledgeStrategy strategy) async {
@@ -57,18 +61,18 @@ class StrategyService {
     final response = await _client.functions.invoke(
       _edgeFunction,
       body: {
-        'title':             item.title,
-        'content':           item.content.length > 3000
+        'title': item.title,
+        'content': item.content.length > 3000
             ? item.content.substring(0, 3000)
             : item.content,
-        'summary':           analysis.summary ?? '',
-        'niche':             item.niche ?? '',
-        'target_audience':   item.targetAudience ?? '',
-        'language':          outputLanguage,
-        'keywords_primary':  analysis.keywordsPrimary,
-        'pain_points':       analysis.audiencePainPoints,
-        'desires':           analysis.audienceDesires,
-        'topics':            analysis.topics,
+        'summary': analysis.summary ?? '',
+        'niche': item.niche ?? '',
+        'target_audience': item.targetAudience ?? '',
+        'language': outputLanguage,
+        'keywords_primary': analysis.keywordsPrimary,
+        'pain_points': analysis.audiencePainPoints,
+        'desires': analysis.audienceDesires,
+        'topics': analysis.topics,
         if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
       },
     );
@@ -81,12 +85,12 @@ class StrategyService {
     if (data.containsKey('error')) throw Exception(data['error']);
 
     final strategy = KnowledgeStrategy(
-      id:               '',
-      knowledgeItemId:  item.id,
-      userId:           uid,
-      strategyJson:     data,
-      createdAt:        DateTime.now(),
-      updatedAt:        DateTime.now(),
+      id: '',
+      knowledgeItemId: item.id,
+      userId: uid,
+      strategyJson: data,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
 
     return save(strategy);

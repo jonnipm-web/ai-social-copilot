@@ -23,7 +23,7 @@ class IveVisualTriggerNotifier extends StateNotifier<IveVisualTrigger?> {
   IveVisualTriggerNotifier() : super(null);
 
   void fire(IveVisualTrigger trigger) => state = trigger;
-  void clear()                        => state = null;
+  void clear() => state = null;
 }
 
 final iveVisualTriggerProvider =

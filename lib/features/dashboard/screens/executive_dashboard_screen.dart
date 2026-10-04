@@ -18,18 +18,19 @@ import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../providers/ive_context_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
-import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
+import '../../../shared/widgets/context_copilot_widget.dart'
+    show showCopilotChat;
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGreen   = Color(0xFF4CAF50);
-const _kOrange  = Color(0xFFFF9800);
-const _kRed     = Color(0xFFF44336);
-const _kCyan    = Color(0xFF00BCD4);
-const _kGold    = Color(0xFFFFD700);
-const _kPink    = Color(0xFFE91E63);
+const _kGreen = Color(0xFF4CAF50);
+const _kOrange = Color(0xFFFF9800);
+const _kRed = Color(0xFFF44336);
+const _kCyan = Color(0xFF00BCD4);
+const _kGold = Color(0xFFFFD700);
+const _kPink = Color(0xFFE91E63);
 
 // ── Responsive Breakpoints ────────────────────────────────────────────────────
 class _Bp {
@@ -60,20 +61,20 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final projectsAsync  = ref.watch(projectsProvider);
-    final analysesAsync  = ref.watch(marketAnalysesProvider);
-    final roiAsync       = ref.watch(roiSummaryProvider);
-    final actionsAsync   = ref.watch(pendingActionsProvider);
-    final flagsAsync     = ref.watch(featureFlagsProvider);
-    final labAsync       = ref.watch(opportunityLabProvider);
+    final projectsAsync = ref.watch(projectsProvider);
+    final analysesAsync = ref.watch(marketAnalysesProvider);
+    final roiAsync = ref.watch(roiSummaryProvider);
+    final actionsAsync = ref.watch(pendingActionsProvider);
+    final flagsAsync = ref.watch(featureFlagsProvider);
+    final labAsync = ref.watch(opportunityLabProvider);
 
-    final projects  = projectsAsync.value  ?? [];
-    final analyses  = analysesAsync.value  ?? [];
-    final actions   = actionsAsync.value   ?? [];
-    final labItems  = labAsync.value       ?? [];
-    final roiMap    = roiAsync.value       ?? {};
-    final flags     = flagsAsync.value     ?? {};
-    final l10n      = AppLocalizations.of(context)!;
+    final projects = projectsAsync.value ?? [];
+    final analyses = analysesAsync.value ?? [];
+    final actions = actionsAsync.value ?? [];
+    final labItems = labAsync.value ?? [];
+    final roiMap = roiAsync.value ?? {};
+    final flags = flagsAsync.value ?? {};
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -90,14 +91,18 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Business OS',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold)),
             Text(l10n.ctxExecSubtitle,
                 style: const TextStyle(color: Colors.white38, fontSize: 11)),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white54),
+            icon: const Icon(Icons.chat_bubble_outline_rounded,
+                color: Colors.white54),
             tooltip: l10n.ctxExecAskIve,
             // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 (achado do Codex Gate,
             // 2ª rodada) -- outro ponto de entrada do chat sem contextData
@@ -105,13 +110,15 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
             onPressed: () {
               // Dashboard executivo global, sem projeto específico em foco.
               final ctx = ref.read(iveContextDataProvider(null)).valueOrNull;
-              final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+              final contextData = ctx != null
+                  ? CopilotContextData.fromIveContext(ctx)
+                  : const CopilotContextData();
               showCopilotChat(
                 context,
                 screenName: 'Business OS',
                 contextData: contextData,
                 request: IveInteractionRequest(
-                  sourceModule:  'executive_dashboard',
+                  sourceModule: 'executive_dashboard',
                   operationType: IveOperationType.ask,
                 ),
               );
@@ -135,15 +142,15 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
         builder: (ctx, constraints) {
           final w = constraints.maxWidth;
           return _DashboardBody(
-            projects:  projects,
-            analyses:  analyses,
-            actions:   actions,
-            labItems:  labItems,
-            roiMap:    roiMap,
-            flags:     flags,
+            projects: projects,
+            analyses: analyses,
+            actions: actions,
+            labItems: labItems,
+            roiMap: roiMap,
+            flags: flags,
             isDesktop: _Bp.isDesktop(w),
-            isTablet:  _Bp.isTablet(w),
-            isWide:    _Bp.isWide(w),
+            isTablet: _Bp.isTablet(w),
+            isWide: _Bp.isWide(w),
           );
         },
       ),
@@ -165,20 +172,20 @@ class _DashboardBody extends StatelessWidget {
     required this.isWide,
   });
 
-  final List<Project>            projects;
-  final List<MarketAnalysis>     analyses;
-  final List<ActionQueueItem>    actions;
+  final List<Project> projects;
+  final List<MarketAnalysis> analyses;
+  final List<ActionQueueItem> actions;
   final List<OpportunityLabItem> labItems;
-  final Map<String, double>      roiMap;
-  final Map<String, bool>        flags;
+  final Map<String, double> roiMap;
+  final Map<String, bool> flags;
   final bool isDesktop;
   final bool isTablet;
   final bool isWide;
 
   @override
   Widget build(BuildContext context) {
-    final maxW   = isWide ? 1400.0 : double.infinity;
-    final hPad   = isDesktop ? 32.0 : 16.0;
+    final maxW = isWide ? 1400.0 : double.infinity;
+    final hPad = isDesktop ? 32.0 : 16.0;
     final bottom = MediaQuery.of(context).padding.bottom;
 
     final mainContent = _buildMain(context);
@@ -220,21 +227,21 @@ class _DashboardBody extends StatelessWidget {
       children: [
         // Executive Module Cards
         _ExecModuleGrid(
-          projects:  projects,
-          analyses:  analyses,
-          actions:   actions,
-          labItems:  labItems,
-          isTablet:  isTablet,
+          projects: projects,
+          analyses: analyses,
+          actions: actions,
+          labItems: labItems,
+          isTablet: isTablet,
           isDesktop: isDesktop,
         ),
         const SizedBox(height: 16),
 
         // Executive Recommendations
         _ExecutiveRecommendations(
-          projects:  projects,
-          analyses:  analyses,
-          actions:   actions,
-          roiMap:    roiMap,
+          projects: projects,
+          analyses: analyses,
+          actions: actions,
+          roiMap: roiMap,
         ),
         const SizedBox(height: 16),
 
@@ -249,11 +256,13 @@ class _DashboardBody extends StatelessWidget {
   }
 
   Widget _buildSidebar(BuildContext context) {
-    final activeProjects = projects.where((p) => p.status == 'active' || p.status == 'executing').length;
+    final activeProjects = projects
+        .where((p) => p.status == 'active' || p.status == 'executing')
+        .length;
     final revPot = roiMap['revenue_potential'] ?? 0;
-    final roi    = roiMap['revenue'] ?? 0;
+    final roi = roiMap['revenue'] ?? 0;
     final avgScore = _avgScore(analyses);
-    final l10n     = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -262,10 +271,12 @@ class _DashboardBody extends StatelessWidget {
         _SidebarKpiCard(
           title: l10n.ctxExecPortfolioTitle,
           items: [
-            _KpiItem(l10n.ctxExecActiveProjects, '$activeProjects',         _kGreen),
-            _KpiItem(l10n.ctxExecTotalProjects,  '${projects.length}',      _kPrimary),
-            _KpiItem(l10n.ctxExecMiAnalyses,     '${analyses.length}',      _kCyan),
-            _KpiItem(l10n.ctxExecAvgScore,       avgScore > 0 ? '$avgScore' : '—', _scoreColor(avgScore)),
+            _KpiItem(l10n.ctxExecActiveProjects, '$activeProjects', _kGreen),
+            _KpiItem(
+                l10n.ctxExecTotalProjects, '${projects.length}', _kPrimary),
+            _KpiItem(l10n.ctxExecMiAnalyses, '${analyses.length}', _kCyan),
+            _KpiItem(l10n.ctxExecAvgScore, avgScore > 0 ? '$avgScore' : '—',
+                _scoreColor(avgScore)),
           ],
         ),
         const SizedBox(height: 12),
@@ -274,8 +285,9 @@ class _DashboardBody extends StatelessWidget {
         _SidebarKpiCard(
           title: l10n.ctxExecFinancialTitle,
           items: [
-            _KpiItem(l10n.ctxExecRecordedRevenue, _fmtBRL(roi, l10n),    _kGold),
-            _KpiItem(l10n.ctxExecMonthlyPotential, _fmtBRL(revPot, l10n), _kGreen),
+            _KpiItem(l10n.ctxExecRecordedRevenue, _fmtBRL(roi, l10n), _kGold),
+            _KpiItem(
+                l10n.ctxExecMonthlyPotential, _fmtBRL(revPot, l10n), _kGreen),
           ],
         ),
         const SizedBox(height: 12),
@@ -288,7 +300,8 @@ class _DashboardBody extends StatelessWidget {
 
   static int _avgScore(List<MarketAnalysis> analyses) {
     if (analyses.isEmpty) return 0;
-    final sum = analyses.map((a) => a.opportunityScore).fold<int>(0, (s, v) => s + v);
+    final sum =
+        analyses.map((a) => a.opportunityScore).fold<int>(0, (s, v) => s + v);
     return (sum / analyses.length).round();
   }
 }
@@ -304,38 +317,46 @@ class _ExecModuleGrid extends StatelessWidget {
     required this.isDesktop,
   });
 
-  final List<Project>            projects;
-  final List<MarketAnalysis>     analyses;
-  final List<ActionQueueItem>    actions;
+  final List<Project> projects;
+  final List<MarketAnalysis> analyses;
+  final List<ActionQueueItem> actions;
   final List<OpportunityLabItem> labItems;
   final bool isTablet;
   final bool isDesktop;
 
   @override
   Widget build(BuildContext context) {
-    final cols = isDesktop ? 4 : isTablet ? 2 : 1;
+    final cols = isDesktop
+        ? 4
+        : isTablet
+            ? 2
+            : 1;
 
-    final activeProjects   = projects.where((p) => p.status == 'active' || p.status == 'executing').length;
-    final ideaProjects     = projects.where((p) => p.status == 'idea').length;
-    final noAnalysis       = projects.where((p) => analyses.every((a) => a.id != p.marketAnalysisId)).length;
+    final activeProjects = projects
+        .where((p) => p.status == 'active' || p.status == 'executing')
+        .length;
+    final ideaProjects = projects.where((p) => p.status == 'idea').length;
+    final noAnalysis = projects
+        .where((p) => analyses.every((a) => a.id != p.marketAnalysisId))
+        .length;
 
-    final highPriOpp       = labItems.where((l) => l.finalScore >= 70).length;
-    final sentToEngine     = labItems.where((l) => l.status == 'approved').length;
+    final highPriOpp = labItems.where((l) => l.finalScore >= 70).length;
+    final sentToEngine = labItems.where((l) => l.status == 'approved').length;
 
-    final pending          = actions.where((a) => a.status == 'pending').length;
-    final executing        = actions.where((a) => a.status == 'executing').length;
-    final blocked          = actions.where((a) => a.status == 'blocked').length;
-    final l10n             = AppLocalizations.of(context)!;
+    final pending = actions.where((a) => a.status == 'pending').length;
+    final executing = actions.where((a) => a.status == 'executing').length;
+    final blocked = actions.where((a) => a.status == 'blocked').length;
+    final l10n = AppLocalizations.of(context)!;
 
     final cards = [
       _ExecModule(
-        icon:  Icons.rocket_launch_rounded,
+        icon: Icons.rocket_launch_rounded,
         color: _kPrimary,
         title: l10n.ctxExecModProjects,
         items: [
-          (l10n.ctxExecTotal,      '${projects.length}'),
-          (l10n.ctxExecActive,     '$activeProjects'),
-          (l10n.ctxExecInIdea,     '$ideaProjects'),
+          (l10n.ctxExecTotal, '${projects.length}'),
+          (l10n.ctxExecActive, '$activeProjects'),
+          (l10n.ctxExecInIdea, '$ideaProjects'),
           (l10n.ctxExecNoAnalysis, projects.isEmpty ? '–' : '$noAnalysis'),
         ],
         emptyMessage: l10n.ctxExecEmptyProjects,
@@ -344,14 +365,22 @@ class _ExecModuleGrid extends StatelessWidget {
         cta: l10n.ctxExecViewProjects,
       ),
       _ExecModule(
-        icon:  Icons.analytics_rounded,
+        icon: Icons.analytics_rounded,
         color: _kCyan,
         title: 'Market Intelligence',
         items: [
-          (l10n.ctxExecAnalyses,     '${analyses.length}'),
-          (l10n.ctxExecAvgScoreShort, analyses.isEmpty ? '–' : '${analyses.map((a) => a.opportunityScore).fold<int>(0, (s, v) => s + v) ~/ (analyses.isEmpty ? 1 : analyses.length)}/100'),
-          (l10n.ctxExecHighQuality, '${analyses.where((a) => a.opportunityScore >= 75).length}'),
-          (l10n.ctxExecNoProject,   analyses.isEmpty ? '–' : '–'),
+          (l10n.ctxExecAnalyses, '${analyses.length}'),
+          (
+            l10n.ctxExecAvgScoreShort,
+            analyses.isEmpty
+                ? '–'
+                : '${analyses.map((a) => a.opportunityScore).fold<int>(0, (s, v) => s + v) ~/ (analyses.isEmpty ? 1 : analyses.length)}/100'
+          ),
+          (
+            l10n.ctxExecHighQuality,
+            '${analyses.where((a) => a.opportunityScore >= 75).length}'
+          ),
+          (l10n.ctxExecNoProject, analyses.isEmpty ? '–' : '–'),
         ],
         emptyMessage: l10n.ctxExecEmptyMi,
         isEmpty: analyses.isEmpty,
@@ -359,14 +388,17 @@ class _ExecModuleGrid extends StatelessWidget {
         cta: l10n.ctxExecAnalyzeMarket,
       ),
       _ExecModule(
-        icon:  Icons.science_rounded,
+        icon: Icons.science_rounded,
         color: _kGreen,
         title: l10n.ctxExecModOpportunities,
         items: [
-          (l10n.ctxExecTotal,        '${labItems.length}'),
+          (l10n.ctxExecTotal, '${labItems.length}'),
           (l10n.ctxExecHighPriority, '$highPriOpp'),
-          (l10n.ctxExecApproved,     '$sentToEngine'),
-          (l10n.ctxExecPending,      '${labItems.where((l) => l.status == 'pending').length}'),
+          (l10n.ctxExecApproved, '$sentToEngine'),
+          (
+            l10n.ctxExecPending,
+            '${labItems.where((l) => l.status == 'pending').length}'
+          ),
         ],
         emptyMessage: l10n.ctxExecEmptyOpportunities,
         isEmpty: labItems.isEmpty,
@@ -374,14 +406,17 @@ class _ExecModuleGrid extends StatelessWidget {
         cta: l10n.ctxExecViewOpportunities,
       ),
       _ExecModule(
-        icon:  Icons.bolt_rounded,
+        icon: Icons.bolt_rounded,
         color: _kOrange,
         title: 'Action Engine',
         items: [
-          (l10n.ctxExecPending,    '$pending'),
+          (l10n.ctxExecPending, '$pending'),
           (l10n.ctxExecInProgress, '$executing'),
-          (l10n.ctxExecBlocked,    '$blocked'),
-          (l10n.ctxExecCompleted,  '${actions.where((a) => a.status == 'done').length}'),
+          (l10n.ctxExecBlocked, '$blocked'),
+          (
+            l10n.ctxExecCompleted,
+            '${actions.where((a) => a.status == 'done').length}'
+          ),
         ],
         emptyMessage: l10n.ctxExecEmptyActions,
         isEmpty: actions.isEmpty,
@@ -392,10 +427,12 @@ class _ExecModuleGrid extends StatelessWidget {
 
     if (cols == 1) {
       return Column(
-        children: cards.map((c) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: c,
-        )).toList(),
+        children: cards
+            .map((c) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: c,
+                ))
+            .toList(),
       );
     }
 
@@ -423,14 +460,14 @@ class _ExecModule extends StatelessWidget {
     required this.cta,
   });
 
-  final IconData           icon;
-  final Color              color;
-  final String             title;
+  final IconData icon;
+  final Color color;
+  final String title;
   final List<(String, String)> items;
-  final String             emptyMessage;
-  final bool               isEmpty;
-  final String             route;
-  final String             cta;
+  final String emptyMessage;
+  final bool isEmpty;
+  final String route;
+  final String cta;
 
   @override
   Widget build(BuildContext context) {
@@ -454,9 +491,13 @@ class _ExecModule extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(title,
-                        style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            color: color,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold)),
                   ),
-                  Icon(Icons.arrow_forward_ios_rounded, color: color.withOpacity(0.5), size: 12),
+                  Icon(Icons.arrow_forward_ios_rounded,
+                      color: color.withOpacity(0.5), size: 12),
                 ],
               ),
               const SizedBox(height: 10),
@@ -468,7 +509,8 @@ class _ExecModule extends StatelessWidget {
                       Icon(icon, color: color.withOpacity(0.2), size: 28),
                       const SizedBox(height: 6),
                       Text(emptyMessage,
-                          style: const TextStyle(color: Colors.white38, fontSize: 10, height: 1.4),
+                          style: const TextStyle(
+                              color: Colors.white38, fontSize: 10, height: 1.4),
                           textAlign: TextAlign.center),
                     ],
                   ),
@@ -485,9 +527,13 @@ class _ExecModule extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(label,
-                                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                                style: const TextStyle(
+                                    color: Colors.white54, fontSize: 11)),
                             Text(value,
-                                style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+                                style: TextStyle(
+                                    color: color,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold)),
                           ],
                         ),
                       );
@@ -504,7 +550,10 @@ class _ExecModule extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(cta,
-                    style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        color: color,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600),
                     textAlign: TextAlign.center),
               ),
             ],
@@ -520,12 +569,12 @@ class _KpiItem {
   const _KpiItem(this.label, this.value, this.color);
   final String label;
   final String value;
-  final Color  color;
+  final Color color;
 }
 
 class _SidebarKpiCard extends StatelessWidget {
   const _SidebarKpiCard({required this.title, required this.items});
-  final String        title;
+  final String title;
   final List<_KpiItem> items;
 
   @override
@@ -541,20 +590,28 @@ class _SidebarKpiCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style: const TextStyle(color: Colors.white38, fontSize: 10,
-                  letterSpacing: 1.2, fontWeight: FontWeight.w600)),
+              style: const TextStyle(
+                  color: Colors.white38,
+                  fontSize: 10,
+                  letterSpacing: 1.2,
+                  fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
           ...items.map((item) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(item.label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                Text(item.value,
-                    style: TextStyle(color: item.color, fontSize: 13, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          )),
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(item.label,
+                        style: const TextStyle(
+                            color: Colors.white60, fontSize: 12)),
+                    Text(item.value,
+                        style: TextStyle(
+                            color: item.color,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              )),
         ],
       ),
     );
@@ -567,10 +624,30 @@ class _QuickNavCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final navItems = [
-      (Icons.hub_rounded,       'Decision Center',          AppConstants.routeEcosystem,         _kPrimary),
-      (Icons.summarize_rounded, l10n.ctxExecWeeklyBriefing, AppConstants.routeEcosystemBriefing,  _kCyan),
-      (Icons.schedule_rounded,  l10n.ctxExecAllocation,     AppConstants.routeEcosystemResources,  _kOrange),
-      (Icons.insights_rounded,  'ROI Tracker',       AppConstants.routeRoiTracker,          _kGold),
+      (
+        Icons.hub_rounded,
+        'Decision Center',
+        AppConstants.routeEcosystem,
+        _kPrimary
+      ),
+      (
+        Icons.summarize_rounded,
+        l10n.ctxExecWeeklyBriefing,
+        AppConstants.routeEcosystemBriefing,
+        _kCyan
+      ),
+      (
+        Icons.schedule_rounded,
+        l10n.ctxExecAllocation,
+        AppConstants.routeEcosystemResources,
+        _kOrange
+      ),
+      (
+        Icons.insights_rounded,
+        'ROI Tracker',
+        AppConstants.routeRoiTracker,
+        _kGold
+      ),
     ];
     return Container(
       padding: const EdgeInsets.all(14),
@@ -583,8 +660,11 @@ class _QuickNavCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(l10n.ctxExecQuickAccess,
-              style: const TextStyle(color: Colors.white38, fontSize: 10,
-                  letterSpacing: 1.2, fontWeight: FontWeight.w600)),
+              style: const TextStyle(
+                  color: Colors.white38,
+                  fontSize: 10,
+                  letterSpacing: 1.2,
+                  fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
           ...navItems.map((n) {
             final (icon, label, route, color) = n;
@@ -597,9 +677,12 @@ class _QuickNavCard extends StatelessWidget {
                     Icon(icon, color: color, size: 16),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                      child: Text(label,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 12)),
                     ),
-                    Icon(Icons.chevron_right_rounded, color: color.withOpacity(0.5), size: 16),
+                    Icon(Icons.chevron_right_rounded,
+                        color: color.withOpacity(0.5), size: 16),
                   ],
                 ),
               ),
@@ -619,7 +702,7 @@ class _PendingActionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pending = actions.where((a) => a.status == 'pending').toList();
-    final l10n    = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -636,13 +719,18 @@ class _PendingActionsCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(l10n.dashPendingActionsTitle,
-                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold)),
               ),
               TextButton(
                 onPressed: () => context.push(AppConstants.routeActionEngine),
                 style: TextButton.styleFrom(
-                    minimumSize: Size.zero, padding: const EdgeInsets.symmetric(horizontal: 8)),
-                child: Text(l10n.dashPendingActionsViewAll, style: const TextStyle(color: _kPrimary, fontSize: 12)),
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 8)),
+                child: Text(l10n.dashPendingActionsViewAll,
+                    style: const TextStyle(color: _kPrimary, fontSize: 12)),
               ),
             ],
           ),
@@ -652,30 +740,35 @@ class _PendingActionsCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 l10n.ctxExecPendingEmpty,
-                style: const TextStyle(color: Colors.white38, fontSize: 12, height: 1.5),
+                style: const TextStyle(
+                    color: Colors.white38, fontSize: 12, height: 1.5),
               ),
             )
           else
             ...pending.take(5).map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 6, height: 6,
-                    decoration: const BoxDecoration(color: _kOrange, shape: BoxShape.circle),
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                            color: _kOrange, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(item.title,
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 13),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                      if (item.roiScore > 0)
+                        Text('ROI: ${item.roiScore}',
+                            style:
+                                const TextStyle(color: _kGold, fontSize: 10)),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(item.title,
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
-                        overflow: TextOverflow.ellipsis),
-                  ),
-                  if (item.roiScore > 0)
-                    Text('ROI: ${item.roiScore}',
-                        style: const TextStyle(color: _kGold, fontSize: 10)),
-                ],
-              ),
-            )),
+                )),
         ],
       ),
     );
@@ -692,19 +785,59 @@ class _ModuleGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final mods = [
-      (Icons.hub_rounded,          'Ecosystem',     AppConstants.routeEcosystem,         _kPrimary, true),
-      (Icons.analytics_rounded,    'Market Intel.', AppConstants.routeMarketIntelligence, _kCyan,    true),
-      (Icons.science_rounded,      'Opp. Lab',      AppConstants.routeOpportunityLab,     _kGreen,   flags[FeatureFlag.opportunityLabEnabled] ?? false),
-      (Icons.bolt_rounded,         l10n.iveScreenActions, AppConstants.routeActionEngine,       _kOrange,  flags[FeatureFlag.actionEngineEnabled] ?? false),
-      (Icons.insights_rounded,     'ROI Tracker',   AppConstants.routeRoiTracker,         _kGold,    true),
-      (Icons.rocket_launch_rounded,l10n.iveScreenProjects, AppConstants.routeProjects,           _kPink,    true),
+      (
+        Icons.hub_rounded,
+        'Ecosystem',
+        AppConstants.routeEcosystem,
+        _kPrimary,
+        true
+      ),
+      (
+        Icons.analytics_rounded,
+        'Market Intel.',
+        AppConstants.routeMarketIntelligence,
+        _kCyan,
+        true
+      ),
+      (
+        Icons.science_rounded,
+        'Opp. Lab',
+        AppConstants.routeOpportunityLab,
+        _kGreen,
+        flags[FeatureFlag.opportunityLabEnabled] ?? false
+      ),
+      (
+        Icons.bolt_rounded,
+        l10n.iveScreenActions,
+        AppConstants.routeActionEngine,
+        _kOrange,
+        flags[FeatureFlag.actionEngineEnabled] ?? false
+      ),
+      (
+        Icons.insights_rounded,
+        'ROI Tracker',
+        AppConstants.routeRoiTracker,
+        _kGold,
+        true
+      ),
+      (
+        Icons.rocket_launch_rounded,
+        l10n.iveScreenProjects,
+        AppConstants.routeProjects,
+        _kPink,
+        true
+      ),
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(l10n.ctxExecModulesTitle,
-            style: const TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1.4, fontWeight: FontWeight.w600)),
+            style: const TextStyle(
+                color: Colors.white38,
+                fontSize: 11,
+                letterSpacing: 1.4,
+                fontWeight: FontWeight.w600)),
         const SizedBox(height: 10),
         GridView.count(
           crossAxisCount: 3,
@@ -718,24 +851,36 @@ class _ModuleGrid extends StatelessWidget {
             return GestureDetector(
               onTap: active ? () => context.push(route) : null,
               child: MouseRegion(
-                cursor: active ? SystemMouseCursors.click : SystemMouseCursors.basic,
+                cursor: active
+                    ? SystemMouseCursors.click
+                    : SystemMouseCursors.basic,
                 child: Tooltip(
-                  message: active ? l10n.ctxExecOpenModule(label) : l10n.ctxExecModuleUnavailable,
+                  message: active
+                      ? l10n.ctxExecOpenModule(label)
+                      : l10n.ctxExecModuleUnavailable,
                   child: Container(
                     decoration: BoxDecoration(
-                      color:        active ? color.withOpacity(0.08) : Colors.white.withOpacity(0.02),
+                      color: active
+                          ? color.withOpacity(0.08)
+                          : Colors.white.withOpacity(0.02),
                       borderRadius: BorderRadius.circular(12),
-                      border:       Border.all(color: active ? color.withOpacity(0.25) : Colors.white12),
+                      border: Border.all(
+                          color: active
+                              ? color.withOpacity(0.25)
+                              : Colors.white12),
                     ),
                     child: Stack(
                       children: [
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(icon, color: active ? color : Colors.white24, size: 22),
+                            Icon(icon,
+                                color: active ? color : Colors.white24,
+                                size: 22),
                             const SizedBox(height: 5),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
                               child: Text(label,
                                   style: TextStyle(
                                       color: active ? color : Colors.white24,
@@ -748,8 +893,11 @@ class _ModuleGrid extends StatelessWidget {
                           ],
                         ),
                         if (!active)
-                          const Positioned(top: 4, right: 4,
-                              child: Icon(Icons.lock_rounded, color: Colors.white24, size: 10)),
+                          const Positioned(
+                              top: 4,
+                              right: 4,
+                              child: Icon(Icons.lock_rounded,
+                                  color: Colors.white24, size: 10)),
                       ],
                     ),
                   ),
@@ -773,10 +921,10 @@ class _Recommendation {
     required this.confidence,
   });
   final IconData icon;
-  final Color    color;
-  final String   title;
-  final String   body;
-  final int      confidence;
+  final Color color;
+  final String title;
+  final String body;
+  final int confidence;
 }
 
 class _ExecutiveRecommendations extends StatelessWidget {
@@ -787,17 +935,19 @@ class _ExecutiveRecommendations extends StatelessWidget {
     required this.roiMap,
   });
 
-  final List<Project>         projects;
-  final List<MarketAnalysis>  analyses;
+  final List<Project> projects;
+  final List<MarketAnalysis> analyses;
   final List<ActionQueueItem> actions;
-  final Map<String, double>   roiMap;
+  final Map<String, double> roiMap;
 
   List<_Recommendation> _build(AppLocalizations l10n) {
     final recs = <_Recommendation>[];
 
     if (projects.isEmpty) {
       recs.add(_Recommendation(
-        icon: Icons.add_business_rounded, color: _kPrimary, confidence: 100,
+        icon: Icons.add_business_rounded,
+        color: _kPrimary,
+        confidence: 100,
         title: l10n.dashRecEmptyProjectTitle,
         body: l10n.dashRecEmptyProjectBody,
       ));
@@ -806,7 +956,9 @@ class _ExecutiveRecommendations extends StatelessWidget {
 
     if (analyses.isEmpty) {
       recs.add(_Recommendation(
-        icon: Icons.analytics_rounded, color: _kCyan, confidence: 95,
+        icon: Icons.analytics_rounded,
+        color: _kCyan,
+        confidence: 95,
         title: l10n.dashRecEmptyAnalysisTitle,
         body: l10n.dashRecEmptyAnalysisBody(projects.first.name),
       ));
@@ -815,7 +967,9 @@ class _ExecutiveRecommendations extends StatelessWidget {
     final pending = actions.where((a) => a.status == 'pending').length;
     if (pending > 0) {
       recs.add(_Recommendation(
-        icon: Icons.bolt_rounded, color: _kGold, confidence: 90,
+        icon: Icons.bolt_rounded,
+        color: _kGold,
+        confidence: 90,
         title: l10n.dashRecPendingActionsTitle(pending),
         body: l10n.dashRecPendingActionsBody,
       ));
@@ -826,7 +980,9 @@ class _ExecutiveRecommendations extends StatelessWidget {
     if (topAnalyses.isNotEmpty) {
       final top = topAnalyses.first;
       recs.add(_Recommendation(
-        icon: Icons.star_rounded, color: _kGreen, confidence: top.opportunityScore,
+        icon: Icons.star_rounded,
+        color: _kGreen,
+        confidence: top.opportunityScore,
         title: l10n.dashRecTopOpportunityTitle(top.niche ?? top.input),
         body: l10n.dashRecTopOpportunityBody(top.opportunityScore),
       ));
@@ -834,7 +990,9 @@ class _ExecutiveRecommendations extends StatelessWidget {
 
     if ((roiMap['revenue'] ?? 0) == 0 && projects.isNotEmpty) {
       recs.add(_Recommendation(
-        icon: Icons.payments_rounded, color: _kOrange, confidence: 75,
+        icon: Icons.payments_rounded,
+        color: _kOrange,
+        confidence: 75,
         title: l10n.dashRecNoRevenueTitle,
         body: l10n.dashRecNoRevenueBody,
       ));
@@ -864,39 +1022,53 @@ class _ExecutiveRecommendations extends StatelessWidget {
               const Icon(Icons.lightbulb_rounded, color: _kGold, size: 18),
               const SizedBox(width: 8),
               Text(l10n.dashRecommendationsTitle,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 12),
           ...recs.map((r) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(color: r.color.withOpacity(0.12), shape: BoxShape.circle),
-                  child: Icon(r.icon, color: r.color, size: 16),
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                          color: r.color.withOpacity(0.12),
+                          shape: BoxShape.circle),
+                      child: Icon(r.icon, color: r.color, size: 16),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(r.title,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text(r.body,
+                              style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 11,
+                                  height: 1.4)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text('${r.confidence}%',
+                        style: TextStyle(
+                            color: r.color,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold)),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(r.title,
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 2),
-                      Text(r.body,
-                          style: const TextStyle(color: Colors.white54, fontSize: 11, height: 1.4)),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text('${r.confidence}%',
-                    style: TextStyle(color: r.color, fontSize: 10, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          )),
+              )),
         ],
       ),
     );

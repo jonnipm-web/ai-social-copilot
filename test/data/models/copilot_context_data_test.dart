@@ -43,9 +43,17 @@ IveContextData _fullContext() => const IveContextData(
         {'name': 'Projeto Alfa', 'score': 88},
       ],
       knowledgeItemsSummary: [
-        {'title': 'Doc 1', 'grounded': true, 'content_excerpt': 'trecho relevante'},
+        {
+          'title': 'Doc 1',
+          'grounded': true,
+          'content_excerpt': 'trecho relevante'
+        },
       ],
-      documentCoverage: {'total_linked': 4, 'used_ids': ['doc1'], 'not_used_count': 3},
+      documentCoverage: {
+        'total_linked': 4,
+        'used_ids': ['doc1'],
+        'not_used_count': 3
+      },
       documentWarnings: ['4 fontes vinculadas · 1 utilizada nesta análise'],
       pendingOpportunitiesSummary: [
         {'title': 'Oportunidade 1', 'score': 90},
@@ -70,7 +78,8 @@ void main() {
     test('carrega o snapshot de projetos', () {
       final result = CopilotContextData.fromIveContext(_fullContext());
       expect(result.project?['projects'], isA<List>());
-      expect((result.project?['projects'] as List).first['name'], 'Projeto Alfa');
+      expect(
+          (result.project?['projects'] as List).first['name'], 'Projeto Alfa');
     });
 
     test('carrega documentos, coverage e warnings de grounding', () {
@@ -92,13 +101,17 @@ void main() {
     // existir e context-copilot/index.ts já ler ctx.actions), e
     // ive_detail_sheet.dart não preenchia nada. Esta é a prova de que a
     // conversão compartilhada agora entrega isso pelos dois caminhos.
-    test('carrega ações pendentes (antes nunca enviado por nenhum dos dois pontos de entrada)', () {
+    test(
+        'carrega ações pendentes (antes nunca enviado por nenhum dos dois pontos de entrada)',
+        () {
       final result = CopilotContextData.fromIveContext(_fullContext());
       expect(result.actions, isNotEmpty);
       expect(result.actions.first['title'], 'Ação 1');
     });
 
-    test('projeto/coverage ficam null quando o contexto de origem não tem nada (não um mapa vazio)', () {
+    test(
+        'projeto/coverage ficam null quando o contexto de origem não tem nada (não um mapa vazio)',
+        () {
       const empty = IveContextData();
       final result = CopilotContextData.fromIveContext(empty);
       expect(result.project, isNull);
@@ -122,7 +135,9 @@ void main() {
     // Guarda de regressão explícita pedida pela missão: um contexto vazio
     // nunca deve "passar por" um contexto real sem que algo no código
     // consiga detectar a diferença.
-    test('detecta contexto vazio mesmo com IveContextData minimamente populado sem grounding', () {
+    test(
+        'detecta contexto vazio mesmo com IveContextData minimamente populado sem grounding',
+        () {
       const minimal = IveContextData(healthScore: 0, projectCount: 0);
       final result = CopilotContextData.fromIveContext(minimal);
       // scores sempre é montado (mesmo que com zeros) -- isEmpty checa

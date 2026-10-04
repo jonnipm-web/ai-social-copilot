@@ -12,14 +12,13 @@ final insightServiceProvider =
     Provider<InsightService>((_) => InsightService());
 
 // Insights for a specific project
-final insightsByProjectProvider =
-    FutureProvider.autoDispose.family<List<OpportunityLabItem>, String>(
-        (ref, projectId) =>
-            ref.read(insightServiceProvider).fetchByProject(projectId));
+final insightsByProjectProvider = FutureProvider.autoDispose
+    .family<List<OpportunityLabItem>, String>((ref, projectId) =>
+        ref.read(insightServiceProvider).fetchByProject(projectId));
 
 // Monthly usage count for a project (entitlement gate)
-final insightMonthCountProvider =
-    FutureProvider.autoDispose.family<int, String>((ref, projectId) =>
+final insightMonthCountProvider = FutureProvider.autoDispose
+    .family<int, String>((ref, projectId) =>
         ref.read(insightServiceProvider).countThisMonth(projectId));
 
 // Recent insights across all projects (home screen)
@@ -38,12 +37,12 @@ class InsightState {
   final int monthCount;
 
   const InsightState({
-    this.items           = const [],
-    this.loading         = false,
+    this.items = const [],
+    this.loading = false,
     this.error,
-    this.saving          = false,
+    this.saving = false,
     this.addingToActions = false,
-    this.monthCount      = 0,
+    this.monthCount = 0,
   });
 
   InsightState copyWith({
@@ -56,12 +55,12 @@ class InsightState {
     bool clearError = false,
   }) =>
       InsightState(
-        items:           items           ?? this.items,
-        loading:         loading         ?? this.loading,
-        error:           clearError ? null : (error ?? this.error),
-        saving:          saving          ?? this.saving,
+        items: items ?? this.items,
+        loading: loading ?? this.loading,
+        error: clearError ? null : (error ?? this.error),
+        saving: saving ?? this.saving,
         addingToActions: addingToActions ?? this.addingToActions,
-        monthCount:      monthCount      ?? this.monthCount,
+        monthCount: monthCount ?? this.monthCount,
       );
 }
 
@@ -72,17 +71,17 @@ class InsightNotifier extends StateNotifier<InsightState> {
       : super(const InsightState());
 
   final InsightService _svc;
-  final Ref            _ref;
-  final String         _projectId;
+  final Ref _ref;
+  final String _projectId;
 
   void _log(String event, {String status = 'success', Object? error}) {
     _ref.read(diagnosticSessionProvider.notifier).logEvent(
-      category:    DiagnosticCategory.ai,
-      eventName:   event,
-      operation:   'insight_vertical',
-      status:      status,
-      error:       error,
-    );
+          category: DiagnosticCategory.ai,
+          eventName: event,
+          operation: 'insight_vertical',
+          status: status,
+          error: error,
+        );
   }
 
   Future<void> load() async {
@@ -106,12 +105,12 @@ class InsightNotifier extends StateNotifier<InsightState> {
     try {
       final item = await _svc.saveFromTurn(
         projectId: _projectId,
-        question:  question,
-        turn:      turn,
+        question: question,
+        turn: turn,
       );
       state = state.copyWith(
-        saving:     false,
-        items:      [item, ...state.items],
+        saving: false,
+        items: [item, ...state.items],
         monthCount: state.monthCount + 1,
       );
       _log('insight_save');
@@ -120,10 +119,9 @@ class InsightNotifier extends StateNotifier<InsightState> {
       final isQuota = e.toString().contains('quota_exceeded');
       state = state.copyWith(
         saving: false,
-        error:  isQuota ? 'quota_exceeded' : e.toString(),
-        monthCount: isQuota
-            ? AppConstants.insightFreeMonthlyLimit
-            : state.monthCount,
+        error: isQuota ? 'quota_exceeded' : e.toString(),
+        monthCount:
+            isQuota ? AppConstants.insightFreeMonthlyLimit : state.monthCount,
       );
       _log('insight_save', status: isQuota ? 'quota' : 'failure', error: e);
       return null;
@@ -148,7 +146,7 @@ class InsightNotifier extends StateNotifier<InsightState> {
     try {
       await _svc.delete(id);
       state = state.copyWith(
-        items:      state.items.where((i) => i.id != id).toList(),
+        items: state.items.where((i) => i.id != id).toList(),
         monthCount: state.monthCount > 0 ? state.monthCount - 1 : 0,
       );
       _log('insight_delete');

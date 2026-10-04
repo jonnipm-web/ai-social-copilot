@@ -28,7 +28,10 @@ class AccountScreen extends ConsumerWidget {
     // supabase_flutter expõe o provedor da identidade atual via
     // currentUser.appMetadata['provider'] -- 'google' quando a sessão foi
     // criada por signInWithOAuth/signInWithIdToken, 'email' caso contrário.
-    final authProvider = ref.watch(authServiceProvider).currentUser?.appMetadata['provider'] as String?;
+    final authProvider = ref
+        .watch(authServiceProvider)
+        .currentUser
+        ?.appMetadata['provider'] as String?;
     final isGoogleLinked = authProvider == 'google';
 
     return Scaffold(
@@ -44,30 +47,36 @@ class AccountScreen extends ConsumerWidget {
             ),
             error: (_, __) => const SizedBox.shrink(),
             data: (profile) => ListTile(
-              leading: const Icon(Icons.person_outline_rounded, color: Colors.white70),
-              title: Text(profile?.email ?? '', style: const TextStyle(color: Colors.white)),
+              leading: const Icon(Icons.person_outline_rounded,
+                  color: Colors.white70),
+              title: Text(profile?.email ?? '',
+                  style: const TextStyle(color: Colors.white)),
               subtitle: isGoogleLinked
-                  ? Text(t.accountGoogleLinked, style: const TextStyle(color: Colors.white38, fontSize: 12))
+                  ? Text(t.accountGoogleLinked,
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 12))
                   : null,
             ),
           ),
           const Divider(color: Colors.white12, height: 32),
-
           _SectionLabel(t.accountLanguage),
           RadioListTile<String>(
             value: 'pt',
             groupValue: language.languageCode,
             title: Text(t.accountLanguagePortuguese),
-            onChanged: (v) => v != null ? ref.read(languageProvider.notifier).setLanguage(v) : null,
+            onChanged: (v) => v != null
+                ? ref.read(languageProvider.notifier).setLanguage(v)
+                : null,
           ),
           RadioListTile<String>(
             value: 'en',
             groupValue: language.languageCode,
             title: Text(t.accountLanguageEnglish),
-            onChanged: (v) => v != null ? ref.read(languageProvider.notifier).setLanguage(v) : null,
+            onChanged: (v) => v != null
+                ? ref.read(languageProvider.notifier).setLanguage(v)
+                : null,
           ),
           const Divider(color: Colors.white12, height: 32),
-
           _SectionLabel(t.accountCurrentPlan),
           quotaAsync.when(
             loading: () => const Padding(
@@ -77,33 +86,41 @@ class AccountScreen extends ConsumerWidget {
             error: (_, __) => const SizedBox.shrink(),
             data: (quota) => _PlanSection(
               isPro: quota.isCommercialPro,
-              planLabel: quota.isAdmin ? 'Admin' : (quota.isCommercialPro ? t.planPro : t.planFree),
-              usageLabel: '${t.accountUsage}: ${quota.used} / ${quota.isAdmin ? '99.999' : quota.limit}',
+              planLabel: quota.isAdmin
+                  ? 'Admin'
+                  : (quota.isCommercialPro ? t.planPro : t.planFree),
+              usageLabel:
+                  '${t.accountUsage}: ${quota.used} / ${quota.isAdmin ? '99.999' : quota.limit}',
               ctaLabel: t.accountUpgradeManage,
               onTapCta: () => context.push(AppConstants.routeUpgrade),
             ),
           ),
           const Divider(color: Colors.white12, height: 32),
-
           ListTile(
-            leading: const Icon(Icons.help_outline_rounded, color: Colors.white70),
+            leading:
+                const Icon(Icons.help_outline_rounded, color: Colors.white70),
             title: Text(t.accountHelpSupport),
-            trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+            trailing:
+                const Icon(Icons.chevron_right_rounded, color: Colors.white38),
             onTap: () => context.push(AppConstants.routeSupport),
           ),
           ListTile(
-            leading: const Icon(Icons.info_outline_rounded, color: Colors.white70),
+            leading:
+                const Icon(Icons.info_outline_rounded, color: Colors.white70),
             title: Text(t.accountAbout),
-            trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+            trailing:
+                const Icon(Icons.chevron_right_rounded, color: Colors.white38),
             onTap: () => context.push(AppConstants.routeAbout),
           ),
           const Divider(color: Colors.white12, height: 32),
-
           if (AppConstants.accountDeletionUrl != null)
             ListTile(
-              leading: const Icon(Icons.delete_outline_rounded, color: Colors.white54),
-              title: Text(t.accountDeleteAccount, style: const TextStyle(color: Colors.white54)),
-              trailing: const Icon(Icons.open_in_new_rounded, color: Colors.white24, size: 18),
+              leading: const Icon(Icons.delete_outline_rounded,
+                  color: Colors.white54),
+              title: Text(t.accountDeleteAccount,
+                  style: const TextStyle(color: Colors.white54)),
+              trailing: const Icon(Icons.open_in_new_rounded,
+                  color: Colors.white24, size: 18),
               onTap: () => launchUrl(
                 Uri.parse(AppConstants.accountDeletionUrl!),
                 mode: LaunchMode.externalApplication,
@@ -111,7 +128,8 @@ class AccountScreen extends ConsumerWidget {
             ),
           ListTile(
             leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-            title: Text(t.accountSignOut, style: const TextStyle(color: Colors.redAccent)),
+            title: Text(t.accountSignOut,
+                style: const TextStyle(color: Colors.redAccent)),
             onTap: () async {
               await ref.read(authNotifierProvider.notifier).signOut();
               if (context.mounted) context.go(AppConstants.routeLogin);
@@ -145,10 +163,10 @@ class _PlanSection extends StatelessWidget {
     required this.onTapCta,
   });
 
-  final bool         isPro;
-  final String       planLabel;
-  final String       usageLabel;
-  final String       ctaLabel;
+  final bool isPro;
+  final String planLabel;
+  final String usageLabel;
+  final String ctaLabel;
   final VoidCallback onTapCta;
 
   @override
@@ -161,7 +179,9 @@ class _PlanSection extends StatelessWidget {
           Row(
             children: [
               Icon(
-                isPro ? Icons.workspace_premium_rounded : Icons.card_giftcard_rounded,
+                isPro
+                    ? Icons.workspace_premium_rounded
+                    : Icons.card_giftcard_rounded,
                 color: isPro ? const Color(0xFFFFD700) : Colors.white70,
               ),
               const SizedBox(width: 16),
@@ -169,11 +189,14 @@ class _PlanSection extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(planLabel, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    Text(planLabel,
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 16)),
                     const SizedBox(height: 2),
                     Text(
                       usageLabel,
-                      style: const TextStyle(color: Colors.white38, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 12),
                     ),
                   ],
                 ),
@@ -204,7 +227,8 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         label,
-        style: const TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+            color: Colors.white38, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }

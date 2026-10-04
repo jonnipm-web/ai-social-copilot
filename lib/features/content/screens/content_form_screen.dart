@@ -16,16 +16,16 @@ class ContentFormScreen extends ConsumerStatefulWidget {
 }
 
 class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
-  final _formKey      = GlobalKey<FormState>();
-  final _titleCtrl    = TextEditingController();
-  final _descCtrl     = TextEditingController();
-  final _bodyCtrl     = TextEditingController();
-  final _nicheCtrl    = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _titleCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  final _bodyCtrl = TextEditingController();
+  final _nicheCtrl = TextEditingController();
   final _audienceCtrl = TextEditingController();
 
   String _selectedType = ContentItem.types.first;
-  bool   _loading      = false;
-  bool   _initialized  = false;
+  bool _loading = false;
+  bool _initialized = false;
 
   bool get isEdit => widget.itemId != null;
 
@@ -40,12 +40,12 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
   }
 
   void _populateFromItem(ContentItem item) {
-    _titleCtrl.text    = item.title;
-    _descCtrl.text     = item.description ?? '';
-    _bodyCtrl.text     = item.baseText ?? '';
-    _nicheCtrl.text    = item.niche ?? '';
+    _titleCtrl.text = item.title;
+    _descCtrl.text = item.description ?? '';
+    _bodyCtrl.text = item.baseText ?? '';
+    _nicheCtrl.text = item.niche ?? '';
     _audienceCtrl.text = item.targetAudience ?? '';
-    _selectedType      = item.type;
+    _selectedType = item.type;
   }
 
   Future<void> _submit() async {
@@ -55,26 +55,37 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
     try {
       if (isEdit) {
         final data = {
-          'title':           _titleCtrl.text.trim(),
-          'type':            _selectedType,
-          'description':     _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
-          'base_text':       _bodyCtrl.text.trim().isEmpty ? null : _bodyCtrl.text.trim(),
-          'niche':           _nicheCtrl.text.trim().isEmpty ? null : _nicheCtrl.text.trim(),
-          'target_audience': _audienceCtrl.text.trim().isEmpty ? null : _audienceCtrl.text.trim(),
+          'title': _titleCtrl.text.trim(),
+          'type': _selectedType,
+          'description':
+              _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+          'base_text':
+              _bodyCtrl.text.trim().isEmpty ? null : _bodyCtrl.text.trim(),
+          'niche':
+              _nicheCtrl.text.trim().isEmpty ? null : _nicheCtrl.text.trim(),
+          'target_audience': _audienceCtrl.text.trim().isEmpty
+              ? null
+              : _audienceCtrl.text.trim(),
         };
-        await ref.read(contentNotifierProvider.notifier).update(widget.itemId!, data);
+        await ref
+            .read(contentNotifierProvider.notifier)
+            .update(widget.itemId!, data);
       } else {
         final item = ContentItem(
-          id:          '',
-          userId:      '',
-          type:        _selectedType,
-          title:       _titleCtrl.text.trim(),
-          description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
-          baseText:    _bodyCtrl.text.trim().isEmpty ? null : _bodyCtrl.text.trim(),
-          niche:       _nicheCtrl.text.trim().isEmpty ? null : _nicheCtrl.text.trim(),
-          targetAudience: _audienceCtrl.text.trim().isEmpty ? null : _audienceCtrl.text.trim(),
-          createdAt:   DateTime.now(),
-          updatedAt:   DateTime.now(),
+          id: '',
+          userId: '',
+          type: _selectedType,
+          title: _titleCtrl.text.trim(),
+          description:
+              _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+          baseText:
+              _bodyCtrl.text.trim().isEmpty ? null : _bodyCtrl.text.trim(),
+          niche: _nicheCtrl.text.trim().isEmpty ? null : _nicheCtrl.text.trim(),
+          targetAudience: _audienceCtrl.text.trim().isEmpty
+              ? null
+              : _audienceCtrl.text.trim(),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         );
         await ref.read(contentNotifierProvider.notifier).create(item);
       }
@@ -83,7 +94,10 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix(extractErrorMessage(e, AppLocalizations.of(context)!))), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix(
+                  extractErrorMessage(e, AppLocalizations.of(context)!))),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -98,8 +112,8 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
       itemAsync.whenData((item) {
         if (item != null && !_initialized) {
           _initialized = true;
-          WidgetsBinding.instance.addPostFrameCallback(
-              (_) => _populateFromItem(item));
+          WidgetsBinding.instance
+              .addPostFrameCallback((_) => _populateFromItem(item));
         }
       });
     }
@@ -107,7 +121,8 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEdit ? l10n.uxContentFormEditTitle : l10n.uxContentFormNewTitle),
+        title: Text(
+            isEdit ? l10n.uxContentFormEditTitle : l10n.uxContentFormNewTitle),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -140,9 +155,8 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
                           ? const Color(0xFF6C63FF)
                           : Colors.white.withOpacity(0.07),
                       side: BorderSide(
-                        color: selected
-                            ? const Color(0xFF6C63FF)
-                            : Colors.white12,
+                        color:
+                            selected ? const Color(0xFF6C63FF) : Colors.white12,
                       ),
                     ),
                   );
@@ -203,7 +217,9 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
                         ),
                       )
                     : Text(
-                        isEdit ? l10n.uxContentFormSaveChanges : l10n.uxContentFormAddToLibrary,
+                        isEdit
+                            ? l10n.uxContentFormSaveChanges
+                            : l10n.uxContentFormAddToLibrary,
                         style: const TextStyle(
                             fontSize: 15, fontWeight: FontWeight.bold),
                       ),
@@ -226,25 +242,25 @@ class _Field extends StatelessWidget {
   });
 
   final TextEditingController controller;
-  final String                label;
-  final String?               hint;
-  final int                   maxLines;
+  final String label;
+  final String? hint;
+  final int maxLines;
   final String? Function(String?)? validator;
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
-      maxLines:   maxLines,
-      validator:  validator,
+      maxLines: maxLines,
+      validator: validator,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        hintText:  hint,
+        hintText: hint,
         labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-        hintStyle:  const TextStyle(color: Colors.white24, fontSize: 12),
-        filled:     true,
-        fillColor:  Colors.white.withOpacity(0.05),
+        hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.05),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Colors.white12),

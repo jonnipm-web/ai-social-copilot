@@ -12,43 +12,62 @@ import '../../../providers/advisor_provider.dart';
 // / styleOptions) are canonical PT codes; only their DISPLAY is localized.
 String advisorRoleLabel(String role, AppLocalizations l10n) {
   switch (role) {
-    case 'Estratégia':  return l10n.uxAdvisorRoleStrategy;
-    case 'Marketing':   return l10n.uxAdvisorRoleMarketing;
-    case 'SEO':         return 'SEO';
-    case 'Monetização': return l10n.uxAdvisorRoleMonetization;
-    case 'Negócios':    return l10n.uxAdvisorRoleBusiness;
-    case 'Geral':       return l10n.uxAdvisorRoleGeneral;
-    default:            return role;
+    case 'Estratégia':
+      return l10n.uxAdvisorRoleStrategy;
+    case 'Marketing':
+      return l10n.uxAdvisorRoleMarketing;
+    case 'SEO':
+      return 'SEO';
+    case 'Monetização':
+      return l10n.uxAdvisorRoleMonetization;
+    case 'Negócios':
+      return l10n.uxAdvisorRoleBusiness;
+    case 'Geral':
+      return l10n.uxAdvisorRoleGeneral;
+    default:
+      return role;
   }
 }
 
 String advisorStyleLabel(String style, AppLocalizations l10n) {
   switch (style) {
-    case 'Executivo':  return l10n.uxAdvisorStyleExecutive;
-    case 'Analítico':  return l10n.uxAdvisorStyleAnalytical;
-    case 'Professor':  return l10n.uxAdvisorStyleTeacher;
-    case 'Mentor':     return l10n.uxAdvisorStyleMentor;
-    case 'Direto':     return l10n.uxAdvisorStyleDirect;
-    default:           return style;
+    case 'Executivo':
+      return l10n.uxAdvisorStyleExecutive;
+    case 'Analítico':
+      return l10n.uxAdvisorStyleAnalytical;
+    case 'Professor':
+      return l10n.uxAdvisorStyleTeacher;
+    case 'Mentor':
+      return l10n.uxAdvisorStyleMentor;
+    case 'Direto':
+      return l10n.uxAdvisorStyleDirect;
+    default:
+      return style;
   }
 }
 
 String advisorStyleDescription(String style, AppLocalizations l10n) {
   switch (style) {
-    case 'Executivo':  return l10n.uxAdvisorStyleExecutiveDesc;
-    case 'Analítico':  return l10n.uxAdvisorStyleAnalyticalDesc;
-    case 'Professor':  return l10n.uxAdvisorStyleTeacherDesc;
-    case 'Mentor':     return l10n.uxAdvisorStyleMentorDesc;
-    case 'Direto':     return l10n.uxAdvisorStyleDirectDesc;
-    default:           return '';
+    case 'Executivo':
+      return l10n.uxAdvisorStyleExecutiveDesc;
+    case 'Analítico':
+      return l10n.uxAdvisorStyleAnalyticalDesc;
+    case 'Professor':
+      return l10n.uxAdvisorStyleTeacherDesc;
+    case 'Mentor':
+      return l10n.uxAdvisorStyleMentorDesc;
+    case 'Direto':
+      return l10n.uxAdvisorStyleDirectDesc;
+    default:
+      return '';
   }
 }
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGold    = Color(0xFFFFD700);
+const _kGold = Color(0xFFFFD700);
 
 // ════════════════════════════════════════════════════════════════════════════
 // Advisor Onboarding Screen (M2)
@@ -63,8 +82,8 @@ class AdvisorOnboardingScreen extends ConsumerStatefulWidget {
 
 class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
   int _step = 0;
-  String _name  = AdvisorProfile.nameOptions.first;
-  String _role  = AdvisorProfile.roleOptions.last;
+  String _name = AdvisorProfile.nameOptions.first;
+  String _role = AdvisorProfile.roleOptions.last;
   String _style = AdvisorProfile.styleOptions.first;
   String _customName = '';
 
@@ -78,15 +97,18 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
     setState(() => _saving = true);
     try {
       await ref.read(advisorNotifierProvider.notifier).save(
-            advisorName:  _effectiveName,
-            advisorRole:  _role,
+            advisorName: _effectiveName,
+            advisorRole: _role,
             advisorStyle: _style,
           );
       if (mounted) context.go(AppConstants.routeExecutiveDashboard);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix(extractErrorMessage(e, AppLocalizations.of(context)!))), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix(
+                  extractErrorMessage(e, AppLocalizations.of(context)!))),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -108,18 +130,20 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
               // Progress indicator
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(3, (i) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    width: i == _step ? 28 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: i <= _step ? _kPrimary : Colors.white12,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                )),
+                children: List.generate(
+                    3,
+                    (i) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: i == _step ? 28 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: i <= _step ? _kPrimary : Colors.white12,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        )),
               ),
               const SizedBox(height: 40),
               Expanded(child: _buildStep()),
@@ -136,11 +160,17 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
     switch (_step) {
       case 0:
         return _StepName(
-          selected:     _name,
-          useCustom:    _useCustomName,
-          customName:   _customName,
-          onSelect:     (v) => setState(() { _name = v; _useCustomName = false; }),
-          onCustom:     (v) => setState(() { _customName = v; _useCustomName = true; }),
+          selected: _name,
+          useCustom: _useCustomName,
+          customName: _customName,
+          onSelect: (v) => setState(() {
+            _name = v;
+            _useCustomName = false;
+          }),
+          onCustom: (v) => setState(() {
+            _customName = v;
+            _useCustomName = true;
+          }),
         );
       case 1:
         return _StepRole(
@@ -151,7 +181,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
         return _StepStyle(
           selected: _style,
           onSelect: (v) => setState(() => _style = v),
-          name:     _effectiveName,
+          name: _effectiveName,
         );
       default:
         return const SizedBox.shrink();
@@ -230,10 +260,10 @@ class _StepName extends StatelessWidget {
   final ValueChanged<String> onCustom;
 
   static const _avatars = {
-    'Atlas':  '🌐',
+    'Atlas': '🌐',
     'Iris': '🔮',
     'Mentor': '🎓',
-    'Nexus':  '⚡',
+    'Nexus': '⚡',
   };
 
   @override
@@ -245,7 +275,10 @@ class _StepName extends StatelessWidget {
         Text(
           l10n.uxAdvisorNameTitle,
           style: const TextStyle(
-              color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              height: 1.3),
         ),
         const SizedBox(height: 8),
         Text(
@@ -266,9 +299,7 @@ class _StepName extends StatelessWidget {
               onTap: () => onSelect(name),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? _kPrimary.withOpacity(0.2)
-                      : _kCard,
+                  color: isSelected ? _kPrimary.withOpacity(0.2) : _kCard,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isSelected ? _kPrimary : Colors.white12,
@@ -278,15 +309,15 @@ class _StepName extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(_avatars[name] ?? '🤖', style: const TextStyle(fontSize: 22)),
+                    Text(_avatars[name] ?? '🤖',
+                        style: const TextStyle(fontSize: 22)),
                     const SizedBox(width: 10),
                     Text(name,
                         style: TextStyle(
                           color: isSelected ? _kPrimary : Colors.white70,
                           fontSize: 16,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                         )),
                   ],
                 ),
@@ -311,8 +342,8 @@ class _StepName extends StatelessWidget {
             decoration: InputDecoration(
               hintText: l10n.uxAdvisorCustomNameHint,
               hintStyle: const TextStyle(color: Colors.white38),
-              prefixIcon:
-                  const Icon(Icons.edit_rounded, color: Colors.white38, size: 18),
+              prefixIcon: const Icon(Icons.edit_rounded,
+                  color: Colors.white38, size: 18),
               border: InputBorder.none,
               isDense: true,
             ),
@@ -330,12 +361,12 @@ class _StepRole extends StatelessWidget {
   final ValueChanged<String> onSelect;
 
   static const _icons = {
-    'Estratégia':  Icons.flag_rounded,
-    'Marketing':   Icons.campaign_rounded,
-    'SEO':         Icons.search_rounded,
+    'Estratégia': Icons.flag_rounded,
+    'Marketing': Icons.campaign_rounded,
+    'SEO': Icons.search_rounded,
     'Monetização': Icons.attach_money_rounded,
-    'Negócios':    Icons.business_rounded,
-    'Geral':       Icons.auto_awesome_rounded,
+    'Negócios': Icons.business_rounded,
+    'Geral': Icons.auto_awesome_rounded,
   };
 
   @override
@@ -347,7 +378,10 @@ class _StepRole extends StatelessWidget {
         Text(
           l10n.uxAdvisorRoleTitle,
           style: const TextStyle(
-              color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              height: 1.3),
         ),
         const SizedBox(height: 8),
         Text(
@@ -366,9 +400,7 @@ class _StepRole extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? _kPrimary.withOpacity(0.15)
-                          : _kCard,
+                      color: isSelected ? _kPrimary.withOpacity(0.15) : _kCard,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected ? _kPrimary : Colors.white12,
@@ -431,7 +463,10 @@ class _StepStyle extends StatelessWidget {
         Text(
           l10n.uxAdvisorStyleTitle(name),
           style: const TextStyle(
-              color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              height: 1.3),
         ),
         const SizedBox(height: 8),
         Text(
@@ -450,9 +485,7 @@ class _StepStyle extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? _kGold.withOpacity(0.1)
-                          : _kCard,
+                      color: isSelected ? _kGold.withOpacity(0.1) : _kCard,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected ? _kGold : Colors.white12,

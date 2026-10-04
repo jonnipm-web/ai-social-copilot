@@ -45,7 +45,8 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
   Future<void> _run() async {
     setState(() => _error = null);
     try {
-      final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      final analysis =
+          await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
       await _exec.run<void>(
@@ -53,20 +54,19 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
         ref: ref,
         analysisLabel: l10n.miGapTitle,
         request: IveInteractionRequest(
-          projectId:        analysis.projectId,
-          sourceModule:     'market_intelligence',
+          projectId: analysis.projectId,
+          sourceModule: 'market_intelligence',
           sourceEntityType: 'gap_analysis',
-          sourceEntityId:   widget.analysisId,
-          operationType:    IveOperationType.analyze,
+          sourceEntityId: widget.analysisId,
+          operationType: IveOperationType.analyze,
         ),
-        action: (idempotencyKey) => ref
-            .read(marketAnalysisServiceProvider)
-            .runGapAnalysis(
-              widget.analysisId,
-              analysis.input,
-              language: backendLanguageCode(context),
-              idempotencyKey: idempotencyKey,
-            ),
+        action: (idempotencyKey) =>
+            ref.read(marketAnalysisServiceProvider).runGapAnalysis(
+                  widget.analysisId,
+                  analysis.input,
+                  language: backendLanguageCode(context),
+                  idempotencyKey: idempotencyKey,
+                ),
       );
       // `run` returns null both when the user cancelled AND when a
       // `Future<void>` action succeeds (void has no distinct non-null
@@ -76,7 +76,8 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
       ref.invalidate(gapAnalysisByAnalysisProvider(widget.analysisId));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
+      setState(
+          () => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
     } finally {
       if (mounted) setState(() {});
     }
@@ -84,7 +85,8 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final asyncGap = ref.watch(gapAnalysisByAnalysisProvider(widget.analysisId));
+    final asyncGap =
+        ref.watch(gapAnalysisByAnalysisProvider(widget.analysisId));
 
     // AnimatedBuilder over `_exec` so both "Analisar" buttons below react
     // live to AiExecutionState transitions (awaiting confirmation →
@@ -95,18 +97,21 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
     );
   }
 
-  Widget _buildScaffold(BuildContext context, AsyncValue<GapAnalysis?> asyncGap) {
+  Widget _buildScaffold(
+      BuildContext context, AsyncValue<GapAnalysis?> asyncGap) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
-        title: Text(l10n.miGapTitle, style: const TextStyle(color: Colors.white)),
+        title:
+            Text(l10n.miGapTitle, style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go(
-            AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', widget.analysisId),
+            AppConstants.routeMarketIntelligenceHub
+                .replaceFirst(':id', widget.analysisId),
           ),
         ),
         actions: [
@@ -114,7 +119,8 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
             onPressed: _running ? null : _run,
             icon: _running
                 ? const AiThinkingIndicator(color: Color(0xFFFFD93D))
-                : const Icon(Icons.find_in_page_rounded, color: Color(0xFFFFD93D)),
+                : const Icon(Icons.find_in_page_rounded,
+                    color: Color(0xFFFFD93D)),
             label: Text(
               _running ? l10n.miGapAnalyzing : l10n.miGapAnalyzeButton,
               style: const TextStyle(color: Color(0xFFFFD93D)),
@@ -133,28 +139,37 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.red.withOpacity(0.3)),
               ),
-              child: Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+              child: Text(_error!,
+                  style:
+                      const TextStyle(color: Colors.redAccent, fontSize: 13)),
             ),
           Expanded(
             child: asyncGap.when(
-              loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFFFFD93D))),
+              loading: () => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFFFD93D))),
               error: (e, _) => Center(
-                  child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
+                  child: Text(
+                      l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
                       style: const TextStyle(color: Colors.redAccent))),
               data: (gap) => gap == null
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.find_in_page_outlined, color: Colors.white24, size: 64),
+                          const Icon(Icons.find_in_page_outlined,
+                              color: Colors.white24, size: 64),
                           const SizedBox(height: 16),
-                          Text(l10n.miGapEmptyTitle, style: const TextStyle(color: Colors.white38)),
+                          Text(l10n.miGapEmptyTitle,
+                              style: const TextStyle(color: Colors.white38)),
                           const SizedBox(height: 8),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Text(l10n.miGapEmptyBody,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white24, fontSize: 12, height: 1.4)),
+                                style: const TextStyle(
+                                    color: Colors.white24,
+                                    fontSize: 12,
+                                    height: 1.4)),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
@@ -209,12 +224,14 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
                             decoration: BoxDecoration(
                               color: const Color(0xFF1A1A2E),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFF333355)),
+                              border:
+                                  Border.all(color: const Color(0xFF333355)),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.summarize_rounded, color: Color(0xFFFFD93D), size: 18),
+                                const Icon(Icons.summarize_rounded,
+                                    color: Color(0xFFFFD93D), size: 18),
                                 const SizedBox(width: 8),
                                 Text(
                                   l10n.miGapTotalIdentified(gap.totalGaps),
@@ -270,48 +287,62 @@ class _GapSection extends StatelessWidget {
                 Icon(icon, color: color, size: 20),
                 const SizedBox(width: 8),
                 Text(title,
-                    style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+                    style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14)),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text('${items.length}',
-                      style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          color: color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
           ),
           const Divider(color: Color(0xFF333355), height: 1),
           ...items.asMap().entries.map(
-            (e) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text('${e.key + 1}',
-                          style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
-                    ),
+                (e) => Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text('${e.key + 1}',
+                              style: TextStyle(
+                                  color: color,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(e.value,
+                            style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                                height: 1.4)),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(e.value,
-                        style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4)),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
           const SizedBox(height: 4),
         ],
       ),

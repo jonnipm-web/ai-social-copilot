@@ -10,11 +10,29 @@ export 'app_exceptions.dart';
 /// (Supabase/Postgrest/Stripe/Google/Edge) that must not reach the UI?
 bool looksTechnicalError(String str) {
   const markers = [
-    'PostgrestException', 'StorageException', 'FunctionException',
-    'AuthException', 'FormatException', 'TypeError', 'NoSuchMethodError',
-    'StateError', 'RangeError', 'statusCode', 'status_code', 'code:',
-    'stripe', 'Stripe', 'googleapis', 'PlatformException', 'Null check',
-    'http://', 'https://', 'Instance of', 'is not a subtype', '{', '}',
+    'PostgrestException',
+    'StorageException',
+    'FunctionException',
+    'AuthException',
+    'FormatException',
+    'TypeError',
+    'NoSuchMethodError',
+    'StateError',
+    'RangeError',
+    'statusCode',
+    'status_code',
+    'code:',
+    'stripe',
+    'Stripe',
+    'googleapis',
+    'PlatformException',
+    'Null check',
+    'http://',
+    'https://',
+    'Instance of',
+    'is not a subtype',
+    '{',
+    '}',
     '[drive:',
   ];
   return markers.any(str.contains);
@@ -29,7 +47,8 @@ bool looksTechnicalError(String str) {
 ///
 /// [fallback] replaces any remaining unmapped raw text (e.g. a provider
 /// message from Stripe/Google on a commercial screen).
-String extractErrorMessage(dynamic e, [AppLocalizations? l10n, String? fallback]) {
+String extractErrorMessage(dynamic e,
+    [AppLocalizations? l10n, String? fallback]) {
   final t = l10n ?? lookupAppLocalizations(const Locale('pt'));
 
   if (e is NotAuthenticatedException) return t.uxErrorNotAuthenticated;
@@ -90,7 +109,9 @@ String extractErrorMessage(dynamic e, [AppLocalizations? l10n, String? fallback]
       str.contains('Failed host lookup')) {
     return t.uxErrorNoConnection;
   }
-  if (str.contains('401') || str.contains('Unauthorized') || str.contains('jwt expired')) {
+  if (str.contains('401') ||
+      str.contains('Unauthorized') ||
+      str.contains('jwt expired')) {
     return t.uxErrorSessionExpired;
   }
   if (str.contains('TimeoutException') || str.contains('timed out')) {
@@ -108,17 +129,28 @@ String extractErrorMessage(dynamic e, [AppLocalizations? l10n, String? fallback]
 /// R16 — localized message for a text-free [AppErrorCode].
 String appErrorMessage(AppErrorCode code, AppLocalizations t) {
   switch (code) {
-    case AppErrorCode.emptyResponse:               return t.uxErrorEmptyResponse;
-    case AppErrorCode.notFound:                    return t.uxErrorNotFound;
-    case AppErrorCode.fileTooLarge:                return t.uxErrorFileTooLarge;
-    case AppErrorCode.fileUnreadable:              return t.uxErrorFileUnreadable;
-    case AppErrorCode.fileTimeout:                 return t.uxErrorFileTimeout;
-    case AppErrorCode.extractionTimeout:           return t.uxErrorExtractionTimeout;
-    case AppErrorCode.extractedTextTooShort:       return t.uxErrorExtractedTextTooShort;
-    case AppErrorCode.checkoutFailed:              return t.checkoutOpeningError;
-    case AppErrorCode.googleSignInNotConfigured:   return t.uxErrorGoogleNotConfigured;
-    case AppErrorCode.googleCredentialsUnavailable:return t.uxErrorGoogleCredentials;
-    case AppErrorCode.signUpFailed:                return t.uxErrorSignUpFailed;
+    case AppErrorCode.emptyResponse:
+      return t.uxErrorEmptyResponse;
+    case AppErrorCode.notFound:
+      return t.uxErrorNotFound;
+    case AppErrorCode.fileTooLarge:
+      return t.uxErrorFileTooLarge;
+    case AppErrorCode.fileUnreadable:
+      return t.uxErrorFileUnreadable;
+    case AppErrorCode.fileTimeout:
+      return t.uxErrorFileTimeout;
+    case AppErrorCode.extractionTimeout:
+      return t.uxErrorExtractionTimeout;
+    case AppErrorCode.extractedTextTooShort:
+      return t.uxErrorExtractedTextTooShort;
+    case AppErrorCode.checkoutFailed:
+      return t.checkoutOpeningError;
+    case AppErrorCode.googleSignInNotConfigured:
+      return t.uxErrorGoogleNotConfigured;
+    case AppErrorCode.googleCredentialsUnavailable:
+      return t.uxErrorGoogleCredentials;
+    case AppErrorCode.signUpFailed:
+      return t.uxErrorSignUpFailed;
   }
 }
 
@@ -149,13 +181,15 @@ const kEntitlementErrorCodes = [
 /// negação de acesso.
 String? entitlementErrorCode(dynamic e) {
   var str = e.toString().trim();
-  if (str.startsWith('Exception: ')) str = str.substring('Exception: '.length).trim();
+  if (str.startsWith('Exception: '))
+    str = str.substring('Exception: '.length).trim();
   return kEntitlementErrorCodes.contains(str) ? str : null;
 }
 
 /// Verdadeiro quando o servidor negou por plano insuficiente — telas podem
 /// oferecer "Fazer upgrade", como já fazem para QUOTA_EXCEEDED.
-bool isPlanRequiredError(dynamic e) => entitlementErrorCode(e) == 'PLAN_REQUIRED';
+bool isPlanRequiredError(dynamic e) =>
+    entitlementErrorCode(e) == 'PLAN_REQUIRED';
 
 void showErrorSnack(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(

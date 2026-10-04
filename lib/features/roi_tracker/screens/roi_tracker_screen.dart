@@ -16,21 +16,36 @@ import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 // 'label' fields were removed from _metricTypes.)
 String _roiTypeLabel(AppLocalizations l10n, String type) {
   switch (type) {
-    case 'revenue':               return l10n.roiTrackerTypeRevenue;
-    case 'investment':            return l10n.roiTrackerTypeInvestment;
-    case 'traffic':                return l10n.roiTrackerTypeTraffic;
-    case 'leads':                  return l10n.roiTrackerTypeLeads;
-    case 'conversions':            return l10n.roiTrackerTypeConversions;
-    case 'opportunities':          return l10n.roiTrackerTypeOpportunities;
-    case 'revenue_potential':      return l10n.roiTrackerTypeRevenuePotential;
-    case 'revenue_estimated':      return l10n.roiTrackerTypeRevenueEstimated;
-    case 'hours_saved':            return l10n.roiTrackerTypeHoursSaved;
-    case 'strategies_executed':    return l10n.roiTrackerTypeStrategiesExecuted;
-    case 'campaigns_executed':     return l10n.roiTrackerTypeCampaignsExecuted;
-    case 'decisions_made':         return l10n.roiTrackerTypeDecisionsMade;
-    case 'opportunity_score':      return l10n.roiTrackerTypeOpportunityScore;
-    case 'avg_opportunity_score':  return l10n.roiTrackerTypeAvgOpportunityScore;
-    default:                       return l10n.roiTrackerTypeOther;
+    case 'revenue':
+      return l10n.roiTrackerTypeRevenue;
+    case 'investment':
+      return l10n.roiTrackerTypeInvestment;
+    case 'traffic':
+      return l10n.roiTrackerTypeTraffic;
+    case 'leads':
+      return l10n.roiTrackerTypeLeads;
+    case 'conversions':
+      return l10n.roiTrackerTypeConversions;
+    case 'opportunities':
+      return l10n.roiTrackerTypeOpportunities;
+    case 'revenue_potential':
+      return l10n.roiTrackerTypeRevenuePotential;
+    case 'revenue_estimated':
+      return l10n.roiTrackerTypeRevenueEstimated;
+    case 'hours_saved':
+      return l10n.roiTrackerTypeHoursSaved;
+    case 'strategies_executed':
+      return l10n.roiTrackerTypeStrategiesExecuted;
+    case 'campaigns_executed':
+      return l10n.roiTrackerTypeCampaignsExecuted;
+    case 'decisions_made':
+      return l10n.roiTrackerTypeDecisionsMade;
+    case 'opportunity_score':
+      return l10n.roiTrackerTypeOpportunityScore;
+    case 'avg_opportunity_score':
+      return l10n.roiTrackerTypeAvgOpportunityScore;
+    default:
+      return l10n.roiTrackerTypeOther;
   }
 }
 
@@ -51,22 +66,82 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
 
   static const _metricTypes = [
     // ── Originais ──────────────────────────────────────────────
-    {'value': 'revenue',                'icon': Icons.attach_money_rounded,   'color': Color(0xFF6BCB77)},
-    {'value': 'investment',             'icon': Icons.savings_rounded,         'color': Color(0xFFFF6B6B)},
-    {'value': 'traffic',                'icon': Icons.trending_up_rounded,     'color': Color(0xFF4D96FF)},
-    {'value': 'leads',                  'icon': Icons.people_alt_rounded,      'color': Color(0xFFAB83FF)},
-    {'value': 'conversions',            'icon': Icons.check_circle_rounded,    'color': Color(0xFFFFD93D)},
-    {'value': 'other',                  'icon': Icons.category_rounded,        'color': Color(0xFF00BCD4)},
+    {
+      'value': 'revenue',
+      'icon': Icons.attach_money_rounded,
+      'color': Color(0xFF6BCB77)
+    },
+    {
+      'value': 'investment',
+      'icon': Icons.savings_rounded,
+      'color': Color(0xFFFF6B6B)
+    },
+    {
+      'value': 'traffic',
+      'icon': Icons.trending_up_rounded,
+      'color': Color(0xFF4D96FF)
+    },
+    {
+      'value': 'leads',
+      'icon': Icons.people_alt_rounded,
+      'color': Color(0xFFAB83FF)
+    },
+    {
+      'value': 'conversions',
+      'icon': Icons.check_circle_rounded,
+      'color': Color(0xFFFFD93D)
+    },
+    {
+      'value': 'other',
+      'icon': Icons.category_rounded,
+      'color': Color(0xFF00BCD4)
+    },
     // ── Fase 10A (Business OS) ─────────────────────────────────
-    {'value': 'opportunities',          'icon': Icons.lightbulb_rounded,       'color': Color(0xFFFFD700)},
-    {'value': 'revenue_potential',      'icon': Icons.bar_chart_rounded,       'color': Color(0xFF00BCD4)},
-    {'value': 'revenue_estimated',      'icon': Icons.calculate_rounded,       'color': Color(0xFF4CAF50)},
-    {'value': 'hours_saved',            'icon': Icons.schedule_rounded,        'color': Color(0xFF9C27B0)},
-    {'value': 'strategies_executed',    'icon': Icons.flag_rounded,            'color': Color(0xFF6C63FF)},
-    {'value': 'campaigns_executed',     'icon': Icons.campaign_rounded,        'color': Color(0xFFE91E63)},
-    {'value': 'decisions_made',         'icon': Icons.psychology_rounded,      'color': Color(0xFFFF9800)},
-    {'value': 'opportunity_score',      'icon': Icons.analytics_rounded,       'color': Color(0xFF4D96FF)},
-    {'value': 'avg_opportunity_score',  'icon': Icons.star_rounded,            'color': Color(0xFFFFD93D)},
+    {
+      'value': 'opportunities',
+      'icon': Icons.lightbulb_rounded,
+      'color': Color(0xFFFFD700)
+    },
+    {
+      'value': 'revenue_potential',
+      'icon': Icons.bar_chart_rounded,
+      'color': Color(0xFF00BCD4)
+    },
+    {
+      'value': 'revenue_estimated',
+      'icon': Icons.calculate_rounded,
+      'color': Color(0xFF4CAF50)
+    },
+    {
+      'value': 'hours_saved',
+      'icon': Icons.schedule_rounded,
+      'color': Color(0xFF9C27B0)
+    },
+    {
+      'value': 'strategies_executed',
+      'icon': Icons.flag_rounded,
+      'color': Color(0xFF6C63FF)
+    },
+    {
+      'value': 'campaigns_executed',
+      'icon': Icons.campaign_rounded,
+      'color': Color(0xFFE91E63)
+    },
+    {
+      'value': 'decisions_made',
+      'icon': Icons.psychology_rounded,
+      'color': Color(0xFFFF9800)
+    },
+    {
+      'value': 'opportunity_score',
+      'icon': Icons.analytics_rounded,
+      'color': Color(0xFF4D96FF)
+    },
+    {
+      'value': 'avg_opportunity_score',
+      'icon': Icons.star_rounded,
+      'color': Color(0xFFFFD93D)
+    },
   ];
 
   @override
@@ -76,14 +151,17 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
     super.dispose();
   }
 
-  String _label(String type, AppLocalizations l10n) => _roiTypeLabel(l10n, type);
+  String _label(String type, AppLocalizations l10n) =>
+      _roiTypeLabel(l10n, type);
 
   Color _color(String type) {
-    return _metricTypes.firstWhere((m) => m['value'] == type, orElse: () => _metricTypes.last)['color'] as Color;
+    return _metricTypes.firstWhere((m) => m['value'] == type,
+        orElse: () => _metricTypes.last)['color'] as Color;
   }
 
   IconData _icon(String type) {
-    return _metricTypes.firstWhere((m) => m['value'] == type, orElse: () => _metricTypes.last)['icon'] as IconData;
+    return _metricTypes.firstWhere((m) => m['value'] == type,
+        orElse: () => _metricTypes.last)['icon'] as IconData;
   }
 
   Future<void> _save() async {
@@ -92,24 +170,34 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
     final value = double.tryParse(raw.replaceAll(',', '.'));
     if (value == null || raw.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.roiTrackerInvalidValue), backgroundColor: Colors.orange),
+        SnackBar(
+            content: Text(l10n.roiTrackerInvalidValue),
+            backgroundColor: Colors.orange),
       );
       return;
     }
     setState(() => _saving = true);
     try {
       await ref.read(roiMetricsNotifierProvider.notifier).add(
-        metricType: _metricType,
-        metricValue: value,
-        projectId: _selectedProjectId,
-        notes: _notesCtrl.text.trim().isNotEmpty ? _notesCtrl.text.trim() : null,
-      );
+            metricType: _metricType,
+            metricValue: value,
+            projectId: _selectedProjectId,
+            notes: _notesCtrl.text.trim().isNotEmpty
+                ? _notesCtrl.text.trim()
+                : null,
+          );
       _valueCtrl.clear();
       _notesCtrl.clear();
-      setState(() { _showForm = false; _selectedProjectId = null; _metricType = 'revenue'; });
+      setState(() {
+        _showForm = false;
+        _selectedProjectId = null;
+        _metricType = 'revenue';
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(extractErrorMessage(e, l10n)), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text(extractErrorMessage(e, l10n)),
+            backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -136,7 +224,8 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
           },
         ),
         backgroundColor: const Color(0xFF0F0F1A),
-        title: Text(l10n.roiTrackerTitle, style: const TextStyle(color: Colors.white)),
+        title: Text(l10n.roiTrackerTitle,
+            style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -155,9 +244,14 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
           children: [
             // Executive Dashboard (M6 expansion)
             asyncSummary.when(
-              loading: () => const SizedBox(height: 100, child: Center(child: CircularProgressIndicator(color: Color(0xFFFFD93D)))),
+              loading: () => const SizedBox(
+                  height: 100,
+                  child: Center(
+                      child:
+                          CircularProgressIndicator(color: Color(0xFFFFD93D)))),
               error: (_, __) => const SizedBox.shrink(),
-              data: (summary) => _ExecutiveDashboardSection(summary: summary, l10n: l10n),
+              data: (summary) =>
+                  _ExecutiveDashboardSection(summary: summary, l10n: l10n),
             ),
 
             // Summary cards
@@ -174,25 +268,36 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
             ),
 
             // Form
-            if (_showForm)
-              _buildForm(l10n),
+            if (_showForm) _buildForm(l10n),
 
             // Metrics list
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Text(l10n.roiTrackerRecordsTitle, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+              child: Text(l10n.roiTrackerRecordsTitle,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold)),
             ),
             asyncMetrics.when(
-              loading: () => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: Color(0xFFFFD93D)))),
+              loading: () => const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child:
+                          CircularProgressIndicator(color: Color(0xFFFFD93D)))),
               error: (e, _) => Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)), style: const TextStyle(color: Colors.redAccent)),
+                child: Text(
+                    l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
+                    style: const TextStyle(color: Colors.redAccent)),
               ),
               data: (metrics) => metrics.isEmpty
                   ? Padding(
                       padding: const EdgeInsets.all(32),
                       child: Center(
-                        child: Text(l10n.roiTrackerEmptyRecords, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white38)),
+                        child: Text(l10n.roiTrackerEmptyRecords,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white38)),
                       ),
                     )
                   : ListView.builder(
@@ -205,7 +310,9 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                         color: _color(metrics[i].metricType),
                         icon: _icon(metrics[i].metricType),
                         label: _label(metrics[i].metricType, l10n),
-                        onDelete: () => ref.read(roiMetricsNotifierProvider.notifier).delete(metrics[i].id),
+                        onDelete: () => ref
+                            .read(roiMetricsNotifierProvider.notifier)
+                            .delete(metrics[i].id),
                       ),
                     ),
             ),
@@ -227,11 +334,14 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.roiTrackerNewRecord, style: const TextStyle(color: Color(0xFFFFD93D), fontWeight: FontWeight.bold)),
+          Text(l10n.roiTrackerNewRecord,
+              style: const TextStyle(
+                  color: Color(0xFFFFD93D), fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
 
           // Metric type
-          Text(l10n.roiTrackerTypeLabel, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(l10n.roiTrackerTypeLabel,
+              style: const TextStyle(color: Colors.white54, fontSize: 12)),
           const SizedBox(height: 6),
           Wrap(
             spacing: 6,
@@ -242,22 +352,29 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
               return GestureDetector(
                 onTap: () => setState(() => _metricType = m['value'] as String),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isSelected ? color.withOpacity(0.15) : const Color(0xFF0F0F1A),
+                    color: isSelected
+                        ? color.withOpacity(0.15)
+                        : const Color(0xFF0F0F1A),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: isSelected ? color : const Color(0xFF333355)),
+                    border: Border.all(
+                        color: isSelected ? color : const Color(0xFF333355)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(m['icon'] as IconData, color: isSelected ? color : Colors.white38, size: 14),
+                      Icon(m['icon'] as IconData,
+                          color: isSelected ? color : Colors.white38, size: 14),
                       const SizedBox(width: 4),
                       Text(_roiTypeLabel(l10n, m['value'] as String),
                           style: TextStyle(
                             color: isSelected ? color : Colors.white54,
                             fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           )),
                     ],
                   ),
@@ -279,30 +396,42 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(l10n.roiTrackerProjectOptional, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                        Text(l10n.roiTrackerProjectOptional,
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 12)),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String?>(
                           value: _selectedProjectId,
                           dropdownColor: const Color(0xFF1A1A2E),
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 13),
                           decoration: InputDecoration(
                             filled: true,
                             fillColor: const Color(0xFF0F0F1A),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8)),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Color(0xFF333355)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFF333355)),
                             ),
                           ),
                           items: [
-                            DropdownMenuItem<String?>(value: null, child: Text(l10n.roiTrackerProjectNone, style: const TextStyle(color: Colors.white54))),
+                            DropdownMenuItem<String?>(
+                                value: null,
+                                child: Text(l10n.roiTrackerProjectNone,
+                                    style: const TextStyle(
+                                        color: Colors.white54))),
                             ...projects.map((p) => DropdownMenuItem<String?>(
-                              value: p.id,
-                              child: Text(p.name, overflow: TextOverflow.ellipsis),
-                            )),
+                                  value: p.id,
+                                  child: Text(p.name,
+                                      overflow: TextOverflow.ellipsis),
+                                )),
                           ],
-                          onChanged: (v) => setState(() => _selectedProjectId = v),
+                          onChanged: (v) =>
+                              setState(() => _selectedProjectId = v),
                         ),
                         const SizedBox(height: 12),
                       ],
@@ -320,8 +449,10 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
               labelStyle: const TextStyle(color: Colors.white54, fontSize: 12),
               filled: true,
               fillColor: const Color(0xFF0F0F1A),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: Color(0xFF333355)),
@@ -343,8 +474,10 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
               labelStyle: const TextStyle(color: Colors.white54, fontSize: 12),
               filled: true,
               fillColor: const Color(0xFF0F0F1A),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: Color(0xFF333355)),
@@ -378,8 +511,13 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                     foregroundColor: Colors.black,
                   ),
                   child: _saving
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
-                      : Text(l10n.commonSave, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              color: Colors.black, strokeWidth: 2))
+                      : Text(l10n.commonSave,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -437,26 +575,34 @@ class _SummarySection extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.insights_rounded, color: Color(0xFFFFD93D), size: 18),
+              const Icon(Icons.insights_rounded,
+                  color: Color(0xFFFFD93D), size: 18),
               const SizedBox(width: 8),
-              Text(l10n.roiTrackerSummaryTitle, style: const TextStyle(color: Color(0xFFFFD93D), fontWeight: FontWeight.bold)),
+              Text(l10n.roiTrackerSummaryTitle,
+                  style: const TextStyle(
+                      color: Color(0xFFFFD93D), fontWeight: FontWeight.bold)),
               const Spacer(),
               if ((summary['investment'] ?? 0) > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: _roi >= 0
                         ? const Color(0xFF6BCB77).withOpacity(0.1)
                         : const Color(0xFFFF6B6B).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: _roi >= 0 ? const Color(0xFF6BCB77) : const Color(0xFFFF6B6B),
+                      color: _roi >= 0
+                          ? const Color(0xFF6BCB77)
+                          : const Color(0xFFFF6B6B),
                     ),
                   ),
                   child: Text(
                     l10n.roiTrackerRoiPercent(_roi.toStringAsFixed(0)),
                     style: TextStyle(
-                      color: _roi >= 0 ? const Color(0xFF6BCB77) : const Color(0xFFFF6B6B),
+                      color: _roi >= 0
+                          ? const Color(0xFF6BCB77)
+                          : const Color(0xFFFF6B6B),
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
@@ -471,7 +617,8 @@ class _SummarySection extends StatelessWidget {
             children: summary.entries.map((e) {
               final c = color(e.key);
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: c.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(10),
@@ -481,8 +628,14 @@ class _SummarySection extends StatelessWidget {
                   children: [
                     Icon(icon(e.key), color: c, size: 18),
                     const SizedBox(height: 4),
-                    Text(_fmt(e.value), style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 13)),
-                    Text(label(e.key), style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                    Text(_fmt(e.value),
+                        style: TextStyle(
+                            color: c,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13)),
+                    Text(label(e.key),
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 10)),
                   ],
                 ),
               );
@@ -541,18 +694,30 @@ class _MetricCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+                Text(label,
+                    style: TextStyle(
+                        color: color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
                 if (metric.notes != null && metric.notes!.isNotEmpty)
-                  Text(metric.notes!, style: const TextStyle(color: Colors.white54, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(metric.notes!,
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
           Text(_fmt(metric.metricValue),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15)),
           const SizedBox(width: 8),
           GestureDetector(
             onTap: onDelete,
-            child: const Icon(Icons.close_rounded, color: Colors.white24, size: 18),
+            child: const Icon(Icons.close_rounded,
+                color: Colors.white24, size: 18),
           ),
         ],
       ),
@@ -577,14 +742,14 @@ class _ExecutiveDashboardSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final revenue           = summary['revenue']             ?? 0;
-    final revPotential      = summary['revenue_potential']   ?? 0;
-    final revEstimated      = summary['revenue_estimated']   ?? 0;
-    final hoursSaved        = summary['hours_saved']         ?? 0;
-    final strategies        = summary['strategies_executed'] ?? 0;
-    final campaigns         = summary['campaigns_executed']  ?? 0;
-    final decisions         = summary['decisions_made']      ?? 0;
-    final opportunities     = summary['opportunities']       ?? 0;
+    final revenue = summary['revenue'] ?? 0;
+    final revPotential = summary['revenue_potential'] ?? 0;
+    final revEstimated = summary['revenue_estimated'] ?? 0;
+    final hoursSaved = summary['hours_saved'] ?? 0;
+    final strategies = summary['strategies_executed'] ?? 0;
+    final campaigns = summary['campaigns_executed'] ?? 0;
+    final decisions = summary['decisions_made'] ?? 0;
+    final opportunities = summary['opportunities'] ?? 0;
 
     final hasData = revenue > 0 || revPotential > 0 || opportunities > 0;
     if (!hasData) return const SizedBox.shrink();
@@ -602,12 +767,15 @@ class _ExecutiveDashboardSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.insights_rounded, color: Color(0xFF4CAF50), size: 18),
+              const Icon(Icons.insights_rounded,
+                  color: Color(0xFF4CAF50), size: 18),
               const SizedBox(width: 8),
               Text(
                 l10n.roiTrackerExecutiveDashboardTitle,
                 style: const TextStyle(
-                    color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -627,11 +795,14 @@ class _ExecutiveDashboardSection extends StatelessWidget {
                 Row(
                   children: [
                     if (revenue > 0)
-                      _ExecStat(l10n.roiTrackerRevenueRegistered,  _fmtBRL(revenue),      const Color(0xFF6BCB77)),
+                      _ExecStat(l10n.roiTrackerRevenueRegistered,
+                          _fmtBRL(revenue), const Color(0xFF6BCB77)),
                     if (revPotential > 0)
-                      _ExecStat(l10n.roiTrackerRevenuePotentialLabel,   _fmtBRL(revPotential), const Color(0xFF00BCD4)),
+                      _ExecStat(l10n.roiTrackerRevenuePotentialLabel,
+                          _fmtBRL(revPotential), const Color(0xFF00BCD4)),
                     if (revEstimated > 0)
-                      _ExecStat(l10n.roiTrackerRevenueEstimatedLabel,    _fmtBRL(revEstimated), const Color(0xFF4CAF50)),
+                      _ExecStat(l10n.roiTrackerRevenueEstimatedLabel,
+                          _fmtBRL(revEstimated), const Color(0xFF4CAF50)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -650,15 +821,20 @@ class _ExecutiveDashboardSection extends StatelessWidget {
             runSpacing: 8,
             children: [
               if (opportunities > 0)
-                _ExecStat(_roiTypeLabel(l10n, 'opportunities'),    _fmt(opportunities), const Color(0xFFFFD700)),
+                _ExecStat(_roiTypeLabel(l10n, 'opportunities'),
+                    _fmt(opportunities), const Color(0xFFFFD700)),
               if (strategies > 0)
-                _ExecStat(_roiTypeLabel(l10n, 'strategies_executed'),      _fmt(strategies),    const Color(0xFF6C63FF)),
+                _ExecStat(_roiTypeLabel(l10n, 'strategies_executed'),
+                    _fmt(strategies), const Color(0xFF6C63FF)),
               if (campaigns > 0)
-                _ExecStat(_roiTypeLabel(l10n, 'campaigns_executed'),        _fmt(campaigns),     const Color(0xFFE91E63)),
+                _ExecStat(_roiTypeLabel(l10n, 'campaigns_executed'),
+                    _fmt(campaigns), const Color(0xFFE91E63)),
               if (decisions > 0)
-                _ExecStat(_roiTypeLabel(l10n, 'decisions_made'),         _fmt(decisions),     const Color(0xFFFF9800)),
+                _ExecStat(_roiTypeLabel(l10n, 'decisions_made'),
+                    _fmt(decisions), const Color(0xFFFF9800)),
               if (hoursSaved > 0)
-                _ExecStat(l10n.roiTrackerHoursSavedShort,      '${hoursSaved.round()}h', const Color(0xFF9C27B0)),
+                _ExecStat(l10n.roiTrackerHoursSavedShort,
+                    '${hoursSaved.round()}h', const Color(0xFF9C27B0)),
             ],
           ),
         ],

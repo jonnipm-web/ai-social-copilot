@@ -29,19 +29,23 @@ import 'package:ai_social_copilot/providers/ive_provider.dart';
 
 void main() {
   group('IveNotifier — interaction bridge', () {
-    test('beginThinking sets interaction=thinking without touching business state', () {
+    test(
+        'beginThinking sets interaction=thinking without touching business state',
+        () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final notifier = container.read(iveProvider.notifier);
 
-      notifier.showMessage('Oportunidade detectada', expression: IveExpression.winking);
+      notifier.showMessage('Oportunidade detectada',
+          expression: IveExpression.winking);
       expect(container.read(iveProvider).expression, IveExpression.winking);
 
       notifier.beginThinking();
       final state = container.read(iveProvider);
 
       expect(state.interaction, IveInteractionState.thinking);
-      expect(state.expression, IveExpression.winking); // business state untouched
+      expect(
+          state.expression, IveExpression.winking); // business state untouched
       expect(IveVisualStateMapper.fromIveState(state), IveVisualState.thinking);
     });
 
@@ -58,43 +62,53 @@ void main() {
       expect(IveVisualStateMapper.fromIveState(state), IveVisualState.speaking);
     });
 
-    test('speaking recomputes the live contextual state after presentation (not a stale snapshot)', () async {
+    test(
+        'speaking recomputes the live contextual state after presentation (not a stale snapshot)',
+        () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final notifier = container.read(iveProvider.notifier);
 
       // Business state before the chat interaction starts.
-      notifier.showMessage('Oportunidade detectada', expression: IveExpression.winking);
+      notifier.showMessage('Oportunidade detectada',
+          expression: IveExpression.winking);
 
       final token = notifier.beginThinking();
       notifier.completeInteraction(token, success: true);
-      expect(container.read(iveProvider).interaction, IveInteractionState.speaking);
+      expect(container.read(iveProvider).interaction,
+          IveInteractionState.speaking);
 
       // Business state changes WHILE the avatar is "speaking" — the bridge
       // must recompute against this, not restore a stale pre-chat snapshot.
-      notifier.showMessage('Novo alerta de execução', expression: IveExpression.neutral);
+      notifier.showMessage('Novo alerta de execução',
+          expression: IveExpression.neutral);
 
       await Future<void>.delayed(const Duration(milliseconds: 1700));
 
       final state = container.read(iveProvider);
       expect(state.interaction, isNull);
       expect(state.expression, IveExpression.neutral);
-      expect(IveVisualStateMapper.fromIveState(state), IveVisualState.attentive);
+      expect(
+          IveVisualStateMapper.fromIveState(state), IveVisualState.attentive);
     });
 
-    test('a failed request clears interaction immediately, preserving prior business state', () {
+    test(
+        'a failed request clears interaction immediately, preserving prior business state',
+        () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final notifier = container.read(iveProvider.notifier);
 
-      notifier.showMessage('Saúde do ecossistema estável', expression: IveExpression.neutral);
+      notifier.showMessage('Saúde do ecossistema estável',
+          expression: IveExpression.neutral);
       final token = notifier.beginThinking();
       notifier.completeInteraction(token, success: false);
 
       final state = container.read(iveProvider);
       expect(state.interaction, isNull);
       expect(state.expression, IveExpression.neutral);
-      expect(IveVisualStateMapper.fromIveState(state), IveVisualState.attentive);
+      expect(
+          IveVisualStateMapper.fromIveState(state), IveVisualState.attentive);
     });
 
     test('a stale token cannot overwrite a newer request\'s visual state', () {
@@ -105,18 +119,23 @@ void main() {
       final tokenA = notifier.beginThinking(); // first request
       final tokenB = notifier.beginThinking(); // second request supersedes it
       expect(tokenB, isNot(tokenA));
-      expect(container.read(iveProvider).interaction, IveInteractionState.thinking);
+      expect(container.read(iveProvider).interaction,
+          IveInteractionState.thinking);
 
       // Stale first request settles late — must be ignored.
       notifier.completeInteraction(tokenA, success: true);
-      expect(container.read(iveProvider).interaction, IveInteractionState.thinking);
+      expect(container.read(iveProvider).interaction,
+          IveInteractionState.thinking);
 
       // Current request settles — must apply.
       notifier.completeInteraction(tokenB, success: true);
-      expect(container.read(iveProvider).interaction, IveInteractionState.speaking);
+      expect(container.read(iveProvider).interaction,
+          IveInteractionState.speaking);
     });
 
-    test('a stale token cannot re-open thinking after the current request already failed', () {
+    test(
+        'a stale token cannot re-open thinking after the current request already failed',
+        () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final notifier = container.read(iveProvider.notifier);
@@ -131,7 +150,9 @@ void main() {
       expect(container.read(iveProvider).interaction, isNull);
     });
 
-    test('no state mutation or notification from a pending speaking timer after dispose', () async {
+    test(
+        'no state mutation or notification from a pending speaking timer after dispose',
+        () async {
       final container = ProviderContainer();
       final notifier = container.read(iveProvider.notifier);
 
@@ -139,7 +160,8 @@ void main() {
       container.listen<IveState>(iveProvider, (_, __) => notifications++);
 
       final token = notifier.beginThinking();
-      notifier.completeInteraction(token, success: true); // schedules the auto-clear timer
+      notifier.completeInteraction(token,
+          success: true); // schedules the auto-clear timer
       final countAtDispose = notifications;
 
       container.dispose();
@@ -150,11 +172,13 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 1700));
 
       expect(notifications, countAtDispose);
-      expect(() => notifier.completeInteraction(token, success: false), returnsNormally);
+      expect(() => notifier.completeInteraction(token, success: false),
+          returnsNormally);
       expect(() => notifier.beginThinking(), returnsNormally);
     });
 
-    test('a business issue that arrives live during "speaking" is preserved and becomes '
+    test(
+        'a business issue that arrives live during "speaking" is preserved and becomes '
         'authoritative once the interaction clears', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
@@ -162,20 +186,23 @@ void main() {
 
       final token = notifier.beginThinking();
       notifier.completeInteraction(token, success: true);
-      expect(container.read(iveProvider).interaction, IveInteractionState.speaking);
+      expect(container.read(iveProvider).interaction,
+          IveInteractionState.speaking);
 
       // A real business event (not synthetic IveState construction) arrives
       // through the same event bus IveNotifier already subscribes to, while
       // the avatar is mid-"speaking".
       IveEventBus.instance.emit(IveEvent.actionMutationFailed(
-        actionTitle:    'Aprovar oportunidade',
+        actionTitle: 'Aprovar oportunidade',
         technicalError: 'timeout',
       ));
       await Future<void>.delayed(Duration.zero); // let the stream listener run
 
       final mid = container.read(iveProvider);
-      expect(mid.interaction, IveInteractionState.speaking); // overlay still active
-      expect(mid.activeIssue?.errorCode, 'ACTION_MUTATION_FAILED'); // not dropped
+      expect(mid.interaction,
+          IveInteractionState.speaking); // overlay still active
+      expect(
+          mid.activeIssue?.errorCode, 'ACTION_MUTATION_FAILED'); // not dropped
 
       await Future<void>.delayed(const Duration(milliseconds: 1700));
 

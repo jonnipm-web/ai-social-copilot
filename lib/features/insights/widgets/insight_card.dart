@@ -75,7 +75,8 @@ class InsightCard extends StatelessWidget {
           if (item.sources.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-              child: _SourcesRow(label: t.insightSources, sources: item.sources),
+              child:
+                  _SourcesRow(label: t.insightSources, sources: item.sources),
             ),
           if (item.actionSteps.isNotEmpty)
             Padding(
@@ -84,8 +85,8 @@ class InsightCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(t.insightRecommendedAction,
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 11)),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 11)),
                   const SizedBox(height: 4),
                   ...item.actionSteps.map((s) => Padding(
                         padding: const EdgeInsets.only(bottom: 2),

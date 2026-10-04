@@ -68,7 +68,8 @@ Future<void> _pump(
       ),
       GoRoute(
         path: AppConstants.routeGenerate,
-        builder: (_, __) => const Scaffold(body: Text('CONTENT_GENERATION_SCREEN_MARKER')),
+        builder: (_, __) =>
+            const Scaffold(body: Text('CONTENT_GENERATION_SCREEN_MARKER')),
       ),
     ],
   );
@@ -76,9 +77,11 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        currentProfileProvider.overrideWith((ref) => Future.value(_fakeProfile())),
+        currentProfileProvider
+            .overrideWith((ref) => Future.value(_fakeProfile())),
         currentQuotaProvider.overrideWith(
-          (ref) => Future.value(const QuotaInfo(role: 'free', limit: 15, used: 0)),
+          (ref) =>
+              Future.value(const QuotaInfo(role: 'free', limit: 15, used: 0)),
         ),
         projectsNotifierProvider
             .overrideWith(projectsNotifier ?? _FakeProjectsNotifier.new),
@@ -159,7 +162,8 @@ void main() {
       expect(find.text('Recomendações Executivas'), findsOneWidget);
       expect(find.text('Prioridades da Semana'), findsOneWidget);
       expect(tester.takeException(), isNull,
-          reason: 'no RenderFlex overflow at 390px with real, non-trivial data');
+          reason:
+              'no RenderFlex overflow at 390px with real, non-trivial data');
     },
   );
 }

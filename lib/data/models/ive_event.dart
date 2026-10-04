@@ -23,19 +23,19 @@ enum IveEventType {
 }
 
 class IveEvent {
-  final IveEventType         type;
-  final String?              entityId;
-  final String?              entityName;
-  final IveIssue?            issue;
+  final IveEventType type;
+  final String? entityId;
+  final String? entityName;
+  final IveIssue? issue;
   final Map<String, dynamic> payload;
-  final DateTime             timestamp;
+  final DateTime timestamp;
 
   const IveEvent({
     required this.type,
     this.entityId,
     this.entityName,
     this.issue,
-    this.payload  = const {},
+    this.payload = const {},
     required this.timestamp,
   });
 
@@ -44,10 +44,10 @@ class IveEvent {
     required String itemName,
   }) =>
       IveEvent(
-        type:       IveEventType.assetAnalysisStarted,
-        entityId:   itemId,
+        type: IveEventType.assetAnalysisStarted,
+        entityId: itemId,
         entityName: itemName,
-        timestamp:  DateTime.now(),
+        timestamp: DateTime.now(),
       );
 
   factory IveEvent.knowledgeAnalysisCompleted({
@@ -56,11 +56,11 @@ class IveEvent {
     int opportunityScore = 0,
   }) =>
       IveEvent(
-        type:       IveEventType.assetAnalysisCompleted,
-        entityId:   itemId,
+        type: IveEventType.assetAnalysisCompleted,
+        entityId: itemId,
         entityName: itemName,
-        payload:    {'opportunityScore': opportunityScore},
-        timestamp:  DateTime.now(),
+        payload: {'opportunityScore': opportunityScore},
+        timestamp: DateTime.now(),
       );
 
   factory IveEvent.knowledgeAnalysisFailed({
@@ -69,12 +69,12 @@ class IveEvent {
     required String technicalError,
   }) =>
       IveEvent(
-        type:      IveEventType.assetAnalysisFailed,
-        entityId:  itemId,
+        type: IveEventType.assetAnalysisFailed,
+        entityId: itemId,
         entityName: itemName,
-        issue:     IveIssue.knowledgeAnalysisFailed(
-          itemId:         itemId,
-          itemName:       itemName,
+        issue: IveIssue.knowledgeAnalysisFailed(
+          itemId: itemId,
+          itemName: itemName,
           technicalError: technicalError,
         ),
         timestamp: DateTime.now(),
@@ -85,10 +85,10 @@ class IveEvent {
     required String technicalError,
   }) =>
       IveEvent(
-        type:       IveEventType.actionMutationFailed,
+        type: IveEventType.actionMutationFailed,
         entityName: actionTitle,
-        issue:      IveIssue.actionMutationFailed(
-          actionTitle:    actionTitle,
+        issue: IveIssue.actionMutationFailed(
+          actionTitle: actionTitle,
           technicalError: technicalError,
         ),
         timestamp: DateTime.now(),
@@ -99,10 +99,10 @@ class IveEvent {
     required String projectName,
   }) =>
       IveEvent(
-        type:       IveEventType.projectCreated,
-        entityId:   projectId,
+        type: IveEventType.projectCreated,
+        entityId: projectId,
         entityName: projectName,
-        timestamp:  DateTime.now(),
+        timestamp: DateTime.now(),
       );
 
   factory IveEvent.projectUpdated({
@@ -110,10 +110,10 @@ class IveEvent {
     required String projectName,
   }) =>
       IveEvent(
-        type:       IveEventType.projectUpdated,
-        entityId:   projectId,
+        type: IveEventType.projectUpdated,
+        entityId: projectId,
         entityName: projectName,
-        timestamp:  DateTime.now(),
+        timestamp: DateTime.now(),
       );
 
   factory IveEvent.projectStatusChanged({
@@ -122,11 +122,11 @@ class IveEvent {
     required String status,
   }) =>
       IveEvent(
-        type:       IveEventType.projectStatusChanged,
-        entityId:   projectId,
+        type: IveEventType.projectStatusChanged,
+        entityId: projectId,
         entityName: projectName,
-        payload:    {'status': status},
-        timestamp:  DateTime.now(),
+        payload: {'status': status},
+        timestamp: DateTime.now(),
       );
 
   factory IveEvent.projectDeleted({
@@ -134,9 +134,9 @@ class IveEvent {
     required String projectName,
   }) =>
       IveEvent(
-        type:       IveEventType.projectDeleted,
-        entityId:   projectId,
+        type: IveEventType.projectDeleted,
+        entityId: projectId,
         entityName: projectName,
-        timestamp:  DateTime.now(),
+        timestamp: DateTime.now(),
       );
 }

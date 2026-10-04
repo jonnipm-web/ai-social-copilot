@@ -30,14 +30,14 @@ class AdvisorService {
     if (uid == null) throw const NotAuthenticatedException();
 
     final data = AdvisorProfile(
-      id:                    '',
-      userId:                uid,
-      advisorName:           advisorName,
-      advisorRole:           advisorRole,
-      advisorStyle:          advisorStyle,
-      advisorAvatar:         advisorAvatar,
+      id: '',
+      userId: uid,
+      advisorName: advisorName,
+      advisorRole: advisorRole,
+      advisorStyle: advisorStyle,
+      advisorAvatar: advisorAvatar,
       advisorPersonalityJson: personalityJson,
-      createdAt:             DateTime.now(),
+      createdAt: DateTime.now(),
     ).toInsertMap();
 
     final row = await _client

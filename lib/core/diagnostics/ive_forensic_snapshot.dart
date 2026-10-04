@@ -43,7 +43,8 @@ class IveForensicSnapshot {
   /// authenticated destination. [currentRoute]'s existing forensic
   /// semantics (attempted path, used by [toMetadata]/[projectContextPresent]
   /// and existing tests) are completely unchanged.
-  static final ValueNotifier<String> settledRouteNotifier = ValueNotifier<String>('');
+  static final ValueNotifier<String> settledRouteNotifier =
+      ValueNotifier<String>('');
   static String get settledRoute => settledRouteNotifier.value;
   static AppLifecycleState? lifecycleState;
   static bool overlayMounted = false;

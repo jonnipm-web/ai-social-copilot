@@ -13,4 +13,5 @@
 /// tool/stability09o/), since diagnostic_sessions.build_sha (see
 /// diagnostic_logger_service.dart's startSession) is populated from this
 /// constant.
-const String kBuildSha = String.fromEnvironment('BUILD_SHA', defaultValue: 'unknown');
+const String kBuildSha =
+    String.fromEnvironment('BUILD_SHA', defaultValue: 'unknown');

@@ -95,6 +95,7 @@ void main() {
       anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
     );
 
-    runApp(UncontrolledProviderScope(container: globalProviderContainer, child: const App()));
+    runApp(UncontrolledProviderScope(
+        container: globalProviderContainer, child: const App()));
   }, _logUncaughtError);
 }

@@ -47,21 +47,27 @@ void main() {
       expect(a.dy, b.dy);
     });
 
-    test('bottom-right blocked -> falls through to the next safe candidate', () {
+    test('bottom-right blocked -> falls through to the next safe candidate',
+        () {
       final defaultResult = computeRestingPosition(input());
       final blockedAtDefault = footprintRectFor(defaultResult).inflate(4);
 
-      final result = computeRestingPosition(input(exclusions: [blockedAtDefault]));
+      final result =
+          computeRestingPosition(input(exclusions: [blockedAtDefault]));
       final resultRect = footprintRectFor(result);
 
       expect(resultRect.overlaps(blockedAtDefault), isFalse,
-          reason: 'must not rest on top of the physically-reproduced collision zone');
+          reason:
+              'must not rest on top of the physically-reproduced collision zone');
     });
 
-    test('multiple blocked regions -> still finds a safe candidate among the rest', () {
+    test(
+        'multiple blocked regions -> still finds a safe candidate among the rest',
+        () {
       // Block every right-edge candidate with one tall Rect down that whole
       // column; only the left-side candidates remain safe.
-      final rightColumn = Rect.fromLTWH(screenSize.width - 100, 0, 100, screenSize.height);
+      final rightColumn =
+          Rect.fromLTWH(screenSize.width - 100, 0, 100, screenSize.height);
 
       final result = computeRestingPosition(input(exclusions: [rightColumn]));
       final resultRect = footprintRectFor(result);
@@ -69,9 +75,12 @@ void main() {
       expect(resultRect.overlaps(rightColumn), isFalse);
     });
 
-    test('no valid candidate anywhere -> falls back to least-overlap, never throws', () {
+    test(
+        'no valid candidate anywhere -> falls back to least-overlap, never throws',
+        () {
       // Cover the ENTIRE screen -- every candidate collides.
-      final everything = Rect.fromLTWH(0, 0, screenSize.width, screenSize.height);
+      final everything =
+          Rect.fromLTWH(0, 0, screenSize.width, screenSize.height);
 
       expect(
         () => computeRestingPosition(input(exclusions: [everything])),
@@ -84,12 +93,16 @@ void main() {
       expect(rect.top, greaterThanOrEqualTo(-0.01));
     });
 
-    test('previous position preserved when still safe (no jitter/oscillation)', () {
-      final safePrevious = const Offset(8, 400); // mid-right-ish, arbitrary safe spot
-      final result = computeRestingPosition(input(previousPosition: safePrevious));
+    test('previous position preserved when still safe (no jitter/oscillation)',
+        () {
+      final safePrevious =
+          const Offset(8, 400); // mid-right-ish, arbitrary safe spot
+      final result =
+          computeRestingPosition(input(previousPosition: safePrevious));
 
       expect(result, safePrevious,
-          reason: 'must not move away from an already-safe position on every rebuild');
+          reason:
+              'must not move away from an already-safe position on every rebuild');
     });
 
     test('previous position abandoned once it starts colliding', () {
@@ -114,8 +127,10 @@ void main() {
       expect(rect.bottom, lessThanOrEqualTo(screenSize.height + 0.01));
     });
 
-    test('verticalReserve keeps a bottom-anchored candidate further from the '
-        'bottom edge, for a caller whose real anchor is taller than avatarFootprint', () {
+    test(
+        'verticalReserve keeps a bottom-anchored candidate further from the '
+        'bottom edge, for a caller whose real anchor is taller than avatarFootprint',
+        () {
       final withoutReserve = computeRestingPosition(input());
       final withReserve = computeRestingPosition(IvePlacementInput(
         screenSize: screenSize,
@@ -125,7 +140,8 @@ void main() {
       ));
 
       expect(withReserve.dy, lessThan(withoutReserve.dy),
-          reason: 'a taller verticalReserve must push a bottom-anchored candidate '
+          reason:
+              'a taller verticalReserve must push a bottom-anchored candidate '
               'HIGHER (smaller dy/top) to leave more room below it -- regression: a '
               'candidate computed only from avatarFootprint (ignoring a taller real '
               'anchor, e.g. a speech bubble stacked above it) let the actual '
@@ -135,7 +151,8 @@ void main() {
               'hit it to drag it)');
     });
 
-    group('footprintOffsetY (COMMERCIAL-EXPERIENCE-CLOSURE-17A regression)', () {
+    group('footprintOffsetY (COMMERCIAL-EXPERIENCE-CLOSURE-17A regression)',
+        () {
       // Physically reproduced: an anchor sits far ABOVE where the avatar
       // itself actually renders (anchor.dy + offsetY), because the anchor
       // is the top of a taller, partly-invisible column. Without
@@ -259,7 +276,8 @@ void main() {
       });
     });
 
-    test('clamp fallback still respects verticalReserve, not just avatarFootprint '
+    test(
+        'clamp fallback still respects verticalReserve, not just avatarFootprint '
         '(Codex final audit, P2 ACCEPTED)', () {
       // Force the fallback-clamp path (everything collides) on a viewport
       // short enough that footprint + reserve barely fits, so the clamp's
@@ -270,7 +288,9 @@ void main() {
         safeArea: safeArea,
         avatarFootprint: footprint,
         verticalReserve: 240,
-        exclusions: [Rect.fromLTWH(0, 0, shortScreen.width, shortScreen.height)],
+        exclusions: [
+          Rect.fromLTWH(0, 0, shortScreen.width, shortScreen.height)
+        ],
       ));
 
       final maxAllowedDy = shortScreen.height - footprint.height - 240;
@@ -295,7 +315,8 @@ void main() {
       final rect = footprintRectFor(result);
 
       expect(rect.top, greaterThanOrEqualTo(inset.top - 0.01));
-      expect(rect.bottom, lessThanOrEqualTo(screenSize.height - inset.bottom + 0.01));
+      expect(rect.bottom,
+          lessThanOrEqualTo(screenSize.height - inset.bottom + 0.01));
     });
   });
 }

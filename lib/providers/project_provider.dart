@@ -11,8 +11,8 @@ import '../core/utils/app_exceptions.dart';
 import '../data/services/content_localization_service.dart';
 
 // ── Service provider — injetável em testes via override ───────────────────────
-final projectServiceProvider =
-    Provider<ProjectServiceInterface>((ref) => ProjectService(localizer: ref.watch(rowLocalizerProvider)));
+final projectServiceProvider = Provider<ProjectServiceInterface>(
+    (ref) => ProjectService(localizer: ref.watch(rowLocalizerProvider)));
 
 // ══════════════════════════════════════════════════════════════════════════════
 // FONTE ÚNICA DE VERDADE

@@ -74,7 +74,8 @@ void main() {
       verify(() => svc.fetchAll()).called(1);
     });
 
-    test('projectsProvider é o mesmo provider que projectsNotifierProvider', () {
+    test('projectsProvider é o mesmo provider que projectsNotifierProvider',
+        () {
       // Garante que o alias aponta para a mesma instância
       expect(identical(projectsProvider, projectsNotifierProvider), isTrue);
     });
@@ -142,8 +143,7 @@ void main() {
       await container.read(projectsNotifierProvider.future);
 
       IveEvent? received;
-      final sub =
-          IveEventBus.instance.stream.listen((e) => received = e);
+      final sub = IveEventBus.instance.stream.listen((e) => received = e);
 
       await container
           .read(projectsNotifierProvider.notifier)
@@ -186,8 +186,7 @@ void main() {
         fetchCountB++;
         return fetchCountB == 1 ? [original] : [updated];
       });
-      when(() => svc.update('p1', any()))
-          .thenAnswer((_) async => updated);
+      when(() => svc.update('p1', any())).thenAnswer((_) async => updated);
 
       final container = _container(svc);
       addTearDown(container.dispose);
@@ -245,9 +244,8 @@ void main() {
       await container.read(projectsNotifierProvider.future);
 
       // Não aguarda — verifica estado otimista imediato
-      final future = container
-          .read(projectsNotifierProvider.notifier)
-          .delete('p1');
+      final future =
+          container.read(projectsNotifierProvider.notifier).delete('p1');
 
       // Imediatamente após chamar delete, o estado já não tem 'p1'
       final stateOptimistic =
@@ -291,9 +289,7 @@ void main() {
       IveEvent? received;
       final sub = IveEventBus.instance.stream.listen((e) => received = e);
 
-      await container
-          .read(projectsNotifierProvider.notifier)
-          .delete('p1');
+      await container.read(projectsNotifierProvider.notifier).delete('p1');
 
       await Future<void>.delayed(Duration.zero);
       await sub.cancel();

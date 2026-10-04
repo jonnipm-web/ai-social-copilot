@@ -40,7 +40,8 @@ import 'package:ai_social_copilot/shared/widgets/ive_overlay.dart';
 // plain test process. Session is a mocktail Mock (a plain data holder
 // class here — only object identity/non-nullness matters, no behavior
 // to stub).
-class MockDiagnosticLoggerService extends Mock implements DiagnosticLoggerService {}
+class MockDiagnosticLoggerService extends Mock
+    implements DiagnosticLoggerService {}
 
 class MockSession extends Mock implements Session {}
 
@@ -53,8 +54,9 @@ Profile _fakeProfile() => Profile(
       updatedAt: DateTime(2026, 1, 1),
     );
 
-AuthState _authState({Session? session}) =>
-    AuthState(session != null ? AuthChangeEvent.signedIn : AuthChangeEvent.signedOut, session);
+AuthState _authState({Session? session}) => AuthState(
+    session != null ? AuthChangeEvent.signedIn : AuthChangeEvent.signedOut,
+    session);
 
 // COMMERCIAL-EXPERIENCE-CLOSURE-17A — same reason test E already gives:
 // a plain message with no activeIssue renders the bubble's fixed
@@ -67,13 +69,14 @@ AuthState _authState({Session? session}) =>
 // (rendered the same regardless of which branch follows it), not this
 // specific issue's content.
 IveIssue _testIssue() => IveIssue(
-      errorCode:        'TEST_ISSUE',
-      stage:            IveIssueStage.unknown,
-      severity:         IveIssueSeverity.warning,
-      recoverable:      true,
-      userMessage:      'irrelevant -- _IveBubble renders IveState.message, not this',
+      errorCode: 'TEST_ISSUE',
+      stage: IveIssueStage.unknown,
+      severity: IveIssueSeverity.warning,
+      recoverable: true,
+      userMessage:
+          'irrelevant -- _IveBubble renders IveState.message, not this',
       technicalMessage: 'irrelevant',
-      occurredAt:       DateTime(2026, 1, 1),
+      occurredAt: DateTime(2026, 1, 1),
       recommendedActions: const [
         IveIssueAction(label: 'Tentar novamente', actionKey: 'retry'),
       ],
@@ -107,10 +110,12 @@ void main() {
   // constructor doc). A-D below only exercise auth-gating/rendering, not
   // chat-opening, so a plain unattached key is enough to satisfy the
   // constructor without changing what these tests actually verify.
-  Widget harness({required Override profileOverride, required Override authOverride}) {
+  Widget harness(
+      {required Override profileOverride, required Override authOverride}) {
     return ProviderScope(
       overrides: [
-        diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+        diagnosticLoggerProvider
+            .overrideWithValue(MockDiagnosticLoggerService()),
         profileOverride,
         authOverride,
       ],
@@ -130,10 +135,13 @@ void main() {
     );
   }
 
-  testWidgets('A. não-autenticado (sessão e profile null): nenhuma superfície operacional da IVE é exibida', (tester) async {
+  testWidgets(
+      'A. não-autenticado (sessão e profile null): nenhuma superfície operacional da IVE é exibida',
+      (tester) async {
     await tester.pumpWidget(harness(
       profileOverride: currentProfileProvider.overrideWith((ref) async => null),
-      authOverride: authStateProvider.overrideWith((ref) => Stream.value(_authState())),
+      authOverride:
+          authStateProvider.overrideWith((ref) => Stream.value(_authState())),
     ));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
@@ -144,11 +152,15 @@ void main() {
     expect(find.text('Conversar com a IVE'), findsNothing);
   });
 
-  testWidgets('B. auth loading/desconhecido (nem sessão nem profile resolvem): nenhuma superfície operacional da IVE é exibida (fail-closed)', (tester) async {
+  testWidgets(
+      'B. auth loading/desconhecido (nem sessão nem profile resolvem): nenhuma superfície operacional da IVE é exibida (fail-closed)',
+      (tester) async {
     // Nunca resolve — simula o estado "carregando/desconhecido" em ambos.
     await tester.pumpWidget(harness(
-      profileOverride: currentProfileProvider.overrideWith((ref) => Completer<Profile?>().future),
-      authOverride: authStateProvider.overrideWith((ref) => const Stream.empty()),
+      profileOverride: currentProfileProvider
+          .overrideWith((ref) => Completer<Profile?>().future),
+      authOverride:
+          authStateProvider.overrideWith((ref) => const Stream.empty()),
     ));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
@@ -157,10 +169,14 @@ void main() {
     expect(find.bySemanticsLabel('IVE, assistente executiva'), findsNothing);
   });
 
-  testWidgets('C. autenticado (sessão e profile resolvidos): a IVE global canônica permanece disponível', (tester) async {
+  testWidgets(
+      'C. autenticado (sessão e profile resolvidos): a IVE global canônica permanece disponível',
+      (tester) async {
     await tester.pumpWidget(harness(
-      profileOverride: currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-      authOverride: authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+      profileOverride:
+          currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
+      authOverride: authStateProvider.overrideWith(
+          (ref) => Stream.value(_authState(session: MockSession()))),
     ));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
@@ -179,10 +195,14 @@ void main() {
   // janela: profile ainda "autenticado" (stale), mas authStateProvider já
   // reporta session null. O overlay deve desaparecer IMEDIATAMENTE, sem
   // esperar a invalidação do profile alcançar o mesmo estado.
-  testWidgets('D. corrida de sign-out: sessão já null mas profile ainda stale (não-invalidado) — overlay some mesmo assim', (tester) async {
+  testWidgets(
+      'D. corrida de sign-out: sessão já null mas profile ainda stale (não-invalidado) — overlay some mesmo assim',
+      (tester) async {
     await tester.pumpWidget(harness(
-      profileOverride: currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-      authOverride: authStateProvider.overrideWith((ref) => Stream.value(_authState())), // session: null
+      profileOverride:
+          currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
+      authOverride: authStateProvider
+          .overrideWith((ref) => Stream.value(_authState())), // session: null
     ));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
@@ -222,28 +242,33 @@ void main() {
 
       final wideIssueState = IveState(
         bubbleVisible: true,
-        message: 'Não consegui analisar "Apresentação Profissional do Projeto".',
+        message:
+            'Não consegui analisar "Apresentação Profissional do Projeto".',
         activeIssue: IveIssue(
-          errorCode:        'KNOWLEDGE_ANALYSIS_FAILED',
-          stage:            IveIssueStage.analysis,
-          severity:         IveIssueSeverity.error,
-          recoverable:      true,
-          userMessage:      'Não consegui analisar "Apresentação Profissional do Projeto".',
+          errorCode: 'KNOWLEDGE_ANALYSIS_FAILED',
+          stage: IveIssueStage.analysis,
+          severity: IveIssueSeverity.error,
+          recoverable: true,
+          userMessage:
+              'Não consegui analisar "Apresentação Profissional do Projeto".',
           technicalMessage: 'timeout',
-          occurredAt:       DateTime(2026, 1, 1),
+          occurredAt: DateTime(2026, 1, 1),
           recommendedActions: const [
             IveIssueAction(label: 'Tentar novamente', actionKey: 'retry'),
-            IveIssueAction(label: 'Ver detalhes',     actionKey: 'view_details'),
+            IveIssueAction(label: 'Ver detalhes', actionKey: 'view_details'),
           ],
         ),
       );
 
       await tester.pumpWidget(ProviderScope(
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
-          iveProvider.overrideWith((ref) => _FixedIveNotifier(ref, wideIssueState)),
+          authStateProvider.overrideWith(
+              (ref) => Stream.value(_authState(session: MockSession()))),
+          iveProvider
+              .overrideWith((ref) => _FixedIveNotifier(ref, wideIssueState)),
         ],
         child: MaterialApp(
           locale: const Locale('pt'),
@@ -268,12 +293,14 @@ void main() {
       // via debugDumpApp during investigation), so match it directly by
       // its Semantics properties instead of relying on the semantics tree.
       final avatarFinder = find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
+        (w) =>
+            w is Semantics && w.properties.label == 'IVE, assistente executiva',
       );
       expect(avatarFinder, findsOneWidget);
 
       final avatarRect = tester.getRect(avatarFinder);
-      final viewport = Offset.zero & tester.view.physicalSize / tester.view.devicePixelRatio;
+      final viewport =
+          Offset.zero & tester.view.physicalSize / tester.view.devicePixelRatio;
 
       // Scoped to the exact regression this mission verified live: the
       // avatar rendering past the RIGHT edge, unreachable, at real desktop
@@ -328,15 +355,19 @@ void main() {
         navigatorKey: navigatorKey,
         initialLocation: '/',
         routes: [
-          GoRoute(path: '/', builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+          GoRoute(
+              path: '/',
+              builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
         ],
       );
 
       await tester.pumpWidget(ProviderScope(
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+          authStateProvider.overrideWith(
+              (ref) => Stream.value(_authState(session: MockSession()))),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -355,7 +386,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
 
       final avatarFinder = find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
+        (w) =>
+            w is Semantics && w.properties.label == 'IVE, assistente executiva',
       );
       expect(avatarFinder, findsOneWidget);
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
@@ -369,7 +401,8 @@ void main() {
       // transition to finish and the sheet's content to build.
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 100));
-        expect(tester.takeException(), isNull, reason: 'threw on pump #$i opening the chat sheet');
+        expect(tester.takeException(), isNull,
+            reason: 'threw on pump #$i opening the chat sheet');
       }
 
       expect(find.text(l10n.iveChatAskCta), findsOneWidget);
@@ -390,9 +423,11 @@ void main() {
 
       await tester.pumpWidget(ProviderScope(
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+          authStateProvider.overrideWith(
+              (ref) => Stream.value(_authState(session: MockSession()))),
         ],
         child: MaterialApp(
           locale: const Locale('pt'),
@@ -412,14 +447,16 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       final avatarFinder = find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
+        (w) =>
+            w is Semantics && w.properties.label == 'IVE, assistente executiva',
       );
       expect(avatarFinder, findsOneWidget);
 
       await tester.tap(avatarFinder, warnIfMissed: false);
       for (var i = 0; i < 5; i++) {
         await tester.pump();
-        expect(tester.takeException(), isNull, reason: 'threw on pump #$i with navigatorKey never attached');
+        expect(tester.takeException(), isNull,
+            reason: 'threw on pump #$i with navigatorKey never attached');
       }
       expect(find.text('Pergunte à IVE'), findsNothing);
     },
@@ -452,7 +489,8 @@ void main() {
                 child: ElevatedButton(
                   onPressed: () => showModalBottomSheet(
                     context: context,
-                    builder: (_) => const SizedBox(height: 200, child: Center(child: Text('Salvar'))),
+                    builder: (_) => const SizedBox(
+                        height: 200, child: Center(child: Text('Salvar'))),
                   ),
                   child: const Text('open unrelated sheet'),
                 ),
@@ -464,9 +502,11 @@ void main() {
 
       await tester.pumpWidget(ProviderScope(
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+          authStateProvider.overrideWith(
+              (ref) => Stream.value(_authState(session: MockSession()))),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -485,9 +525,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       final avatarFinder = find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
+        (w) =>
+            w is Semantics && w.properties.label == 'IVE, assistente executiva',
       );
-      expect(avatarFinder, findsOneWidget, reason: 'IVE avatar visible before the unrelated sheet opens');
+      expect(avatarFinder, findsOneWidget,
+          reason: 'IVE avatar visible before the unrelated sheet opens');
 
       // Not pumpAndSettle: IveAvatar's ring-pulse animation never settles
       // on its own (same caveat as test F above) -- bounded pumps instead.
@@ -496,16 +538,19 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
 
-      expect(avatarFinder, findsNothing, reason: 'IVE avatar must hide while ANY modal covers the screen');
+      expect(avatarFinder, findsNothing,
+          reason: 'IVE avatar must hide while ANY modal covers the screen');
       expect(find.text('Salvar'), findsOneWidget);
 
       // Close it -- IveOverlay must reappear.
-      Navigator.of(tester.element(find.text('Salvar')), rootNavigator: true).pop();
+      Navigator.of(tester.element(find.text('Salvar')), rootNavigator: true)
+          .pop();
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
 
-      expect(avatarFinder, findsOneWidget, reason: 'IVE avatar must reappear once the modal closes');
+      expect(avatarFinder, findsOneWidget,
+          reason: 'IVE avatar must reappear once the modal closes');
       expect(tester.takeException(), isNull);
     },
   );
@@ -534,9 +579,11 @@ void main() {
     (tester) async {
       await tester.pumpWidget(ProviderScope(
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+          authStateProvider.overrideWith(
+              (ref) => Stream.value(_authState(session: MockSession()))),
         ],
         child: MaterialApp(
           locale: const Locale('pt'),
@@ -553,7 +600,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(find.bySemanticsLabel('IVE, assistente executiva'), findsOneWidget);
+      expect(
+          find.bySemanticsLabel('IVE, assistente executiva'), findsOneWidget);
 
       tester.view.viewInsets = const FakeViewPadding(bottom: 300);
       addTearDown(tester.view.resetViewInsets);
@@ -562,7 +610,8 @@ void main() {
       expect(
         find.bySemanticsLabel('IVE, assistente executiva'),
         findsNothing,
-        reason: 'must hide while a keyboard/bottom inset is showing, not guess a position above it',
+        reason:
+            'must hide while a keyboard/bottom inset is showing, not guess a position above it',
       );
 
       tester.view.viewInsets = FakeViewPadding.zero;
@@ -587,13 +636,16 @@ void main() {
     'J. rolagem ativa sem bolha aberta: avatar recua (opacidade/escala reduzidas) mas nunca desaparece; volta ao normal ao parar',
     (tester) async {
       await tester.pumpWidget(harness(
-        profileOverride: currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-        authOverride: authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+        profileOverride:
+            currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
+        authOverride: authStateProvider.overrideWith(
+            (ref) => Stream.value(_authState(session: MockSession()))),
       ));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      final opacityFinder = find.byKey(const ValueKey('iveScrollCompactionOpacity'));
+      final opacityFinder =
+          find.byKey(const ValueKey('iveScrollCompactionOpacity'));
       expect(
         tester.widget<AnimatedOpacity>(opacityFinder).opacity,
         1.0,
@@ -604,11 +656,13 @@ void main() {
       await tester.pump();
 
       expect(find.bySemanticsLabel('IVE, assistente executiva'), findsOneWidget,
-          reason: 'recedes during scroll, but must never fully disappear (unlike the keyboard/modal cases)');
+          reason:
+              'recedes during scroll, but must never fully disappear (unlike the keyboard/modal cases)');
       expect(
         tester.widget<AnimatedOpacity>(opacityFinder).opacity,
         lessThan(1.0),
-        reason: 'visually recedes while content is actively scrolling underneath it',
+        reason:
+            'visually recedes while content is actively scrolling underneath it',
       );
 
       iveScrollingNotifier.value = false;
@@ -659,9 +713,11 @@ void main() {
 
       await tester.pumpWidget(ProviderScope(
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+          authStateProvider.overrideWith(
+              (ref) => Stream.value(_authState(session: MockSession()))),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -680,10 +736,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       final avatarFinder = find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
+        (w) =>
+            w is Semantics && w.properties.label == 'IVE, assistente executiva',
       );
       expect(avatarFinder, findsNothing,
-          reason: 'must already be hidden: the CTA mounts in the same frame as the route');
+          reason:
+              'must already be hidden: the CTA mounts in the same frame as the route');
       expect(find.text('Perguntar à IVE sobre esta ação'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
@@ -717,15 +775,19 @@ void main() {
         initialLocation: '/',
         observers: [IveRouteObserver()],
         routes: [
-          GoRoute(path: '/', builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+          GoRoute(
+              path: '/',
+              builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
         ],
       );
 
       await tester.pumpWidget(ProviderScope(
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+          authStateProvider.overrideWith(
+              (ref) => Stream.value(_authState(session: MockSession()))),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -741,18 +803,22 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       final avatarFinder = find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
+        (w) =>
+            w is Semantics && w.properties.label == 'IVE, assistente executiva',
       );
       expect(avatarFinder, findsOneWidget);
       final rect = tester.getRect(avatarFinder);
       expect(rect.right, closeTo(400, 16),
-          reason: 'no exclusions -> the bottom-right candidate, near the right edge');
+          reason:
+              'no exclusions -> the bottom-right candidate, near the right edge');
       expect(rect.bottom, greaterThan(400),
-          reason: 'no exclusions -> still the BOTTOM-right candidate (lower half '
+          reason:
+              'no exclusions -> still the BOTTOM-right candidate (lower half '
               'of the screen), not pushed all the way up');
       expect(rect.top, greaterThanOrEqualTo(0));
       expect(rect.bottom, lessThanOrEqualTo(800.5),
-          reason: 'regression guard: the whole bubble+avatar column (the bubble '
+          reason:
+              'regression guard: the whole bubble+avatar column (the bubble '
               'is always laid out above the avatar, even hidden) must stay '
               'on-screen -- previously verticalReserve was missing and the '
               'avatar rendered fully off the bottom edge, unreachable by any '
@@ -784,16 +850,19 @@ void main() {
         routes: [
           GoRoute(
             path: '/',
-            builder: (_, __) => _ToggleableBottomRightBlock(blockRect: blockRect),
+            builder: (_, __) =>
+                _ToggleableBottomRightBlock(blockRect: blockRect),
           ),
         ],
       );
 
       await tester.pumpWidget(ProviderScope(
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+          authStateProvider.overrideWith(
+              (ref) => Stream.value(_authState(session: MockSession()))),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -809,7 +878,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       final avatarFinder = find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
+        (w) =>
+            w is Semantics && w.properties.label == 'IVE, assistente executiva',
       );
       final restRect = tester.getRect(avatarFinder);
       blockRect.value = restRect.inflate(24);
@@ -829,10 +899,12 @@ void main() {
 
       final blockedRect = tester.getRect(avatarFinder);
       expect(blockedRect, isNot(equals(restRect)),
-          reason: 'avatar must move away from the now-blocked corner it was resting in');
+          reason:
+              'avatar must move away from the now-blocked corner it was resting in');
       final blockFinder = find.byKey(const ValueKey('ive-test-block'));
       expect(tester.getRect(blockFinder).overlaps(blockedRect), isFalse,
-          reason: 'must not rest on top of the newly-registered exclusion region');
+          reason:
+              'must not rest on top of the newly-registered exclusion region');
 
       // Turn the block back off. The avatar's current spot is already safe
       // (no exclusions left at all) -- continuity means it stays exactly
@@ -847,10 +919,12 @@ void main() {
       await tester.pump();
 
       expect(tester.takeException(), isNull,
-          reason: 'unmounting (disposing) an IveExclusionRegion must never throw either');
+          reason:
+              'unmounting (disposing) an IveExclusionRegion must never throw either');
       final freedRect = tester.getRect(avatarFinder);
       expect(freedRect, equals(blockedRect),
-          reason: 'no exclusions left -> the already-safe position is kept as-is, no jitter');
+          reason:
+              'no exclusions left -> the already-safe position is kept as-is, no jitter');
     },
   );
 
@@ -890,9 +964,11 @@ void main() {
 
       await tester.pumpWidget(ProviderScope(
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+          authStateProvider.overrideWith(
+              (ref) => Stream.value(_authState(session: MockSession()))),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -909,9 +985,11 @@ void main() {
       await tester.pump(); // let the region's post-frame geometry publish land
 
       final avatarFinder = find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
+        (w) =>
+            w is Semantics && w.properties.label == 'IVE, assistente executiva',
       );
-      final dropTarget = tester.getRect(find.byKey(const ValueKey('ive-test-drop-target')));
+      final dropTarget =
+          tester.getRect(find.byKey(const ValueKey('ive-test-drop-target')));
 
       // Drag the avatar from its resting corner to the center of the
       // exclusion region and release it there.
@@ -926,7 +1004,8 @@ void main() {
       expect(tester.takeException(), isNull);
       final finalRect = tester.getRect(avatarFinder);
       expect(finalRect.overlaps(dropTarget), isFalse,
-          reason: 'dropped directly onto essential content -- must be corrected on release, '
+          reason:
+              'dropped directly onto essential content -- must be corrected on release, '
               'not left permanently blocking it');
     },
   );
@@ -947,7 +1026,8 @@ void main() {
       find.byWidgetPredicate((w) => w.runtimeType.toString() == '_IveBubble');
 
   Finder avatarFinder() => find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
+        (w) =>
+            w is Semantics && w.properties.label == 'IVE, assistente executiva',
       );
 
   testWidgets(
@@ -963,8 +1043,8 @@ void main() {
       final navigatorKey = GlobalKey<NavigatorState>();
       final blockRect = ValueNotifier<Rect?>(null);
       addTearDown(blockRect.dispose);
-      final shortBubbleState =
-          IveState(bubbleVisible: true, message: 'Oi!', activeIssue: _testIssue());
+      final shortBubbleState = IveState(
+          bubbleVisible: true, message: 'Oi!', activeIssue: _testIssue());
 
       final router = GoRouter(
         navigatorKey: navigatorKey,
@@ -973,17 +1053,21 @@ void main() {
         routes: [
           GoRoute(
             path: '/',
-            builder: (_, __) => _ToggleableBottomRightBlock(blockRect: blockRect),
+            builder: (_, __) =>
+                _ToggleableBottomRightBlock(blockRect: blockRect),
           ),
         ],
       );
 
       await tester.pumpWidget(ProviderScope(
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
-          iveProvider.overrideWith((ref) => _FixedIveNotifier(ref, shortBubbleState)),
+          authStateProvider.overrideWith(
+              (ref) => Stream.value(_authState(session: MockSession()))),
+          iveProvider
+              .overrideWith((ref) => _FixedIveNotifier(ref, shortBubbleState)),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -1020,10 +1104,12 @@ void main() {
       expect(tester.takeException(), isNull);
       final newBubbleRect = tester.getRect(bubbleFinder());
       final newAvatarRect = tester.getRect(avatarFinder());
-      final blockActualRect = tester.getRect(find.byKey(const ValueKey('ive-test-block')));
+      final blockActualRect =
+          tester.getRect(find.byKey(const ValueKey('ive-test-block')));
 
       expect(blockActualRect.overlaps(newBubbleRect), isFalse,
-          reason: 'the bubble itself -- not just the 56x56 avatar -- must steer clear of '
+          reason:
+              'the bubble itself -- not just the 56x56 avatar -- must steer clear of '
               'a registered exclusion region; the pre-fix engine only ever tested the '
               'avatar-sized footprint, so a block positioned exactly like this one would '
               'have been incorrectly accepted as safe');
@@ -1043,22 +1129,28 @@ void main() {
       final navigatorKey = GlobalKey<NavigatorState>();
       _FixedIveNotifier? notifier;
       final withBubble = IveState(
-          bubbleVisible: true, message: 'Uma mensagem qualquer.', activeIssue: _testIssue());
+          bubbleVisible: true,
+          message: 'Uma mensagem qualquer.',
+          activeIssue: _testIssue());
 
       final router = GoRouter(
         navigatorKey: navigatorKey,
         initialLocation: '/',
         observers: [IveRouteObserver()],
         routes: [
-          GoRoute(path: '/', builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+          GoRoute(
+              path: '/',
+              builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
         ],
       );
 
       await tester.pumpWidget(ProviderScope(
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+          authStateProvider.overrideWith(
+              (ref) => Stream.value(_authState(session: MockSession()))),
           iveProvider.overrideWith((ref) {
             notifier = _FixedIveNotifier(ref, withBubble);
             return notifier!;
@@ -1097,7 +1189,8 @@ void main() {
       expect(tester.takeException(), isNull);
       final withoutBubbleRect = tester.getRect(avatarFinder());
       expect(withoutBubbleRect, equals(withBubbleRect),
-          reason: 'continuity: the corner the bubble+avatar rested in is still safe using '
+          reason:
+              'continuity: the corner the bubble+avatar rested in is still safe using '
               'just the avatar footprint alone, so it must not jump/spring anywhere once '
               'the bubble closes -- same anti-jitter guarantee the pure engine tests '
               'already prove at the algorithm level, now confirmed through the real '
@@ -1117,23 +1210,27 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final navigatorKey = GlobalKey<NavigatorState>();
-    final longState =
-        IveState(bubbleVisible: true, message: message, activeIssue: _testIssue());
+    final longState = IveState(
+        bubbleVisible: true, message: message, activeIssue: _testIssue());
 
     final router = GoRouter(
       navigatorKey: navigatorKey,
       initialLocation: '/',
       observers: [IveRouteObserver()],
       routes: [
-        GoRoute(path: '/', builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+        GoRoute(
+            path: '/',
+            builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
       ],
     );
 
     await tester.pumpWidget(ProviderScope(
       overrides: [
-        diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+        diagnosticLoggerProvider
+            .overrideWithValue(MockDiagnosticLoggerService()),
         currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-        authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+        authStateProvider.overrideWith(
+            (ref) => Stream.value(_authState(session: MockSession()))),
         iveProvider.overrideWith((ref) => _FixedIveNotifier(ref, longState)),
       ],
       child: MaterialApp.router(
@@ -1165,12 +1262,15 @@ void main() {
 
     final bubbleRect = tester.getRect(bubbleFinder());
     expect(bubbleRect.height, lessThan(260),
-        reason: 'message: $message -- bounded by maxLines: 5, must not grow unbounded '
+        reason:
+            'message: $message -- bounded by maxLines: 5, must not grow unbounded '
             'regardless of message length');
 
     final avatarRect = tester.getRect(avatarFinder());
-    expect(avatarRect.bottom, lessThanOrEqualTo(800.5), reason: 'message: $message');
-    expect(avatarRect.top, greaterThanOrEqualTo(-0.5), reason: 'message: $message');
+    expect(avatarRect.bottom, lessThanOrEqualTo(800.5),
+        reason: 'message: $message');
+    expect(avatarRect.top, greaterThanOrEqualTo(-0.5),
+        reason: 'message: $message');
   }
 
   testWidgets(
@@ -1208,10 +1308,12 @@ class _ToggleableBottomRightBlock extends StatefulWidget {
   final ValueListenable<Rect?> blockRect;
 
   @override
-  State<_ToggleableBottomRightBlock> createState() => _ToggleableBottomRightBlockState();
+  State<_ToggleableBottomRightBlock> createState() =>
+      _ToggleableBottomRightBlockState();
 }
 
-class _ToggleableBottomRightBlockState extends State<_ToggleableBottomRightBlock> {
+class _ToggleableBottomRightBlockState
+    extends State<_ToggleableBottomRightBlock> {
   bool _blocked = false;
 
   @override

@@ -26,7 +26,7 @@ class IveAnalysisScreen extends ConsumerStatefulWidget {
 }
 
 class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
-  final _ctrl  = TextEditingController();
+  final _ctrl = TextEditingController();
   final _focus = FocusNode();
 
   OpportunityLabItem? _pendingInsight;
@@ -52,21 +52,22 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
     if (question.isEmpty) return;
     _focus.unfocus();
 
-    final ctxValue = ref.read(iveContextDataProvider(widget.projectId)).valueOrNull;
+    final ctxValue =
+        ref.read(iveContextDataProvider(widget.projectId)).valueOrNull;
     CopilotContextData context = ctxValue != null
         ? CopilotContextData.fromIveContext(ctxValue)
         : const CopilotContextData();
     context = context.withIdentity(IveInteractionRequest(
-      projectId:        widget.projectId,
-      sourceModule:     'ive_analysis',
+      projectId: widget.projectId,
+      sourceModule: 'ive_analysis',
       sourceEntityType: 'project',
-      sourceEntityId:   widget.projectId,
-      operationType:    IveOperationType.analyze,
+      sourceEntityId: widget.projectId,
+      operationType: IveOperationType.analyze,
     ));
 
     setState(() {
       _pendingInsight = null;
-      _justSaved      = false;
+      _justSaved = false;
     });
     _ctrl.clear();
 
@@ -77,25 +78,26 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
     final copilotState = ref.read(contextCopilotProvider(_convKey));
     final lastTurn = copilotState.turns.lastWhere(
       (t) => t.role == 'assistant',
-      orElse: () => CopilotTurn(role: 'assistant', content: '', timestamp: DateTime.now()),
+      orElse: () => CopilotTurn(
+          role: 'assistant', content: '', timestamp: DateTime.now()),
     );
 
     if (mounted && lastTurn.content.isNotEmpty) {
       final uid = Supabase.instance.client.auth.currentUser?.id ?? '';
       setState(() {
         _pendingInsight = OpportunityLabItem(
-          id:          '',
-          userId:      uid,
-          projectId:   widget.projectId,
-          title:       _titleFrom(question),
+          id: '',
+          userId: uid,
+          projectId: widget.projectId,
+          title: _titleFrom(question),
           description: lastTurn.content,
-          confidence:  lastTurn.confidence,
-          sources:     lastTurn.sources,
+          confidence: lastTurn.confidence,
+          sources: lastTurn.sources,
           actionSteps: lastTurn.actionSuggestion != null
               ? [lastTurn.actionSuggestion!.label]
               : [],
-          origin:      AppConstants.originIveAnalysis,
-          createdAt:   lastTurn.timestamp,
+          origin: AppConstants.originIveAnalysis,
+          createdAt: lastTurn.timestamp,
         );
       });
     }
@@ -108,14 +110,18 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
     final copilotState = ref.read(contextCopilotProvider(_convKey));
     final lastTurn = copilotState.turns.lastWhere(
       (t) => t.role == 'assistant',
-      orElse: () => CopilotTurn(role: 'assistant', content: '', timestamp: DateTime.now()),
+      orElse: () => CopilotTurn(
+          role: 'assistant', content: '', timestamp: DateTime.now()),
     );
     if (lastTurn.content.isEmpty) return;
 
-    final question = copilotState.turns.lastWhere(
-      (t) => t.role == 'user',
-      orElse: () => CopilotTurn(role: 'user', content: '', timestamp: DateTime.now()),
-    ).content;
+    final question = copilotState.turns
+        .lastWhere(
+          (t) => t.role == 'user',
+          orElse: () =>
+              CopilotTurn(role: 'user', content: '', timestamp: DateTime.now()),
+        )
+        .content;
 
     final saved = await ref
         .read(insightNotifierProvider(widget.projectId).notifier)
@@ -127,20 +133,21 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
     if (saved != null) {
       setState(() {
         _pendingInsight = null;
-        _justSaved      = true;
+        _justSaved = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:         Text(t.insightSaved),
+        content: Text(t.insightSaved),
         backgroundColor: const Color(0xFF6BCB77),
-        duration:        const Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ));
     } else {
       final error = ref.read(insightNotifierProvider(widget.projectId)).error;
       final isQuota = error == 'quota_exceeded';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:         Text(isQuota ? t.insightQuotaExceeded : t.insightAddToActionsError),
+        content:
+            Text(isQuota ? t.insightQuotaExceeded : t.insightAddToActionsError),
         backgroundColor: Colors.red,
-        duration:        const Duration(seconds: 3),
+        duration: const Duration(seconds: 3),
       ));
     }
   }
@@ -153,15 +160,15 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
     if (!mounted) return;
     if (action != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:         Text(t.insightAddedToActions),
+        content: Text(t.insightAddedToActions),
         backgroundColor: const Color(0xFF6C63FF),
-        duration:        const Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content:         Text(t.insightAddToActionsError),
+        content: Text(t.insightAddToActionsError),
         backgroundColor: Colors.red,
-        duration:        const Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ));
     }
   }
@@ -178,14 +185,16 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final t            = AppLocalizations.of(context)!;
+    final t = AppLocalizations.of(context)!;
     final copilotState = ref.watch(contextCopilotProvider(_convKey));
     final insightState = ref.watch(insightNotifierProvider(widget.projectId));
-    final profile      = ref.watch(currentProfileProvider).valueOrNull;
-    final isPro        = profile?.isPro ?? false;
-    final blocked      = _isQuotaBlocked(insightState, isPro);
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
+    final isPro = profile?.isPro ?? false;
+    final blocked = _isQuotaBlocked(insightState, isPro);
 
-    final projectName  = ref.watch(projectsNotifierProvider).valueOrNull
+    final projectName = ref
+            .watch(projectsNotifierProvider)
+            .valueOrNull
             ?.where((p) => p.id == widget.projectId)
             .map((p) => p.name)
             .firstOrNull ??
@@ -197,8 +206,9 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
         backgroundColor: const Color(0xFF0F0F1A),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppConstants.routeHome),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppConstants.routeHome),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         title: Column(
@@ -215,7 +225,8 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
           IconButton(
             icon: insightState.loading
                 ? const SizedBox(
-                    width: 18, height: 18,
+                    width: 18,
+                    height: 18,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Color(0xFF6C63FF)))
                 : const Icon(Icons.refresh_rounded, color: Color(0xFF6C63FF)),
@@ -225,31 +236,33 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
       ),
       drawer: const AppDrawer(),
       body: RefreshIndicator(
-        color:           const Color(0xFF6C63FF),
+        color: const Color(0xFF6C63FF),
         backgroundColor: const Color(0xFF1A1A2E),
-        onRefresh:       _refresh,
+        onRefresh: _refresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
-            16, 16, 16,
+            16,
+            16,
+            16,
             16 + MediaQuery.of(context).padding.bottom,
           ),
           children: [
             if (!isPro)
               _QuotaBadge(
-                used:    insightState.monthCount,
-                max:     AppConstants.insightFreeMonthlyLimit,
+                used: insightState.monthCount,
+                max: AppConstants.insightFreeMonthlyLimit,
                 blocked: blocked,
-                t:       t,
+                t: t,
               ),
             if (!isPro) const SizedBox(height: 12),
             _InputCard(
-              ctrl:    _ctrl,
-              focus:   _focus,
+              ctrl: _ctrl,
+              focus: _focus,
               loading: copilotState.loading,
               blocked: blocked,
-              onSend:  () => _send(blocked),
-              t:       t,
+              onSend: () => _send(blocked),
+              t: t,
             ),
             if (copilotState.loading) ...[
               const SizedBox(height: 16),
@@ -258,8 +271,8 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
             if (!copilotState.loading && _pendingInsight != null) ...[
               const SizedBox(height: 16),
               InsightCard(
-                item:           _pendingInsight!,
-                elevated:       true,
+                item: _pendingInsight!,
+                elevated: true,
                 onAddToActions: () => _addToActions(_pendingInsight!),
               ),
               const SizedBox(height: 8),
@@ -276,14 +289,15 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
               _HistoryHeader(count: insightState.items.length, t: t),
               const SizedBox(height: 8),
               ...insightState.items.map((item) => InsightCard(
-                    key:           ValueKey(item.id),
-                    item:          item,
+                    key: ValueKey(item.id),
+                    item: item,
                     onAddToActions: () => _addToActions(item),
-                    onDelete:      () async {
+                    onDelete: () async {
                       final ok = await _confirmDelete(context, t);
                       if (ok && mounted) {
                         ref
-                            .read(insightNotifierProvider(widget.projectId).notifier)
+                            .read(insightNotifierProvider(widget.projectId)
+                                .notifier)
                             .delete(item.id);
                       }
                     },
@@ -293,7 +307,7 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
-                  child:   CircularProgressIndicator(color: Color(0xFF6C63FF)),
+                  child: CircularProgressIndicator(color: Color(0xFF6C63FF)),
                 ),
               ),
             if (!insightState.loading &&
@@ -353,15 +367,15 @@ class _QuotaBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color:        color.withValues(alpha: 0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
-        border:       Border.all(color: color.withValues(alpha: 0.35)),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(children: [
         Icon(
           blocked ? Icons.lock_rounded : Icons.info_outline_rounded,
           color: color,
-          size:  14,
+          size: 14,
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -394,19 +408,19 @@ class _InputCard extends StatelessWidget {
     required this.t,
   });
   final TextEditingController ctrl;
-  final FocusNode             focus;
-  final bool                  loading;
-  final bool                  blocked;
-  final VoidCallback          onSend;
-  final AppLocalizations      t;
+  final FocusNode focus;
+  final bool loading;
+  final bool blocked;
+  final VoidCallback onSend;
+  final AppLocalizations t;
 
   @override
   Widget build(BuildContext context) {
     final disabled = loading || blocked;
     return Container(
-      padding:    const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color:        const Color(0xFF1A1A2E),
+        color: const Color(0xFF1A1A2E),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: blocked
@@ -421,7 +435,7 @@ class _InputCard extends StatelessWidget {
             Icon(
               Icons.psychology_alt_rounded,
               color: blocked ? Colors.white24 : const Color(0xFF6C63FF),
-              size:  18,
+              size: 18,
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -436,32 +450,33 @@ class _InputCard extends StatelessWidget {
           ]),
           const SizedBox(height: 12),
           TextField(
-            controller:      ctrl,
-            focusNode:       focus,
-            enabled:         !disabled,
+            controller: ctrl,
+            focusNode: focus,
+            enabled: !disabled,
             style: const TextStyle(color: Colors.white, fontSize: 14),
-            maxLines:        3,
-            minLines:        2,
+            maxLines: 3,
+            minLines: 2,
             textInputAction: TextInputAction.done,
-            onSubmitted:     (_) => onSend(),
+            onSubmitted: (_) => onSend(),
             decoration: InputDecoration(
-              hintText:  blocked ? t.insightQuotaExceeded : t.insightAskHint,
+              hintText: blocked ? t.insightQuotaExceeded : t.insightAskHint,
               hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
-              filled:    true,
+              filled: true,
               fillColor: const Color(0xFF0F0F1A),
               contentPadding: const EdgeInsets.all(12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide:   const BorderSide(color: Color(0xFF333355)),
+                borderSide: const BorderSide(color: Color(0xFF333355)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide:   const BorderSide(color: Color(0xFF6C63FF)),
+                borderSide: const BorderSide(color: Color(0xFF6C63FF)),
               ),
               disabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide:   const BorderSide(color: Color(0xFF222235)),
+                borderSide: const BorderSide(color: Color(0xFF222235)),
               ),
             ),
           ),
@@ -471,9 +486,8 @@ class _InputCard extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: disabled ? null : onSend,
               style: ElevatedButton.styleFrom(
-                backgroundColor: blocked
-                    ? const Color(0xFF6C63FF)
-                    : const Color(0xFF6C63FF),
+                backgroundColor:
+                    blocked ? const Color(0xFF6C63FF) : const Color(0xFF6C63FF),
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: const Color(0xFF333355),
                 disabledForegroundColor: Colors.white38,
@@ -483,16 +497,16 @@ class _InputCard extends StatelessWidget {
               ),
               icon: loading
                   ? const SizedBox(
-                      width: 16, height: 16,
+                      width: 16,
+                      height: 16,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
                   : Icon(
                       blocked ? Icons.lock_rounded : Icons.send_rounded,
                       size: 16,
                     ),
-              label: Text(blocked
-                  ? t.insightUpgradeCta
-                  : t.insightAnalyzeProject),
+              label:
+                  Text(blocked ? t.insightUpgradeCta : t.insightAnalyzeProject),
             ),
           ),
         ],
@@ -510,14 +524,15 @@ class _ThinkingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color:        const Color(0xFF1A1A2E),
+        color: const Color(0xFF1A1A2E),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: const Color(0xFF6C63FF).withValues(alpha: 0.2)),
+        border:
+            Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.2)),
       ),
       child: Row(children: [
         const SizedBox(
-          width: 18, height: 18,
+          width: 18,
+          height: 18,
           child: CircularProgressIndicator(
               strokeWidth: 2, color: Color(0xFF6C63FF)),
         ),
@@ -535,8 +550,8 @@ class _SaveButton extends StatelessWidget {
     required this.onSave,
     required this.t,
   });
-  final bool             saved;
-  final VoidCallback     onSave;
+  final bool saved;
+  final VoidCallback onSave;
   final AppLocalizations t;
 
   @override
@@ -548,13 +563,14 @@ class _SaveButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF6BCB77),
           foregroundColor: Colors.black,
-          disabledBackgroundColor: const Color(0xFF6BCB77).withValues(alpha: 0.4),
+          disabledBackgroundColor:
+              const Color(0xFF6BCB77).withValues(alpha: 0.4),
           disabledForegroundColor: Colors.black38,
           padding: const EdgeInsets.symmetric(vertical: 10),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        icon:  Icon(saved ? Icons.check_rounded : Icons.save_alt_rounded, size: 16),
+        icon: Icon(saved ? Icons.check_rounded : Icons.save_alt_rounded,
+            size: 16),
         label: Text(t.insightSaved),
       ),
     );
@@ -563,7 +579,7 @@ class _SaveButton extends StatelessWidget {
 
 class _ErrorCard extends StatelessWidget {
   const _ErrorCard({required this.onRetry, required this.t});
-  final VoidCallback     onRetry;
+  final VoidCallback onRetry;
   final AppLocalizations t;
 
   @override
@@ -571,10 +587,10 @@ class _ErrorCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color:        const Color(0xFF2A1A1A),
+        color: const Color(0xFF2A1A1A),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-            color: const Color(0xFFFF6B6B).withValues(alpha: 0.4)),
+        border:
+            Border.all(color: const Color(0xFFFF6B6B).withValues(alpha: 0.4)),
       ),
       child: Row(children: [
         const Icon(Icons.error_outline_rounded,
@@ -582,8 +598,7 @@ class _ErrorCard extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: Text(t.insightError,
-              style: const TextStyle(
-                  color: Color(0xFFFF6B6B), fontSize: 13)),
+              style: const TextStyle(color: Color(0xFFFF6B6B), fontSize: 13)),
         ),
         TextButton(
           onPressed: onRetry,
@@ -597,7 +612,7 @@ class _ErrorCard extends StatelessWidget {
 
 class _HistoryHeader extends StatelessWidget {
   const _HistoryHeader({required this.count, required this.t});
-  final int              count;
+  final int count;
   final AppLocalizations t;
 
   @override
@@ -605,15 +620,15 @@ class _HistoryHeader extends StatelessWidget {
     return Row(children: [
       Text(t.insightRecent,
           style: const TextStyle(
-              color:         Colors.white54,
-              fontSize:      12,
-              fontWeight:    FontWeight.bold,
+              color: Colors.white54,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
               letterSpacing: 0.5)),
       const SizedBox(width: 8),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color:        const Color(0xFF6C63FF).withValues(alpha: 0.15),
+          color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(t.insightNOf(count),

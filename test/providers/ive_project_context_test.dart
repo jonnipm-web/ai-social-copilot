@@ -28,7 +28,8 @@ Project _project(String id, String name) => Project(
       updatedAt: DateTime(2026, 1, 1),
     );
 
-EcosystemScore _score(String id, String name, int ecosystemScore) => EcosystemScore(
+EcosystemScore _score(String id, String name, int ecosystemScore) =>
+    EcosystemScore(
       project: _project(id, name),
       opportunityScore: 0,
       strategicFit: 0,
@@ -48,7 +49,9 @@ EcosystemScore _score(String id, String name, int ecosystemScore) => EcosystemSc
 
 void main() {
   group('selectProjectFocus', () {
-    test('Projeto A explícito retorna o contexto do Projeto A, não o de maior score', () {
+    test(
+        'Projeto A explícito retorna o contexto do Projeto A, não o de maior score',
+        () {
       final scores = [
         _score('project-a', 'Projeto A', 20), // menor score
         _score('project-b', 'Projeto B', 90), // maior score do sistema
@@ -63,7 +66,9 @@ void main() {
       expect(result.focus?.project.id, isNot('project-b'));
     });
 
-    test('trocar de Projeto A para Projeto B retorna o contexto de B, sem vazamento de A', () {
+    test(
+        'trocar de Projeto A para Projeto B retorna o contexto de B, sem vazamento de A',
+        () {
       final scores = [
         _score('project-a', 'Projeto A', 50),
         _score('project-b', 'Projeto B', 10),
@@ -79,7 +84,9 @@ void main() {
       expect(resultB.focus?.project.name, isNot(resultA.focus?.project.name));
     });
 
-    test('projectId null preserva o comportamento ecosystem-wide original (maior score)', () {
+    test(
+        'projectId null preserva o comportamento ecosystem-wide original (maior score)',
+        () {
       final scores = [
         _score('project-a', 'Projeto A', 20),
         _score('project-b', 'Projeto B', 90),
@@ -92,7 +99,9 @@ void main() {
       expect(result.focus?.project.id, 'project-b');
     });
 
-    test('projeto pedido não encontrado falha seguro — NUNCA cai para o de maior score', () {
+    test(
+        'projeto pedido não encontrado falha seguro — NUNCA cai para o de maior score',
+        () {
       final scores = [
         _score('project-b', 'Projeto B', 90),
         _score('project-c', 'Projeto C', 70),
@@ -104,20 +113,24 @@ void main() {
       expect(result.focus, isNull);
     });
 
-    test('lista de scores vazia com projectId null retorna foco nulo, não erro', () {
+    test('lista de scores vazia com projectId null retorna foco nulo, não erro',
+        () {
       final result = selectProjectFocus(const [], null);
       expect(result.unavailable, isFalse);
       expect(result.focus, isNull);
     });
 
-    test('lista de scores vazia com projectId explícito é "não encontrado", não "sem projeto"', () {
+    test(
+        'lista de scores vazia com projectId explícito é "não encontrado", não "sem projeto"',
+        () {
       final result = selectProjectFocus(const [], 'project-a');
       expect(result.unavailable, isTrue);
       expect(result.focus, isNull);
     });
   });
 
-  group('selectEcosystemWideFields (Codex Gate 1, round 1, P1 — regressão)', () {
+  group('selectEcosystemWideFields (Codex Gate 1, round 1, P1 — regressão)',
+      () {
     test(
       'com projectId explícito, topProjectsSnapshot e bottleneck NÃO vazam '
       'dados de outros projetos — ficam vazios/nulos',
@@ -138,7 +151,9 @@ void main() {
       },
     );
 
-    test('com projectId null, preserva o resumo ecosystem-wide original (top 3 + gargalo)', () {
+    test(
+        'com projectId null, preserva o resumo ecosystem-wide original (top 3 + gargalo)',
+        () {
       final scores = [
         _score('project-a', 'Projeto A', 20),
         _score('project-b', 'Projeto B', 90),
@@ -153,7 +168,8 @@ void main() {
     });
   });
 
-  group('selectPendingOpportunitiesCount (Codex Gate 2, round 2 — regressão)', () {
+  group('selectPendingOpportunitiesCount (Codex Gate 2, round 2 — regressão)',
+      () {
     test('com projectId explícito, usa a contagem escopada, não a global', () {
       final result = selectPendingOpportunitiesCount(
         projectId: 'project-a',

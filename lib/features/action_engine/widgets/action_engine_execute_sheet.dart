@@ -52,7 +52,11 @@ class ActionEngineExecuteSheet extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(item.title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+              Text(item.title,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Text(
                 l.actionEngineExecuteSheetIntro,
@@ -82,7 +86,8 @@ class ActionEngineExecuteSheet extends ConsumerWidget {
                     // Fire-and-forget from the sheet's perspective: the
                     // notifier reloads the list; a failure here surfaces
                     // through the same IveEventBus every other mutation uses.
-                    notifier.applyGovernedResult(item.id, result, title: item.title);
+                    notifier.applyGovernedResult(item.id, result,
+                        title: item.title);
                   }
                 },
               ),
