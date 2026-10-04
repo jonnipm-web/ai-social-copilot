@@ -7077,4 +7077,134 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insightRetry => 'Retry';
+
+  @override
+  String get impactDiscover => 'Discover';
+
+  @override
+  String get impactDiscoverTitle => 'Discover Entity';
+
+  @override
+  String get impactDiscoverHint => 'Organisation, company or entity name';
+
+  @override
+  String get impactDiscoverSubtitle =>
+      'Search and start an evidence investigation';
+
+  @override
+  String get impactDiscoverSearch => 'Search';
+
+  @override
+  String get impactDiscoverEmpty =>
+      'No results yet. Enter an organisation name to begin.';
+
+  @override
+  String get impactDiscoverProGate =>
+      'Full investigation is available on the PRO plan. Upgrade to create investigations, collect evidence and generate dossiers.';
+
+  @override
+  String get impactDiscoverEntityLabel => 'Entity';
+
+  @override
+  String get impactDiscoverJurisdiction => 'Jurisdiction';
+
+  @override
+  String get impactDiscoverConfidence => 'Identity confidence';
+
+  @override
+  String get impactDiscoverSources => 'Sources found';
+
+  @override
+  String get impactDiscoverNoSources => 'No sources found for this entity.';
+
+  @override
+  String get impactDiscoverGaps => 'Evidence gaps';
+
+  @override
+  String get impactDiscoverWarnings => 'Warnings';
+
+  @override
+  String get impactDiscoverStartInvestigation => 'Start investigation';
+
+  @override
+  String get impactDiscoverPending => 'Searching for entity…';
+
+  @override
+  String get impactDiscoverError =>
+      'Search failed. Check your connection and try again.';
+
+  @override
+  String get impactDiscoverResultTitle => 'Discovery result';
+
+  @override
+  String get impactDiscoverUnresolved =>
+      'Identity unresolved — additional information may be required.';
+
+  @override
+  String get impactDiscoverAbsenceNote =>
+      'Absence of records does NOT imply wrongdoing.';
+
+  @override
+  String get impactMonitor => 'Monitor';
+
+  @override
+  String get impactMonitorTitle => 'Investigation Monitor';
+
+  @override
+  String get impactMonitorSubtitle => 'Track evidence changes over time';
+
+  @override
+  String get impactMonitorPartialNote =>
+      'Automatic periodic checks are not available in this version. Verification state can be updated manually.';
+
+  @override
+  String get impactMonitorLastChecked => 'Last checked';
+
+  @override
+  String get impactMonitorNever => 'Not yet checked';
+
+  @override
+  String get impactMonitorRecheck => 'Re-check now';
+
+  @override
+  String get impactMonitorHistory => 'Verification history';
+
+  @override
+  String get impactMonitorNoHistory => 'No previous checks recorded.';
+
+  @override
+  String get impactMonitorStatus => 'Monitor status';
+
+  @override
+  String get impactMonitorActive => 'Active (manual)';
+
+  @override
+  String get impactMonitorPro =>
+      'Automatic monitoring available on the PRO plan.';
+
+  @override
+  String get impactNavigateHome => 'Investigations';
+
+  @override
+  String get impactNavigateDiscover => 'Discover';
+
+  @override
+  String get impactNavigateMonitor => 'Monitor';
+
+  @override
+  String get impactNavigateDossiers => 'Dossiers';
+
+  @override
+  String get impactEntitlementFreeLimit =>
+      'You have reached the free plan limit for this feature.';
+
+  @override
+  String get impactEntitlementUpgradeCta => 'View plans';
+
+  @override
+  String get impactEntitlementProRequired => 'PRO Feature';
+
+  @override
+  String get impactEntitlementProDescription =>
+      'Available on the PRO plan or higher.';
 }

@@ -336,32 +336,27 @@ void main() {
       }
     });
 
-    test(
-        'UI-API-10 (I6G1-04) the Impact client only ever sends the four read actions (never owner review DTOs)',
-        () {
+    test('UI-API-10 (I6G1-04) the Impact client only ever sends the declared action set (never owner review DTOs)', () {
+      // IV-IMPACT-MACRO-08 Phase 7/9: create_investigation and run_verification
+      // are the two write actions added by the Discover and Monitor verticals.
+      // The forbidden list below (unchanged) guards against server-authority
+      // operations that must never be performed from the client.
       final sources = Directory('lib/features/impact')
           .listSync(recursive: true)
           .whereType<File>()
           .where((f) => f.path.endsWith('.dart'))
           .map((f) => f.readAsStringSync())
           .join(' ');
-      final actions = RegExp(r"_call\(\s*'([a-z_]+)'")
-          .allMatches(sources)
-          .map((m) => m.group(1))
-          .toSet();
+      final actions = RegExp(r"_call\('([a-z_]+)'").allMatches(sources).map((m) => m.group(1)).toSet();
       expect(actions, {
         'list_investigations',
+        'create_investigation',
+        'run_verification',
         'get_dossier',
         'export_dossier',
-        'verify_dossier'
+        'verify_dossier',
       });
-      for (final forbidden in [
-        'get_investigation',
-        'review_candidate',
-        'import_registry_claim',
-        'ingest_artifact',
-        'OWNER_REVIEW_RAW'
-      ]) {
+      for (final forbidden in ['get_investigation', 'review_candidate', 'import_registry_claim', 'ingest_artifact', 'OWNER_REVIEW_RAW']) {
         expect(sources, isNot(contains(forbidden)), reason: forbidden);
       }
     });

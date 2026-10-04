@@ -152,3 +152,52 @@ export function buildTrustAudit(
     at: now,
   });
 }
+
+// ── Trust Neutrality Policy (anti-pay-to-rank) ───────────────────────────────
+
+/**
+ * IV-IMPACT-MACRO-08 — TRUST_NEUTRALITY_POLICY
+ *
+ * Payment, subscription tier, and entitlement level MUST NOT influence:
+ *   - trust score computation
+ *   - evidence weighting
+ *   - source authority classification
+ *   - verification status or confidence
+ *   - ranking or ordering of trust results
+ *   - claim credibility
+ *
+ * This is an unconditional invariant. A paying user cannot purchase a better
+ * trust score for themselves or their subject. A non-paying user cannot
+ * receive a worse trust assessment. Monetization is access to features
+ * (investigation depth, monitoring, exports) — never to truth.
+ *
+ * Enforcement:
+ *   1. CallerContext deliberately contains no tier/plan/billing field.
+ *   2. VerificationContext (verification.ts) contains no tier field.
+ *   3. SourceAuthority scores are computed from evidence, not from payer status.
+ *   4. TrustNeutralityGuard.assertNoBillingField() tests this at build time.
+ */
+export const TRUST_NEUTRALITY_POLICY = Object.freeze({
+  version: '1.0.0',
+  rule: 'PAYMENT_MUST_NOT_INFLUENCE_TRUST',
+  forbiddenInTrustContext: [
+    'plan', 'tier', 'billing', 'subscription', 'isPro', 'isBusiness',
+    'isEnterprise', 'sponsoredBy', 'advertiserId', 'paidRank',
+  ] as const,
+} as const);
+
+/**
+ * Runtime guard: throws if any forbidden billing field appears on an object
+ * that participates in trust computation. Call this in tests to prevent
+ * future accidental coupling.
+ */
+export function assertNoBillingFieldInTrustObject(obj: Record<string, unknown>, label: string): void {
+  for (const forbidden of TRUST_NEUTRALITY_POLICY.forbiddenInTrustContext) {
+    if (Object.prototype.hasOwnProperty.call(obj, forbidden)) {
+      throw new Error(
+        `TRUST_NEUTRALITY_VIOLATION: field "${forbidden}" found in trust object "${label}". ` +
+        `Billing and plan fields must never enter trust computation.`,
+      );
+    }
+  }
+}

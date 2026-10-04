@@ -70,8 +70,10 @@ import 'features/action_engine/screens/action_engine_screen.dart';
 import 'features/action_engine/screens/action_detail_screen.dart';
 import 'features/quant_lab/quant_lab_screen.dart';
 import 'features/debug/screens/intelligence_debug_hub_screen.dart';
+import 'features/impact/screens/impact_discover_screen.dart';
 import 'features/impact/screens/impact_dossier_screen.dart';
 import 'features/impact/screens/impact_home_screen.dart';
+import 'features/impact/screens/impact_monitor_screen.dart';
 import 'features/strategy_lab/strategy_lab_screen.dart';
 import 'features/insights/screens/ive_analysis_screen.dart';
 
@@ -681,14 +683,25 @@ final _router = GoRouter(
       builder: (_, __) => const IntelligenceDebugHubScreen(),
     ),
 
-    // ── IV-IMPACT-I5 — Impact Lab (admin-only; EXPERIMENTAL module) ───────
+    // ── IV-IMPACT-I5 / MACRO-08 — Impact Lab (admin-only; EXPERIMENTAL) ──────
+    // Order matters: specific sub-paths before :id catch-all.
     GoRoute(
       path: AppConstants.routeImpact,
       builder: (_, __) => const ImpactHomeScreen(),
     ),
     GoRoute(
+      path: AppConstants.routeImpactDiscover,
+      builder: (_, __) => const ImpactDiscoverScreen(),
+    ),
+    GoRoute(
       path: AppConstants.routeImpactDossier,
       builder: (_, state) => ImpactDossierScreen(
+        investigationId: state.pathParameters['id']!,
+      ),
+    ),
+    GoRoute(
+      path: AppConstants.routeImpactMonitor,
+      builder: (_, state) => ImpactMonitorScreen(
         investigationId: state.pathParameters['id']!,
       ),
     ),

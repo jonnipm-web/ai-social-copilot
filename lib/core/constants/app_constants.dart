@@ -107,9 +107,11 @@ class AppConstants {
   static const originIveAnalysis = 'ive_analysis';
   static const insightFreeMonthlyLimit = 15;
 
-  // IV-IMPACT-I5 — Impact Lab (admin-only: module 'impact' is EXPERIMENTAL)
+  // IV-IMPACT-MACRO-08 — Impact product shell
   static const routeImpact = '/impact';
+  static const routeImpactDiscover = '/impact/discover';
   static const routeImpactDossier = '/impact/:id';
+  static const routeImpactMonitor = '/impact/:id/monitor';
 
   // ROBOT-BUILDER-MACRO-05 — Strategy Lab (module 'strategy-builder' is COMMERCIAL, free tier)
   static const routeStrategyLab = '/strategy-lab';

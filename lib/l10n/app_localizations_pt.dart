@@ -7113,4 +7113,137 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get insightRetry => 'Tentar novamente';
+
+  @override
+  String get impactDiscover => 'Descobrir';
+
+  @override
+  String get impactDiscoverTitle => 'Descobrir Entidade';
+
+  @override
+  String get impactDiscoverHint => 'Nome da organização, empresa ou entidade';
+
+  @override
+  String get impactDiscoverSubtitle =>
+      'Pesquise e comece uma investigação de evidência';
+
+  @override
+  String get impactDiscoverSearch => 'Pesquisar';
+
+  @override
+  String get impactDiscoverEmpty =>
+      'Nenhum resultado ainda. Digite o nome de uma organização para começar.';
+
+  @override
+  String get impactDiscoverProGate =>
+      'Investigação completa disponível no plano PRO. Faça upgrade para criar investigações, coletar evidências e gerar dossiês.';
+
+  @override
+  String get impactDiscoverEntityLabel => 'Entidade';
+
+  @override
+  String get impactDiscoverJurisdiction => 'Jurisdição';
+
+  @override
+  String get impactDiscoverConfidence => 'Confiança da identidade';
+
+  @override
+  String get impactDiscoverSources => 'Fontes encontradas';
+
+  @override
+  String get impactDiscoverNoSources =>
+      'Nenhuma fonte encontrada para esta entidade.';
+
+  @override
+  String get impactDiscoverGaps => 'Lacunas de evidência';
+
+  @override
+  String get impactDiscoverWarnings => 'Avisos';
+
+  @override
+  String get impactDiscoverStartInvestigation => 'Iniciar investigação';
+
+  @override
+  String get impactDiscoverPending => 'Pesquisando a entidade…';
+
+  @override
+  String get impactDiscoverError =>
+      'Não foi possível pesquisar. Verifique a conexão e tente novamente.';
+
+  @override
+  String get impactDiscoverResultTitle => 'Resultado da descoberta';
+
+  @override
+  String get impactDiscoverUnresolved =>
+      'Identidade não resolvida — pode ser necessária informação adicional.';
+
+  @override
+  String get impactDiscoverAbsenceNote =>
+      'Ausência de registros NÃO implica irregularidade.';
+
+  @override
+  String get impactMonitor => 'Monitorar';
+
+  @override
+  String get impactMonitorTitle => 'Monitor de Investigação';
+
+  @override
+  String get impactMonitorSubtitle =>
+      'Acompanhe mudanças de evidência ao longo do tempo';
+
+  @override
+  String get impactMonitorPartialNote =>
+      'Verificações periódicas automáticas não estão disponíveis nesta versão. O estado de verificação pode ser atualizado manualmente.';
+
+  @override
+  String get impactMonitorLastChecked => 'Última verificação';
+
+  @override
+  String get impactMonitorNever => 'Ainda não verificado';
+
+  @override
+  String get impactMonitorRecheck => 'Re-verificar agora';
+
+  @override
+  String get impactMonitorHistory => 'Histórico de verificações';
+
+  @override
+  String get impactMonitorNoHistory =>
+      'Nenhuma verificação anterior registrada.';
+
+  @override
+  String get impactMonitorStatus => 'Status do monitor';
+
+  @override
+  String get impactMonitorActive => 'Ativo (manual)';
+
+  @override
+  String get impactMonitorPro =>
+      'Monitoramento automático disponível no plano PRO.';
+
+  @override
+  String get impactNavigateHome => 'Investigações';
+
+  @override
+  String get impactNavigateDiscover => 'Descobrir';
+
+  @override
+  String get impactNavigateMonitor => 'Monitorar';
+
+  @override
+  String get impactNavigateDossiers => 'Dossiês';
+
+  @override
+  String get impactEntitlementFreeLimit =>
+      'Você atingiu o limite do plano gratuito para este recurso.';
+
+  @override
+  String get impactEntitlementUpgradeCta => 'Ver planos';
+
+  @override
+  String get impactEntitlementProRequired => 'Recurso PRO';
+
+  @override
+  String get impactEntitlementProDescription =>
+      'Disponível no plano PRO ou superior.';
 }

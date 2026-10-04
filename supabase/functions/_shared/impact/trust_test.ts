@@ -2,7 +2,13 @@
  * Trust boundary tests — IV-IMPACT-I7-TRUST-EGRESS-AEF-INTEGRATION-01
  */
 import { assertEquals, assertThrows } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
-import { buildCallerContext, isKnownServiceId, validateProjectScope } from './trust.ts';
+import {
+  assertNoBillingFieldInTrustObject,
+  buildCallerContext,
+  isKnownServiceId,
+  TRUST_NEUTRALITY_POLICY,
+  validateProjectScope,
+} from './trust.ts';
 
 // ── isKnownServiceId ──────────────────────────────────────────────────────────
 
@@ -101,4 +107,53 @@ Deno.test('buildCallerContext: service identity does not imply user identity', (
     () => buildCallerContext({ authenticatedUserId: '', correlationId: 'c', projectId: null, serviceId: 'impact-lab' }),
     Error,
   );
+});
+
+// ── TRUST_NEUTRALITY_POLICY (anti-pay-to-rank) ───────────────────────────────
+
+Deno.test('TRUST_NEUTRALITY_POLICY: policy version is declared', () => {
+  assertEquals(TRUST_NEUTRALITY_POLICY.version, '1.0.0');
+  assertEquals(TRUST_NEUTRALITY_POLICY.rule, 'PAYMENT_MUST_NOT_INFLUENCE_TRUST');
+});
+
+Deno.test('assertNoBillingFieldInTrustObject: clean object passes', () => {
+  // A CallerContext without billing fields — must not throw
+  const ctx = buildCallerContext({ authenticatedUserId: 'u1', correlationId: 'c1', projectId: null, serviceId: 'impact-lab' });
+  assertNoBillingFieldInTrustObject(ctx as unknown as Record<string, unknown>, 'CallerContext');
+});
+
+Deno.test('assertNoBillingFieldInTrustObject: "plan" field throws', () => {
+  assertThrows(
+    () => assertNoBillingFieldInTrustObject({ plan: 'pro', source: 'example' }, 'VerificationContext'),
+    Error,
+    'TRUST_NEUTRALITY_VIOLATION',
+  );
+});
+
+Deno.test('assertNoBillingFieldInTrustObject: "isPro" field throws', () => {
+  assertThrows(
+    () => assertNoBillingFieldInTrustObject({ isPro: true, score: 0.9 }, 'TrustScore'),
+    Error,
+    'TRUST_NEUTRALITY_VIOLATION',
+  );
+});
+
+Deno.test('assertNoBillingFieldInTrustObject: "billing" field throws', () => {
+  assertThrows(
+    () => assertNoBillingFieldInTrustObject({ billing: 'active', confidence: 0.8 }, 'EvidenceWeight'),
+    Error,
+    'TRUST_NEUTRALITY_VIOLATION',
+  );
+});
+
+Deno.test('CallerContext has no billing fields (pay-to-rank prevention)', () => {
+  // A paying user's CallerContext must be structurally identical to a free user's.
+  // If a billing field were ever added, this guard would catch it.
+  const ctx = buildCallerContext({ authenticatedUserId: 'u1', correlationId: 'c1', projectId: null, serviceId: 'impact-lab' });
+  assertNoBillingFieldInTrustObject(ctx as unknown as Record<string, unknown>, 'CallerContext');
+  // Additional: the trust object for a "pro" user is the same shape as for "free"
+  const proCtx = buildCallerContext({ authenticatedUserId: 'pro-user-id', correlationId: 'c2', projectId: null, serviceId: 'impact-lab' });
+  assertNoBillingFieldInTrustObject(proCtx as unknown as Record<string, unknown>, 'CallerContext-pro');
+  // They must be structurally identical
+  assertEquals(Object.keys(ctx), Object.keys(proCtx));
 });

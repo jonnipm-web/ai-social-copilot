@@ -183,6 +183,27 @@ class ImpactLabApi {
     return parseInvestigations(data);
   }
 
+  /// IV-IMPACT-MACRO-08 Phase 7 — Creates a new investigation from an
+  /// organisation name/reference and returns the summary for navigation.
+  Future<InvestigationSummary> createInvestigation({required String orgRef}) async {
+    final data = await _call('create_investigation', {'org_ref': orgRef});
+    final id = data['id'];
+    if (id is! String || id.isEmpty) throw const ImpactApiException(ImpactErrorKind.contract);
+    return InvestigationSummary(
+      id:            id,
+      subjectOrgRef: data['subjectOrgRef'] is String ? data['subjectOrgRef'] as String : orgRef,
+      status:        data['status'] is String ? data['status'] as String : '—',
+      createdAt:     data['createdAt'] as String?,
+    );
+  }
+
+  /// IV-IMPACT-MACRO-08 Phase 9 — Triggers a re-verification run for an
+  /// existing investigation and returns the updated dossier view.
+  Future<DossierView> runVerification(String investigationId, String lang) async {
+    final data = await _call('run_verification', {'investigation_id': investigationId});
+    return getDossier(investigationId, lang);
+  }
+
   Future<DossierView> getDossier(String investigationId, String lang) async {
     final data = await _call(
         'get_dossier', {'investigation_id': investigationId, 'lang': lang});
