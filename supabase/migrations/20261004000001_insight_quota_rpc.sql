@@ -34,6 +34,15 @@ BEGIN
     RAISE EXCEPTION 'not_authenticated';
   END IF;
 
+  -- Project ownership check: SECURITY DEFINER bypasses RLS, so we must
+  -- explicitly verify ownership here (mirrors opportunity_lab's WITH CHECK).
+  IF NOT EXISTS (
+    SELECT 1 FROM public.projects
+     WHERE id = p_project_id AND user_id = v_uid
+  ) THEN
+    RAISE EXCEPTION 'project_not_found';
+  END IF;
+
   -- Resolve entitlement (missing profile → treat as free)
   SELECT (role IN ('pro', 'premium', 'admin'))
     INTO v_is_pro

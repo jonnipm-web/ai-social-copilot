@@ -211,6 +211,13 @@ void main() {
       expect(result.monthCount, AppConstants.insightFreeMonthlyLimit);
       expect(result.error, 'quota_exceeded');
     });
+
+    test('project_not_found error (cross-tenant SECURITY DEFINER guard) is NOT treated as quota_exceeded', () {
+      final result = handleSaveError(Exception('project_not_found'), 3);
+      expect(result.monthCount, 3); // count unchanged
+      expect(result.error, isNot('quota_exceeded'));
+      expect(result.error, contains('project_not_found'));
+    });
   });
 
   group('recent insights filtering', () {
