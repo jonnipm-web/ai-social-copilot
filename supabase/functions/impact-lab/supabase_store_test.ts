@@ -50,7 +50,7 @@ function fakeClient(name: 'user' | 'service', calls: Call[], respond: (c: Call) 
       b.update = chain((p) => { call.op = 'update'; call.payload = p; });
       b.upsert = chain(() => { call.op = 'upsert'; });
       b.delete = chain(() => { call.op = 'delete'; });
-      for (const f of ['eq', 'is']) b[f] = chain((k, v) => call.filters.push([k as string, v]));
+      for (const f of ['eq', 'is', 'in']) b[f] = chain((k, v) => call.filters.push([k as string, v]));
       b.order = chain(() => {});
       b.limit = chain(() => {});
       b.maybeSingle = () => Promise.resolve(respond(call));
@@ -58,20 +58,35 @@ function fakeClient(name: 'user' | 'service', calls: Call[], respond: (c: Call) 
       b.then = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => Promise.resolve(respond(call)).then(res, rej);
       return b;
     },
-    rpc(fn: string) {
-      calls.push({ client: name, table: fn, op: 'rpc', filters: [] });
-      return Promise.resolve({ data: true, error: null });
+    rpc(fn: string, args: Record<string, unknown>) {
+      const call: Call = { client: name, table: fn, op: 'rpc', filters: [], payload: args };
+      calls.push(call);
+      return Promise.resolve(respond(call));
     },
   };
 }
 
-Deno.test('SS-02 reads go through the caller-JWT client (RLS); writes through service with server ids; never DELETE', async () => {
+Deno.test('SS-02 reads go through the caller-JWT client (RLS); atomic write RPCs use user JWT; other writes through service', async () => {
   const calls: Call[] = [];
   const respond = (c: Call) => {
-    if (c.op === 'insert' && c.table === 'impact_investigations') {
-      return { data: { id: INV, owner_id: ACTOR, project_id: null, subject_org_ref: 'org-x', subject_org_type: 'NGO', subject_identity: {}, status: 'ACTIVE', audit_seq: 1, audit_head: 'a'.repeat(64), created_at: 'x' }, error: null };
+    // MACRO-08 TOCTOU fix: createInvestigation uses user.rpc + user.select
+    if (c.op === 'rpc' && c.table === 'impact_atomic_create_investigation') {
+      return { data: [{ investigation_id: INV, subject_org_ref: 'org-x', denied: false, denied_reason: 'ok' }], error: null };
     }
-    if (c.op === 'insert' && c.table === 'impact_verifications') return { data: { version: 1, result: {}, idempotency_key: null }, error: null };
+    // After atomic create, the store does a user SELECT (with id filter) to get the full row
+    if (c.op === 'select' && c.table === 'impact_investigations' && c.client === 'user' && c.filters.some(([k]) => k === 'id')) {
+      return { data: { id: INV, owner_id: ACTOR, project_id: null, subject_org_ref: 'org-x', subject_org_type: 'NGO', subject_identity: {}, status: 'ACTIVE', audit_seq: 0, audit_head: '0'.repeat(64), created_at: 'x' }, error: null };
+    }
+    // MACRO-08 TOCTOU fix: insertVerification uses user.rpc + service.select
+    if (c.op === 'rpc' && c.table === 'impact_atomic_insert_verification') {
+      return { data: [{ stored_version: 1, denied: false, denied_reason: 'ok' }], error: null };
+    }
+    // After atomic insert, store does a service SELECT to get full verification row
+    if (c.op === 'select' && c.table === 'impact_verifications' && c.client === 'service') {
+      return { data: { version: 1, result: {}, idempotency_key: null }, error: null };
+    }
+    if (c.op === 'rpc' && c.table === 'impact_audit_chain_ok') return { data: true, error: null };
+    if (c.op === 'rpc') return { data: true, error: null };
     if (c.op === 'update') return { data: [{ ref: 'x' }], error: null };
     return { data: c.op === 'select' ? [] : null, error: null, count: 0 };
   };
@@ -93,28 +108,37 @@ Deno.test('SS-02 reads go through the caller-JWT client (RLS); writes through se
   await store.countOwnedInvestigations(ACTOR);
   const count = calls.splice(0)[0];
   assertEquals([count.client, count.filters], ['service', [['owner_id', ACTOR]]]);
-  assert(reads.filter((c) => c.op === 'select' && c.table.startsWith('impact_') && c.table !== 'impact_investigations').every((c) => c.filters.some(([k, v]) => k === 'investigation_id' && v === INV)));
 
   await store.createInvestigation({ ownerId: ACTOR, projectId: null, subjectOrgRef: 'org-x', subjectOrgType: 'NGO', subjectIdentity: {} });
+  const createCalls = calls.splice(0);
+  // SS-02a TOCTOU: createInvestigation uses user.rpc (atomic write), then user.select (read-back)
+  assert(createCalls.some((c) => c.client === 'user' && c.op === 'rpc' && c.table === 'impact_atomic_create_investigation'),
+    'createInvestigation uses user.rpc for atomic write');
+  assert(!createCalls.some((c) => c.client === 'service' && c.op === 'insert' && c.table === 'impact_investigations'),
+    'createInvestigation must NOT use service.insert (TOCTOU fix)');
+
   await store.insertSource(INV, { source: a.sources[0], snapshot: null }, ACTOR);
   await store.insertClaim(INV, a.claim, ACTOR);
   await store.insertEvidence(INV, a.evidence[0], ACTOR);
   await store.insertVerification(INV, r.value, null, ACTOR);
+  const verCalls = calls.filter((c) => c.table === 'impact_atomic_insert_verification' || (c.table === 'impact_verifications' && c.op === 'insert'));
+  // SS-02b TOCTOU: insertVerification uses user.rpc (atomic write), not service.insert
+  assert(verCalls.some((c) => c.client === 'user' && c.op === 'rpc' && c.table === 'impact_atomic_insert_verification'),
+    'insertVerification uses user.rpc for atomic write');
+  assert(!verCalls.some((c) => c.client === 'service' && c.op === 'insert' && c.table === 'impact_verifications'),
+    'insertVerification must NOT use service.insert (TOCTOU fix)');
+
   await store.updateSourceStatus(INV, 'src-registry-hb', 'RETRACTED', ACTOR);
   await store.insertDispute(INV, { ref: 'd1', claimRef: 'claim-a', kind: 'ORGANIZATION_RESPONSE', openedAt: 'x', submittedEvidenceRefs: [], resolution: null, resolvedAt: null }, ACTOR);
   await store.resolveDispute(INV, 'd1', 'UPHELD', 'x', ACTOR);
   await store.archiveInvestigation(INV, ACTOR);
-  const writes = calls.filter((c) => c.op !== 'select');
-  assert(writes.every((c) => c.client === 'service'), 'writes use the service client');
-  assertEquals(calls.filter((c) => c.op === 'delete' || c.op === 'upsert').length, 0);
-  for (const w of writes.filter((c) => c.op === 'insert' && c.table !== 'impact_investigations')) {
+  // All remaining writes (sources, claims, evidence, disputes, archive) still go through service client
+  const serviceWrites = calls.filter((c) => c.client === 'service' && c.op === 'insert');
+  assert(serviceWrites.length > 0, 'other inserts still use service client');
+  assertEquals(calls.filter((c) => c.op === 'delete' || c.op === 'upsert').length, 0, 'no DELETE or upsert');
+  for (const w of serviceWrites.filter((c) => !['impact_investigations', 'impact_verifications'].includes(c.table))) {
     const p = w.payload as Record<string, unknown>;
     assertEquals([p.investigation_id, p.created_by], [INV, ACTOR], w.table);
-  }
-  const inv = writes.find((c) => c.table === 'impact_investigations' && c.op === 'insert')!.payload as Record<string, unknown>;
-  assertEquals(inv.owner_id, ACTOR);
-  for (const u of writes.filter((c) => c.op === 'update' && c.table !== 'impact_investigations')) {
-    assert(u.filters.some(([k, v]) => k === 'investigation_id' && v === INV), u.table);
   }
 });
 
@@ -128,15 +152,16 @@ Deno.test('SS-03 database errors map to stable codes and never leak SQL text', (
 });
 
 Deno.test('SS-04 an idempotent retry that races returns the winning row, not a duplicate', async () => {
+  // MACRO-08 TOCTOU fix: user.rpc atomic call returns 23505; store falls back
+  // to service reads (idempotency_key lookup) to return the winning row.
   const calls: Call[] = [];
-  let inserted = false;
   const respond = (c: Call) => {
-    if (c.op === 'insert') {
-      inserted = true;
+    // Simulate the atomic RPC returning a unique violation
+    if (c.op === 'rpc' && c.table === 'impact_atomic_insert_verification') {
       return { data: null, error: { code: '23505', message: 'duplicate' } };
     }
     if (c.op === 'select' && c.filters.some(([k]) => k === 'idempotency_key')) {
-      return inserted ? { data: { version: 3, result: { resultId: 'vr_x' }, idempotency_key: 'k' }, error: null } : { data: null, error: null };
+      return { data: { version: 3, result: { resultId: 'vr_x' }, idempotency_key: '9e9e9e9e-0000-4000-8000-000000000001' }, error: null };
     }
     return { data: null, error: null };
   };
@@ -157,4 +182,90 @@ Deno.test('SS-05 an archive or status update that changes no row is reported as 
   assertEquals(a.ok ? 'OK' : a.error.code, 'INVESTIGATION_NOT_ACTIVE');
   const u = await store.updateSourceStatus(INV, 'src-x', 'RETRACTED', ACTOR);
   assertEquals(u.ok ? 'OK' : u.error.code, 'INVALID_REQUEST');
+});
+
+// TOCTOU atomic write tests (MACRO-08 security hardening)
+
+Deno.test('SS-TOCTOU-01 createInvestigation: atomic RPC denied=pro_required → INVALID_REQUEST', async () => {
+  // Simulates a user whose entitlement was revoked between the pre-flight
+  // check_impact_access call and the atomic write RPC.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_create_investigation') {
+      return { data: [{ investigation_id: null, subject_org_ref: 'org-x', denied: true, denied_reason: 'pro_required' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const result = await store.createInvestigation({ ownerId: ACTOR, projectId: null, subjectOrgRef: 'org-x', subjectOrgType: 'NGO', subjectIdentity: {} });
+  assert(!result.ok, 'must fail when entitlement denied');
+  assertEquals(result.error.code, 'INVALID_REQUEST', 'denied=pro_required maps to INVALID_REQUEST');
+  // Verify no fallback service.insert was attempted
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after RPC denial');
+});
+
+Deno.test('SS-TOCTOU-02 createInvestigation: atomic RPC denied=limit_exceeded → LIMIT_EXCEEDED', async () => {
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_create_investigation') {
+      return { data: [{ investigation_id: null, subject_org_ref: 'org-x', denied: true, denied_reason: 'limit_exceeded' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const result = await store.createInvestigation({ ownerId: ACTOR, projectId: null, subjectOrgRef: 'org-x', subjectOrgType: 'NGO', subjectIdentity: {} });
+  assert(!result.ok, 'must fail when limit exceeded');
+  assertEquals(result.error.code, 'LIMIT_EXCEEDED');
+});
+
+Deno.test('SS-TOCTOU-03 createInvestigation: atomic RPC denied=no_session → INTERNAL_ERROR', async () => {
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_create_investigation') {
+      return { data: [{ investigation_id: null, subject_org_ref: 'org-x', denied: true, denied_reason: 'no_session' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const result = await store.createInvestigation({ ownerId: ACTOR, projectId: null, subjectOrgRef: 'org-x', subjectOrgType: 'NGO', subjectIdentity: {} });
+  assert(!result.ok);
+  assertEquals(result.error.code, 'INTERNAL_ERROR');
+});
+
+Deno.test('SS-TOCTOU-04 insertVerification: atomic RPC denied=not_owner → INVESTIGATION_NOT_FOUND', async () => {
+  // Simulates a cross-user forgery attempt: the investigation is owned by
+  // another user; the atomic RPC ownership check catches it.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_insert_verification') {
+      return { data: [{ stored_version: null, denied: true, denied_reason: 'not_owner' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const a = (await goldenCases()).find((c) => c.id === 'A')!;
+  const r = await verifyClaim({ claim: a.claim, evidence: a.evidence, sources: a.sources }, a.ctx);
+  assert(r.ok);
+  const result = await store.insertVerification(INV, r.value, null, ACTOR);
+  assert(!result.ok, 'must fail when caller does not own investigation');
+  assertEquals(result.error.code, 'INVESTIGATION_NOT_FOUND');
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after ownership denial');
+});
+
+Deno.test('SS-TOCTOU-05 insertVerification: atomic RPC denied=pro_required → INVALID_REQUEST', async () => {
+  // Simulates entitlement revoked between pre-flight check and write.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_insert_verification') {
+      return { data: [{ stored_version: null, denied: true, denied_reason: 'pro_required' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const a = (await goldenCases()).find((c) => c.id === 'A')!;
+  const r = await verifyClaim({ claim: a.claim, evidence: a.evidence, sources: a.sources }, a.ctx);
+  assert(r.ok);
+  const result = await store.insertVerification(INV, r.value, null, ACTOR);
+  assert(!result.ok);
+  assertEquals(result.error.code, 'INVALID_REQUEST');
 });

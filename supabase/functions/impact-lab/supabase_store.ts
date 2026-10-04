@@ -5,13 +5,17 @@
  *  - READS use a client carrying the CALLER's JWT (anon key + Authorization),
  *    so PostgreSQL RLS decides what is visible — a foreign investigation reads
  *    as "not found" even if the service layer had a bug.
- *  - WRITES use the service-role client (authenticated/anon have no write
- *    privilege on impact_* tables at all). They are only issued by the Lab
- *    service AFTER authentication, server-side entitlement and an RLS-bound
- *    ownership read, always with the server-verified investigation id and the
- *    caller's user id as created_by/updated_by. The database re-checks
- *    ownership links, subject binding, append-only history and temporal rules
- *    for this role too (migration 20260924010000).
+ *  - WRITES use two paths:
+ *    * create_investigation + run_verification (MACRO-08 TOCTOU fix, migration
+ *      20261004000004): use the caller JWT to call SECURITY DEFINER RPCs that
+ *      atomically re-check entitlement AND insert in one transaction.  This
+ *      eliminates the TOCTOU gap between check_impact_access and the write.
+ *    * All other writes: continue to use the service-role client (authenticated/
+ *      anon have no write privilege on impact_* tables at all), issued AFTER
+ *      authentication, server-side entitlement and an RLS-bound ownership read,
+ *      with the server-verified investigation id and caller's user id as
+ *      created_by/updated_by.  The database re-checks ownership links, subject
+ *      binding, append-only history and temporal rules (migration 20260924010000).
  *  - No DELETE is ever issued.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.116.0';
@@ -378,12 +382,29 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
   }
 
   async createInvestigation(n: NewInvestigation): Promise<ImpactResult<InvestigationRecord>> {
-    const { data, error } = await this.service.from('impact_investigations').insert({
-      owner_id: n.ownerId, project_id: n.projectId, subject_org_ref: n.subjectOrgRef,
-      subject_org_type: n.subjectOrgType, subject_identity: n.subjectIdentity,
-    }).select('*').single();
+    // MACRO-08 TOCTOU fix: entitlement re-check + insert are atomic in one
+    // SECURITY DEFINER transaction (migration 20261004000004). Called via
+    // the caller JWT so auth.uid() resolves to the real caller.
+    const { data: rows, error } = await this.user.rpc('impact_atomic_create_investigation', {
+      p_subject_ref: n.subjectOrgRef,
+      p_subject_type: n.subjectOrgType,
+      p_subject_identity: n.subjectIdentity,
+      p_project_id: n.projectId ?? null,
+    });
     if (error) return dbFail(error);
-    return ok(rowToInvestigation(data as Row));
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    if (!row) return fail('INTERNAL_ERROR', 'atomic create returned no row');
+    if (row.denied) {
+      const reason = row.denied_reason as string;
+      if (reason === 'no_session') return fail('INTERNAL_ERROR', 'no_session');
+      if (reason === 'pro_required') return fail('INVALID_REQUEST', 'entitlement_denied_pro_required');
+      if (reason === 'limit_exceeded') return fail('LIMIT_EXCEEDED', 'too many investigations');
+      return fail('INTERNAL_ERROR', `atomic_create_denied: ${reason}`);
+    }
+    // Fetch full row via caller JWT (RLS ensures only owner can read).
+    const { data: inv, error: readErr } = await this.user.from('impact_investigations').select('*').eq('id', row.investigation_id as string).single();
+    if (readErr) return dbFail(readErr);
+    return ok(rowToInvestigation(inv as Row));
   }
   async archiveInvestigation(id: string, actorId: string): Promise<ImpactResult<true>> {
     const { data, error } = await this.service.from('impact_investigations').update({ status: 'ARCHIVED', updated_by: actorId, updated_at: new Date().toISOString() })
@@ -416,27 +437,55 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
     return ok(data ? rowToVerification(data as Row) : null);
   }
   async insertVerification(investigationId: string, r: VerificationResult, idempotencyKey: string | null, actorId: string): Promise<ImpactResult<StoredVerification>> {
-    if (idempotencyKey) {
-      const prior = await this.findVerification(investigationId, 'idempotency_key', idempotencyKey);
-      if (!prior.ok || prior.value) return prior as ImpactResult<StoredVerification>;
+    // MACRO-08 TOCTOU fix: entitlement re-check + ownership check + insert
+    // are atomic in one SECURITY DEFINER transaction (migration 20261004000004).
+    // Called via the caller JWT so auth.uid() resolves to the real caller.
+    // Idempotency is handled inside the RPC (returns the existing version if
+    // the key was already used, without raising an error).
+    const { data: rows, error } = await this.user.rpc('impact_atomic_insert_verification', {
+      p_investigation_id: investigationId,
+      p_claim_ref: r.claimId,
+      p_result_id: r.resultId,
+      p_status: r.status,
+      p_underlying_status: r.underlyingStatus,
+      p_sufficiency: r.sufficiency,
+      p_display_class: r.displayClass,
+      p_review_state: r.reviewState,
+      p_policy_version: r.policyVersion,
+      p_evidence_set_hash: r.evidenceSetHash,
+      p_review_binding_hash: r.reviewBindingHash,
+      p_evaluated_at: r.evaluatedAt,
+      p_rules_applied: r.rulesApplied,
+      p_gaps: r.gaps,
+      p_conflict_count: r.conflicts.length,
+      p_result: r,
+      p_idempotency_key: idempotencyKey,
+    });
+    if (error) {
+      // 23505 = unique violation from a concurrent insert racing past idempotency check.
+      if (error.code === '23505') {
+        const byKey = idempotencyKey ? await this.findVerification(investigationId, 'idempotency_key', idempotencyKey) : ok(null);
+        if (byKey.ok && byKey.value) return ok(byKey.value);
+        const byResult = await this.findVerification(investigationId, 'result_id', r.resultId);
+        if (byResult.ok && byResult.value) return ok(byResult.value);
+      }
+      return dbFail(error);
     }
-    const row = {
-      investigation_id: investigationId, claim_ref: r.claimId, result_id: r.resultId, status: r.status,
-      underlying_status: r.underlyingStatus, sufficiency: r.sufficiency, display_class: r.displayClass, review_state: r.reviewState,
-      policy_version: r.policyVersion, evidence_set_hash: r.evidenceSetHash, review_binding_hash: r.reviewBindingHash,
-      evaluated_at: r.evaluatedAt, rules_applied: r.rulesApplied, gaps: r.gaps, conflict_count: r.conflicts.length,
-      result: r, idempotency_key: idempotencyKey, created_by: actorId,
-    };
-    const { data, error } = await this.service.from('impact_verifications').insert(row).select('*').single();
-    if (!error) return ok(rowToVerification(data as Row));
-    if (error.code === '23505') {
-      // Retry race: return the row that won (same key or same resultId) — never a duplicate.
-      const byKey = idempotencyKey ? await this.findVerification(investigationId, 'idempotency_key', idempotencyKey) : ok(null);
-      if (byKey.ok && byKey.value) return ok(byKey.value);
-      const byResult = await this.findVerification(investigationId, 'result_id', r.resultId);
-      if (byResult.ok && byResult.value) return ok(byResult.value);
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    if (!row) return fail('INTERNAL_ERROR', 'atomic insert returned no row');
+    if (row.denied) {
+      const reason = row.denied_reason as string;
+      if (reason === 'no_session') return fail('INTERNAL_ERROR', 'no_session');
+      if (reason === 'pro_required') return fail('INVALID_REQUEST', 'entitlement_denied_pro_required');
+      if (reason === 'not_owner') return fail('INVESTIGATION_NOT_FOUND', 'investigation not found');
+      return fail('INTERNAL_ERROR', `atomic_insert_denied: ${reason}`);
     }
-    return dbFail(error);
+    // Fetch the full verification row to return StoredVerification.
+    const version = row.stored_version as number;
+    const { data: vRow, error: readErr } = await this.service.from('impact_verifications').select('*')
+      .eq('investigation_id', investigationId).eq('version', version).eq('claim_ref', r.claimId).single();
+    if (readErr) return dbFail(readErr);
+    return ok(rowToVerification(vRow as Row));
   }
   async insertDispute(investigationId: string, d: StoredDispute, actorId: string): Promise<ImpactResult<true>> {
     const { error } = await this.service.from('impact_disputes').insert({

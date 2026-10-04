@@ -43,6 +43,11 @@ function env() {
     aefStore,
     now: () => '2026-09-23T12:00:00Z',
     log: (l) => logs.push(l),
+    // MACRO-08 Fix 2: inject a permissive stub so tests run without a live
+    // Supabase instance.  Non-admin users are already blocked upstream by
+    // requireModuleAccess (EXPERIMENTAL=admin-only), so they never reach this
+    // check.  Production uses checkImpactActionAccess() (RPC call).
+    checkAccess: () => Promise.resolve({ allowed: true, tier: 'admin', reason: 'test_stub' }),
   };
   const send = async (token: string | null, body: unknown, role = 'admin', extraHeaders: Record<string, string> = {}, method = 'POST') => {
     const headers: Record<string, string> = { 'Content-Type': 'application/json', ...extraHeaders };
@@ -133,7 +138,11 @@ Deno.test('EF-06 class C requests → 403 ACTION_BLOCKED requiring AEF_HUMAN_GAT
 
 Deno.test('EF-07 internal failures return 500 without internal details', async () => {
   const req = new Request('http://localhost/', { method: 'POST', headers: { Authorization: 'Bearer jwt-admin-a' }, body: JSON.stringify({ action: 'list_investigations' }) });
-  const res = await handler(req, auth, undefined, fakeSubjectSource('admin'), { store: () => { throw new Error('connection string postgres://secret'); }, log: () => {} });
+  const res = await handler(req, auth, undefined, fakeSubjectSource('admin'), {
+    store: () => { throw new Error('connection string postgres://secret'); },
+    log: () => {},
+    checkAccess: () => Promise.resolve({ allowed: true, tier: 'admin', reason: 'test_stub' }),
+  });
   const body = await res.json();
   assertEquals([res.status, body.error], [500, 'INTERNAL_ERROR']);
   assertEquals(JSON.stringify(body).includes('secret'), false);
