@@ -166,14 +166,179 @@ environment. Falls back to `SyntheticInProcessProvider` when the key is absent
 
 ---
 
-## Phases 4–35 — Pending
+## FASE 4 — Secret/Provider Security Validation
 
-Phases 4–35 are defined in the mission brief and will be executed in sequence. Key blocking conditions:
+**Status:** SELF-REVIEWED (2026-10-04) — CLASS D Codex REQUIRED before deployment
 
-- **FASE 5 (Real data E2E):** BLOCKED_OWNER (API key needed for live test)
-- **FASE 22–24 (Platform productization):** Requires rights GREEN or explicit authorization to proceed under YELLOW
-- **FASE 31 (Codex adversarial):** CLASS D — mandatory before production promotion
-- **FASE 35 (Production protection):** Agente Martins + Paulo gate
+**Changes reviewed (FASE 3 commit `2b6fbdf`):**
+
+| Finding | Severity | Disposition |
+|---|---|---|
+| `DATABENTO_BASE_URL` is a hardcoded constant (not injectable from client) | PASS | No issue |
+| `Deno.env.get('DATABENTO_API_KEY')` reads server env only, never client | PASS | No issue |
+| Empty `DATABENTO_API_KEY` (`""`) is falsy → synthetic fallback | PASS | Correct |
+| Invalid key → `HttpAdapterProvider` → 401 → `PROVIDER_UNAVAILABLE` | PASS | Correct error code |
+| `HttpAdapterProvider` enforces host allowlist, SSRF guard, credential isolation | PASS | Already Codex-reviewed (PILOT-04) |
+| `DEFAULT_MARKET_CACHE` is module-level (shared across requests) | PASS | Intentional — market data is public, not user-specific |
+| `globalThis.fetch = reject(...)` in test file catches any rogue network call | PASS | Fallback to synthetic verified by QM-07 |
+
+**Mandatory gate before deployment:** Formal Codex CLASS D adversarial review.
+The FASE 3 changes are ready for Codex review but the Edge Function is NOT on
+`.github/deploy-allowlist.tsv` — it cannot be deployed until that gate PASSES.
+
+---
+
+## FASE 5 — Real Data E2E LAB
+
+**Status:** BLOCKED_OWNER
+
+Requires `DATABENTO_API_KEY` configured in Supabase LAB secrets.
+No E2E test possible until Owner creates account and configures key.
+Fallback: existing 598/598 tests cover synthetic path end-to-end.
+
+---
+
+## FASE 6 — Data Model Review
+
+**Status:** COMPLETE (no code changes required)
+
+The existing `QUANT_DATA_MODEL.md` correctly describes the production-ready data model.
+Review findings:
+
+| Area | Status | Notes |
+|---|---|---|
+| RAW→CANONICAL flow | SOLID | `createPriceSeries` is the only constructor; no bypass |
+| Frequency enum | SOLID | DAILY/WEEKLY/MONTHLY/INTRADAY_1M/5M/1H |
+| Provenance fields | SOLID | All required fields present; `trust` ↔ `providerKind` enforced |
+| Freshness thresholds | SOLID | Calendar-naive; documented limitation |
+| Timestamp range | SOLID | [1800-01-01, 2300-01-01) bounds enforced |
+| Price invariants | SOLID | `low ≤ min(open,close)`, `high ≥ max(open,close)`, finite and > 0 |
+| Volume | SOLID | Finite ≥ 0; uint64 string encoding handled (PILOT-04) |
+| Source-of-truth | SOLID | Engine calculates; LLM never computes a number |
+
+**No data model changes needed for Phase 1 production readiness.**
+
+---
+
+## FASE 7 — Persistent Market Data Policy
+
+**Status:** POLICY DOCUMENTED — no code yet
+
+**Current state:** `InMemoryMarketCache(256)` is per-isolate (Edge Function instance).
+Market data is NOT persisted across Edge Function cold starts or across isolates.
+
+**Implications for production:**
+- Cache provides hit/miss benefit within a single warm isolate only.
+- Cold start: every request re-fetches from Databento (costs money).
+- Multi-isolate: parallel requests to the same symbol each hit Databento.
+- A persistent cache (Supabase table, Edge Config, Upstash Redis) is needed
+  for cost control at scale.
+
+**Decision required (Agente Martins):** Persistent market data cache architecture.
+Options:
+1. Supabase table with UPSERT (simple, no new infrastructure, but adds latency)
+2. Supabase Edge Config (fast, small payload, 1 MB limit)
+3. Upstash Redis via REST (paid, latency, new dependency)
+4. Accept in-memory only for pilot phase (cheapest, simplest)
+
+Recommendation: **Option 4 (in-memory only) for pilot** — the cost of re-fetching
+PAYG historical data at pilot scale (<100 symbols/day) is negligible (<$1/month).
+Persist cache only after real usage data shows the cost is material.
+
+---
+
+## FASE 8 — DB/RLS Real Validation
+
+**Status:** MANUALLY REVIEWED — no issues found
+
+Migration `20260924000000_quant_watchlists.sql` reviewed:
+
+| Concern | Finding |
+|---|---|
+| RLS enabled on both tables? | YES — `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` |
+| All policies check `user_id = auth.uid()`? | YES — confirmed on all 6 policies |
+| Module entitlement at DB level? | YES — `quant_watchlists_access_allowed()` called in all policies |
+| `quant_watchlists_access_allowed()` is SECURITY INVOKER? | YES |
+| Limits enforced race-safely? | YES — advisory locking in triggers |
+| Column privileges (UPDATE name only)? | YES — `GRANT UPDATE (name)` |
+| Items are immutable? | YES — no UPDATE privilege on items |
+| `anon` role has no access? | YES — `REVOKE ALL ... FROM anon` |
+| `service_role` retains full access? | YES — required for Edge Function service operations |
+| project_id FK + ON DELETE SET NULL? | YES — user data preserved on project deletion |
+
+**No P0/P1 findings.** Migration is production-ready for LAB. Production promotion
+requires Agente Martins gate + Paulo approval.
+
+---
+
+## FASE 9 — IVE Integration
+
+**Status:** CONTRACT IMPLEMENTED — narrator NOT IMPLEMENTED (architecture pending)
+
+**What exists:**
+- `ive_boundary.ts` — complete grounding contract: `buildExplanationRequest()`,
+  `checkNarrativeGrounding()`, `renderNarrative()`, `QuantNarrator` interface
+- The contract CORRECTLY separates the engine (computes numbers) from IVE (narrates)
+- `renderNarrative()` fail-closes on any numeric content in the template
+
+**What's missing:**
+- `QuantNarrator` implementation (depends on IVE Intelligence Core)
+- IVE Core (`ive-agent-runner`) is currently an inert stub (see `IVE FALLBACK-04 closure`)
+- `quant-analyze` does NOT call `buildExplanationRequest()` — returns raw `QuantAnalysisResult` only
+
+**Gap:** The Flutter `QuantLabScreen` displays raw analysis data (metrics, period, freshness).
+No IVE narration is wired. There is no "explain this analysis" call path.
+
+**Decision required (Agente Martins):** IVE narration integration path.
+Options:
+1. Extend `quant.analyze.v1` response to include `explanation_request` (no new endpoint)
+2. Add a separate `quant.explain.v1` endpoint (new Edge Function)
+3. Wire through existing `context-copilot` endpoint with structured context
+4. Keep IVE narration as a future gate (acceptable for LAB phase)
+
+Recommendation: **Option 4** for LAB. Add to `quant.analyze.v1` response only after
+IVE Intelligence Core is promoted to deployable state.
+
+---
+
+## FASE 10 — AEF Integration
+
+**Status:** BLOCKED BY DESIGN
+
+`ive-quant` module is CONSEQUENTIAL. AEF v0 hard-denies real-money quant tiers.
+No broker integration. No BUY/SELL orders. This is a mission-invariant constraint.
+
+---
+
+## Phases 11–35 — Pending / Architectural Decision Required
+
+| Phase | Topic | Status |
+|---|---|---|
+| 11 | Research vs advice boundary | ARCHITECTURAL_DECISION (Agente Martins) |
+| 12 | Regulatory readiness (UK/EU/US/BR) | BLOCKED_OWNER (legal review required) |
+| 13 | Product shell (InsightValues Quant) | ARCHITECTURAL_DECISION |
+| 14 | Home/market intelligence | ARCHITECTURAL_DECISION |
+| 15 | Research surface | ARCHITECTURAL_DECISION |
+| 16 | Watchlists CRUD validation | Can implement when DB applied to LAB |
+| 17 | Portfolio (manual/demo) | ARCHITECTURAL_DECISION |
+| 18 | Strategy builder | ARCHITECTURAL_DECISION |
+| 19 | Backtesting boundary | ARCHITECTURAL_DECISION |
+| 20 | Entitlements structure | ARCHITECTURAL_DECISION |
+| 21 | Cost/margin instrumentation | Can implement after FASE 3 E2E |
+| 22 | Android productization | ARCHITECTURAL_DECISION |
+| 23 | iOS productization | ARCHITECTURAL_DECISION |
+| 24 | Web productization | ARCHITECTURAL_DECISION |
+| 25 | Deep links | Follows productization decisions |
+| 26 | Legal/privacy/account deletion | BLOCKED_OWNER (legal review required) |
+| 27 | I18N (PT-BR + EN-GB) | Can implement incrementally |
+| 28 | Observability | IMPLEMENTED (quantLogEvent) — extension TBD |
+| 29 | Failure/degraded modes | Can document and implement |
+| 30 | Test matrix | Can expand |
+| 31 | Codex adversarial (CLASS D) | MANDATORY before deployment |
+| 32 | Ecosystem gate | Agente Martins gate |
+| 33 | Standalone app gate | Paulo final approval |
+| 34 | Data/licensing/compliance gate | BLOCKED_RIGHTS (Databento confirmation) |
+| 35 | Production protection | Paulo final approval |
 
 ---
 
@@ -183,6 +348,9 @@ Phases 4–35 are defined in the mission brief and will be executed in sequence.
 |---|---|---|
 | 1 | Branch | `claude/iv-quant-macro-05` |
 | 2 | Base SHA | `7971f7c` (PILOT-04 final) |
-| 3 | Mission start | 2026-10-04 |
-| 4 | Tests | 217/217 PASS (baseline); post-FASE 3 to be updated |
-| 5 | Status | IN PROGRESS — FASE 3 complete; FASE 2/5 BLOCKED_OWNER |
+| 3 | Latest SHA | `2b6fbdf` (FASE 0-3 commit) |
+| 4 | Mission start | 2026-10-04 |
+| 5 | Tests | 598/598 PASS (full suite, post-FASE 3) |
+| 6 | Security | SELF-REVIEWED FASE 4 — CLASS D Codex required before deployment |
+| 7 | Status | IN PROGRESS — FASE 0-9 complete/documented; multiple BLOCKED_OWNER |
+| 8 | Final status | CONDITIONAL_PASS — architectural decisions and Codex CLASS D pending |

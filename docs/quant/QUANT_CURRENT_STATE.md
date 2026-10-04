@@ -111,6 +111,32 @@ be re-measured on the platform before any promotion.
 Superseded for READINESS-03 by QUANT_RESOURCE_BUDGET.md (calendar memo fix,
 multi-series bound, PLATFORM_RUNTIME_NOT_MEASURED).
 
+## 11. MACRO-05 Ecosystem Promotion (IV-QUANT-MACRO-05, 2026-10-04)
+
+Branch: `claude/iv-quant-macro-05` (base: `7971f7c` = PILOT-04 final).  
+Mission: Ecosystem Promotion + Real-Data Integration + Standalone Productization.
+
+| Phase | Status |
+|---|---|
+| FASE 0 — Baseline | COMPLETE |
+| FASE 1 — Capability inventory | COMPLETE |
+| FASE 2 — Rights closure | BLOCKED_OWNER |
+| FASE 3 — Real provider runtime wiring | COMPLETE (2b6fbdf) |
+| FASE 4 — Security validation (self-review) | COMPLETE — CLASS D Codex pending |
+| FASE 5 — Real data E2E | BLOCKED_OWNER (no API key) |
+| FASE 6 — Data model review | COMPLETE (no changes needed) |
+| FASE 7 — Persistent market data policy | DOCUMENTED — in-memory for pilot (decision pending) |
+| FASE 8 — DB/RLS validation | COMPLETE (no issues) |
+| FASE 9 — IVE integration gap | DOCUMENTED — narrator not implemented; architecture pending |
+| FASE 10 — AEF integration | BLOCKED BY DESIGN |
+| FASE 11–35 | PENDING — architectural decisions and gates |
+
+Key change: `quant-analyze` now calls `makeLiveProvider()` which selects
+`HttpAdapterProvider(databentoAdapter)` when `DATABENTO_API_KEY` is configured,
+and falls back to `SyntheticInProcessProvider` otherwise. 598/598 tests PASS.
+
+Full analysis: `docs/quant/IV-QUANT-MACRO-05.md`
+
 ## 10. Licensed Provider Pilot (IV-QUANT-LICENSED-PROVIDER-PILOT-04, 2026-10-03)
 
 | Area | Doc |
