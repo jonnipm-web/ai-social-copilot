@@ -165,13 +165,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountTerms => 'Terms of Use';
 
   @override
+  String get accountDeleteAccount => 'Request account deletion';
+
+  @override
   String get accountSignOut => 'Sign out';
 
   @override
   String get aboutTitle => 'About InsightValues';
 
   @override
-  String get aboutTagline => 'Strategic intelligence for founders and decision-makers.';
+  String get aboutTagline => 'AI copilot for marketing and content strategy.';
 
   @override
   String get aboutVersion => 'App version';
@@ -4672,12 +4675,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ecoRecScaleTitle(String name) {
-    return 'Scale "$name"';
+    return 'Scale \"$name\"';
   }
 
   @override
   String ecoRecInvestTitle(String name) {
-    return 'Invest more in "$name"';
+    return 'Invest more in \"$name\"';
   }
 
   @override
@@ -4697,7 +4700,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ecoRecValidateTitle(String name) {
-    return 'Validate the assumptions behind "$name"';
+    return 'Validate the assumptions behind \"$name\"';
   }
 
   @override
@@ -4715,7 +4718,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ecoRecOppTitle(String title) {
-    return 'Execute the "$title" opportunity';
+    return 'Execute the \"$title\" opportunity';
   }
 
   @override
@@ -4733,7 +4736,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ecoRecQuickWinTitle(String title) {
-    return 'Quick win: "$title"';
+    return 'Quick win: \"$title\"';
   }
 
   @override
@@ -4747,11 +4750,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ecoRecQuickWinImpact => 'Fast execution with a high relative return';
+  String get ecoRecQuickWinImpact =>
+      'Fast execution with a high relative return';
 
   @override
   String ecoRecPauseTitle(String name) {
-    return 'Pause or rework "$name"';
+    return 'Pause or rework \"$name\"';
   }
 
   @override
@@ -4765,15 +4769,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ecoRecPauseImpact => 'Frees up time and focus for higher-potential projects';
+  String get ecoRecPauseImpact =>
+      'Frees up time and focus for higher-potential projects';
 
   @override
   String ecoRecRiskTitle(String name, String risk) {
-    return 'Risk in "$name": $risk';
+    return 'Risk in \"$name\": $risk';
   }
 
   @override
-  String get ecoRecRiskReason => 'Flagged by Ecosystem Intelligence based on the project data';
+  String get ecoRecRiskReason =>
+      'Flagged by Ecosystem Intelligence based on the project data';
 
   @override
   String ecoRecRiskData(int score, int momentum) {
@@ -4781,10 +4787,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ecoRecRiskImpact => 'Preventive mitigation before it hits the portfolio';
+  String get ecoRecRiskImpact =>
+      'Preventive mitigation before it hits the portfolio';
 
   @override
-  String get ecoAllocEmptySummary => 'No project has a high enough score for allocation yet. Run the Knowledge → Action Engine to generate operational intelligence.';
+  String get ecoAllocEmptySummary =>
+      'No project has a high enough score for allocation yet. Run the Knowledge → Action Engine to generate operational intelligence.';
 
   @override
   String get ecoAllocUnitHours => 'hours';
@@ -4793,8 +4801,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ecoAllocResourceBudget => 'budget';
 
   @override
-  String ecoAllocSummary(String name, String amount, String unit, int percent, int score) {
-    return 'Prioritize "$name" with $amount $unit ($percent% of the budget). Score: $score/100.';
+  String ecoAllocSummary(
+      String name, String amount, String unit, int percent, int score) {
+    return 'Prioritize \"$name\" with $amount $unit ($percent% of the budget). Score: $score/100.';
   }
 
   @override
@@ -4808,13 +4817,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ecoAllocReasonMaintain => 'Healthy project — keep investment steady';
+  String get ecoAllocReasonMaintain =>
+      'Healthy project — keep investment steady';
 
   @override
-  String get ecoAllocReasonValidate => 'Reduced allocation until the assumptions are validated';
+  String get ecoAllocReasonValidate =>
+      'Reduced allocation until the assumptions are validated';
 
   @override
-  String get ecoAllocReasonPause => 'Not recommended — consider pausing this project';
+  String get ecoAllocReasonPause =>
+      'Not recommended — consider pausing this project';
 
   @override
   String get ecoResourceAllocationTitle => 'Resource Allocation';
@@ -4832,7 +4844,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ecoAllocExecutiveRecommendation => 'Executive Recommendation';
 
   @override
-  String get ecoAllocEmpty => 'Add projects with analyses to see the allocation.';
+  String get ecoAllocEmpty =>
+      'Add projects with analyses to see the allocation.';
 
   @override
   String ecoAllocDistribution(int total, String unit) {
@@ -4845,7 +4858,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ecoBriefNewAnalysesDetail => 'New opportunities mapped by Market Intelligence';
+  String get ecoBriefNewAnalysesDetail =>
+      'New opportunities mapped by Market Intelligence';
 
   @override
   String ecoBriefNewActionsTitle(int count) {
@@ -4875,7 +4889,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ecoBriefNoActivityTitle => 'No new activity this week';
 
   @override
-  String get ecoBriefNoActivityDetail => 'Add analyses or actions to generate insights';
+  String get ecoBriefNoActivityDetail =>
+      'Add analyses or actions to generate insights';
 
   @override
   String ecoBriefProjectScoreTitle(String name, int score) {
@@ -4904,7 +4919,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ecoBriefSummaryEmpty => 'No projects yet. Start by adding projects and running analyses.';
+  String get ecoBriefSummaryEmpty =>
+      'No projects yet. Start by adding projects and running analyses.';
 
   @override
   String ecoBriefSummary(int count, int health, int growing, int pausing) {
@@ -4940,7 +4956,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ecoStrengthRoi => 'Positive ROI recorded';
 
   @override
-  String get ecoStrengthSynergy => 'Strong synergy with the rest of the portfolio';
+  String get ecoStrengthSynergy =>
+      'Strong synergy with the rest of the portfolio';
 
   @override
   String get ecoStrengthMomentum => 'High recent activity';
@@ -4966,7 +4983,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ecoRiskLowActivity => 'Low activity in the last 30 days';
 
   @override
-  String get ecoRiskIdeaStage => 'Still at the idea stage — execution has not started';
+  String get ecoRiskIdeaStage =>
+      'Still at the idea stage — execution has not started';
 
   @override
   String ecoIveCriticalProjects(int count) {
@@ -5002,19 +5020,24 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ecoHealthNarrativeExcellent => 'Your ecosystem is running at full potential. Projects are aligned and scaling.';
+  String get ecoHealthNarrativeExcellent =>
+      'Your ecosystem is running at full potential. Projects are aligned and scaling.';
 
   @override
-  String get ecoHealthNarrativeHealthy => 'Your ecosystem is healthy and growing. There are levers ready to accelerate.';
+  String get ecoHealthNarrativeHealthy =>
+      'Your ecosystem is healthy and growing. There are levers ready to accelerate.';
 
   @override
-  String get ecoHealthNarrativeStable => 'Your ecosystem is stable. A few areas need attention to unlock growth.';
+  String get ecoHealthNarrativeStable =>
+      'Your ecosystem is stable. A few areas need attention to unlock growth.';
 
   @override
-  String get ecoHealthNarrativeValidating => 'Your ecosystem is in a validation phase. Add more analyses to sharpen the intelligence.';
+  String get ecoHealthNarrativeValidating =>
+      'Your ecosystem is in a validation phase. Add more analyses to sharpen the intelligence.';
 
   @override
-  String get ecoHealthNarrativeReview => 'Your ecosystem needs a strategic review. IVE can help pinpoint the blockers.';
+  String get ecoHealthNarrativeReview =>
+      'Your ecosystem needs a strategic review. IVE can help pinpoint the blockers.';
 
   @override
   String ecoErrorGeneric(String error) {
@@ -5022,7 +5045,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ecoTop5Empty => 'No projects found.\nAdd content to the Vault and create projects.';
+  String get ecoTop5Empty =>
+      'No projects found.\nAdd content to the Vault and create projects.';
 
   @override
   String get ecoTop5ProjectsTitle => '🚀 TOP 5 PROJECTS';
@@ -5034,11 +5058,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ecoTop5OpportunitiesTitle => '💡 TOP 5 OPPORTUNITIES';
 
   @override
-  String get ecoTop5OpportunitiesSubtitle => 'Highest potential in the Opportunity Lab';
+  String get ecoTop5OpportunitiesSubtitle =>
+      'Highest potential in the Opportunity Lab';
 
   @override
   String ecoOppExplanation(String type, int score, String status) {
-    return 'A "$type" opportunity scoring $score/100. Current status: $status.';
+    return 'A \"$type\" opportunity scoring $score/100. Current status: $status.';
   }
 
   @override
@@ -5055,7 +5080,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ecoIveAskOpportunity(String title, int score) {
-    return 'Analyze the "$title" opportunity (score $score) and tell me how to capitalize on it.';
+    return 'Analyze the \"$title\" opportunity (score $score) and tell me how to capitalize on it.';
   }
 
   @override
@@ -5090,7 +5115,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ecoBadgeRisk => 'risk';
 
   @override
-  String get ecoRiskActionExplanation => 'This action belongs to a project with a critical Ecosystem Score (below 30). It needs urgent attention to avoid losing the opportunity.';
+  String get ecoRiskActionExplanation =>
+      'This action belongs to a project with a critical Ecosystem Score (below 30). It needs urgent attention to avoid losing the opportunity.';
 
   @override
   String get ecoTop5WastesTitle => '🗑️ TOP 5 WASTES';
@@ -5111,7 +5137,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ecoProjectExplanation(String name, int score, String verdict) {
-    return '$name has an Ecosystem Score of $score/100, which classifies it as "$verdict". The score combines market opportunity, strategic fit, potential ROI and execution capacity.';
+    return '$name has an Ecosystem Score of $score/100, which classifies it as \"$verdict\". The score combines market opportunity, strategic fit, potential ROI and execution capacity.';
   }
 
   @override
@@ -5145,11 +5171,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ecoAskIveImproveScore => 'Ask IVE how to improve this score';
 
   @override
-  String get ecoAskIveImproveScoreDesc => 'Open a chat with this project\'s context';
+  String get ecoAskIveImproveScoreDesc =>
+      'Open a chat with this project\'s context';
 
   @override
   String ecoIveAskImproveProject(String name, int score) {
-    return 'How can I improve the Ecosystem Score of "$name", currently at $score/100? Explain each component and which actions have the biggest impact.';
+    return 'How can I improve the Ecosystem Score of \"$name\", currently at $score/100? Explain each component and which actions have the biggest impact.';
   }
 
   @override
@@ -5190,7 +5217,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ecoQuickWinsTitle => 'Quick Wins';
 
   @override
-  String get ecoRecsEmpty => 'Add projects and analyses to generate recommendations.';
+  String get ecoRecsEmpty =>
+      'Add projects and analyses to generate recommendations.';
 
   @override
   String get ecoBlockedBadge => '🔒 BLOCKED';
@@ -5226,7 +5254,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ecoIveAskRecommendation(String title) {
-    return 'Explain the recommendation "$title" and give me a concrete action plan.';
+    return 'Explain the recommendation \"$title\" and give me a concrete action plan.';
   }
 
   @override
@@ -5280,7 +5308,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ecoBriefLowScoreHint => '⚠ Low score. Review the risks and priorities below to improve it.';
+  String get ecoBriefLowScoreHint =>
+      '⚠ Low score. Review the risks and priorities below to improve it.';
 
   @override
   String get ecoBriefHeaderLabel => 'EXECUTIVE BRIEFING';
@@ -5317,100 +5346,124 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ecoBriefIncludedProjects => 'Included projects';
 
   @override
-  String get ctxIveProjectsMsg1 => 'Hi! I\'m IVE, your executive advisor. I can analyze your portfolio right now.';
+  String get ctxIveProjectsMsg1 =>
+      'Hi! I\'m IVE, your executive advisor. I can analyze your portfolio right now.';
 
   @override
-  String get ctxIveProjectsMsg2 => 'Want to know which project has the most potential to scale right now?';
+  String get ctxIveProjectsMsg2 =>
+      'Want to know which project has the most potential to scale right now?';
 
   @override
-  String get ctxIveProjectsMsg3 => 'I spot patterns across your projects. Any strategic questions?';
+  String get ctxIveProjectsMsg3 =>
+      'I spot patterns across your projects. Any strategic questions?';
 
   @override
-  String get ctxIveOppLabMsg1 => 'I\'ve found high-ROI opportunities in this list. I can prioritize them for you.';
+  String get ctxIveOppLabMsg1 =>
+      'I\'ve found high-ROI opportunities in this list. I can prioritize them for you.';
 
   @override
-  String get ctxIveOppLabMsg2 => 'Every opportunity here has measurable criteria. I can explain any of them.';
+  String get ctxIveOppLabMsg2 =>
+      'Every opportunity here has measurable criteria. I can explain any of them.';
 
   @override
-  String get ctxIveOppLabMsg3 => 'Want me to point out which opportunities to execute first this week?';
+  String get ctxIveOppLabMsg3 =>
+      'Want me to point out which opportunities to execute first this week?';
 
   @override
-  String get ctxIveEcosystemMsg1 => 'This is your decision center. I can explain any score in plain language.';
+  String get ctxIveEcosystemMsg1 =>
+      'This is your decision center. I can explain any score in plain language.';
 
   @override
-  String get ctxIveEcosystemMsg2 => 'I see projects with untapped potential. Want a detailed analysis?';
+  String get ctxIveEcosystemMsg2 =>
+      'I see projects with untapped potential. Want a detailed analysis?';
 
   @override
-  String get ctxIveEcosystemMsg3 => 'I can simulate the impact of approving opportunities or completing actions.';
+  String get ctxIveEcosystemMsg3 =>
+      'I can simulate the impact of approving opportunities or completing actions.';
 
   @override
-  String get ctxIveBriefingMsg1 => 'Your executive briefing is ready. I can highlight what\'s most urgent.';
+  String get ctxIveBriefingMsg1 =>
+      'Your executive briefing is ready. I can highlight what\'s most urgent.';
 
   @override
-  String get ctxIveBriefingMsg2 => 'Want me to turn this report into concrete next steps?';
+  String get ctxIveBriefingMsg2 =>
+      'Want me to turn this report into concrete next steps?';
 
   @override
-  String get ctxIveBriefingMsg3 => 'I can identify what changed this week and why.';
+  String get ctxIveBriefingMsg3 =>
+      'I can identify what changed this week and why.';
 
   @override
-  String get ctxIvePersonasMsg1 => 'Your personas are your market presence. I can compare how each one performs.';
+  String get ctxIvePersonasMsg1 =>
+      'Your personas are your market presence. I can compare how each one performs.';
 
   @override
-  String get ctxIvePersonasMsg2 => 'Want to know which persona has the most growth potential right now?';
+  String get ctxIvePersonasMsg2 =>
+      'Want to know which persona has the most growth potential right now?';
 
   @override
-  String get ctxIvePersonasMsg3 => 'I can recommend specific strategies for each niche.';
+  String get ctxIvePersonasMsg3 =>
+      'I can recommend specific strategies for each niche.';
 
   @override
-  String get ctxIveKnowledgeMsg1 => 'Your knowledge vault powers all of the system\'s intelligence.';
+  String get ctxIveKnowledgeMsg1 =>
+      'Your knowledge vault powers all of the system\'s intelligence.';
 
   @override
-  String get ctxIveKnowledgeMsg2 => 'Which document would you like me to analyze or connect to your projects?';
+  String get ctxIveKnowledgeMsg2 =>
+      'Which document would you like me to analyze or connect to your projects?';
 
   @override
-  String get ctxIveKnowledgeMsg3 => 'I can show which knowledge is generating the most insights.';
+  String get ctxIveKnowledgeMsg3 =>
+      'I can show which knowledge is generating the most insights.';
 
   @override
-  String get ctxIveActionsMsg1 => 'Your action queue sets your execution speed.';
+  String get ctxIveActionsMsg1 =>
+      'Your action queue sets your execution speed.';
 
   @override
-  String get ctxIveActionsMsg2 => 'I can help you prioritize: which actions have the biggest impact on your score?';
+  String get ctxIveActionsMsg2 =>
+      'I can help you prioritize: which actions have the biggest impact on your score?';
 
   @override
-  String get ctxIveActionsMsg3 => 'Want me to identify what\'s blocking your progress?';
+  String get ctxIveActionsMsg3 =>
+      'Want me to identify what\'s blocking your progress?';
 
   @override
-  String get ctxIveDebugMsg1 => 'Full observability center. I can audit any calculation.';
+  String get ctxIveDebugMsg1 =>
+      'Full observability center. I can audit any calculation.';
 
   @override
-  String get ctxIveDebugMsg2 => 'Want to understand how a score was generated? Just ask.';
+  String get ctxIveDebugMsg2 =>
+      'Want to understand how a score was generated? Just ask.';
 
   @override
-  String get ctxIveDebugMsg3 => 'I can trace the origin of any data point or recommendation.';
+  String get ctxIveDebugMsg3 =>
+      'I can trace the origin of any data point or recommendation.';
 
   @override
   String ctxIveAnalysisCompleted(String name) {
-    return 'Analysis of "$name" complete!';
+    return 'Analysis of \"$name\" complete!';
   }
 
   @override
   String ctxIveAnalyzing(String name) {
-    return 'Analyzing "$name"...';
+    return 'Analyzing \"$name\"...';
   }
 
   @override
   String ctxIveProjectCreated(String name) {
-    return 'Project "$name" created!';
+    return 'Project \"$name\" created!';
   }
 
   @override
   String ctxIveProjectRemoved(String name) {
-    return 'Project "$name" removed.';
+    return 'Project \"$name\" removed.';
   }
 
   @override
   String ctxIveProjectStatusChanged(String name, String status) {
-    return '"$name" $status.';
+    return '\"$name\" $status.';
   }
 
   @override
@@ -5460,17 +5513,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ctxIssueAnalysisFailed(String name) {
-    return 'I couldn\'t analyze "$name".\nThe failure happened during AI processing.\nYou can try again.';
+    return 'I couldn\'t analyze \"$name\".\nThe failure happened during AI processing.\nYou can try again.';
   }
 
   @override
   String ctxIssueDownloadFailed(String name) {
-    return 'I couldn\'t import "$name".\nThe failure happened while downloading the file.\nThe content hasn\'t been analyzed yet.';
+    return 'I couldn\'t import \"$name\".\nThe failure happened while downloading the file.\nThe content hasn\'t been analyzed yet.';
   }
 
   @override
   String ctxIssueActionMutationFailed(String name) {
-    return 'I couldn\'t update "$name".\nCheck your connection and try again.';
+    return 'I couldn\'t update \"$name\".\nCheck your connection and try again.';
   }
 
   @override
@@ -5507,7 +5560,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ctxGroundingEmptyContent(String title) {
-    return '"$title": registered but has no processable content.';
+    return '\"$title\": registered but has no processable content.';
   }
 
   @override
@@ -5526,16 +5579,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ctxDvReasonProfile => 'Incomplete intelligence profile — link a market analysis';
+  String get ctxDvReasonProfile =>
+      'Incomplete intelligence profile — link a market analysis';
 
   @override
-  String get ctxDvReasonStructuring => 'No opportunities or actions generated yet — run Knowledge → Action Engine';
+  String get ctxDvReasonStructuring =>
+      'No opportunities or actions generated yet — run Knowledge → Action Engine';
 
   @override
-  String get ctxDvBlockStructuring => 'Project is still being structured. Knowledge is available, but there isn\'t enough operational intelligence for a strategic recommendation.';
+  String get ctxDvBlockStructuring =>
+      'Project is still being structured. Knowledge is available, but there isn\'t enough operational intelligence for a strategic recommendation.';
 
   @override
-  String get ctxDvBlockInsufficient => 'Not enough data for a strategic decision.';
+  String get ctxDvBlockInsufficient =>
+      'Not enough data for a strategic decision.';
 
   @override
   String get ctxDvNoDocuments => 'No documents';
@@ -5575,7 +5632,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ctxGapNoDocuments => 'Add documents to the Knowledge Vault';
 
   @override
-  String get ctxGapNoOpportunities => 'No opportunities — run Knowledge → Action Engine';
+  String get ctxGapNoOpportunities =>
+      'No opportunities — run Knowledge → Action Engine';
 
   @override
   String get ctxGapNoActions => 'No actions defined for the project';
@@ -5635,10 +5693,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ctxMaturityIdea => 'Idea';
 
   @override
-  String get ctxProfileWarningNoAnalysis => 'Run a market analysis to get intelligence.';
+  String get ctxProfileWarningNoAnalysis =>
+      'Run a market analysis to get intelligence.';
 
   @override
-  String get ctxProfileWarningLowData => 'Not enough data. Add actions and opportunities.';
+  String get ctxProfileWarningLowData =>
+      'Not enough data. Add actions and opportunities.';
 
   @override
   String get ctxProfileNotDefined => 'Not defined';
@@ -5776,7 +5836,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ctxHomeConnectionsFound => 'Connections found:';
 
   @override
-  String get ctxHomeNoConnections => 'Run market analyses to discover connections between your projects.';
+  String get ctxHomeNoConnections =>
+      'Run market analyses to discover connections between your projects.';
 
   @override
   String get ctxHomeSeeAll => 'see all';
@@ -5906,7 +5967,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ctxExecPending => 'Pending';
 
   @override
-  String get ctxExecEmptyOpportunities => 'Generate opportunities from your market analyses.';
+  String get ctxExecEmptyOpportunities =>
+      'Generate opportunities from your market analyses.';
 
   @override
   String get ctxExecViewOpportunities => 'View Opportunities';
@@ -5921,7 +5983,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ctxExecCompleted => 'Completed';
 
   @override
-  String get ctxExecEmptyActions => 'Approve opportunities to generate actionable tasks.';
+  String get ctxExecEmptyActions =>
+      'Approve opportunities to generate actionable tasks.';
 
   @override
   String get ctxExecOpenDecisions => 'Open Decisions';
@@ -5936,7 +5999,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ctxExecQuickAccess => 'QUICK ACCESS';
 
   @override
-  String get ctxExecPendingEmpty => 'No pending actions. Action Engine will fill this in automatically.';
+  String get ctxExecPendingEmpty =>
+      'No pending actions. Action Engine will fill this in automatically.';
 
   @override
   String get ctxExecModulesTitle => 'BUSINESS OS MODULES';
@@ -5966,7 +6030,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ctxResultCopied(String title) {
-    return '"$title" copied!';
+    return '\"$title\" copied!';
   }
 
   @override
@@ -6137,7 +6201,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uxActionDefaultTitle => 'Action';
 
   @override
-  String get uxErrorNotAuthenticated => 'Your session has expired. Please sign in again to continue.';
+  String get uxErrorNotAuthenticated =>
+      'Your session has expired. Please sign in again to continue.';
 
   @override
   String get uxMemoryCampaignSucceeded => 'Successful campaign';
@@ -6154,46 +6219,59 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uxAuthErrorInvalidCredentials => 'Incorrect email or password.';
 
   @override
-  String get uxAuthErrorEmailNotConfirmed => 'Please confirm your email before signing in.';
+  String get uxAuthErrorEmailNotConfirmed =>
+      'Please confirm your email before signing in.';
 
   @override
-  String get uxAuthErrorAlreadyRegistered => 'This email is already registered.';
+  String get uxAuthErrorAlreadyRegistered =>
+      'This email is already registered.';
 
   @override
-  String get uxAuthErrorRateLimited => 'Too many attempts. Please wait a few seconds.';
+  String get uxAuthErrorRateLimited =>
+      'Too many attempts. Please wait a few seconds.';
 
   @override
-  String get uxAuthErrorWeakPassword => 'Password is too weak. Use at least 6 characters.';
+  String get uxAuthErrorWeakPassword =>
+      'Password is too weak. Use at least 6 characters.';
 
   @override
-  String get uxAuthErrorGeneric => 'We couldn\'t complete sign-in. Please try again.';
+  String get uxAuthErrorGeneric =>
+      'We couldn\'t complete sign-in. Please try again.';
 
   @override
-  String get uxErrorQuotaExceeded => 'You\'ve reached your plan\'s monthly AI analysis limit. Upgrade to Pro to continue.';
+  String get uxErrorQuotaExceeded =>
+      'You\'ve reached your plan\'s monthly AI analysis limit. Upgrade to Pro to continue.';
 
   @override
-  String get uxErrorPlanRequired => 'This feature is part of a higher plan. Upgrade to continue.';
+  String get uxErrorPlanRequired =>
+      'This feature is part of a higher plan. Upgrade to continue.';
 
   @override
-  String get uxErrorModuleNotAvailable => 'This feature isn\'t available for your account yet.';
+  String get uxErrorModuleNotAvailable =>
+      'This feature isn\'t available for your account yet.';
 
   @override
   String get uxErrorModuleDisabled => 'This feature has been disabled.';
 
   @override
-  String get uxErrorEntitlementUnavailable => 'We couldn\'t verify your access right now. Please try again.';
+  String get uxErrorEntitlementUnavailable =>
+      'We couldn\'t verify your access right now. Please try again.';
 
   @override
-  String get uxErrorSessionExpired => 'Your session has expired. Please sign in again.';
+  String get uxErrorSessionExpired =>
+      'Your session has expired. Please sign in again.';
 
   @override
-  String get uxErrorNoConnection => 'Couldn\'t connect. Please check your internet connection.';
+  String get uxErrorNoConnection =>
+      'Couldn\'t connect. Please check your internet connection.';
 
   @override
-  String get uxErrorTimeout => 'The connection took too long. Please try again.';
+  String get uxErrorTimeout =>
+      'The connection took too long. Please try again.';
 
   @override
-  String get uxErrorServiceUnavailable => 'Service temporarily unavailable. Please try again.';
+  String get uxErrorServiceUnavailable =>
+      'Service temporarily unavailable. Please try again.';
 
   @override
   String get uxOriginManual => 'Added manually';
@@ -6211,7 +6289,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uxAdminAccessDeniedTitle => 'Access denied';
 
   @override
-  String get uxAdminAccessDeniedBody => 'You don\'t have permission to access this area.';
+  String get uxAdminAccessDeniedBody =>
+      'You don\'t have permission to access this area.';
 
   @override
   String get uxAdminPanelTitle => 'Admin Panel';
@@ -6344,19 +6423,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uxDriveLoginCancelled => 'Sign-in cancelled.';
 
   @override
-  String get uxDriveConfigError => 'Couldn\'t connect to Google (configuration error).\nUse the "URL" type and paste the Google Docs sharing link, or use the "File" type to import local PDFs.';
+  String get uxDriveConfigError =>
+      'Couldn\'t connect to Google (configuration error).\nUse the \"URL\" type and paste the Google Docs sharing link, or use the \"File\" type to import local PDFs.';
 
   @override
-  String get uxDriveNoInternet => 'No internet connection. Check your network and try again.';
+  String get uxDriveNoInternet =>
+      'No internet connection. Check your network and try again.';
 
   @override
-  String get uxDriveConnectError => 'Couldn\'t connect to Google Drive. Please try again.';
+  String get uxDriveConnectError =>
+      'Couldn\'t connect to Google Drive. Please try again.';
 
   @override
-  String get uxDriveLoadError => 'Couldn\'t load your Drive files. Please try again.';
+  String get uxDriveLoadError =>
+      'Couldn\'t load your Drive files. Please try again.';
 
   @override
-  String get uxDriveDownloadError => 'Couldn\'t download the file. Please try again.';
+  String get uxDriveDownloadError =>
+      'Couldn\'t download the file. Please try again.';
 
   @override
   String get uxDriveImportTitle => 'Import from Google Drive';
@@ -6371,7 +6455,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uxDriveConnectTitle => 'Connect Google Drive';
 
   @override
-  String get uxDriveConnectBody => 'Import PDFs, Google Docs and text documents directly into the Knowledge Vault.';
+  String get uxDriveConnectBody =>
+      'Import PDFs, Google Docs and text documents directly into the Knowledge Vault.';
 
   @override
   String get uxDriveConnecting => 'Connecting…';
@@ -6388,7 +6473,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uxDriveSearchHint => 'Search files in Drive…';
 
   @override
-  String get uxDriveNoFiles => 'No files found.\nSupported: Google Docs, PDF, DOCX, TXT and CSV.';
+  String get uxDriveNoFiles =>
+      'No files found.\nSupported: Google Docs, PDF, DOCX, TXT and CSV.';
 
   @override
   String get uxDriveTypeText => 'Text';
@@ -6407,11 +6493,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String uxKnowledgeAskIveMessage(String title) {
-    return 'Analyze the knowledge item "$title" and tell me how to apply the insights to the project strategy.';
+    return 'Analyze the knowledge item \"$title\" and tell me how to apply the insights to the project strategy.';
   }
 
   @override
-  String get uxKnowledgeNoPersonas => 'No personas found. Create a persona first.';
+  String get uxKnowledgeNoPersonas =>
+      'No personas found. Create a persona first.';
 
   @override
   String get uxKnowledgePersonaTrained => 'Persona trained successfully!';
@@ -6523,7 +6610,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uxHistoryEmptyTitle => 'No saved content yet';
 
   @override
-  String get uxHistoryEmptyBody => 'Go back to the main screen, write a post\nand tap "Save" after generating the result.';
+  String get uxHistoryEmptyBody =>
+      'Go back to the main screen, write a post\nand tap \"Save\" after generating the result.';
 
   @override
   String get uxContentTypeBook => 'Book';
@@ -6634,19 +6722,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uxAdvisorStyleDirect => 'Direct';
 
   @override
-  String get uxAdvisorStyleExecutiveDesc => 'Straight to the point, focused on results and ROI.';
+  String get uxAdvisorStyleExecutiveDesc =>
+      'Straight to the point, focused on results and ROI.';
 
   @override
-  String get uxAdvisorStyleAnalyticalDesc => 'Data first, in-depth analysis before recommending.';
+  String get uxAdvisorStyleAnalyticalDesc =>
+      'Data first, in-depth analysis before recommending.';
 
   @override
-  String get uxAdvisorStyleTeacherDesc => 'Explains every concept, ideal for learning.';
+  String get uxAdvisorStyleTeacherDesc =>
+      'Explains every concept, ideal for learning.';
 
   @override
-  String get uxAdvisorStyleMentorDesc => 'Guides with experience and strategic questions.';
+  String get uxAdvisorStyleMentorDesc =>
+      'Guides with experience and strategic questions.';
 
   @override
-  String get uxAdvisorStyleDirectDesc => 'No detours, goes straight to the solution.';
+  String get uxAdvisorStyleDirectDesc =>
+      'No detours, goes straight to the solution.';
 
   @override
   String get uxAdvisorNext => 'Next';
@@ -6655,10 +6748,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uxAdvisorActivate => 'Activate Advisor';
 
   @override
-  String get uxAdvisorNameTitle => 'Choose a name for your\nPersonal AI Advisor';
+  String get uxAdvisorNameTitle =>
+      'Choose a name for your\nPersonal AI Advisor';
 
   @override
-  String get uxAdvisorNameSubtitle => 'This will be your strategic business partner.';
+  String get uxAdvisorNameSubtitle =>
+      'This will be your strategic business partner.';
 
   @override
   String get uxAdvisorCustomNameHint => 'Or type a custom name...';
@@ -6667,7 +6762,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uxAdvisorRoleTitle => 'What will your Advisor\nspecialize in?';
 
   @override
-  String get uxAdvisorRoleSubtitle => 'Sets the focus of analyses and recommendations.';
+  String get uxAdvisorRoleSubtitle =>
+      'Sets the focus of analyses and recommendations.';
 
   @override
   String uxAdvisorStyleTitle(String name) {
@@ -6675,7 +6771,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get uxAdvisorStyleSubtitle => 'Sets the style of responses and interactions.';
+  String get uxAdvisorStyleSubtitle =>
+      'Sets the style of responses and interactions.';
 
   @override
   String get uxImpactInvestigationActive => 'Active';
@@ -6698,28 +6795,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uxActionPriorityShort => 'prio';
 
   @override
-  String get uxErrorEmptyResponse => 'The service returned no data. Please try again.';
+  String get uxErrorEmptyResponse =>
+      'The service returned no data. Please try again.';
 
   @override
   String get uxErrorNotFound => 'Item not found.';
 
   @override
-  String get uxErrorFileTooLarge => 'File is too large to import. The limit is about 6 MB.';
+  String get uxErrorFileTooLarge =>
+      'File is too large to import. The limit is about 6 MB.';
 
   @override
   String get uxErrorFileUnreadable => 'Couldn\'t read the file.';
 
   @override
-  String get uxErrorFileTimeout => 'Timed out while processing the file. Please try again.';
+  String get uxErrorFileTimeout =>
+      'Timed out while processing the file. Please try again.';
 
   @override
-  String get uxErrorExtractionTimeout => 'The server took too long to extract the text. Please try again.';
+  String get uxErrorExtractionTimeout =>
+      'The server took too long to extract the text. Please try again.';
 
   @override
-  String get uxErrorExtractedTextTooShort => 'The extracted content is too short. The file may be protected or corrupted — try copying and pasting the text manually.';
+  String get uxErrorExtractedTextTooShort =>
+      'The extracted content is too short. The file may be protected or corrupted — try copying and pasting the text manually.';
 
   @override
-  String get uxErrorGoogleNotConfigured => 'Google sign-in isn\'t configured in this environment.';
+  String get uxErrorGoogleNotConfigured =>
+      'Google sign-in isn\'t configured in this environment.';
 
   @override
   String get uxErrorGoogleCredentials => 'Couldn\'t obtain Google credentials.';
@@ -6741,7 +6844,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String uxOppAskIveMessage(String title, String score) {
-    return 'Analyze the opportunity "$title" (score $score) and tell me how to make the most of it.';
+    return 'Analyze the opportunity \"$title\" (score $score) and tell me how to make the most of it.';
   }
 
   @override
@@ -6837,7 +6940,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get r16ShowingOriginalContent => 'Showing content in its original language';
+  String get r16ShowingOriginalContent =>
+      'Showing content in its original language';
 
   @override
   String get r16ViewOriginal => 'View original';
@@ -6860,4 +6964,117 @@ class AppLocalizationsEn extends AppLocalizations {
   String uxfEcoAllocationScoreLine(String score, String emoji, String verdict) {
     return 'Ecosystem Score: $score/100  •  $emoji $verdict';
   }
+
+  @override
+  String get insightTitle => 'IVE Analysis';
+
+  @override
+  String get insightSubtitle => 'Ask IVE about this project';
+
+  @override
+  String get insightAskHint =>
+      'What would you like to know about this project?';
+
+  @override
+  String get insightAnalyzeProject => 'Analyze with IVE';
+
+  @override
+  String get insightEmpty => 'No insights yet for this project.';
+
+  @override
+  String get insightEmptyPrompt =>
+      'Ask IVE a question to generate your first insight.';
+
+  @override
+  String get insightThinking => 'IVE is thinking...';
+
+  @override
+  String get insightGenerating => 'Generating insight...';
+
+  @override
+  String get insightError => 'Could not generate insight. Please try again.';
+
+  @override
+  String get insightSaved => 'Insight saved';
+
+  @override
+  String get insightConfidence => 'Confidence';
+
+  @override
+  String get insightRecommendedAction => 'Recommended action';
+
+  @override
+  String get insightSources => 'Sources';
+
+  @override
+  String get insightAddToActions => 'Add to actions';
+
+  @override
+  String get insightRecent => 'Recent insights';
+
+  @override
+  String get insightProjectContext => 'Project context';
+
+  @override
+  String get insightFreeLimit => 'Free plan: limited AI analyses per month.';
+
+  @override
+  String get insightUpgradeForMore => 'Upgrade to Pro for more analyses';
+
+  @override
+  String get insightViewAll => 'View all insights';
+
+  @override
+  String get insightDeleteConfirm => 'Delete this insight?';
+
+  @override
+  String insightNOf(num n) {
+    final intl.NumberFormat nNumberFormat = intl.NumberFormat.compact(
+      locale: localeName,
+    );
+    final String nString = nNumberFormat.format(n);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$nString insights',
+      one: '$nString insight',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insightUsageOf(num used, num max) {
+    final intl.NumberFormat usedNumberFormat = intl.NumberFormat.compact(
+      locale: localeName,
+    );
+    final String usedString = usedNumberFormat.format(used);
+    final intl.NumberFormat maxNumberFormat = intl.NumberFormat.compact(
+      locale: localeName,
+    );
+    final String maxString = maxNumberFormat.format(max);
+
+    return '$usedString / $maxString analyses used this month';
+  }
+
+  @override
+  String get insightQuotaExceeded => 'Monthly analysis limit reached.';
+
+  @override
+  String get insightUpgradeCta => 'Upgrade to Pro for unlimited analyses';
+
+  @override
+  String get insightAddedToActions => 'Added to actions';
+
+  @override
+  String get insightAddToActionsError => 'Could not add to actions. Try again.';
+
+  @override
+  String get insightRecentAll => 'All recent insights';
+
+  @override
+  String get insightCancel => 'Cancel';
+
+  @override
+  String get insightRetry => 'Retry';
 }

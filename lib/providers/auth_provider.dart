@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/diagnostics/diagnostic_models.dart';
 import '../data/services/auth_service.dart';
+import 'context_copilot_provider.dart';
 import 'diagnostic_session_provider.dart';
 import 'ive_memory_provider.dart';
 import 'ive_session_isolation.dart';
@@ -62,6 +63,10 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     _ref.invalidate(currentProfileProvider);
     _ref.invalidate(currentQuotaProvider);
     _ref.invalidate(projectsNotifierProvider);
+    // P1-Q9: contextCopilotProvider is NOT autoDispose — conversation history
+    // persists in memory. Without this, a second user signing in within the
+    // same app session could see the first user's IVE Analysis history.
+    _ref.invalidate(contextCopilotProvider);
   }
 
   // IVE-INTELLIGENCE-CORE-01 (IVE-F01) — after a successful sign-in, bind the

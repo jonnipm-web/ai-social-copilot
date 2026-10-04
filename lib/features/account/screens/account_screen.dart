@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../l10n/app_localizations.dart';
@@ -98,6 +99,16 @@ class AccountScreen extends ConsumerWidget {
           ),
           const Divider(color: Colors.white12, height: 32),
 
+          if (AppConstants.accountDeletionUrl != null)
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded, color: Colors.white54),
+              title: Text(t.accountDeleteAccount, style: const TextStyle(color: Colors.white54)),
+              trailing: const Icon(Icons.open_in_new_rounded, color: Colors.white24, size: 18),
+              onTap: () => launchUrl(
+                Uri.parse(AppConstants.accountDeletionUrl!),
+                mode: LaunchMode.externalApplication,
+              ),
+            ),
           ListTile(
             leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
             title: Text(t.accountSignOut, style: const TextStyle(color: Colors.redAccent)),

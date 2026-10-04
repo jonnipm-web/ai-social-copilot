@@ -97,6 +97,11 @@ class AppConstants {
   // Fase 10F — Intelligence Debug & Observability
   static const routeIntelligenceDebug    = '/intelligence-debug';
 
+  // INSIGHTVALUES-COMMERCIAL-V1-FINAL-CLOSURE-01 — IVE Analysis (per-project)
+  static const routeProjectAnalysis      = '/projects/:id/analysis';
+  static const originIveAnalysis         = 'ive_analysis';
+  static const insightFreeMonthlyLimit   = 5;
+
   // IV-IMPACT-I5 — Impact Lab (admin-only: module 'impact' is EXPERIMENTAL)
   static const routeImpact               = '/impact';
   static const routeImpactDossier        = '/impact/:id';
@@ -187,9 +192,10 @@ class AppConstants {
   // próprio foi encontrado configurado em nenhum lugar do repositório.
   static const officialWebsiteUrl = 'https://jonnipm-web.github.io/ai-social-copilot/';
   // Nenhuma página de Política de Privacidade ou Termos de Uso foi
-  // encontrada em nenhum lugar do repositório ou configuração conhecida.
-  // Deliberadamente null -- ver mission section 12 (não fabricar texto
-  // legal). Reportado como OWNER CONTENT REQUIRED no relatório final.
-  static const String? privacyPolicyUrl = null;
-  static const String? termsOfUseUrl = null;
+  static const String? privacyPolicyUrl =
+      'https://insightvalues.com/en/privacy-policy/';
+  static const String? termsOfUseUrl =
+      'https://insightvalues.com/en/terms-of-use/';
+  static const String? accountDeletionUrl =
+      'https://insightvalues.com/en/delete-account/';
 }

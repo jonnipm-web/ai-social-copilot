@@ -73,6 +73,7 @@ import 'features/debug/screens/intelligence_debug_hub_screen.dart';
 import 'features/impact/screens/impact_dossier_screen.dart';
 import 'features/impact/screens/impact_home_screen.dart';
 import 'features/strategy_lab/strategy_lab_screen.dart';
+import 'features/insights/screens/ive_analysis_screen.dart';
 
 final _iveObserver = IveRouteObserver();
 
@@ -702,6 +703,14 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeStrategyLab,
       builder: (_, __) => const StrategyLabScreen(),
+    ),
+
+    // ── INSIGHTVALUES-COMMERCIAL-V1-FINAL-CLOSURE-01 — IVE Analysis ─────
+    GoRoute(
+      path: AppConstants.routeProjectAnalysis,
+      builder: (_, state) => IveAnalysisScreen(
+        projectId: state.pathParameters['id']!,
+      ),
     ),
   ],
 );
