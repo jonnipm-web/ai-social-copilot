@@ -10,6 +10,7 @@ import type { AuthClient } from '../_shared/auth.ts';
 import { fakeSubjectSource } from '../_shared/entitlement_test_support.ts';
 import { type AnalyzeDeps, handler } from './index.ts';
 import { checkQuantCapability, InMemoryRateLimiter } from '../_shared/quant_server.ts';
+import { resolveProviderMode } from '../_shared/quant_provider_mode.ts';
 import type { WatchlistRow, WatchlistStore } from '../_shared/quant/watchlist_contract.ts';
 import type { EntitlementSubjectSource } from '../_shared/entitlement.ts';
 
@@ -589,4 +590,58 @@ Deno.test('QM-11 Codex-P2: null provider → 500 (normalization correctness pinn
   assertEquals(r.status, 500, 'null provider → 500 (fail-closed)');
   assertEquals(r.json.error, 'INTERNAL_ERROR');
   assertEquals(r.json.multi_analysis, undefined, 'no partial data on fail-closed response');
+});
+
+// MACRO-05 FASE 3: QUANT_PROVIDER_MODE explicit enum resolution.
+// resolveProviderMode() accepts an injectable env accessor so all branches can
+// be exercised in a pure unit test, without touching the real Deno.env or
+// requiring a fresh module isolate per test case.
+Deno.test('QM-12 FASE3 QUANT_PROVIDER_MODE: resolveProviderMode covers all branches', () => {
+  const env = (vars: Record<string, string>) => (k: string) => vars[k];
+
+  // Default (no env) → auto_lab
+  assertEquals(resolveProviderMode(env({})), 'auto_lab', 'default is auto_lab');
+
+  // Explicit values
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'synthetic' })), 'synthetic', 'explicit synthetic');
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'real' })), 'real', 'explicit real');
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'auto_lab' })), 'auto_lab', 'explicit auto_lab');
+
+  // Case and whitespace normalisation
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'REAL' })), 'real', 'uppercase normalised');
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: ' real ' })), 'real', 'whitespace trimmed');
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'SYNTHETIC' })), 'synthetic', 'SYNTHETIC normalised');
+
+  // Legacy alias: QUANT_REQUIRE_LIVE_DATA=true → real
+  assertEquals(resolveProviderMode(env({ QUANT_REQUIRE_LIVE_DATA: 'true' })), 'real', 'legacy true');
+  assertEquals(resolveProviderMode(env({ QUANT_REQUIRE_LIVE_DATA: 'TRUE' })), 'real', 'legacy TRUE normalised');
+  assertEquals(resolveProviderMode(env({ QUANT_REQUIRE_LIVE_DATA: ' true ' })), 'real', 'legacy true whitespace');
+  assertEquals(resolveProviderMode(env({ QUANT_REQUIRE_LIVE_DATA: 'false' })), 'auto_lab', 'legacy false → auto_lab');
+
+  // Explicit QUANT_PROVIDER_MODE takes precedence over legacy
+  assertEquals(
+    resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'synthetic', QUANT_REQUIRE_LIVE_DATA: 'true' })),
+    'synthetic', 'explicit mode wins over legacy alias',
+  );
+
+  // Unknown QUANT_PROVIDER_MODE value → fall back to auto_lab (safe default)
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'invalid' })), 'auto_lab', 'unknown → auto_lab');
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'PRODUCTION' })), 'auto_lab', 'unknown value → auto_lab');
+});
+
+// MACRO-05 FASE 3: provider_mode appears in the observability log.
+// The log entry for every request must carry the resolved provider_mode so
+// operations can distinguish synthetic from real data without secrets.
+Deno.test('QM-13 FASE3 observability: provider_mode present in log event', async () => {
+  const entries: unknown[] = [];
+  const logCollector = (line: string) => { try { entries.push(JSON.parse(line)); } catch { /**/ } };
+  const d = deps({ log: logCollector });
+  const r = await call(post(body()), d);
+  assertEquals(r.status, 200);
+  const ev = entries.find((e) => typeof e === 'object' && e !== null && (e as Record<string, unknown>).event === 'quant_analysis') as Record<string, unknown> | undefined;
+  assert(ev !== undefined, 'no quant_analysis log event found');
+  assert(
+    ev.provider_mode === 'synthetic' || ev.provider_mode === 'real' || ev.provider_mode === 'auto_lab',
+    `provider_mode must be one of synthetic/real/auto_lab, got: ${ev.provider_mode}`,
+  );
 });

@@ -47,6 +47,7 @@ import type { WatchlistRow, WatchlistStore } from '../_shared/quant/watchlist_co
 import type { QuantErrorCode } from '../_shared/quant/errors.ts';
 import { quantLogEvent } from '../_shared/quant/observability.ts';
 import { buildExplanationRequest } from '../_shared/quant/ive_boundary.ts';
+import { resolveProviderMode, type ProviderMode } from '../_shared/quant_provider_mode.ts';
 import {
   bearerToken,
   checkQuantCapability,
@@ -94,29 +95,35 @@ const _LIVE_HTTP_PROVIDER: MarketDataProvider | null = Deno.env.get('DATABENTO_A
   ? new HttpAdapterProvider(databentoAdapter, DATABENTO_BASE_URL)
   : null;
 
-// QUANT_REQUIRE_LIVE_DATA=true → fail closed when DATABENTO_API_KEY is absent.
-// Set this in any environment that declares real-data mode (production, staging
-// with live data). Absent or 'false' → synthetic fallback is allowed (dev/CI/LAB).
-// This prevents silent degradation to synthetic data in production deployments
-// where the API key was accidentally omitted.
-// Codex P2 fix: normalize so "TRUE" / " true " / "True" all behave identically to "true".
-const _REQUIRE_LIVE_DATA = (Deno.env.get('QUANT_REQUIRE_LIVE_DATA') ?? '').trim().toLowerCase() === 'true';
-const _LIVE_CONFIG_ERROR: string | null = _REQUIRE_LIVE_DATA && !_LIVE_HTTP_PROVIDER
-  ? 'QUANT_REQUIRE_LIVE_DATA=true but DATABENTO_API_KEY is not configured'
+// QUANT_PROVIDER_MODE: explicit provider selection (synthetic / real / auto_lab).
+// Replaces the binary QUANT_REQUIRE_LIVE_DATA (still supported as legacy alias).
+// See _shared/quant_provider_mode.ts for full semantics.
+// MACRO-05 FASE 3: Codex P2 fix (case/whitespace normalisation) is inherited via
+// resolveProviderMode() which uses .trim().toLowerCase() internally.
+const PROVIDER_MODE: ProviderMode = resolveProviderMode();
+const _LIVE_CONFIG_ERROR: string | null = PROVIDER_MODE === 'real' && !_LIVE_HTTP_PROVIDER
+  ? `QUANT_PROVIDER_MODE=real but DATABENTO_API_KEY is not configured`
   : null;
 
 /**
  * Selects the market-data provider for watchlist.v1 requests.
- * When DATABENTO_API_KEY was present at module load, returns the real
- * Databento EQUS.SUMMARY provider (YELLOW/NOT_VERIFIED rights).
- * When QUANT_REQUIRE_LIVE_DATA=true and no API key → returns null (fail closed).
- * When key absent and live data not required → SyntheticInProcessProvider
- * (safe default for lab/CI environments without credentials).
+ *
+ * PROVIDER_MODE=synthetic  → always SyntheticInProcessProvider (TEST/DEV).
+ * PROVIDER_MODE=real       → requires DATABENTO_API_KEY; returns null (fail
+ *                            closed) if absent so the caller returns 500.
+ * PROVIDER_MODE=auto_lab   → real if DATABENTO_API_KEY is set, else synthetic
+ *                            (default for lab/CI without credentials).
+ *
  * On real-provider failure the error propagates as a Quant error code;
- * there is NO silent automatic fallback to synthetic once the key is set.
+ * there is NO silent automatic fallback to synthetic once a real key is set.
+ * RIGHTS: YELLOW/NOT_VERIFIED — see docs/quant/BOOTSTRAP_PROVIDER_DECISION.md §2.2.
  */
 function makeLiveProvider(clock: () => number): MarketDataProvider | null {
-  if (_LIVE_CONFIG_ERROR) return null; // caller must fail closed
+  if (PROVIDER_MODE === 'synthetic') {
+    // Explicit synthetic mode: ignore any configured API key.
+    return new CachingProvider(new SyntheticInProcessProvider(clock), DEFAULT_MARKET_CACHE, clock);
+  }
+  if (_LIVE_CONFIG_ERROR) return null; // real mode, key absent → caller must fail closed
   const inner: MarketDataProvider = _LIVE_HTTP_PROVIDER ?? new SyntheticInProcessProvider(clock);
   return new CachingProvider(inner, DEFAULT_MARKET_CACHE, clock);
 }
@@ -155,6 +162,7 @@ export async function handler(
     log(JSON.stringify(quantLogEvent({
       analysisId: extra.analysisId ?? null,
       providerId: extra.providerId ?? 'user-csv',
+      providerMode: PROVIDER_MODE,
       instrumentCount: extra.instruments ?? (extra.analysisId ? 1 : 0),
       contract,
       cacheHits: extra.hits ?? 0,

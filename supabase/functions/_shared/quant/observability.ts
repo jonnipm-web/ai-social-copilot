@@ -15,6 +15,8 @@ export interface QuantLogEvent {
   readonly event: 'quant_analysis';
   readonly analysis_id: string | null;
   readonly provider_id: string | null;
+  /** MACRO-05 FASE 3: explicit provider mode (synthetic / real / auto_lab). */
+  readonly provider_mode: string | null;
   readonly instrument_count: number;
   readonly dataset_size: number;
   readonly period_start: string | null;
@@ -33,6 +35,8 @@ export interface QuantLogEvent {
 export interface QuantLogInput {
   analysisId?: string | null;
   providerId?: string | null;
+  /** MACRO-05 FASE 3: explicit provider mode (synthetic / real / auto_lab). */
+  providerMode?: string | null;
   instrumentCount: number;
   datasetSize: number;
   periodStart?: string | null;
@@ -47,6 +51,7 @@ export interface QuantLogInput {
 }
 
 const SAFE_TOKEN_RE = /^[A-Za-z0-9_:.\-]{1,64}$/;
+const PROVIDER_MODES: ReadonlySet<string> = new Set(['synthetic', 'real', 'auto_lab']);
 const FRESHNESS_STATES: ReadonlySet<string> = new Set(['FRESH', 'DELAYED', 'STALE', 'UNKNOWN']);
 const ERROR_CODES: ReadonlySet<string> = new Set([
   'INVALID_INSTRUMENT', 'INVALID_DATASET', 'DATASET_TOO_LARGE', 'INSUFFICIENT_DATA', 'STALE_DATA', 'PROVIDER_UNAVAILABLE',
@@ -66,6 +71,7 @@ export function quantLogEvent(i: QuantLogInput): QuantLogEvent {
     event: 'quant_analysis',
     analysis_id: safe(i.analysisId),
     provider_id: safe(i.providerId),
+    provider_mode: typeof i.providerMode === 'string' && PROVIDER_MODES.has(i.providerMode) ? i.providerMode : null,
     instrument_count: Number.isSafeInteger(i.instrumentCount) ? i.instrumentCount : 0,
     dataset_size: Number.isSafeInteger(i.datasetSize) ? i.datasetSize : 0,
     period_start: safe(i.periodStart),
