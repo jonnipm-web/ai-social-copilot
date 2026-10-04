@@ -6964,4 +6964,117 @@ class AppLocalizationsEn extends AppLocalizations {
   String uxfEcoAllocationScoreLine(String score, String emoji, String verdict) {
     return 'Ecosystem Score: $score/100  •  $emoji $verdict';
   }
+
+  @override
+  String get insightTitle => 'IVE Analysis';
+
+  @override
+  String get insightSubtitle => 'Ask IVE about this project';
+
+  @override
+  String get insightAskHint =>
+      'What would you like to know about this project?';
+
+  @override
+  String get insightAnalyzeProject => 'Analyze with IVE';
+
+  @override
+  String get insightEmpty => 'No insights yet for this project.';
+
+  @override
+  String get insightEmptyPrompt =>
+      'Ask IVE a question to generate your first insight.';
+
+  @override
+  String get insightThinking => 'IVE is thinking...';
+
+  @override
+  String get insightGenerating => 'Generating insight...';
+
+  @override
+  String get insightError => 'Could not generate insight. Please try again.';
+
+  @override
+  String get insightSaved => 'Insight saved';
+
+  @override
+  String get insightConfidence => 'Confidence';
+
+  @override
+  String get insightRecommendedAction => 'Recommended action';
+
+  @override
+  String get insightSources => 'Sources';
+
+  @override
+  String get insightAddToActions => 'Add to actions';
+
+  @override
+  String get insightRecent => 'Recent insights';
+
+  @override
+  String get insightProjectContext => 'Project context';
+
+  @override
+  String get insightFreeLimit => 'Free plan: limited AI analyses per month.';
+
+  @override
+  String get insightUpgradeForMore => 'Upgrade to Pro for more analyses';
+
+  @override
+  String get insightViewAll => 'View all insights';
+
+  @override
+  String get insightDeleteConfirm => 'Delete this insight?';
+
+  @override
+  String insightNOf(num n) {
+    final intl.NumberFormat nNumberFormat = intl.NumberFormat.compact(
+      locale: localeName,
+    );
+    final String nString = nNumberFormat.format(n);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$nString insights',
+      one: '$nString insight',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insightUsageOf(num used, num max) {
+    final intl.NumberFormat usedNumberFormat = intl.NumberFormat.compact(
+      locale: localeName,
+    );
+    final String usedString = usedNumberFormat.format(used);
+    final intl.NumberFormat maxNumberFormat = intl.NumberFormat.compact(
+      locale: localeName,
+    );
+    final String maxString = maxNumberFormat.format(max);
+
+    return '$usedString / $maxString analyses used this month';
+  }
+
+  @override
+  String get insightQuotaExceeded => 'Monthly analysis limit reached.';
+
+  @override
+  String get insightUpgradeCta => 'Upgrade to Pro for unlimited analyses';
+
+  @override
+  String get insightAddedToActions => 'Added to actions';
+
+  @override
+  String get insightAddToActionsError => 'Could not add to actions. Try again.';
+
+  @override
+  String get insightRecentAll => 'All recent insights';
+
+  @override
+  String get insightCancel => 'Cancel';
+
+  @override
+  String get insightRetry => 'Retry';
 }

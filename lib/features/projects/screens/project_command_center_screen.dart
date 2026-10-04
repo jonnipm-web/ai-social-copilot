@@ -378,6 +378,12 @@ class _ProjectCommandCenterScreenState
               }
             : null,
         onAnalyzeKnowledge: () => _analyzeWithKnowledge(project),
+        onIveAnalysis: () {
+          Navigator.of(context).pop();
+          context.push(
+            AppConstants.routeProjectAnalysis.replaceFirst(':id', project.id),
+          );
+        },
         onViewKnowledge: () {
           Navigator.of(context).pop();
           context.push(
@@ -653,6 +659,9 @@ class _ProjectCommandCenterScreenState
               ? () => context.go(AppConstants.routeMarketIntelligenceHub
                   .replaceFirst(':id', p.marketAnalysisId!))
               : null,
+          onIveAnalysis: () => context.push(
+            AppConstants.routeProjectAnalysis.replaceFirst(':id', p.id),
+          ),
         );
       },
     );
@@ -707,6 +716,7 @@ class _ProjectCard extends StatelessWidget {
     required this.onDelete,
     this.ecosystemScore,
     this.onAnalyze,
+    this.onIveAnalysis,
   });
 
   final Project project;
@@ -716,6 +726,7 @@ class _ProjectCard extends StatelessWidget {
   final void Function(String) onStatusChange;
   final VoidCallback onDelete;
   final VoidCallback? onAnalyze;
+  final VoidCallback? onIveAnalysis;
 
   Color get _statusColor {
     switch (project.status) {
@@ -903,6 +914,12 @@ class _ProjectCard extends StatelessWidget {
                         label: t.projectCommandActionAnalysis,
                         color: const Color(0xFF00BCD4),
                         onTap: onAnalyze!),
+                  if (onIveAnalysis != null)
+                    _ActionBtn(
+                        icon: Icons.psychology_rounded,
+                        label: 'IVE',
+                        color: const Color(0xFF6C63FF),
+                        onTap: onIveAnalysis!),
                   _ActionBtn(
                     icon: Icons.play_arrow_rounded,
                     label: t.projectCommandActionActivate,
@@ -943,6 +960,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
     this.onAnalyze,
     this.onAnalyzeKnowledge,
     this.onViewKnowledge,
+    this.onIveAnalysis,
     required this.onAnalyzeIdea,
     required this.onOpenConfig,
   });
@@ -955,6 +973,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
   final VoidCallback? onAnalyze;
   final VoidCallback? onAnalyzeKnowledge;
   final VoidCallback? onViewKnowledge;
+  final VoidCallback? onIveAnalysis;
   /// IVE-COMMERCIAL-EXPERIENCE-14, Phase B Section 07 — opens Market
   /// Intelligence pre-bound to this project (the "Idea Analysis" entry
   /// point). Always available, unlike [onAnalyze] (which only shows an
@@ -1254,6 +1273,21 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   ),
               ],
             ),
+            if (onIveAnalysis != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SheetButton(
+                      icon: Icons.auto_awesome_rounded,
+                      label: t.insightTitle,
+                      color: const Color(0xFF6C63FF),
+                      onTap: onIveAnalysis!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 8),
             Row(
               children: [
