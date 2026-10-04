@@ -35,7 +35,9 @@ class LabelledFact {
   final String label;
   final String value;
 
-  String toContextLine() => '[${kind.name.toUpperCase()}] $label: $value';
+  // Values are wrapped in XML-style delimiters so downstream IVE runners
+  // cannot treat the value content as control instructions.
+  String toContextLine() => '[${kind.name.toUpperCase()}] $label: <value>${_sanitize(value)}</value>';
 }
 
 // ── IVE boundary rules (printed verbatim in every context) ─────────────────
@@ -111,3 +113,8 @@ String _trunc(String? s, int max) {
   if (s == null || s.isEmpty) return '—';
   return s.length <= max ? s : '${s.substring(0, max)}…';
 }
+
+// Removes </value> sequences from user-controlled text so the XML delimiter
+// cannot be escaped by injected content. This is defense-in-depth: the IVE
+// runner's own system prompt is the primary injection boundary.
+String _sanitize(String s) => s.replaceAll('</value>', '<\\/value>');

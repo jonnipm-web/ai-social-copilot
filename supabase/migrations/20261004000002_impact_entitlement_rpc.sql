@@ -27,11 +27,19 @@
 SET search_path = public, extensions;
 
 -- ─── check_impact_access ────────────────────────────────────────────────────
+--
+-- INTEGRATION STATUS: This RPC is infrastructure for the commercial promotion
+-- of Impact. The Edge Function (impact-lab) does NOT yet call it — current
+-- protection relies on requireModuleAccess (EXPERIMENTAL = admin-only).
+-- When Impact is promoted to commercialEnabled:true, the Edge Function MUST
+-- call this RPC for every action before any data access.
+-- Gate: Agente Martins + Paulo must authorize the wiring change.
 
-CREATE OR REPLACE FUNCTION check_impact_access(p_action text)
+CREATE OR REPLACE FUNCTION public.check_impact_access(p_action text)
 RETURNS TABLE(allowed boolean, tier text, reason text)
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = pg_catalog, public, auth
 AS $$
 DECLARE
   v_user_id   uuid;
@@ -54,12 +62,13 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Read role from profiles — single lookup, SECURITY DEFINER bypasses RLS
-  -- intentionally here (we're reading our own row; RLS would allow it anyway,
-  -- but SECURITY DEFINER keeps the path predictable under any future RLS change).
+  -- Read role from public.profiles — qualified to prevent search-path shadowing.
+  -- SECURITY DEFINER bypasses RLS intentionally (we're reading our own row;
+  -- RLS would allow it anyway, but explicit qualification keeps the path safe
+  -- under any future RLS or schema change).
   SELECT COALESCE(role, 'free')
   INTO v_role
-  FROM profiles
+  FROM public.profiles
   WHERE id = v_user_id;
 
   -- Resolve tier from role (same as Profile.isPro in the Flutter client,

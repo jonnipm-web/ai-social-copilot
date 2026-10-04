@@ -326,7 +326,9 @@ class ImpactAdminGate extends ConsumerWidget {
 ///
 /// Authority: client is NEVER the authority. Any capability shown here must
 /// also be enforced server-side via `check_impact_access` RPC.
-enum ImpactTier { loading, admin, pro, free, denied }
+// Ordered lowest→highest privilege. tier.index >= minimumTier.index is the
+// entitlement check; adding tiers here must preserve this invariant.
+enum ImpactTier { denied, loading, free, pro, admin }
 
 class ImpactEntitlementGate extends ConsumerWidget {
   const ImpactEntitlementGate({
