@@ -87,6 +87,11 @@ BEGIN
     RETURN;
   END IF;
 
+  -- Lock the caller's profile row for the transaction duration to prevent a
+  -- concurrent role downgrade from committing between the entitlement read and
+  -- the INSERT (Codex CLASS D P1-Q16).
+  PERFORM id FROM public.profiles WHERE id = v_user_id FOR UPDATE;
+
   v_tier := public._impact_caller_tier();
 
   IF v_tier NOT IN ('admin', 'pro') THEN
@@ -178,6 +183,9 @@ BEGIN
     RETURN QUERY SELECT NULL::integer, TRUE, 'no_session'::text;
     RETURN;
   END IF;
+
+  -- Lock the caller's profile row for the transaction duration (Codex CLASS D P1-Q16).
+  PERFORM id FROM public.profiles WHERE id = v_user_id FOR UPDATE;
 
   v_tier := public._impact_caller_tier();
 

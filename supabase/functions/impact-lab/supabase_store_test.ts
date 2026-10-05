@@ -73,8 +73,8 @@ Deno.test('SS-02 reads go through the caller-JWT client (RLS); atomic write RPCs
     if (c.op === 'rpc' && c.table === 'impact_atomic_create_investigation') {
       return { data: [{ investigation_id: INV, subject_org_ref: 'org-x', denied: false, denied_reason: 'ok' }], error: null };
     }
-    // After atomic create, the store does a user SELECT (with id filter) to get the full row
-    if (c.op === 'select' && c.table === 'impact_investigations' && c.client === 'user' && c.filters.some(([k]) => k === 'id')) {
+    // After atomic create, the store uses service.select (avoids RLS gap — P2-Q11).
+    if (c.op === 'select' && c.table === 'impact_investigations' && c.client === 'service' && c.filters.some(([k]) => k === 'id')) {
       return { data: { id: INV, owner_id: ACTOR, project_id: null, subject_org_ref: 'org-x', subject_org_type: 'NGO', subject_identity: {}, status: 'ACTIVE', audit_seq: 0, audit_head: '0'.repeat(64), created_at: 'x' }, error: null };
     }
     // MACRO-08 TOCTOU fix: insertVerification uses user.rpc + service.select
@@ -111,7 +111,7 @@ Deno.test('SS-02 reads go through the caller-JWT client (RLS); atomic write RPCs
 
   await store.createInvestigation({ ownerId: ACTOR, projectId: null, subjectOrgRef: 'org-x', subjectOrgType: 'NGO', subjectIdentity: {} });
   const createCalls = calls.splice(0);
-  // SS-02a TOCTOU: createInvestigation uses user.rpc (atomic write), then user.select (read-back)
+  // SS-02a TOCTOU: createInvestigation uses user.rpc (atomic write), then service.select (read-back, P2-Q11)
   assert(createCalls.some((c) => c.client === 'user' && c.op === 'rpc' && c.table === 'impact_atomic_create_investigation'),
     'createInvestigation uses user.rpc for atomic write');
   assert(!createCalls.some((c) => c.client === 'service' && c.op === 'insert' && c.table === 'impact_investigations'),
@@ -151,17 +151,17 @@ Deno.test('SS-03 database errors map to stable codes and never leak SQL text', (
   assertEquals(mapDbError({ code: 'XX000', message: 'boom' }), 'INTERNAL_ERROR');
 });
 
-Deno.test('SS-04 an idempotent retry that races returns the winning row, not a duplicate', async () => {
+Deno.test('SS-04 an idempotent retry that races returns the winning row via idempotency_key fallback', async () => {
   // MACRO-08 TOCTOU fix: user.rpc atomic call returns 23505; store falls back
-  // to service reads (idempotency_key lookup) to return the winning row.
+  // to service read by idempotency_key to return the winning row.
+  const IDEM = '9e9e9e9e-0000-4000-8000-000000000001';
   const calls: Call[] = [];
   const respond = (c: Call) => {
-    // Simulate the atomic RPC returning a unique violation
     if (c.op === 'rpc' && c.table === 'impact_atomic_insert_verification') {
       return { data: null, error: { code: '23505', message: 'duplicate' } };
     }
     if (c.op === 'select' && c.filters.some(([k]) => k === 'idempotency_key')) {
-      return { data: { version: 3, result: { resultId: 'vr_x' }, idempotency_key: '9e9e9e9e-0000-4000-8000-000000000001' }, error: null };
+      return { data: { version: 3, result: { resultId: 'vr_x' }, idempotency_key: IDEM }, error: null };
     }
     return { data: null, error: null };
   };
@@ -169,9 +169,42 @@ Deno.test('SS-04 an idempotent retry that races returns the winning row, not a d
   const a = (await goldenCases()).find((c) => c.id === 'A')!;
   const r = await verifyClaim({ claim: a.claim, evidence: a.evidence, sources: a.sources }, a.ctx);
   assert(r.ok);
-  const s = await store.insertVerification(INV, r.value, '9e9e9e9e-0000-4000-8000-000000000001', ACTOR);
+  const s = await store.insertVerification(INV, r.value, IDEM, ACTOR);
   assert(s.ok);
   assertEquals(s.value.version, 3);
+  // Assert exact fallback arguments (P2-Q19)
+  const fallback = calls.find((c) => c.op === 'select' && c.filters.some(([k]) => k === 'idempotency_key'));
+  assert(fallback, 'idempotency_key fallback read must occur');
+  assertEquals(fallback!.client, 'service', 'fallback uses service client');
+  assert(fallback!.filters.some(([k, v]) => k === 'investigation_id' && v === INV), 'fallback filters on investigation_id');
+  assert(fallback!.filters.some(([k, v]) => k === 'idempotency_key' && v === IDEM), 'fallback filters on exact idempotency_key');
+});
+
+Deno.test('SS-04b an idempotent retry without idempotency_key falls back to result_id lookup', async () => {
+  // When no idempotency_key is provided, 23505 triggers a result_id fallback.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_insert_verification') {
+      return { data: null, error: { code: '23505', message: 'duplicate' } };
+    }
+    if (c.op === 'select' && c.filters.some(([k]) => k === 'result_id')) {
+      return { data: { version: 7, result: { resultId: 'vr_y' }, idempotency_key: null }, error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const a = (await goldenCases()).find((c) => c.id === 'A')!;
+  const r = await verifyClaim({ claim: a.claim, evidence: a.evidence, sources: a.sources }, a.ctx);
+  assert(r.ok);
+  // null idempotency key → must NOT look up by idempotency_key, must use result_id
+  const s = await store.insertVerification(INV, r.value, null, ACTOR);
+  assert(s.ok);
+  assertEquals(s.value.version, 7);
+  assert(!calls.some((c) => c.filters.some(([k]) => k === 'idempotency_key')), 'no idempotency_key lookup when key is null');
+  const fallback = calls.find((c) => c.op === 'select' && c.filters.some(([k]) => k === 'result_id'));
+  assert(fallback, 'result_id fallback must occur');
+  assertEquals(fallback!.client, 'service', 'fallback uses service client');
+  assert(fallback!.filters.some(([k, v]) => k === 'investigation_id' && v === INV), 'fallback filters on investigation_id');
 });
 
 Deno.test('SS-05 an archive or status update that changes no row is reported as a failure, not success (I1F-03)', async () => {

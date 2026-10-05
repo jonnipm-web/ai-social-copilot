@@ -401,8 +401,9 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
       if (reason === 'limit_exceeded') return fail('LIMIT_EXCEEDED', 'too many investigations');
       return fail('INTERNAL_ERROR', `atomic_create_denied: ${reason}`);
     }
-    // Fetch full row via caller JWT (RLS ensures only owner can read).
-    const { data: inv, error: readErr } = await this.user.from('impact_investigations').select('*').eq('id', row.investigation_id as string).single();
+    // Fetch full row via service client to avoid an RLS denial between the
+    // committed write and this read-back (Codex CLASS D P2-Q11).
+    const { data: inv, error: readErr } = await this.service.from('impact_investigations').select('*').eq('id', row.investigation_id as string).single();
     if (readErr) return dbFail(readErr);
     return ok(rowToInvestigation(inv as Row));
   }
