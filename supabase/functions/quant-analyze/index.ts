@@ -270,12 +270,16 @@ export async function handler(
       if (!inst.ok) return failWith('INVALID_INSTRUMENT');
       instruments.push(inst.value);
     }
-    // deps.marketProvider === undefined → runtime path (makeLiveProvider selects real or synthetic)
-    // deps.marketProvider === null      → explicitly unavailable (fail-closed — used in tests and when
-    //                                     QUANT_REQUIRE_LIVE_DATA=true makes makeLiveProvider return null)
-    const provider = deps.marketProvider !== undefined ? deps.marketProvider : makeLiveProvider(clock);
-    if (!provider) return failWith('INTERNAL_ERROR', { reason: _LIVE_CONFIG_ERROR ?? 'provider_unavailable' });
-    const result = await runWatchlistAnalysis(instruments, parsed.value, provider, clock());
+    // Watchlist analysis is ALWAYS synthetic at the current gate. The request contract
+    // enforces data_source=SYNTHETIC_PROVIDER (multi_contract.ts:184), the Databento
+    // adapter only supports UNADJUSTED bars, and a real-data watchlist provider requires
+    // rights, an aligned adjustment policy, and a contract update — all future, separately
+    // gated features (BLOCKED_OWNER). Real-provider injection via deps.marketProvider is
+    // still supported for testing (e.g. a fake returning deterministic bars).
+    const watchlistProvider: MarketDataProvider = deps.marketProvider !== undefined && deps.marketProvider !== null
+      ? deps.marketProvider
+      : new CachingProvider(new SyntheticInProcessProvider(clock), DEFAULT_MARKET_CACHE, clock);
+    const result = await runWatchlistAnalysis(instruments, parsed.value, watchlistProvider, clock());
     if (!result.ok) return failWith(result.error.code, result.error.details);
     const c = result.value.dataSource.cache;
     return multiDone(result.value, {

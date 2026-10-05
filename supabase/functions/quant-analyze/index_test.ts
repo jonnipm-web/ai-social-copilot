@@ -502,20 +502,20 @@ Deno.test('QM-07 FASE3 makeLiveProvider: synthetic fallback when DATABENTO_API_K
 });
 
 // MACRO-05 FASE 3 — fail-closed when QUANT_REQUIRE_LIVE_DATA=true and key absent.
-// Tests that setting the env var causes watchlist.v1 to return 500 (not silent
-// synthetic). Injected marketProvider bypasses the flag so normal tests still pass.
-Deno.test('QM-09 FASE3 fail-closed: QUANT_REQUIRE_LIVE_DATA=true + no key → 500, not synthetic', async () => {
+// Codex CLASS D MACRO-05 third-pass remediation: watchlist analysis is ALWAYS
+// synthetic (never wired to the real Databento provider). QUANT_PROVIDER_MODE
+// and QUANT_REQUIRE_LIVE_DATA do not affect watchlist.v1. The null-provider
+// injection that previously simulated fail-closed now correctly triggers the
+// synthetic fallback, returning a successful response.
+Deno.test('QM-09 FASE3 watchlist-always-synthetic: null provider falls back to synthetic (no 500)', async () => {
   const rows = [wlRow(WL_A, [['AAPL', 'XNAS', 'USD']])];
   const seen = { tokens: [] as string[], users: [] as string[] };
-  // Simulate what the module-level check produces: marketProvider returns null.
-  // The handler must fail with 500, not silently use synthetic.
+  // With the always-synthetic design, null injection → synthetic provider (not fail-closed 500).
   const nullProvider = deps({ clock: () => WNOW, storeFor: storeFor(rows, seen), marketProvider: null as never });
-  // We test the null-provider path directly — the env-var flag is module-level
-  // and cannot be toggled in-process. The null injection replicates exactly what
-  // _LIVE_CONFIG_ERROR triggers in production.
   const r = await call(post(wlBody()), nullProvider);
-  assertEquals(r.status, 500, 'expected 500 when provider is unavailable (fail-closed)');
-  assertEquals(r.json.multi_analysis, undefined, 'no partial analysis must be returned on provider failure');
+  assertEquals(r.status, 200, 'watchlist.v1 always uses synthetic; null injection → synthetic, not 500');
+  assert(r.json.multi_analysis !== undefined, 'successful response must include multi_analysis');
+  assert(Array.isArray(r.json.multi_analysis.series), 'series must be an array');
 });
 
 // CLASS D regression pin (MACRO-05 FASE 28): explanation_request structure.
@@ -580,16 +580,17 @@ Deno.test('QM-10 FASE20 checkQuantCapability: plan gate matrix', () => {
 // case — the real env-var normalization is exercised on module load only; in-process
 // injection covers the runtime branch accurately (P3, deferred: fresh-isolate test
 // requires subprocess spawning not available in this test environment).
-Deno.test('QM-11 Codex-P2: null provider → 500 (normalization correctness pinned via injection)', async () => {
+Deno.test('QM-11 Codex-D always-synthetic: null provider → synthetic result (watchlist never wired to real provider)', async () => {
   const rows = [wlRow(WL_A, [['MSFT', 'XNAS', 'USD']])];
   const seen = { tokens: [] as string[], users: [] as string[] };
-  // Null simulates what the normalized _REQUIRE_LIVE_DATA=true produces for all
-  // case variants ("TRUE", "True", " true ") — behavior identical to QM-09.
+  // With watchlist-always-synthetic (Codex CLASS D third-pass remediation):
+  // null injection no longer means fail-closed; it resolves to SyntheticInProcessProvider.
+  // This pins the invariant: no code path can accidentally wire Databento to watchlist.v1.
   const nullProvider = deps({ clock: () => WNOW, storeFor: storeFor(rows, seen), marketProvider: null as never });
   const r = await call(post(wlBody()), nullProvider);
-  assertEquals(r.status, 500, 'null provider → 500 (fail-closed)');
-  assertEquals(r.json.error, 'INTERNAL_ERROR');
-  assertEquals(r.json.multi_analysis, undefined, 'no partial data on fail-closed response');
+  assertEquals(r.status, 200, 'watchlist.v1 always synthetic: null injection → 200 with synthetic data');
+  assertEquals(r.json.error, undefined, 'no error when synthetic provider is used');
+  assert(r.json.multi_analysis !== undefined, 'multi_analysis must be present');
 });
 
 // MACRO-05 FASE 3: QUANT_PROVIDER_MODE explicit enum resolution.
