@@ -105,7 +105,7 @@ class AppConstants {
   // INSIGHTVALUES-COMMERCIAL-V1-FINAL-CLOSURE-01 — IVE Analysis (per-project)
   static const routeProjectAnalysis = '/projects/:id/analysis';
   static const originIveAnalysis = 'ive_analysis';
-  static const insightFreeMonthlyLimit = 5;
+  static const insightFreeMonthlyLimit = 15;
 
   // IV-IMPACT-I5 — Impact Lab (admin-only: module 'impact' is EXPERIMENTAL)
   static const routeImpact = '/impact';

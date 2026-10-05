@@ -87,8 +87,8 @@ void main() {
   });
 
   group('insightFreeMonthlyLimit constant', () {
-    test('free limit is 5', () {
-      expect(AppConstants.insightFreeMonthlyLimit, 5);
+    test('free limit is 15', () {
+      expect(AppConstants.insightFreeMonthlyLimit, 15);
     });
   });
 
