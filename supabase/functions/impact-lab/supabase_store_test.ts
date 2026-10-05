@@ -35,7 +35,7 @@ Deno.test('SS-01 every golden case survives a DB round-trip with the SAME eviden
 
 type Call = { client: 'user' | 'service'; table: string; op: string; payload?: unknown; filters: [string, unknown][] };
 
-function fakeClient(name: 'user' | 'service', calls: Call[], respond: (c: Call) => { data: unknown; error: unknown; count?: number }): DbClient {
+function fakeClient(name: 'user' | 'service', calls: Call[], respond: (c: Call) => { data: unknown; error: { code?: string; message?: string } | null; count?: number | null }): DbClient {
   return {
     from(table: string) {
       const call: Call = { client: name, table, op: 'select', filters: [] };
