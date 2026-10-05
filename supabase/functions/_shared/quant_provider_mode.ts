@@ -44,19 +44,20 @@ export function resolveProviderMode(env?: (k: string) => string | undefined): Pr
     return explicit as ProviderMode;
   }
 
-  // Legacy alias: QUANT_REQUIRE_LIVE_DATA=true → 'real' (same normalisation as P2 fix).
-  if ((getEnv('QUANT_REQUIRE_LIVE_DATA') ?? '').trim().toLowerCase() === 'true') {
-    return 'real';
-  }
-
-  // Non-empty, unrecognised QUANT_PROVIDER_MODE → fail closed.
-  // A typo like 'prod' or 'production' must never silently fall back to
-  // synthetic data, which would make a production misconfiguration invisible.
+  // Non-empty, unrecognised QUANT_PROVIDER_MODE → fail closed BEFORE the legacy
+  // alias is evaluated. A typo like 'prod' combined with QUANT_REQUIRE_LIVE_DATA=true
+  // must still throw: an explicit but invalid mode is always a configuration error,
+  // regardless of what the legacy flag says.
   if (explicit !== '') {
     throw new Error(
       `Invalid QUANT_PROVIDER_MODE value: "${explicit}". ` +
         `Must be 'synthetic', 'real', or 'auto_lab'.`,
     );
+  }
+
+  // Legacy alias: QUANT_REQUIRE_LIVE_DATA=true → 'real' (backward compat).
+  if ((getEnv('QUANT_REQUIRE_LIVE_DATA') ?? '').trim().toLowerCase() === 'true') {
+    return 'real';
   }
 
   return 'auto_lab';

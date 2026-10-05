@@ -634,6 +634,12 @@ Deno.test('QM-12 FASE3 QUANT_PROVIDER_MODE: resolveProviderMode covers all branc
     () => resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'PRODUCTION' })),
     Error, 'Invalid QUANT_PROVIDER_MODE value', 'unrecognised production-like value throws',
   );
+  // Codex P2 regression: invalid explicit mode must throw even when legacy
+  // QUANT_REQUIRE_LIVE_DATA=true is also set — the error check runs first.
+  assertThrows(
+    () => resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'prod', QUANT_REQUIRE_LIVE_DATA: 'true' })),
+    Error, 'Invalid QUANT_PROVIDER_MODE value', 'invalid mode + legacy=true still throws (precedence)',
+  );
 });
 
 // MACRO-05 FASE 3: provider_mode appears in the observability log.
