@@ -438,7 +438,7 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
     if (error) return dbFail(error);
     return ok(data ? rowToVerification(data as Row) : null);
   }
-  async insertVerification(investigationId: string, r: VerificationResult, idempotencyKey: string | null, actorId: string): Promise<ImpactResult<StoredVerification>> {
+  async insertVerification(investigationId: string, r: VerificationResult, idempotencyKey: string | null, _actorId: string): Promise<ImpactResult<StoredVerification>> {
     // MACRO-08 TOCTOU fix: entitlement re-check + ownership check + insert
     // are atomic in one SECURITY DEFINER transaction (migration 20261004000004).
     // Called via the caller JWT so auth.uid() resolves to the real caller.
