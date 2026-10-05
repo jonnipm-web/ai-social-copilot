@@ -13,14 +13,24 @@ final _hash = 'a' * 64;
 const _rid = '0e000000-0000-4000-8000-00000000000e';
 final _rh = 'c' * 64;
 
-Map<String, dynamic> _reply(String phase, {bool completed = false, Map<String, dynamic>? receipt, bool gate = false}) => {
+Map<String, dynamic> _reply(String phase,
+        {bool completed = false,
+        Map<String, dynamic>? receipt,
+        bool gate = false}) =>
+    {
       'phase': phase,
       'completed': completed,
       'reconciliationRequired': phase == 'UNKNOWN_OUTCOME',
       'retryAllowed': false,
       'operationId': _op,
       'denialCode': null,
-      'gate': gate ? {'gateId': _gate, 'bindingHash': _hash, 'expiresAt': '2026-01-01T00:00:00Z'} : null,
+      'gate': gate
+          ? {
+              'gateId': _gate,
+              'bindingHash': _hash,
+              'expiresAt': '2026-01-01T00:00:00Z'
+            }
+          : null,
       'receipt': receipt,
       'replayed': false,
     };
@@ -41,18 +51,25 @@ class FakeApi implements AefRuntimeApi {
   @override
   Future<AefRuntimeResult> decide(AefGate gate, {required bool approve}) async {
     calls.add(approve ? 'approve' : 'reject');
-    return AefRuntimeResult.fromMap(_reply(approve ? 'AUTHORIZED' : 'REJECTED'));
+    return AefRuntimeResult.fromMap(
+        _reply(approve ? 'AUTHORIZED' : 'REJECTED'));
   }
 
   @override
   Future<AefRuntimeResult> execute(Map<String, dynamic> proposal) async {
     calls.add('execute');
     proposals.add(proposal);
-    return AefRuntimeResult.fromMap(executeReply ?? _reply('SUCCEEDED', completed: true, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'SUCCESS'}));
+    return AefRuntimeResult.fromMap(executeReply ??
+        _reply('SUCCEEDED', completed: true, receipt: {
+          'receiptId': _rid,
+          'receiptHash': _rh,
+          'outcome': 'SUCCESS'
+        }));
   }
 
   @override
-  Future<AefRuntimeResult> status(String operationId) async => AefRuntimeResult.unreadable;
+  Future<AefRuntimeResult> status(String operationId) async =>
+      AefRuntimeResult.unreadable;
 }
 
 const _intent = IveActionIntentData(
@@ -87,27 +104,99 @@ Future<void> _fill(WidgetTester t) async {
 void main() {
   group('AefRuntimeResult (fail closed)', () {
     test('done only for SUCCEEDED + server completed + SUCCESS receipt', () {
-      expect(AefRuntimeResult.fromMap(_reply('SUCCEEDED', completed: true, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'SUCCESS'})).isCompleted, isTrue);
-      expect(AefRuntimeResult.fromMap(_reply('SUCCEEDED', completed: false, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'SUCCESS'})).isCompleted, isFalse);
-      expect(AefRuntimeResult.fromMap(_reply('SUCCEEDED', completed: true)).isCompleted, isFalse);
-      expect(AefRuntimeResult.fromMap(_reply('SUCCEEDED', completed: true, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'FAILURE'})).isCompleted, isFalse);
-      for (final p in ['AUTHORIZED', 'EXECUTING', 'FAILED', 'UNKNOWN_OUTCOME', 'REJECTED', 'EXPIRED', 'CANCELLED', 'INVALIDATED']) {
-        expect(AefRuntimeResult.fromMap(_reply(p, completed: true, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'SUCCESS'})).isCompleted, isFalse, reason: p);
+      expect(
+          AefRuntimeResult.fromMap(_reply('SUCCEEDED',
+              completed: true,
+              receipt: {
+                'receiptId': _rid,
+                'receiptHash': _rh,
+                'outcome': 'SUCCESS'
+              })).isCompleted,
+          isTrue);
+      expect(
+          AefRuntimeResult.fromMap(_reply('SUCCEEDED',
+              completed: false,
+              receipt: {
+                'receiptId': _rid,
+                'receiptHash': _rh,
+                'outcome': 'SUCCESS'
+              })).isCompleted,
+          isFalse);
+      expect(
+          AefRuntimeResult.fromMap(_reply('SUCCEEDED', completed: true))
+              .isCompleted,
+          isFalse);
+      expect(
+          AefRuntimeResult.fromMap(_reply('SUCCEEDED',
+              completed: true,
+              receipt: {
+                'receiptId': _rid,
+                'receiptHash': _rh,
+                'outcome': 'FAILURE'
+              })).isCompleted,
+          isFalse);
+      for (final p in [
+        'AUTHORIZED',
+        'EXECUTING',
+        'FAILED',
+        'UNKNOWN_OUTCOME',
+        'REJECTED',
+        'EXPIRED',
+        'CANCELLED',
+        'INVALIDATED'
+      ]) {
+        expect(
+            AefRuntimeResult.fromMap(_reply(p, completed: true, receipt: {
+              'receiptId': _rid,
+              'receiptHash': _rh,
+              'outcome': 'SUCCESS'
+            })).isCompleted,
+            isFalse,
+            reason: p);
       }
     });
 
-    test('unknown phase, malformed ids or gate, and non-maps are unreadable (never progress)', () {
+    test(
+        'unknown phase, malformed ids or gate, and non-maps are unreadable (never progress)',
+        () {
       for (final raw in <Object?>[
         null, 'SUCCEEDED', [], {'phase': 'DONE'}, {'phase': 'succeeded'},
         {..._reply('SUCCEEDED'), 'operationId': 'not-a-uuid'},
         {..._reply('AWAITING_APPROVAL'), 'gate': null},
-        {..._reply('AWAITING_APPROVAL', gate: true), 'gate': {'gateId': _gate, 'bindingHash': 'short', 'expiresAt': 'x'}},
+        {
+          ..._reply('AWAITING_APPROVAL', gate: true),
+          'gate': {'gateId': _gate, 'bindingHash': 'short', 'expiresAt': 'x'}
+        },
         {..._reply('SUCCEEDED'), 'receipt': 'forged'},
         // Codex RG1-01: a receipt without the persisted shape is not a receipt.
-        {..._reply('SUCCEEDED', completed: true), 'receipt': {'receiptId': 'x', 'receiptHash': 'c' * 64, 'outcome': 'SUCCESS'}},
-        {..._reply('SUCCEEDED', completed: true), 'receipt': {'receiptId': _rid, 'outcome': 'SUCCESS'}},
-        {..._reply('SUCCEEDED', completed: true), 'receipt': {'receiptId': _rid, 'receiptHash': 'short', 'outcome': 'SUCCESS'}},
-        {..._reply('SUCCEEDED', completed: true), 'receipt': {'receiptId': _rid, 'receiptHash': 'c' * 64, 'outcome': 'DONE'}},
+        {
+          ..._reply('SUCCEEDED', completed: true),
+          'receipt': {
+            'receiptId': 'x',
+            'receiptHash': 'c' * 64,
+            'outcome': 'SUCCESS'
+          }
+        },
+        {
+          ..._reply('SUCCEEDED', completed: true),
+          'receipt': {'receiptId': _rid, 'outcome': 'SUCCESS'}
+        },
+        {
+          ..._reply('SUCCEEDED', completed: true),
+          'receipt': {
+            'receiptId': _rid,
+            'receiptHash': 'short',
+            'outcome': 'SUCCESS'
+          }
+        },
+        {
+          ..._reply('SUCCEEDED', completed: true),
+          'receipt': {
+            'receiptId': _rid,
+            'receiptHash': 'c' * 64,
+            'outcome': 'DONE'
+          }
+        },
       ]) {
         final r = AefRuntimeResult.fromMap(raw);
         expect(r.phase, AefPhase.denied, reason: '$raw');
@@ -116,25 +205,57 @@ void main() {
     });
 
     test('UNKNOWN_OUTCOME always requires reconciliation', () {
-      expect(AefRuntimeResult.fromMap({..._reply('UNKNOWN_OUTCOME'), 'reconciliationRequired': false}).reconciliationRequired, isTrue);
+      expect(
+          AefRuntimeResult.fromMap({
+            ..._reply('UNKNOWN_OUTCOME'),
+            'reconciliationRequired': false
+          }).reconciliationRequired,
+          isTrue);
     });
 
-    test('intent parsing is strict; the proposal carries only the six intent keys', () {
-      expect(IveActionIntentData.tryParse({'requestedAction': 'publish_content', 'contextRef': 'x', 'riskClass': 'CONSEQUENTIAL'}), isNull);
-      expect(IveActionIntentData.tryParse({'requestedAction': 'Publish Content', 'contextRef': _op, 'riskClass': 'CONSEQUENTIAL'}), isNull);
+    test(
+        'intent parsing is strict; the proposal carries only the six intent keys',
+        () {
+      expect(
+          IveActionIntentData.tryParse({
+            'requestedAction': 'publish_content',
+            'contextRef': 'x',
+            'riskClass': 'CONSEQUENTIAL'
+          }),
+          isNull);
+      expect(
+          IveActionIntentData.tryParse({
+            'requestedAction': 'Publish Content',
+            'contextRef': _op,
+            'riskClass': 'CONSEQUENTIAL'
+          }),
+          isNull);
       final p = _intent.toProposal({'channel': 'blog', 'text': 'x'});
-      expect(p.keys.toSet(), {'capabilityId', 'requestedAction', 'projectId', 'riskClass', 'contextRef', 'parameters'});
+      expect(p.keys.toSet(), {
+        'capabilityId',
+        'requestedAction',
+        'projectId',
+        'riskClass',
+        'contextRef',
+        'parameters'
+      });
     });
   });
 
   group('AefActionCard', () {
-    testWidgets('nothing runs without an explicit approval; approve and run are separate clicks', (t) async {
+    testWidgets(
+        'nothing runs without an explicit approval; approve and run are separate clicks',
+        (t) async {
       final api = FakeApi();
       await t.pumpWidget(_app(AefActionCard(intent: _intent, api: api)));
       expect(find.textContaining('Nada foi executado'), findsWidgets);
       expect(find.byKey(const Key('aef-approve')), findsNothing);
       // Request is disabled until every field is valid.
-      expect(t.widget<ElevatedButton>(find.byKey(const Key('aef-request'))).onPressed, isNull);
+      expect(
+          t
+              .widget<ElevatedButton>(find.byKey(const Key('aef-request')))
+              .onPressed,
+          isNull);
       await _fill(t);
       await t.tap(find.byKey(const Key('aef-request')));
       await t.pumpAndSettle();
@@ -153,16 +274,21 @@ void main() {
       expect(api.calls, ['propose', 'approve', 'execute']);
       expect(find.textContaining('Concluída'), findsOneWidget);
       // The executed payload is exactly the one proposed (locked after the proposal).
-      expect(api.proposals.last['parameters'], api.proposals.first['parameters']);
+      expect(
+          api.proposals.last['parameters'], api.proposals.first['parameters']);
     });
 
-    testWidgets('fields are locked once proposed (approval binds that exact payload)', (t) async {
+    testWidgets(
+        'fields are locked once proposed (approval binds that exact payload)',
+        (t) async {
       final api = FakeApi();
       await t.pumpWidget(_app(AefActionCard(intent: _intent, api: api)));
       await _fill(t);
       await t.tap(find.byKey(const Key('aef-request')));
       await t.pumpAndSettle();
-      expect(t.widget<TextField>(find.byKey(const Key('aef-field-text'))).enabled, isFalse);
+      expect(
+          t.widget<TextField>(find.byKey(const Key('aef-field-text'))).enabled,
+          isFalse);
     });
 
     testWidgets('reject is terminal and never executes', (t) async {
@@ -179,14 +305,37 @@ void main() {
       expect(find.textContaining('Concluída'), findsNothing);
     });
 
-    testWidgets('UNKNOWN_OUTCOME is distinct from FAILED, never "done", and offers no retry', (t) async {
+    testWidgets(
+        'UNKNOWN_OUTCOME is distinct from FAILED, never "done", and offers no retry',
+        (t) async {
       for (final (reply, text, icon) in [
-        (_reply('UNKNOWN_OUTCOME', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'UNKNOWN_OUTCOME'}), 'Resultado desconhecido', Icons.help),
-        (_reply('FAILED', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'FAILURE'}), 'Falhou', Icons.error),
-        (_reply('SUCCEEDED', completed: false), 'não confirmada', Icons.hourglass_top),
+        (
+          _reply('UNKNOWN_OUTCOME', receipt: {
+            'receiptId': _rid,
+            'receiptHash': _rh,
+            'outcome': 'UNKNOWN_OUTCOME'
+          }),
+          'Resultado desconhecido',
+          Icons.help
+        ),
+        (
+          _reply('FAILED', receipt: {
+            'receiptId': _rid,
+            'receiptHash': _rh,
+            'outcome': 'FAILURE'
+          }),
+          'Falhou',
+          Icons.error
+        ),
+        (
+          _reply('SUCCEEDED', completed: false),
+          'não confirmada',
+          Icons.hourglass_top
+        ),
       ]) {
         final api = FakeApi(executeReply: reply);
-        await t.pumpWidget(_app(AefActionCard(key: UniqueKey(), intent: _intent, api: api)));
+        await t.pumpWidget(
+            _app(AefActionCard(key: UniqueKey(), intent: _intent, api: api)));
         await _fill(t);
         await t.tap(find.byKey(const Key('aef-request')));
         await t.pumpAndSettle();
@@ -197,11 +346,14 @@ void main() {
         expect(find.textContaining(text), findsOneWidget, reason: text);
         expect(find.byIcon(icon), findsOneWidget, reason: text);
         expect(find.textContaining('Concluída'), findsNothing, reason: text);
-        expect(find.byKey(const Key('aef-execute')), findsNothing, reason: 'no retry after $text');
+        expect(find.byKey(const Key('aef-execute')), findsNothing,
+            reason: 'no retry after $text');
       }
     });
 
-    testWidgets('a network interruption is shown as unconfirmed, never as progress', (t) async {
+    testWidgets(
+        'a network interruption is shown as unconfirmed, never as progress',
+        (t) async {
       final api = _NetworkDownApi();
       await t.pumpWidget(_app(AefActionCard(intent: _intent, api: api)));
       await _fill(t);
@@ -215,5 +367,6 @@ void main() {
 
 class _NetworkDownApi extends FakeApi {
   @override
-  Future<AefRuntimeResult> propose(Map<String, dynamic> proposal) async => AefRuntimeResult.denied('NETWORK_INTERRUPTED');
+  Future<AefRuntimeResult> propose(Map<String, dynamic> proposal) async =>
+      AefRuntimeResult.denied('NETWORK_INTERRUPTED');
 }

@@ -37,7 +37,8 @@ class FakeProjectResourceAllocationService
   }
 
   @override
-  Future<ProjectResourceAllocation> save(ProjectResourceAllocation allocation) async {
+  Future<ProjectResourceAllocation> save(
+      ProjectResourceAllocation allocation) async {
     saveCallCount++;
     if (saveDelay > Duration.zero) await Future<void>.delayed(saveDelay);
     if (failNextSave) throw Exception('simulated save failure');
@@ -92,8 +93,10 @@ ProviderContainer _container(
 void main() {
   // ── Load inicial ────────────────────────────────────────────────────────
   group('Carregamento inicial', () {
-    test('carrega o valor salvo e inicia preview == saved, status == saved', () async {
-      final svc = FakeProjectResourceAllocationService(_allocation(hours: 20, cents: 500000));
+    test('carrega o valor salvo e inicia preview == saved, status == saved',
+        () async {
+      final svc = FakeProjectResourceAllocationService(
+          _allocation(hours: 20, cents: 500000));
       final container = _container(svc);
       addTearDown(container.dispose);
 
@@ -104,7 +107,9 @@ void main() {
 
       await Future<void>.delayed(Duration.zero);
 
-      final state = container.read(projectResourceAllocationProvider(_projectId)).valueOrNull;
+      final state = container
+          .read(projectResourceAllocationProvider(_projectId))
+          .valueOrNull;
       expect(state, isNotNull);
       expect(state!.saved.hoursAllocated, 20);
       expect(state.preview.hoursAllocated, 20);
@@ -116,16 +121,21 @@ void main() {
 
   // ── Edição só afeta o preview ───────────────────────────────────────────
   group('updateHoursPreview / updateBudgetPreviewCents', () {
-    test('altera apenas preview, nunca saved, e marca status editing', () async {
-      final svc = FakeProjectResourceAllocationService(_allocation(hours: 10, cents: 100000));
+    test('altera apenas preview, nunca saved, e marca status editing',
+        () async {
+      final svc = FakeProjectResourceAllocationService(
+          _allocation(hours: 10, cents: 100000));
       final container = _container(svc);
       addTearDown(container.dispose);
       await Future<void>.delayed(Duration.zero);
 
-      final notifier = container.read(projectResourceAllocationProvider(_projectId).notifier);
+      final notifier = container
+          .read(projectResourceAllocationProvider(_projectId).notifier);
       notifier.updateHoursPreview(30);
 
-      final state = container.read(projectResourceAllocationProvider(_projectId)).valueOrNull!;
+      final state = container
+          .read(projectResourceAllocationProvider(_projectId))
+          .valueOrNull!;
       expect(state.preview.hoursAllocated, 30);
       expect(state.saved.hoursAllocated, 10);
       expect(state.status, AllocationEditStatus.editing);
@@ -134,15 +144,19 @@ void main() {
     });
 
     test('updateBudgetPreviewCents altera apenas o preview', () async {
-      final svc = FakeProjectResourceAllocationService(_allocation(cents: 100000));
+      final svc =
+          FakeProjectResourceAllocationService(_allocation(cents: 100000));
       final container = _container(svc);
       addTearDown(container.dispose);
       await Future<void>.delayed(Duration.zero);
 
-      final notifier = container.read(projectResourceAllocationProvider(_projectId).notifier);
+      final notifier = container
+          .read(projectResourceAllocationProvider(_projectId).notifier);
       notifier.updateBudgetPreviewCents(250000);
 
-      final state = container.read(projectResourceAllocationProvider(_projectId)).valueOrNull!;
+      final state = container
+          .read(projectResourceAllocationProvider(_projectId))
+          .valueOrNull!;
       expect(state.preview.budgetAllocatedCents, 250000);
       expect(state.saved.budgetAllocatedCents, 100000);
       expect(svc.saveCallCount, 0);
@@ -152,17 +166,21 @@ void main() {
   // ── cancel() — Section 12: restaura o valor salvo exatamente ────────────
   group('cancel()', () {
     test('descarta o preview e restaura exatamente o saved', () async {
-      final svc = FakeProjectResourceAllocationService(_allocation(hours: 15, cents: 300000));
+      final svc = FakeProjectResourceAllocationService(
+          _allocation(hours: 15, cents: 300000));
       final container = _container(svc);
       addTearDown(container.dispose);
       await Future<void>.delayed(Duration.zero);
 
-      final notifier = container.read(projectResourceAllocationProvider(_projectId).notifier);
+      final notifier = container
+          .read(projectResourceAllocationProvider(_projectId).notifier);
       notifier.updateHoursPreview(999);
       notifier.updateBudgetPreviewCents(1);
       notifier.cancel();
 
-      final state = container.read(projectResourceAllocationProvider(_projectId)).valueOrNull!;
+      final state = container
+          .read(projectResourceAllocationProvider(_projectId))
+          .valueOrNull!;
       expect(state.preview.hoursAllocated, 15);
       expect(state.preview.budgetAllocatedCents, 300000);
       expect(state.status, AllocationEditStatus.saved);
@@ -174,18 +192,22 @@ void main() {
   // ── save() — ciclo SAVED → EDITING → SAVING → SAVED ─────────────────────
   group('save()', () {
     test('persiste o preview e promove a saved em caso de sucesso', () async {
-      final svc = FakeProjectResourceAllocationService(_allocation(hours: 0, cents: 0));
+      final svc =
+          FakeProjectResourceAllocationService(_allocation(hours: 0, cents: 0));
       final container = _container(svc);
       addTearDown(container.dispose);
       await Future<void>.delayed(Duration.zero);
 
-      final notifier = container.read(projectResourceAllocationProvider(_projectId).notifier);
+      final notifier = container
+          .read(projectResourceAllocationProvider(_projectId).notifier);
       notifier.updateHoursPreview(50);
       notifier.updateBudgetPreviewCents(999900);
 
       await notifier.save();
 
-      final state = container.read(projectResourceAllocationProvider(_projectId)).valueOrNull!;
+      final state = container
+          .read(projectResourceAllocationProvider(_projectId))
+          .valueOrNull!;
       expect(state.status, AllocationEditStatus.saved);
       expect(state.saved.hoursAllocated, 50);
       expect(state.saved.budgetAllocatedCents, 999900);
@@ -194,18 +216,23 @@ void main() {
       expect(svc.saveCallCount, 1);
     });
 
-    test('em caso de erro, marca status error e preserva o preview em edição', () async {
-      final svc = FakeProjectResourceAllocationService(_allocation(hours: 5, cents: 0))
-        ..failNextSave = true;
+    test('em caso de erro, marca status error e preserva o preview em edição',
+        () async {
+      final svc =
+          FakeProjectResourceAllocationService(_allocation(hours: 5, cents: 0))
+            ..failNextSave = true;
       final container = _container(svc);
       addTearDown(container.dispose);
       await Future<void>.delayed(Duration.zero);
 
-      final notifier = container.read(projectResourceAllocationProvider(_projectId).notifier);
+      final notifier = container
+          .read(projectResourceAllocationProvider(_projectId).notifier);
       notifier.updateHoursPreview(60);
       await notifier.save();
 
-      final state = container.read(projectResourceAllocationProvider(_projectId)).valueOrNull!;
+      final state = container
+          .read(projectResourceAllocationProvider(_projectId))
+          .valueOrNull!;
       expect(state.status, AllocationEditStatus.error);
       expect(state.error, isNotNull);
       // O preview em edição não é perdido — o usuário pode tentar salvar de novo.
@@ -218,13 +245,15 @@ void main() {
       'Codex Gate 1 P1 — edição feita DURANTE um save() em andamento não é '
       'perdida quando o save resolve (revision token)',
       () async {
-        final svc = FakeProjectResourceAllocationService(_allocation(hours: 10, cents: 0))
+        final svc = FakeProjectResourceAllocationService(
+            _allocation(hours: 10, cents: 0))
           ..saveDelay = const Duration(milliseconds: 30);
         final container = _container(svc);
         addTearDown(container.dispose);
         await Future<void>.delayed(Duration.zero);
 
-        final notifier = container.read(projectResourceAllocationProvider(_projectId).notifier);
+        final notifier = container
+            .read(projectResourceAllocationProvider(_projectId).notifier);
         notifier.updateHoursPreview(20);
         final saveFuture = notifier.save(); // captura preview=20 antes do await
 
@@ -234,7 +263,9 @@ void main() {
 
         await saveFuture;
 
-        final state = container.read(projectResourceAllocationProvider(_projectId)).valueOrNull!;
+        final state = container
+            .read(projectResourceAllocationProvider(_projectId))
+            .valueOrNull!;
         // A edição mais nova (999) NÃO pode ter sido sobrescrita pelo
         // resultado stale do save (20) — este é exatamente o bug do Gate 1.
         expect(state.preview.hoursAllocated, 999);
@@ -251,13 +282,15 @@ void main() {
       'Codex Gate 1 P1 / Gate 2 P2 (F-01) — cancel() durante um save() em '
       'andamento não é revertido, e o status permanece consistente com isDirty',
       () async {
-        final svc = FakeProjectResourceAllocationService(_allocation(hours: 10, cents: 0))
+        final svc = FakeProjectResourceAllocationService(
+            _allocation(hours: 10, cents: 0))
           ..saveDelay = const Duration(milliseconds: 30);
         final container = _container(svc);
         addTearDown(container.dispose);
         await Future<void>.delayed(Duration.zero);
 
-        final notifier = container.read(projectResourceAllocationProvider(_projectId).notifier);
+        final notifier = container
+            .read(projectResourceAllocationProvider(_projectId).notifier);
         notifier.updateHoursPreview(20);
         final saveFuture = notifier.save();
 
@@ -266,7 +299,9 @@ void main() {
 
         await saveFuture;
 
-        final state = container.read(projectResourceAllocationProvider(_projectId)).valueOrNull!;
+        final state = container
+            .read(projectResourceAllocationProvider(_projectId))
+            .valueOrNull!;
         // cancel() já havia restaurado preview para o saved original (10) —
         // o save (que persistiu 20 no servidor) não pode reverter isso de
         // volta a 20.
@@ -283,23 +318,30 @@ void main() {
       },
     );
 
-    test('uma segunda chamada de save() concorrente é um no-op (guard síncrono)', () async {
-      final svc = FakeProjectResourceAllocationService(_allocation(hours: 0, cents: 0))
-        ..saveDelay = const Duration(milliseconds: 30);
+    test(
+        'uma segunda chamada de save() concorrente é um no-op (guard síncrono)',
+        () async {
+      final svc =
+          FakeProjectResourceAllocationService(_allocation(hours: 0, cents: 0))
+            ..saveDelay = const Duration(milliseconds: 30);
       final container = _container(svc);
       addTearDown(container.dispose);
       await Future<void>.delayed(Duration.zero);
 
-      final notifier = container.read(projectResourceAllocationProvider(_projectId).notifier);
+      final notifier = container
+          .read(projectResourceAllocationProvider(_projectId).notifier);
       notifier.updateHoursPreview(70);
 
       final firstSave = notifier.save();
-      final secondSave = notifier.save(); // deve ser no-op — status já é "saving"
+      final secondSave =
+          notifier.save(); // deve ser no-op — status já é "saving"
 
       await Future.wait([firstSave, secondSave]);
 
       expect(svc.saveCallCount, 1);
-      final state = container.read(projectResourceAllocationProvider(_projectId)).valueOrNull!;
+      final state = container
+          .read(projectResourceAllocationProvider(_projectId))
+          .valueOrNull!;
       expect(state.status, AllocationEditStatus.saved);
       expect(state.saved.hoursAllocated, 70);
     });
@@ -338,8 +380,12 @@ void main() {
         container.listen(projectResourceAllocationProvider('p2'), (_, __) {});
         await Future<void>.delayed(Duration.zero);
 
-        final state1 = container.read(projectResourceAllocationProvider('p1')).valueOrNull!;
-        final state2 = container.read(projectResourceAllocationProvider('p2')).valueOrNull!;
+        final state1 = container
+            .read(projectResourceAllocationProvider('p1'))
+            .valueOrNull!;
+        final state2 = container
+            .read(projectResourceAllocationProvider('p2'))
+            .valueOrNull!;
 
         // Cada provider carregou o valor do SEU PRÓPRIO projeto — a falha
         // que o fake antigo (com um único `_current` ignorando projectId)
@@ -350,12 +396,17 @@ void main() {
         expect(state2.saved.currency, 'USD');
 
         // Editar/salvar em p1 não pode afetar p2.
-        final notifier1 = container.read(projectResourceAllocationProvider('p1').notifier);
+        final notifier1 =
+            container.read(projectResourceAllocationProvider('p1').notifier);
         notifier1.updateHoursPreview(77);
         await notifier1.save();
 
-        final after1 = container.read(projectResourceAllocationProvider('p1')).valueOrNull!;
-        final after2 = container.read(projectResourceAllocationProvider('p2')).valueOrNull!;
+        final after1 = container
+            .read(projectResourceAllocationProvider('p1'))
+            .valueOrNull!;
+        final after2 = container
+            .read(projectResourceAllocationProvider('p2'))
+            .valueOrNull!;
         expect(after1.saved.hoursAllocated, 77);
         expect(after2.saved.hoursAllocated, 999); // p2 intacto
       },
@@ -365,12 +416,15 @@ void main() {
   // ── isDirty ──────────────────────────────────────────────────────────────
   group('isDirty', () {
     test('é falso quando preview == saved em todos os campos', () async {
-      final svc = FakeProjectResourceAllocationService(_allocation(hours: 8, cents: 1000, currency: 'USD'));
+      final svc = FakeProjectResourceAllocationService(
+          _allocation(hours: 8, cents: 1000, currency: 'USD'));
       final container = _container(svc);
       addTearDown(container.dispose);
       await Future<void>.delayed(Duration.zero);
 
-      final state = container.read(projectResourceAllocationProvider(_projectId)).valueOrNull!;
+      final state = container
+          .read(projectResourceAllocationProvider(_projectId))
+          .valueOrNull!;
       expect(state.isDirty, isFalse);
     });
   });

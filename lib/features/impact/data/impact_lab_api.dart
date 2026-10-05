@@ -49,9 +49,12 @@ ImpactApiException impactErrorFrom(int status, Object? body) {
   final map = body is Map ? body : const {};
   final code = map['error'] is String ? map['error'] as String : null;
   final retry = map['retry_after'];
-  if (status == 401) return ImpactApiException(ImpactErrorKind.auth, code: code);
-  if (status == 403 || status == 404) return ImpactApiException(ImpactErrorKind.notAvailable, code: code);
-  if (status == 413 || code == 'DOSSIER_TOO_LARGE') return ImpactApiException(ImpactErrorKind.tooLarge, code: code);
+  if (status == 401)
+    return ImpactApiException(ImpactErrorKind.auth, code: code);
+  if (status == 403 || status == 404)
+    return ImpactApiException(ImpactErrorKind.notAvailable, code: code);
+  if (status == 413 || code == 'DOSSIER_TOO_LARGE')
+    return ImpactApiException(ImpactErrorKind.tooLarge, code: code);
   if (status == 429) {
     return ImpactApiException(
       ImpactErrorKind.rateLimited,
@@ -59,7 +62,8 @@ ImpactApiException impactErrorFrom(int status, Object? body) {
       retryAfterSeconds: retry is int && retry > 0 ? retry : 60,
     );
   }
-  if (status >= 500) return ImpactApiException(ImpactErrorKind.server, code: code);
+  if (status >= 500)
+    return ImpactApiException(ImpactErrorKind.server, code: code);
   return ImpactApiException(ImpactErrorKind.invalidRequest, code: code);
 }
 
@@ -88,7 +92,8 @@ class SupabaseImpactTransport implements ImpactTransport {
       throw const ImpactApiException(ImpactErrorKind.network);
     }
     final data = response.data;
-    if (data is! Map<String, dynamic>) throw const ImpactApiException(ImpactErrorKind.contract);
+    if (data is! Map<String, dynamic>)
+      throw const ImpactApiException(ImpactErrorKind.contract);
     return data;
   }
 }
@@ -100,12 +105,18 @@ class SupabaseImpactTransport implements ImpactTransport {
 /// can never be redirected by a build flag (same contract as the Quant Lab).
 const _kDevBaseUrlDefine = String.fromEnvironment('IMPACT_API_BASE_URL');
 
-String? impactDevBaseUrl({String define = _kDevBaseUrlDefine, bool debug = kDebugMode}) {
+String? impactDevBaseUrl(
+    {String define = _kDevBaseUrlDefine, bool debug = kDebugMode}) {
   if (!debug || define.isEmpty) return null;
   final uri = Uri.tryParse(define);
-  if (uri == null || uri.scheme != 'http' || !(uri.host == '127.0.0.1' || uri.host == 'localhost')) return null;
+  if (uri == null ||
+      uri.scheme != 'http' ||
+      !(uri.host == '127.0.0.1' || uri.host == 'localhost')) return null;
   // Origin only: no userinfo, path, query or fragment can ride along.
-  if (uri.userInfo.isNotEmpty || uri.hasQuery || uri.hasFragment || !(uri.path.isEmpty || uri.path == '/')) return null;
+  if (uri.userInfo.isNotEmpty ||
+      uri.hasQuery ||
+      uri.hasFragment ||
+      !(uri.path.isEmpty || uri.path == '/')) return null;
   // Rebuilt from the parsed parts, so what is used is exactly what was validated.
   return 'http://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
 }
@@ -113,7 +124,8 @@ String? impactDevBaseUrl({String define = _kDevBaseUrlDefine, bool debug = kDebu
 /// Debug-only HTTP transport to the local Lab dev server. The caller's own
 /// session JWT is attached; errors map exactly like the Supabase transport.
 class HttpImpactTransport implements ImpactTransport {
-  HttpImpactTransport(this.baseUrl, this._token, {http.Client? client}) : _client = client ?? http.Client();
+  HttpImpactTransport(this.baseUrl, this._token, {http.Client? client})
+      : _client = client ?? http.Client();
 
   final String baseUrl;
   final String? Function() _token;
@@ -127,7 +139,10 @@ class HttpImpactTransport implements ImpactTransport {
       res = await _client
           .post(
             Uri.parse('$baseUrl/impact-lab'),
-            headers: {'Content-Type': 'application/json', if (token != null) 'Authorization': 'Bearer $token'},
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null) 'Authorization': 'Bearer $token'
+            },
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 30));
@@ -140,8 +155,10 @@ class HttpImpactTransport implements ImpactTransport {
     } catch (_) {
       decoded = null;
     }
-    if (res.statusCode < 200 || res.statusCode >= 300) throw impactErrorFrom(res.statusCode, decoded);
-    if (decoded is! Map<String, dynamic>) throw const ImpactApiException(ImpactErrorKind.contract);
+    if (res.statusCode < 200 || res.statusCode >= 300)
+      throw impactErrorFrom(res.statusCode, decoded);
+    if (decoded is! Map<String, dynamic>)
+      throw const ImpactApiException(ImpactErrorKind.contract);
     return decoded;
   }
 }
@@ -151,7 +168,8 @@ class ImpactLabApi {
 
   final ImpactTransport _transport;
 
-  Future<Map<String, dynamic>> _call(String action, Map<String, dynamic> params) async {
+  Future<Map<String, dynamic>> _call(
+      String action, Map<String, dynamic> params) async {
     final res = await _transport.send({'action': action, ...params});
     if (res['ok'] != true) throw impactErrorFrom(400, res);
     if (res['action'] != action || res['data'] is! Map<String, dynamic>) {
@@ -166,20 +184,24 @@ class ImpactLabApi {
   }
 
   Future<DossierView> getDossier(String investigationId, String lang) async {
-    final data = await _call('get_dossier', {'investigation_id': investigationId, 'lang': lang});
+    final data = await _call(
+        'get_dossier', {'investigation_id': investigationId, 'lang': lang});
     return DossierView.fromResponse(data);
   }
 
   Future<DossierView> exportDossier(String investigationId, String lang) async {
-    final data = await _call('export_dossier', {'investigation_id': investigationId, 'lang': lang});
+    final data = await _call(
+        'export_dossier', {'investigation_id': investigationId, 'lang': lang});
     final view = DossierView.fromResponse(data);
-    if (!view.envelope.isSnapshot) throw const ImpactApiException(ImpactErrorKind.contract);
+    if (!view.envelope.isSnapshot)
+      throw const ImpactApiException(ImpactErrorKind.contract);
     return view;
   }
 
   /// Presents an issued snapshot back to the server. The server — not the
   /// UI — decides CURRENT / STALE / NOT_ISSUED and the envelope match.
-  Future<VerifyResult> verifyDossier(String investigationId, DossierView snapshot) async {
+  Future<VerifyResult> verifyDossier(
+      String investigationId, DossierView snapshot) async {
     final data = await _call('verify_dossier', {
       'investigation_id': investigationId,
       'content_hash': snapshot.integrity.contentHash,

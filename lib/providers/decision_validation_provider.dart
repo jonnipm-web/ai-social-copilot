@@ -10,42 +10,46 @@ import 'opportunity_lab_provider.dart';
 final decisionValidationMapProvider =
     FutureProvider.autoDispose<Map<String, DecisionValidation>>((ref) async {
   // R16 — block reasons are user-facing; built in the presentation language.
-  final l10n             = ref.watch(appL10nProvider);
-  final profiles         = await ref.watch(projectIntelligenceProfilesProvider.future);
-  final learningProfiles = await ref.watch(personaLearningProfilesProvider.future);
-  final knowledgeItems   = await ref.watch(knowledgeItemsProvider.future);
-  final actions          = await ref.watch(actionQueueProvider.future);
-  final labItems         = await ref.watch(opportunityLabProvider.future);
+  final l10n = ref.watch(appL10nProvider);
+  final profiles = await ref.watch(projectIntelligenceProfilesProvider.future);
+  final learningProfiles =
+      await ref.watch(personaLearningProfilesProvider.future);
+  final knowledgeItems = await ref.watch(knowledgeItemsProvider.future);
+  final actions = await ref.watch(actionQueueProvider.future);
+  final labItems = await ref.watch(opportunityLabProvider.future);
 
   final avgLearning = learningProfiles.isEmpty
       ? 0
       : learningProfiles.map((p) => p.learningScore).reduce((a, b) => a + b) ~/
           learningProfiles.length;
 
-  final totalDocs   = knowledgeItems.length;
-  final indexedDocs = knowledgeItems.where((k) => k.status == 'analyzed').length;
+  final totalDocs = knowledgeItems.length;
+  final indexedDocs =
+      knowledgeItems.where((k) => k.status == 'analyzed').length;
 
   final map = <String, DecisionValidation>{};
 
   for (final profile in profiles) {
-    final projectId       = profile.project.id;
-    final coverageScore   = profile.coverage.score;
+    final projectId = profile.project.id;
+    final coverageScore = profile.coverage.score;
     final profileComplete = profile.analysis != null;
-    final assetCount      = actions.where((a) => a.projectId == projectId).length;
-    final opportunityCount = labItems.where((l) => l.projectId == projectId).length;
+    final assetCount = actions.where((a) => a.projectId == projectId).length;
+    final opportunityCount =
+        labItems.where((l) => l.projectId == projectId).length;
 
     // Module 8 — structuring check (no operational intelligence at all)
-    final hasNoOperationalIntelligence = opportunityCount == 0 && assetCount == 0;
+    final hasNoOperationalIntelligence =
+        opportunityCount == 0 && assetCount == 0;
 
     // Evidence quality checks
     final blockReasons = <String>[];
     if (coverageScore < DecisionValidation.minCoverage) {
-      blockReasons.add(
-          l10n.ctxDvReasonCoverage(coverageScore, DecisionValidation.minCoverage));
+      blockReasons.add(l10n.ctxDvReasonCoverage(
+          coverageScore, DecisionValidation.minCoverage));
     }
     if (avgLearning < DecisionValidation.minLearning) {
-      blockReasons.add(
-          l10n.ctxDvReasonLearning(avgLearning, DecisionValidation.minLearning));
+      blockReasons.add(l10n.ctxDvReasonLearning(
+          avgLearning, DecisionValidation.minLearning));
     }
     if (!profileComplete) {
       blockReasons.add(l10n.ctxDvReasonProfile);
@@ -68,17 +72,17 @@ final decisionValidationMapProvider =
     }
 
     map[projectId] = DecisionValidation(
-      projectId:        projectId,
-      entityName:       profile.project.name,
-      status:           status,
-      coverageScore:    coverageScore,
-      learningScore:    avgLearning,
-      profileComplete:  profileComplete,
-      documentCount:    totalDocs,
+      projectId: projectId,
+      entityName: profile.project.name,
+      status: status,
+      coverageScore: coverageScore,
+      learningScore: avgLearning,
+      profileComplete: profileComplete,
+      documentCount: totalDocs,
       indexedDocuments: indexedDocs,
-      assetCount:       assetCount,
+      assetCount: assetCount,
       opportunityCount: opportunityCount,
-      blockReasons:     reasons,
+      blockReasons: reasons,
     );
   }
 

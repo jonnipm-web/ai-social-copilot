@@ -4,17 +4,19 @@ import '../data/models/opportunity_lab_item.dart';
 import '../data/services/opportunity_lab_service.dart';
 import '../data/services/content_localization_service.dart';
 
-final opportunityLabServiceProvider =
-    Provider<OpportunityLabService>((ref) => OpportunityLabService(localizer: ref.watch(rowLocalizerProvider)));
+final opportunityLabServiceProvider = Provider<OpportunityLabService>(
+    (ref) => OpportunityLabService(localizer: ref.watch(rowLocalizerProvider)));
 
 final opportunityLabProvider =
     FutureProvider.autoDispose<List<OpportunityLabItem>>((ref) {
   return ref.watch(opportunityLabServiceProvider).fetchAll();
 });
 
-final opportunityLabByProjectProvider =
-    FutureProvider.autoDispose.family<List<OpportunityLabItem>, String>((ref, projectId) {
-  return ref.watch(opportunityLabServiceProvider).fetchAll(projectId: projectId);
+final opportunityLabByProjectProvider = FutureProvider.autoDispose
+    .family<List<OpportunityLabItem>, String>((ref, projectId) {
+  return ref
+      .watch(opportunityLabServiceProvider)
+      .fetchAll(projectId: projectId);
 });
 
 final opportunityLabItemByIdProvider =

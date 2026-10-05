@@ -27,8 +27,7 @@ class QuotaService {
 
     final now = DateTime.now().toUtc();
     final periodStart = DateTime.utc(now.year, now.month, 1);
-    final periodStartStr =
-        '${periodStart.year.toString().padLeft(4, '0')}-'
+    final periodStartStr = '${periodStart.year.toString().padLeft(4, '0')}-'
         '${periodStart.month.toString().padLeft(2, '0')}-01';
 
     final usageRow = await _client

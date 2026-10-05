@@ -34,7 +34,8 @@ import 'package:ai_social_copilot/shared/widgets/ive_overlay.dart';
 // app's Dart/widget code, narrowing it to the Flutter-Web/CanvasKit
 // rendering pipeline or the GitHub Pages deployment shell -- information
 // no amount of further source reading could produce.
-class MockDiagnosticLoggerService extends Mock implements DiagnosticLoggerService {}
+class MockDiagnosticLoggerService extends Mock
+    implements DiagnosticLoggerService {}
 
 class MockSession extends Mock implements Session {}
 
@@ -47,8 +48,7 @@ Profile _fakeProfile() => Profile(
       updatedAt: DateTime(2026, 1, 1),
     );
 
-AuthState _authState() =>
-    AuthState(AuthChangeEvent.signedIn, MockSession());
+AuthState _authState() => AuthState(AuthChangeEvent.signedIn, MockSession());
 
 MarketAnalysis _fakeAnalysis(String id) => MarketAnalysis(
       id: id,
@@ -71,7 +71,8 @@ MarketAnalysis _fakeAnalysis(String id) => MarketAnalysis(
       updatedAt: DateTime(2026, 1, 1),
     );
 
-List<Competitor> _fakeCompetitors(String analysisId, int count) => List.generate(
+List<Competitor> _fakeCompetitors(String analysisId, int count) =>
+    List.generate(
       count,
       (i) => Competitor(
         id: 'competitor-$i',
@@ -98,7 +99,8 @@ GapAnalysis _fakeGap(String analysisId) => GapAnalysis(
       createdAt: DateTime(2026, 1, 1),
     );
 
-List<Opportunity> _fakeOpportunities(String analysisId, int count) => List.generate(
+List<Opportunity> _fakeOpportunities(String analysisId, int count) =>
+    List.generate(
       count,
       (i) => Opportunity(
         id: 'opportunity-$i',

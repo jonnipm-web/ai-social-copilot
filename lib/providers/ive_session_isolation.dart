@@ -55,7 +55,8 @@ final iveSessionGuardProvider = Provider<void>((ref) {
     }
     final userId = authState.session?.user.id;
     if (userId != null) {
-      bindIveSessionToUser(userId: userId, invalidate: ref.invalidate, memory: memory);
+      bindIveSessionToUser(
+          userId: userId, invalidate: ref.invalidate, memory: memory);
     }
   });
 });

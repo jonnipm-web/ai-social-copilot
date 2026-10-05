@@ -28,10 +28,10 @@ final _pt = lookupAppLocalizations(const Locale('pt'));
 KnowledgeItem _item({required String id, String? projectId}) {
   final now = DateTime(2026, 1, 1);
   return KnowledgeItem(
-    id:        id,
-    userId:    'user-1',
+    id: id,
+    userId: 'user-1',
     projectId: projectId,
-    title:     'Item $id',
+    title: 'Item $id',
     createdAt: now,
     updatedAt: now,
   );
@@ -49,7 +49,8 @@ void main() {
       expect(result, hasLength(3));
     });
 
-    test('com projeto ativo, retorna apenas itens vinculados a esse projeto', () {
+    test('com projeto ativo, retorna apenas itens vinculados a esse projeto',
+        () {
       final all = [
         _item(id: '1', projectId: 'project-a'),
         _item(id: '2', projectId: 'project-b'),
@@ -73,8 +74,11 @@ void main() {
       },
     );
 
-    test('lista vazia de entrada retorna lista vazia independentemente do projeto', () {
-      expect(selectKnowledgeForGrounding(<KnowledgeItem>[], 'project-a'), isEmpty);
+    test(
+        'lista vazia de entrada retorna lista vazia independentemente do projeto',
+        () {
+      expect(
+          selectKnowledgeForGrounding(<KnowledgeItem>[], 'project-a'), isEmpty);
       expect(selectKnowledgeForGrounding(<KnowledgeItem>[], null), isEmpty);
     });
   });
@@ -95,7 +99,9 @@ void main() {
           updatedAt: DateTime(2026, 1, 1),
         );
 
-    EcosystemScore buildScore({required String projectId, required int ecosystemScore}) => EcosystemScore(
+    EcosystemScore buildScore(
+            {required String projectId, required int ecosystemScore}) =>
+        EcosystemScore(
           project: buildProject(id: projectId),
           opportunityScore: 0,
           strategicFit: 0,
@@ -124,51 +130,69 @@ void main() {
     // carregados (pré-autenticação, RLS vazio, ou usuário genuinamente novo
     // sem projetos ainda), health=0 NUNCA pode virar um alerta de "saúde
     // baixa" — isso seria um diagnóstico factual sobre dados que não existem.
-    test('E: scores vazio + health=0 (sentinela "sem dados") NÃO gera alerta de saúde baixa', () {
-      final alert = selectEcosystemAlert(scores: const [], health: 0, pending: const [], l10n: _pt);
+    test(
+        'E: scores vazio + health=0 (sentinela "sem dados") NÃO gera alerta de saúde baixa',
+        () {
+      final alert = selectEcosystemAlert(
+          scores: const [], health: 0, pending: const [], l10n: _pt);
       expect(alert.hasAlert, isFalse);
       expect(alert.alertMessage, isEmpty);
     });
 
-    test('E (variante): scores vazio + health=0 + muitas ações pendentes ainda pode alertar por outro motivo real', () {
+    test(
+        'E (variante): scores vazio + health=0 + muitas ações pendentes ainda pode alertar por outro motivo real',
+        () {
       // Verifica que o guard não é "hasAlert sempre false quando scores
       // vazio" -- apenas o ramo de SAÚDE (dependente de scores) é
       // desativado; ações pendentes são um sinal genuinamente independente.
       final manyPending = List.generate(6, (i) => buildAction(id: 'a$i'));
-      final alert = selectEcosystemAlert(scores: const [], health: 0, pending: manyPending, l10n: _pt);
+      final alert = selectEcosystemAlert(
+          scores: const [], health: 0, pending: manyPending, l10n: _pt);
       expect(alert.hasAlert, isTrue);
       expect(alert.alertId, startsWith('actions_overdue_'));
     });
 
     // Teste F — um score REAL e genuinamente baixo (projetos existem, dados
     // carregados) deve continuar gerando o alerta normalmente.
-    test('F: scores não-vazio + health<40 genuíno preserva o alerta de saúde baixa', () {
+    test(
+        'F: scores não-vazio + health<40 genuíno preserva o alerta de saúde baixa',
+        () {
       final scores = [buildScore(projectId: 'p1', ecosystemScore: 35)];
-      final alert = selectEcosystemAlert(scores: scores, health: 35, pending: const [], l10n: _pt);
+      final alert = selectEcosystemAlert(
+          scores: scores, health: 35, pending: const [], l10n: _pt);
       expect(alert.hasAlert, isTrue);
       expect(alert.alertId, 'health_low_35');
       expect(alert.alertMessage, contains('35/100'));
     });
 
-    test('F (variante): scores não-vazio com ecosystemScore genuinamente 0 ainda alerta (zero real != zero desconhecido)', () {
+    test(
+        'F (variante): scores não-vazio com ecosystemScore genuinamente 0 ainda alerta (zero real != zero desconhecido)',
+        () {
       final scores = [buildScore(projectId: 'p1', ecosystemScore: 0)];
-      final alert = selectEcosystemAlert(scores: scores, health: 0, pending: const [], l10n: _pt);
+      final alert = selectEcosystemAlert(
+          scores: scores, health: 0, pending: const [], l10n: _pt);
       expect(alert.hasAlert, isTrue);
       expect(alert.alertId, 'health_low_0');
     });
 
-    test('scores não-vazio + health>=40 sem críticos nem pendências acumuladas: nenhum alerta', () {
+    test(
+        'scores não-vazio + health>=40 sem críticos nem pendências acumuladas: nenhum alerta',
+        () {
       final scores = [buildScore(projectId: 'p1', ecosystemScore: 80)];
-      final alert = selectEcosystemAlert(scores: scores, health: 80, pending: const [], l10n: _pt);
+      final alert = selectEcosystemAlert(
+          scores: scores, health: 80, pending: const [], l10n: _pt);
       expect(alert.hasAlert, isFalse);
     });
 
-    test('projeto com score crítico (<30) gera alerta específico mesmo com health>=40', () {
+    test(
+        'projeto com score crítico (<30) gera alerta específico mesmo com health>=40',
+        () {
       final scores = [
         buildScore(projectId: 'ok', ecosystemScore: 90),
         buildScore(projectId: 'critico', ecosystemScore: 20),
       ];
-      final alert = selectEcosystemAlert(scores: scores, health: 55, pending: const [], l10n: _pt);
+      final alert = selectEcosystemAlert(
+          scores: scores, health: 55, pending: const [], l10n: _pt);
       expect(alert.hasAlert, isTrue);
       expect(alert.alertId, 'score_critical_critico');
     });

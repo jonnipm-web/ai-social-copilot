@@ -19,10 +19,12 @@ class ExperimentHistorySection extends ConsumerStatefulWidget {
   final String strategyId;
 
   @override
-  ConsumerState<ExperimentHistorySection> createState() => ExperimentHistorySectionState();
+  ConsumerState<ExperimentHistorySection> createState() =>
+      ExperimentHistorySectionState();
 }
 
-class ExperimentHistorySectionState extends ConsumerState<ExperimentHistorySection> {
+class ExperimentHistorySectionState
+    extends ConsumerState<ExperimentHistorySection> {
   List<dynamic>? _experiments;
   bool _loading = true;
 
@@ -34,7 +36,9 @@ class ExperimentHistorySectionState extends ConsumerState<ExperimentHistorySecti
 
   Future<void> refresh() async {
     setState(() => _loading = true);
-    final result = await ref.read(strategyBuilderApiProvider).listExperiments(widget.strategyId);
+    final result = await ref
+        .read(strategyBuilderApiProvider)
+        .listExperiments(widget.strategyId);
     if (!mounted) return;
     setState(() {
       _experiments = (result.data?['experiments'] as List?) ?? const [];
@@ -42,12 +46,14 @@ class ExperimentHistorySectionState extends ConsumerState<ExperimentHistorySecti
     });
   }
 
-  String _categoryLabel(AppLocalizations l, String category) => switch (category) {
+  String _categoryLabel(AppLocalizations l, String category) =>
+      switch (category) {
         'BACKTEST' => l.strategyDetailExperimentCategoryBacktest,
         'ROBUSTNESS_EXPERIMENT' => l.strategyDetailExperimentCategoryRobustness,
         'SIMULATION' => l.strategyDetailExperimentCategorySimulation,
         'USER_DECISION' => l.strategyDetailExperimentCategoryUserDecision,
-        'IVE_RECOMMENDATION' => l.strategyDetailExperimentCategoryIveRecommendation,
+        'IVE_RECOMMENDATION' =>
+          l.strategyDetailExperimentCategoryIveRecommendation,
         _ => category,
       };
 
@@ -63,17 +69,22 @@ class ExperimentHistorySectionState extends ConsumerState<ExperimentHistorySecti
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    if (_loading) return const Padding(padding: EdgeInsets.all(12), child: Center(child: CircularProgressIndicator()));
+    if (_loading)
+      return const Padding(
+          padding: EdgeInsets.all(12),
+          child: Center(child: CircularProgressIndicator()));
     final experiments = _experiments ?? const [];
     if (experiments.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(12),
-        child: Text(l.strategyDetailExperimentHistoryEmpty, key: const Key('experimentHistoryEmpty')),
+        child: Text(l.strategyDetailExperimentHistoryEmpty,
+            key: const Key('experimentHistoryEmpty')),
       );
     }
     // Newest first: the server returns chronological research lineage,
     // most recent activity is what a returning user wants to see.
-    final sorted = [...experiments]..sort((a, b) => (b['createdAt'] as String).compareTo(a['createdAt'] as String));
+    final sorted = [...experiments]..sort((a, b) =>
+        (b['createdAt'] as String).compareTo(a['createdAt'] as String));
     return Column(
       key: const Key('experimentHistoryList'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,18 +101,31 @@ class ExperimentHistorySectionState extends ConsumerState<ExperimentHistorySecti
                 children: [
                   Container(
                     margin: const EdgeInsets.only(top: 3, right: 8),
-                    width: 8, height: 8,
-                    decoration: BoxDecoration(color: _categoryColor(category), shape: BoxShape.circle),
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                        color: _categoryColor(category),
+                        shape: BoxShape.circle),
                   ),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_categoryLabel(l, category), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                        Text('${e['reason'] ?? ''}', style: const TextStyle(fontSize: 12)),
+                        Text(_categoryLabel(l, category),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text('${e['reason'] ?? ''}',
+                            style: const TextStyle(fontSize: 12)),
                         Text(
-                          l.strategyDetailExperimentSegment('${e['segment']}') + (contaminated ? ' · ${l.strategyDetailExperimentContaminated}' : ''),
-                          style: TextStyle(fontSize: 11, color: contaminated ? Colors.orangeAccent : Colors.white54),
+                          l.strategyDetailExperimentSegment('${e['segment']}') +
+                              (contaminated
+                                  ? ' · ${l.strategyDetailExperimentContaminated}'
+                                  : ''),
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: contaminated
+                                  ? Colors.orangeAccent
+                                  : Colors.white54),
                         ),
                       ],
                     ),

@@ -125,9 +125,11 @@ class ProjectResourceAllocationNotifier
   /// save is already in flight a no-op.
   Future<void> save() async {
     final current = state.valueOrNull;
-    if (current == null || current.status == AllocationEditStatus.saving) return;
+    if (current == null || current.status == AllocationEditStatus.saving)
+      return;
     final revisionAtStart = _revision;
-    state = AsyncValue.data(current.copyWith(status: AllocationEditStatus.saving));
+    state =
+        AsyncValue.data(current.copyWith(status: AllocationEditStatus.saving));
     try {
       final saved = await _service.save(current.preview);
       if (_revision != revisionAtStart) {
@@ -148,7 +150,9 @@ class ProjectResourceAllocationNotifier
           // isDirty == true would tell the user everything's fine while
           // Save is silently re-enabled underneath them.
           state = AsyncValue.data(merged.copyWith(
-            status: merged.isDirty ? AllocationEditStatus.editing : AllocationEditStatus.saved,
+            status: merged.isDirty
+                ? AllocationEditStatus.editing
+                : AllocationEditStatus.saved,
           ));
         }
         return;
@@ -173,7 +177,8 @@ class ProjectResourceAllocationNotifier
 }
 
 final projectResourceAllocationProvider = StateNotifierProvider.autoDispose
-    .family<ProjectResourceAllocationNotifier, AsyncValue<ProjectResourceAllocationEditState>, String>(
+    .family<ProjectResourceAllocationNotifier,
+        AsyncValue<ProjectResourceAllocationEditState>, String>(
   (ref, projectId) => ProjectResourceAllocationNotifier(
     ref.watch(projectResourceAllocationServiceProvider),
     projectId,

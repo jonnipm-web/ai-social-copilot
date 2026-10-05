@@ -11,8 +11,7 @@ final advisorProfileProvider =
   return ref.read(advisorServiceProvider).fetchProfile();
 });
 
-final advisorSetupProvider =
-    FutureProvider.autoDispose<bool>((ref) {
+final advisorSetupProvider = FutureProvider.autoDispose<bool>((ref) {
   return ref.read(advisorServiceProvider).hasProfile();
 });
 
@@ -42,8 +41,8 @@ class AdvisorNotifier extends StateNotifier<AsyncValue<AdvisorProfile?>> {
     state = const AsyncValue.loading();
     try {
       final profile = await _svc.saveProfile(
-        advisorName:  advisorName,
-        advisorRole:  advisorRole,
+        advisorName: advisorName,
+        advisorRole: advisorRole,
         advisorStyle: advisorStyle,
         advisorAvatar: advisorAvatar,
       );
@@ -54,7 +53,7 @@ class AdvisorNotifier extends StateNotifier<AsyncValue<AdvisorProfile?>> {
   }
 }
 
-final advisorNotifierProvider =
-    StateNotifierProvider.autoDispose<AdvisorNotifier, AsyncValue<AdvisorProfile?>>(
+final advisorNotifierProvider = StateNotifierProvider.autoDispose<
+    AdvisorNotifier, AsyncValue<AdvisorProfile?>>(
   (ref) => AdvisorNotifier(ref.read(advisorServiceProvider)),
 );

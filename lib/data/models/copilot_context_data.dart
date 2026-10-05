@@ -38,14 +38,14 @@ class CopilotContextData {
   const CopilotContextData({
     this.project,
     this.scores,
-    this.opportunities      = const [],
-    this.actions            = const [],
-    this.documents          = const [],
-    this.personas           = const [],
+    this.opportunities = const [],
+    this.actions = const [],
+    this.documents = const [],
+    this.personas = const [],
     this.revenue,
     this.market,
     this.documentCoverage,
-    this.documentWarnings   = const [],
+    this.documentWarnings = const [],
     this.analysis,
     this.projectId,
     this.sourceModule,
@@ -58,23 +58,24 @@ class CopilotContextData {
   /// choke point `showCopilotChat` uses (see context_copilot_widget.dart)
   /// so every chat invocation carries identity regardless of how its
   /// `contextData` was built upstream.
-  CopilotContextData withIdentity(IveInteractionRequest request) => CopilotContextData(
-        project:           project,
-        scores:            scores,
-        opportunities:     opportunities,
-        actions:           actions,
-        documents:         documents,
-        personas:          personas,
-        revenue:           revenue,
-        market:            market,
-        documentCoverage:  documentCoverage,
-        documentWarnings:  documentWarnings,
-        analysis:          analysis,
-        projectId:         request.projectId,
-        sourceModule:      request.sourceModule,
-        sourceEntityType:  request.sourceEntityType,
-        sourceEntityId:    request.sourceEntityId,
-        correlationId:     request.correlationId,
+  CopilotContextData withIdentity(IveInteractionRequest request) =>
+      CopilotContextData(
+        project: project,
+        scores: scores,
+        opportunities: opportunities,
+        actions: actions,
+        documents: documents,
+        personas: personas,
+        revenue: revenue,
+        market: market,
+        documentCoverage: documentCoverage,
+        documentWarnings: documentWarnings,
+        analysis: analysis,
+        projectId: request.projectId,
+        sourceModule: request.sourceModule,
+        sourceEntityType: request.sourceEntityType,
+        sourceEntityId: request.sourceEntityId,
+        correlationId: request.correlationId,
       );
 
   // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 — fonte única desta conversão.
@@ -92,16 +93,20 @@ class CopilotContextData {
   factory CopilotContextData.fromIveContext(IveContextData ctx) {
     return CopilotContextData(
       scores: {
-        'ecosystem_health':          ctx.healthScore,
-        'total_projects':            ctx.projectCount,
-        'pending_actions':           ctx.pendingActionsCount,
-        'pending_opportunities':     ctx.pendingOpportunitiesCount,
-        if (ctx.topProjectName        != null) 'top_project_name':           ctx.topProjectName,
-        if (ctx.topProjectDescription != null) 'top_project_description':    ctx.topProjectDescription,
-        if (ctx.topProjectType        != null) 'top_project_type':           ctx.topProjectType,
-        if (ctx.topProjectScore       != null) 'top_project_score':          ctx.topProjectScore,
-        if (ctx.mainBottleneckName    != null) 'main_bottleneck':            ctx.mainBottleneckName,
-        if (ctx.mainBottleneckScore   != null) 'bottleneck_execution_score': ctx.mainBottleneckScore,
+        'ecosystem_health': ctx.healthScore,
+        'total_projects': ctx.projectCount,
+        'pending_actions': ctx.pendingActionsCount,
+        'pending_opportunities': ctx.pendingOpportunitiesCount,
+        if (ctx.topProjectName != null) 'top_project_name': ctx.topProjectName,
+        if (ctx.topProjectDescription != null)
+          'top_project_description': ctx.topProjectDescription,
+        if (ctx.topProjectType != null) 'top_project_type': ctx.topProjectType,
+        if (ctx.topProjectScore != null)
+          'top_project_score': ctx.topProjectScore,
+        if (ctx.mainBottleneckName != null)
+          'main_bottleneck': ctx.mainBottleneckName,
+        if (ctx.mainBottleneckScore != null)
+          'bottleneck_execution_score': ctx.mainBottleneckScore,
         // IVE-COMMERCIAL-FOUNDATION-11 — falha segura e explícita: quando
         // um projectId foi pedido e não foi encontrado, diz isso ao LLM
         // em vez de silenciosamente devolver um contexto vazio que possa
@@ -111,11 +116,12 @@ class CopilotContextData {
       project: ctx.topProjectsSnapshot.isNotEmpty
           ? {'projects': ctx.topProjectsSnapshot}
           : null,
-      documents:        ctx.knowledgeItemsSummary,
-      documentCoverage: ctx.documentCoverage.isNotEmpty ? ctx.documentCoverage : null,
+      documents: ctx.knowledgeItemsSummary,
+      documentCoverage:
+          ctx.documentCoverage.isNotEmpty ? ctx.documentCoverage : null,
       documentWarnings: ctx.documentWarnings,
-      opportunities:    ctx.pendingOpportunitiesSummary,
-      actions:          ctx.pendingActionsSummary,
+      opportunities: ctx.pendingOpportunitiesSummary,
+      actions: ctx.pendingActionsSummary,
     );
   }
 
@@ -131,27 +137,31 @@ class CopilotContextData {
   // `project` grounding key vs. `project_id` identity key staying
   // unambiguous once both are on the wire).
   Map<String, dynamic> toMap() => {
-    if (project      != null) 'project':       project,
-    if (scores       != null) 'scores':        scores,
-    if (opportunities.isNotEmpty) 'opportunities': opportunities,
-    if (actions.isNotEmpty)       'actions':       actions,
-    if (documents.isNotEmpty)     'documents':     documents,
-    if (personas.isNotEmpty)      'personas':      personas,
-    if (revenue      != null) 'revenue':       revenue,
-    if (market       != null) 'market':        market,
-    if (documentCoverage != null)         'document_coverage':  documentCoverage,
-    if (documentWarnings.isNotEmpty)      'document_warnings':  documentWarnings,
-    if (analysis != null)                 'analysis':           analysis,
-    if (projectId != null || sourceModule != null || sourceEntityType != null ||
-        sourceEntityId != null || correlationId != null)
-      'identity': {
-        if (projectId        != null) 'project_id':         projectId,
-        if (sourceModule      != null) 'source_module':      sourceModule,
-        if (sourceEntityType  != null) 'source_entity_type': sourceEntityType,
-        if (sourceEntityId    != null) 'source_entity_id':   sourceEntityId,
-        if (correlationId     != null) 'correlation_id':     correlationId,
-      },
-  };
+        if (project != null) 'project': project,
+        if (scores != null) 'scores': scores,
+        if (opportunities.isNotEmpty) 'opportunities': opportunities,
+        if (actions.isNotEmpty) 'actions': actions,
+        if (documents.isNotEmpty) 'documents': documents,
+        if (personas.isNotEmpty) 'personas': personas,
+        if (revenue != null) 'revenue': revenue,
+        if (market != null) 'market': market,
+        if (documentCoverage != null) 'document_coverage': documentCoverage,
+        if (documentWarnings.isNotEmpty) 'document_warnings': documentWarnings,
+        if (analysis != null) 'analysis': analysis,
+        if (projectId != null ||
+            sourceModule != null ||
+            sourceEntityType != null ||
+            sourceEntityId != null ||
+            correlationId != null)
+          'identity': {
+            if (projectId != null) 'project_id': projectId,
+            if (sourceModule != null) 'source_module': sourceModule,
+            if (sourceEntityType != null)
+              'source_entity_type': sourceEntityType,
+            if (sourceEntityId != null) 'source_entity_id': sourceEntityId,
+            if (correlationId != null) 'correlation_id': correlationId,
+          },
+      };
 
   bool get isEmpty =>
       project == null &&

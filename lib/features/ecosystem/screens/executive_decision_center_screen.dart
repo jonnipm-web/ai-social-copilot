@@ -23,16 +23,17 @@ import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
 import '../../../shared/widgets/ive_detail_sheet.dart';
 import '../../../shared/widgets/ive_explain_button.dart';
+
 // ── Colors ────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0A0A14);
-const _kCard    = Color(0xFF12121E);
-const _kBorder  = Color(0xFF1E1E30);
+const _kBg = Color(0xFF0A0A14);
+const _kCard = Color(0xFF12121E);
+const _kBorder = Color(0xFF1E1E30);
 const _kPrimary = Color(0xFF7C4DFF);
-const _kGold    = Color(0xFFFFD700);
-const _kGreen   = Color(0xFF00E676);
-const _kOrange  = Color(0xFFFF9100);
-const _kRed     = Color(0xFFFF1744);
-const _kCyan    = Color(0xFF00E5FF);
+const _kGold = Color(0xFFFFD700);
+const _kGreen = Color(0xFF00E676);
+const _kOrange = Color(0xFFFF9100);
+const _kRed = Color(0xFFFF1744);
+const _kCyan = Color(0xFF00E5FF);
 
 Color _scoreColor(int s) {
   if (s >= 80) return _kGreen;
@@ -69,9 +70,10 @@ class _ExecutiveDecisionCenterScreenState
         final risky = scores.where((s) => s.ecosystemScore < 40).toList();
         if (risky.isNotEmpty) {
           ref.read(iveProvider.notifier).showMessage(
-            AppLocalizations.of(context)!.ecoIveCriticalProjects(risky.length),
-            expression: IveExpression.thinking,
-          );
+                AppLocalizations.of(context)!
+                    .ecoIveCriticalProjects(risky.length),
+                expression: IveExpression.thinking,
+              );
         }
       }).catchError((_) {});
     });
@@ -85,11 +87,11 @@ class _ExecutiveDecisionCenterScreenState
 
   @override
   Widget build(BuildContext context) {
-    final scoresAsync        = ref.watch(ecosystemScoresProvider);
-    final healthAsync        = ref.watch(ecosystemHealthProvider);
+    final scoresAsync = ref.watch(ecosystemScoresProvider);
+    final healthAsync = ref.watch(ecosystemHealthProvider);
     final needsBootstrapAsync = ref.watch(projectsNeedingBootstrapProvider);
-    final bootstrapState     = ref.watch(autoBootstrapNotifierProvider);
-    final l10n               = AppLocalizations.of(context)!;
+    final bootstrapState = ref.watch(autoBootstrapNotifierProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -98,11 +100,15 @@ class _ExecutiveDecisionCenterScreenState
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppConstants.routeDashboard),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppConstants.routeDashboard),
         ),
-        title: Text(l10n.ecoDecisionCenterTitle, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(l10n.ecoDecisionCenterTitle,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold)),
         iconTheme: const IconThemeData(color: Colors.white),
         bottom: TabBar(
           controller: _tab,
@@ -131,39 +137,40 @@ class _ExecutiveDecisionCenterScreenState
       body: SafeArea(
         top: false,
         child: Column(
-        children: [
-          // Health banner
-          healthAsync.when(
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-            data: (h) => _HealthBanner(health: h),
-          ),
-          // Bootstrap banner
-          needsBootstrapAsync.when(
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-            data: (projects) {
-              if (projects.isEmpty && !bootstrapState.isRunning) {
-                return const SizedBox.shrink();
-              }
-              return _BootstrapBanner(
-                pendingCount: projects.length,
-                bootstrapState: bootstrapState,
-                onTap: () => context.push(AppConstants.routeIntelligenceDebug),
-              );
-            },
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tab,
-              children: [
-                _Top5Tab(scoresAsync: scoresAsync),
-                _EcosystemTab(scoresAsync: scoresAsync),
-                const _RecsTab(),
-              ],
+          children: [
+            // Health banner
+            healthAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (h) => _HealthBanner(health: h),
             ),
-          ),
-        ],
+            // Bootstrap banner
+            needsBootstrapAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (projects) {
+                if (projects.isEmpty && !bootstrapState.isRunning) {
+                  return const SizedBox.shrink();
+                }
+                return _BootstrapBanner(
+                  pendingCount: projects.length,
+                  bootstrapState: bootstrapState,
+                  onTap: () =>
+                      context.push(AppConstants.routeIntelligenceDebug),
+                );
+              },
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tab,
+                children: [
+                  _Top5Tab(scoresAsync: scoresAsync),
+                  _EcosystemTab(scoresAsync: scoresAsync),
+                  const _RecsTab(),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -243,7 +250,8 @@ class _HealthBanner extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 48, height: 48,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: color.withOpacity(0.15),
               shape: BoxShape.circle,
@@ -251,7 +259,8 @@ class _HealthBanner extends StatelessWidget {
             ),
             child: Center(
               child: Text('$health',
-                style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+                  style: TextStyle(
+                      color: color, fontWeight: FontWeight.bold, fontSize: 14)),
             ),
           ),
           const SizedBox(width: 12),
@@ -260,14 +269,18 @@ class _HealthBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(l10n.ecoHealthTitle,
-                  style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+                    style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13)),
                 Text(_healthNarrative(health, l10n),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.35)),
+                    style: const TextStyle(
+                        color: Colors.white70, fontSize: 12, height: 1.35)),
                 const SizedBox(height: 4),
                 IveExplainButton(
-                  question:   l10n.ecoIveAskHealth(health),
+                  question: l10n.ecoIveAskHealth(health),
                   screenName: 'Decisões',
-                  compact:    true,
+                  compact: true,
                 ),
               ],
             ),
@@ -294,16 +307,17 @@ class _HealthBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 80, height: 6,
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(3),
-      child: LinearProgressIndicator(
-        value: value,
-        backgroundColor: Colors.white12,
-        valueColor: AlwaysStoppedAnimation(color),
-      ),
-    ),
-  );
+        width: 80,
+        height: 6,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            value: value,
+            backgroundColor: Colors.white12,
+            valueColor: AlwaysStoppedAnimation(color),
+          ),
+        ),
+      );
 }
 
 // ── Tab 1: TOP 5 ──────────────────────────────────────────────────────────
@@ -313,27 +327,32 @@ class _Top5Tab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final labAsync     = ref.watch(opportunityLabProvider);
+    final labAsync = ref.watch(opportunityLabProvider);
     final actionsAsync = ref.watch(actionQueueProvider);
-    final l10n         = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context)!;
 
     return scoresAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-      error: (e, _) => Center(child: Text(l10n.ecoErrorGeneric(extractErrorMessage(e, l10n)), style: const TextStyle(color: _kRed))),
+      loading: () =>
+          const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      error: (e, _) => Center(
+          child: Text(l10n.ecoErrorGeneric(extractErrorMessage(e, l10n)),
+              style: const TextStyle(color: _kRed))),
       data: (scores) {
         if (scores.isEmpty) {
           return Center(
-            child: Text(l10n.ecoTop5Empty,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54)));
+              child: Text(l10n.ecoTop5Empty,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white54)));
         }
         return ListView(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.fromLTRB(
+              16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           children: [
             _Top5Section(
               title: l10n.ecoTop5ProjectsTitle,
               subtitle: l10n.ecoTop5ProjectsSubtitle,
-              children: scores.take(5).map((s) => _ProjectCard(score: s)).toList(),
+              children:
+                  scores.take(5).map((s) => _ProjectCard(score: s)).toList(),
             ),
             const SizedBox(height: 20),
             labAsync.when(
@@ -345,60 +364,77 @@ class _Top5Tab extends ConsumerWidget {
                 return _Top5Section(
                   title: l10n.ecoTop5OpportunitiesTitle,
                   subtitle: l10n.ecoTop5OpportunitiesSubtitle,
-                  children: top.take(5).map((l) => _SimpleCard(
-                    title: l.title,
-                    subtitle: l.opportunityType,
-                    score: l.finalScore,
-                    badge: l.status,
-                    onTap: () => IveDetailSheet.show(
-                      context,
-                      title: l.title,
-                      emoji: '💡',
-                      humanExplanation:
-                          l10n.ecoOppExplanation(l.opportunityType, l.finalScore, l.status),
-                      evidence: [
-                        IveEvidence(emoji: '📊', label: l10n.ecoLabelType,       value: l.opportunityType),
-                        IveEvidence(emoji: '🎯', label: l10n.ecoLabelFinalScore, value: '${l.finalScore}/100'),
-                        IveEvidence(emoji: '📋', label: l10n.ecoLabelStatus,     value: l.status),
-                      ],
-                      suggestedActions: [
-                        IveAction(
-                          emoji: '💬',
-                          label: l10n.ecoAskIveOpportunity,
-                          // IVE-COMMERCIAL-TARGETED-REMEDIATION-04: mesmo
-                          // padrão dos demais pontos de entrada -- sem isto,
-                          // caía no CopilotContextData() vazio padrão.
-                          onTap: () {
-                            // IVE-COMMERCIAL-FOUNDATION-11: escopado pelo
-                            // projectId da própria oportunidade, quando
-                            // presente — antes, sempre pegava o projeto de
-                            // maior score do sistema todo.
-                            final ctx = ref.read(iveContextDataProvider(l.projectId)).valueOrNull;
-                            final contextData = ctx != null
-                                ? CopilotContextData.fromIveContext(ctx)
-                                : const CopilotContextData();
-                            showCopilotChat(
+                  children: top
+                      .take(5)
+                      .map((l) => _SimpleCard(
+                            title: l.title,
+                            subtitle: l.opportunityType,
+                            score: l.finalScore,
+                            badge: l.status,
+                            onTap: () => IveDetailSheet.show(
                               context,
-                              screenName:     'Decisões',
-                              contextData:    contextData,
-                              initialMessage: l10n.ecoIveAskOpportunity(l.title, l.finalScore),
-                              request: IveInteractionRequest(
-                                projectId:        l.projectId,
-                                sourceModule:     'ecosystem_decision_center',
-                                sourceEntityType: 'opportunity',
-                                sourceEntityId:   l.id,
-                                operationType:    IveOperationType.ask,
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                      screenName: 'Decisões',
-                      projectId:        l.projectId,
-                      sourceEntityType: 'opportunity',
-                      sourceEntityId:   l.id,
-                    ),
-                  )).toList(),
+                              title: l.title,
+                              emoji: '💡',
+                              humanExplanation: l10n.ecoOppExplanation(
+                                  l.opportunityType, l.finalScore, l.status),
+                              evidence: [
+                                IveEvidence(
+                                    emoji: '📊',
+                                    label: l10n.ecoLabelType,
+                                    value: l.opportunityType),
+                                IveEvidence(
+                                    emoji: '🎯',
+                                    label: l10n.ecoLabelFinalScore,
+                                    value: '${l.finalScore}/100'),
+                                IveEvidence(
+                                    emoji: '📋',
+                                    label: l10n.ecoLabelStatus,
+                                    value: l.status),
+                              ],
+                              suggestedActions: [
+                                IveAction(
+                                  emoji: '💬',
+                                  label: l10n.ecoAskIveOpportunity,
+                                  // IVE-COMMERCIAL-TARGETED-REMEDIATION-04: mesmo
+                                  // padrão dos demais pontos de entrada -- sem isto,
+                                  // caía no CopilotContextData() vazio padrão.
+                                  onTap: () {
+                                    // IVE-COMMERCIAL-FOUNDATION-11: escopado pelo
+                                    // projectId da própria oportunidade, quando
+                                    // presente — antes, sempre pegava o projeto de
+                                    // maior score do sistema todo.
+                                    final ctx = ref
+                                        .read(
+                                            iveContextDataProvider(l.projectId))
+                                        .valueOrNull;
+                                    final contextData = ctx != null
+                                        ? CopilotContextData.fromIveContext(ctx)
+                                        : const CopilotContextData();
+                                    showCopilotChat(
+                                      context,
+                                      screenName: 'Decisões',
+                                      contextData: contextData,
+                                      initialMessage: l10n.ecoIveAskOpportunity(
+                                          l.title, l.finalScore),
+                                      request: IveInteractionRequest(
+                                        projectId: l.projectId,
+                                        sourceModule:
+                                            'ecosystem_decision_center',
+                                        sourceEntityType: 'opportunity',
+                                        sourceEntityId: l.id,
+                                        operationType: IveOperationType.ask,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                              screenName: 'Decisões',
+                              projectId: l.projectId,
+                              sourceEntityType: 'opportunity',
+                              sourceEntityId: l.id,
+                            ),
+                          ))
+                      .toList(),
                 );
               },
             ),
@@ -408,24 +444,33 @@ class _Top5Tab extends ConsumerWidget {
               error: (_, __) => const SizedBox.shrink(),
               data: (actions) {
                 // Quick wins: high impact, low effort
-                final qw = actions.where((a) =>
-                    a.status == 'pending' && a.impactScore >= 60 && a.effortScore <= 50)
+                final qw = actions
+                    .where((a) =>
+                        a.status == 'pending' &&
+                        a.impactScore >= 60 &&
+                        a.effortScore <= 50)
                     .toList()
-                  ..sort((a, b) =>
-                      (b.impactScore - b.effortScore).compareTo(a.impactScore - a.effortScore));
+                  ..sort((a, b) => (b.impactScore - b.effortScore)
+                      .compareTo(a.impactScore - a.effortScore));
 
                 // Wastes: many pending + low impact
-                final wastes = actions.where((a) =>
-                    a.status == 'pending' && a.impactScore < 40 && a.effortScore >= 60)
+                final wastes = actions
+                    .where((a) =>
+                        a.status == 'pending' &&
+                        a.impactScore < 40 &&
+                        a.effortScore >= 60)
                     .toList();
 
                 // Risks (pending actions from projects with low ecosystem score)
                 final riskProjects = scoresAsync.value
-                    ?.where((s) => s.ecosystemScore < 30)
-                    .map((s) => s.project.id)
-                    .toSet() ?? {};
-                final risks = actions.where((a) =>
-                    a.projectId != null && riskProjects.contains(a.projectId))
+                        ?.where((s) => s.ecosystemScore < 30)
+                        .map((s) => s.project.id)
+                        .toSet() ??
+                    {};
+                final risks = actions
+                    .where((a) =>
+                        a.projectId != null &&
+                        riskProjects.contains(a.projectId))
                     .toList();
 
                 return Column(
@@ -433,75 +478,113 @@ class _Top5Tab extends ConsumerWidget {
                     _Top5Section(
                       title: l10n.ecoTop5QuickWinsTitle,
                       subtitle: l10n.ecoTop5QuickWinsSubtitle,
-                      children: qw.take(5).map((a) => _SimpleCard(
-                        title: a.title,
-                        subtitle: l10n.ecoImpactEffort(a.impactScore, a.effortScore),
-                        score: a.impactScore - a.effortScore + 50,
-                        badge: a.actionType,
-                        onTap: () => IveDetailSheet.show(
-                          context,
-                          title: a.title,
-                          emoji: '⚡',
-                          humanExplanation:
-                              l10n.ecoQuickWinExplanation(a.impactScore, a.effortScore),
-                          evidence: [
-                            IveEvidence(emoji: '🎯', label: l10n.ecoLabelImpact, value: '${a.impactScore}/100'),
-                            IveEvidence(emoji: '⚙️', label: l10n.ecoLabelEffort, value: '${a.effortScore}/100'),
-                            IveEvidence(emoji: '📋', label: l10n.ecoLabelType,   value: a.actionType),
-                          ],
-                          screenName: 'Decisões',
-                        ),
-                      )).toList(),
+                      children: qw
+                          .take(5)
+                          .map((a) => _SimpleCard(
+                                title: a.title,
+                                subtitle: l10n.ecoImpactEffort(
+                                    a.impactScore, a.effortScore),
+                                score: a.impactScore - a.effortScore + 50,
+                                badge: a.actionType,
+                                onTap: () => IveDetailSheet.show(
+                                  context,
+                                  title: a.title,
+                                  emoji: '⚡',
+                                  humanExplanation: l10n.ecoQuickWinExplanation(
+                                      a.impactScore, a.effortScore),
+                                  evidence: [
+                                    IveEvidence(
+                                        emoji: '🎯',
+                                        label: l10n.ecoLabelImpact,
+                                        value: '${a.impactScore}/100'),
+                                    IveEvidence(
+                                        emoji: '⚙️',
+                                        label: l10n.ecoLabelEffort,
+                                        value: '${a.effortScore}/100'),
+                                    IveEvidence(
+                                        emoji: '📋',
+                                        label: l10n.ecoLabelType,
+                                        value: a.actionType),
+                                  ],
+                                  screenName: 'Decisões',
+                                ),
+                              ))
+                          .toList(),
                     ),
                     const SizedBox(height: 20),
                     _Top5Section(
                       title: l10n.ecoTop5RisksTitle,
                       subtitle: l10n.ecoTop5RisksSubtitle,
-                      children: risks.take(5).map((a) => _SimpleCard(
-                        title: a.title,
-                        subtitle: a.status,
-                        score: 100 - a.impactScore,
-                        badge: l10n.ecoBadgeRisk,
-                        scoreColor: _kRed,
-                        onTap: () => IveDetailSheet.show(
-                          context,
-                          title: a.title,
-                          emoji: '⚠️',
-                          humanExplanation:
-                              l10n.ecoRiskActionExplanation,
-                          evidence: [
-                            IveEvidence(emoji: '🎯', label: l10n.ecoLabelImpact, value: '${a.impactScore}/100'),
-                            IveEvidence(emoji: '📋', label: l10n.ecoLabelStatus, value: a.status),
-                            IveEvidence(emoji: '⚙️', label: l10n.ecoLabelType,   value: a.actionType),
-                          ],
-                          screenName: 'Decisões',
-                        ),
-                      )).toList(),
+                      children: risks
+                          .take(5)
+                          .map((a) => _SimpleCard(
+                                title: a.title,
+                                subtitle: a.status,
+                                score: 100 - a.impactScore,
+                                badge: l10n.ecoBadgeRisk,
+                                scoreColor: _kRed,
+                                onTap: () => IveDetailSheet.show(
+                                  context,
+                                  title: a.title,
+                                  emoji: '⚠️',
+                                  humanExplanation:
+                                      l10n.ecoRiskActionExplanation,
+                                  evidence: [
+                                    IveEvidence(
+                                        emoji: '🎯',
+                                        label: l10n.ecoLabelImpact,
+                                        value: '${a.impactScore}/100'),
+                                    IveEvidence(
+                                        emoji: '📋',
+                                        label: l10n.ecoLabelStatus,
+                                        value: a.status),
+                                    IveEvidence(
+                                        emoji: '⚙️',
+                                        label: l10n.ecoLabelType,
+                                        value: a.actionType),
+                                  ],
+                                  screenName: 'Decisões',
+                                ),
+                              ))
+                          .toList(),
                     ),
                     const SizedBox(height: 20),
                     _Top5Section(
                       title: l10n.ecoTop5WastesTitle,
                       subtitle: l10n.ecoTop5WastesSubtitle,
-                      children: wastes.take(5).map((a) => _SimpleCard(
-                        title: a.title,
-                        subtitle: l10n.ecoImpactEffort(a.impactScore, a.effortScore),
-                        score: a.impactScore,
-                        badge: l10n.ecoBadgeReview,
-                        scoreColor: _kOrange,
-                        onTap: () => IveDetailSheet.show(
-                          context,
-                          title: a.title,
-                          emoji: '🗑️',
-                          humanExplanation:
-                              l10n.ecoWasteExplanation(a.impactScore, a.effortScore),
-                          evidence: [
-                            IveEvidence(emoji: '🎯', label: l10n.ecoLabelImpact, value: '${a.impactScore}/100'),
-                            IveEvidence(emoji: '⚙️', label: l10n.ecoLabelEffort, value: '${a.effortScore}/100'),
-                            IveEvidence(emoji: '📋', label: l10n.ecoLabelType,   value: a.actionType),
-                          ],
-                          screenName: 'Decisões',
-                        ),
-                      )).toList(),
+                      children: wastes
+                          .take(5)
+                          .map((a) => _SimpleCard(
+                                title: a.title,
+                                subtitle: l10n.ecoImpactEffort(
+                                    a.impactScore, a.effortScore),
+                                score: a.impactScore,
+                                badge: l10n.ecoBadgeReview,
+                                scoreColor: _kOrange,
+                                onTap: () => IveDetailSheet.show(
+                                  context,
+                                  title: a.title,
+                                  emoji: '🗑️',
+                                  humanExplanation: l10n.ecoWasteExplanation(
+                                      a.impactScore, a.effortScore),
+                                  evidence: [
+                                    IveEvidence(
+                                        emoji: '🎯',
+                                        label: l10n.ecoLabelImpact,
+                                        value: '${a.impactScore}/100'),
+                                    IveEvidence(
+                                        emoji: '⚙️',
+                                        label: l10n.ecoLabelEffort,
+                                        value: '${a.effortScore}/100'),
+                                    IveEvidence(
+                                        emoji: '📋',
+                                        label: l10n.ecoLabelType,
+                                        value: a.actionType),
+                                  ],
+                                  screenName: 'Decisões',
+                                ),
+                              ))
+                          .toList(),
                     ),
                   ],
                 );
@@ -518,16 +601,22 @@ class _Top5Section extends StatelessWidget {
   final String title;
   final String subtitle;
   final List<Widget> children;
-  const _Top5Section({required this.title, required this.subtitle, required this.children});
+  const _Top5Section(
+      {required this.title, required this.subtitle, required this.children});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+        Text(title,
+            style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15)),
         const SizedBox(height: 2),
-        Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+        Text(subtitle,
+            style: const TextStyle(color: Colors.white38, fontSize: 11)),
         const SizedBox(height: 10),
         if (children.isEmpty)
           Padding(
@@ -550,30 +639,45 @@ class _ProjectCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     IveDetailSheet.show(
       context,
-      title:            score.project.name,
-      emoji:            score.recommendationEmoji,
+      title: score.project.name,
+      emoji: score.recommendationEmoji,
       humanExplanation: l10n.ecoProjectExplanation(
         score.project.name,
         score.ecosystemScore,
         ecosystemVerdictLabel(score.recommendation, l10n),
       ),
       evidence: [
-        IveEvidence(emoji: '🎯', label: l10n.ecoLabelOpportunity,  value: '${score.opportunityScore}/100'),
-        IveEvidence(emoji: '🔗', label: l10n.ecoLabelStrategicFit, value: '${score.strategicFit}/100'),
-        IveEvidence(emoji: '💰', label: l10n.ecoLabelRoiScore,     value: '${score.roiScore}/100'),
-        IveEvidence(emoji: '⚡', label: l10n.ecoLabelMarket,       value: '${score.marketScore}/100'),
-        IveEvidence(emoji: '🏃', label: l10n.ecoLabelExecution,    value: '${score.executionScore}/100'),
+        IveEvidence(
+            emoji: '🎯',
+            label: l10n.ecoLabelOpportunity,
+            value: '${score.opportunityScore}/100'),
+        IveEvidence(
+            emoji: '🔗',
+            label: l10n.ecoLabelStrategicFit,
+            value: '${score.strategicFit}/100'),
+        IveEvidence(
+            emoji: '💰',
+            label: l10n.ecoLabelRoiScore,
+            value: '${score.roiScore}/100'),
+        IveEvidence(
+            emoji: '⚡',
+            label: l10n.ecoLabelMarket,
+            value: '${score.marketScore}/100'),
+        IveEvidence(
+            emoji: '🏃',
+            label: l10n.ecoLabelExecution,
+            value: '${score.executionScore}/100'),
       ],
       expandedData: {
-        l10n.ecoLabelMomentum:  '${score.momentumScore}/100',
-        l10n.ecoLabelSynergy:   '${score.synergyScore}/100',
-        l10n.ecoLabelTotalRoi:  'R\$${score.totalRoi.toStringAsFixed(0)}',
+        l10n.ecoLabelMomentum: '${score.momentumScore}/100',
+        l10n.ecoLabelSynergy: '${score.synergyScore}/100',
+        l10n.ecoLabelTotalRoi: 'R\$${score.totalRoi.toStringAsFixed(0)}',
         l10n.ecoLabelEcosystem: '${score.ecosystemScore}/100',
       },
       suggestedActions: [
         IveAction(
-          emoji:       '💬',
-          label:       l10n.ecoAskIveImproveScore,
+          emoji: '💬',
+          label: l10n.ecoAskIveImproveScore,
           description: l10n.ecoAskIveImproveScoreDesc,
           // IVE-COMMERCIAL-TARGETED-REMEDIATION-04: mesmo padrão dos demais
           // pontos de entrada -- sem isto, caía no CopilotContextData()
@@ -582,103 +686,119 @@ class _ProjectCard extends ConsumerWidget {
             // IVE-COMMERCIAL-FOUNDATION-11: escopado por score.project.id
             // (o projeto que este card/mensagem literalmente cita), não
             // mais o projeto de maior score do sistema todo.
-            final ctx = ref.read(iveContextDataProvider(score.project.id)).valueOrNull;
-            final contextData =
-                ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+            final ctx =
+                ref.read(iveContextDataProvider(score.project.id)).valueOrNull;
+            final contextData = ctx != null
+                ? CopilotContextData.fromIveContext(ctx)
+                : const CopilotContextData();
             showCopilotChat(
               context,
-              screenName:     'Decisões',
-              contextData:    contextData,
-              initialMessage: l10n.ecoIveAskImproveProject(score.project.name, score.ecosystemScore),
+              screenName: 'Decisões',
+              contextData: contextData,
+              initialMessage: l10n.ecoIveAskImproveProject(
+                  score.project.name, score.ecosystemScore),
               request: IveInteractionRequest(
-                projectId:        score.project.id,
-                sourceModule:     'ecosystem_decision_center',
+                projectId: score.project.id,
+                sourceModule: 'ecosystem_decision_center',
                 sourceEntityType: 'project',
-                sourceEntityId:   score.project.id,
-                operationType:    IveOperationType.ask,
+                sourceEntityId: score.project.id,
+                operationType: IveOperationType.ask,
               ),
             );
           },
         ),
       ],
       screenName: 'Decisões',
-      projectId:        score.project.id,
+      projectId: score.project.id,
       sourceEntityType: 'project',
-      sourceEntityId:   score.project.id,
+      sourceEntityId: score.project.id,
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n  = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context)!;
     final color = _scoreColor(score.ecosystemScore);
     return GestureDetector(
       onTap: () => _showDetail(context, ref),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44, height: 44,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  shape: BoxShape.circle,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text('${score.ecosystemScore}',
+                        style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13)),
+                  ),
                 ),
-                child: Center(
-                  child: Text('${score.ecosystemScore}',
-                    style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(score.project.name,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13)),
+                      const SizedBox(height: 2),
+                      Text(
+                          '${score.recommendationEmoji} ${ecosystemVerdictLabel(score.recommendation, l10n)}  •  ROI R\$${score.totalRoi.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 11)),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(score.project.name,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                    const SizedBox(height: 2),
-                    Text('${score.recommendationEmoji} ${ecosystemVerdictLabel(score.recommendation, l10n)}  •  ROI R\$${score.totalRoi.toStringAsFixed(0)}',
-                      style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                    Text(l10n.ecoShortMarket(score.marketScore),
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 10)),
+                    Text(l10n.ecoShortFit(score.strategicFit),
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 10)),
+                    Text(l10n.ecoShortExec(score.executionScore),
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 10)),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(l10n.ecoShortMarket(score.marketScore),
-                    style: const TextStyle(color: Colors.white38, fontSize: 10)),
-                  Text(l10n.ecoShortFit(score.strategicFit),
-                    style: const TextStyle(color: Colors.white38, fontSize: 10)),
-                  Text(l10n.ecoShortExec(score.executionScore),
-                    style: const TextStyle(color: Colors.white38, fontSize: 10)),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          IveExplainButton(
-            question:         l10n.ecoIveAskProjectScore(score.project.name, score.ecosystemScore),
-            screenName:       'Decisões',
-            compact:          true,
-            // IVE-COMMERCIAL-FOUNDATION-11 — antes, este botão perguntava
-            // sobre ESTE projeto mas o grounding vinha do projeto de maior
-            // score do sistema todo (podendo ser um projeto diferente).
-            projectId:        score.project.id,
-            sourceModule:     'ecosystem_decision_center',
-            sourceEntityType: 'project',
-            sourceEntityId:   score.project.id,
-          ),
-        ],
-      ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            IveExplainButton(
+              question: l10n.ecoIveAskProjectScore(
+                  score.project.name, score.ecosystemScore),
+              screenName: 'Decisões',
+              compact: true,
+              // IVE-COMMERCIAL-FOUNDATION-11 — antes, este botão perguntava
+              // sobre ESTE projeto mas o grounding vinha do projeto de maior
+              // score do sistema todo (podendo ser um projeto diferente).
+              projectId: score.project.id,
+              sourceModule: 'ecosystem_decision_center',
+              sourceEntityType: 'project',
+              sourceEntityId: score.project.id,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -706,48 +826,60 @@ class _SimpleCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: onTap != null ? color.withOpacity(0.25) : _kBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(4),
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: onTap != null ? color.withOpacity(0.25) : _kBorder),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text('$score',
+                  style: TextStyle(
+                      color: color, fontSize: 11, fontWeight: FontWeight.bold)),
             ),
-            child: Text('$score', style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 10)),
-              ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  Text(subtitle,
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 10)),
+                ],
+              ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white10,
-              borderRadius: BorderRadius.circular(4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white10,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(badge,
+                  style: const TextStyle(color: Colors.white54, fontSize: 9)),
             ),
-            child: Text(badge, style: const TextStyle(color: Colors.white54, fontSize: 9)),
-          ),
-          if (onTap != null) ...[
-            const SizedBox(width: 4),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white24, size: 14),
+            if (onTap != null) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Colors.white24, size: 14),
+            ],
           ],
-        ],
-      ),
+        ),
       ),
     );
   }
@@ -762,17 +894,21 @@ class _EcosystemTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return scoresAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-      error: (e, _) => Center(child: Text(l10n.ecoErrorGeneric(extractErrorMessage(e, l10n)), style: const TextStyle(color: _kRed))),
+      loading: () =>
+          const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      error: (e, _) => Center(
+          child: Text(l10n.ecoErrorGeneric(extractErrorMessage(e, l10n)),
+              style: const TextStyle(color: _kRed))),
       data: (scores) {
         if (scores.isEmpty) {
           return Center(
-            child: Text(l10n.ecoEcosystemEmpty,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54)));
+              child: Text(l10n.ecoEcosystemEmpty,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white54)));
         }
         return ListView.separated(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.fromLTRB(
+              16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           itemCount: scores.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (_, i) => _EcosystemCard(score: scores[i]),
@@ -820,44 +956,62 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                     children: [
                       Expanded(
                         child: Text(s.project.name,
-                          style: const TextStyle(color: Colors.white,
-                              fontWeight: FontWeight.bold, fontSize: 14)),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14)),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: color.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: color.withOpacity(0.5)),
                         ),
                         child: Text('${s.ecosystemScore}',
-                          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+                            style: TextStyle(
+                                color: color,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text('${s.recommendationEmoji} ${ecosystemVerdictLabel(s.recommendation, l10n)}',
-                    style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+                  Text(
+                      '${s.recommendationEmoji} ${ecosystemVerdictLabel(s.recommendation, l10n)}',
+                      style: TextStyle(
+                          color: color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
                   const SizedBox(height: 10),
                   _ScoreRow(label: l10n.ecoLabelMarket, value: s.marketScore),
                   const SizedBox(height: 4),
-                  _ScoreRow(label: l10n.ecoLabelOpportunity, value: s.opportunityScore),
+                  _ScoreRow(
+                      label: l10n.ecoLabelOpportunity,
+                      value: s.opportunityScore),
                   const SizedBox(height: 4),
-                  _ScoreRow(label: l10n.ecoLabelStrategicFit, value: s.strategicFit),
+                  _ScoreRow(
+                      label: l10n.ecoLabelStrategicFit, value: s.strategicFit),
                   const SizedBox(height: 4),
-                  _ScoreRow(label: l10n.ecoLabelExecution, value: s.executionScore),
+                  _ScoreRow(
+                      label: l10n.ecoLabelExecution, value: s.executionScore),
                   const SizedBox(height: 4),
                   _ScoreRow(label: 'ROI', value: s.roiScore),
                   const SizedBox(height: 4),
-                  _ScoreRow(label: l10n.ecoLabelMomentum, value: s.momentumScore),
+                  _ScoreRow(
+                      label: l10n.ecoLabelMomentum, value: s.momentumScore),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text(l10n.ecoCardFooter(s.actionCount, s.completionRate, s.totalRoi.toStringAsFixed(0)),
-                        style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                      Text(
+                          l10n.ecoCardFooter(s.actionCount, s.completionRate,
+                              s.totalRoi.toStringAsFixed(0)),
+                          style: const TextStyle(
+                              color: Colors.white38, fontSize: 10)),
                       const Spacer(),
                       Icon(_expanded ? Icons.expand_less : Icons.expand_more,
-                        color: Colors.white38, size: 18),
+                          color: Colors.white38, size: 18),
                     ],
                   ),
                 ],
@@ -872,33 +1026,48 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (s.strengths.isNotEmpty) ...[
-                    Text(l10n.ecoStrengthsTitle, style: const TextStyle(color: _kGreen,
-                        fontWeight: FontWeight.w600, fontSize: 12)),
+                    Text(l10n.ecoStrengthsTitle,
+                        style: const TextStyle(
+                            color: _kGreen,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12)),
                     const SizedBox(height: 4),
                     ...s.strengths.map((st) => Padding(
-                      padding: const EdgeInsets.only(bottom: 2, left: 4),
-                      child: Text('• $st', style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                    )),
+                          padding: const EdgeInsets.only(bottom: 2, left: 4),
+                          child: Text('• $st',
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 11)),
+                        )),
                     const SizedBox(height: 10),
                   ],
                   if (s.risks.isNotEmpty) ...[
-                    Text(l10n.ecoRisksTitle, style: const TextStyle(color: _kOrange,
-                        fontWeight: FontWeight.w600, fontSize: 12)),
+                    Text(l10n.ecoRisksTitle,
+                        style: const TextStyle(
+                            color: _kOrange,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12)),
                     const SizedBox(height: 4),
                     ...s.risks.map((r) => Padding(
-                      padding: const EdgeInsets.only(bottom: 2, left: 4),
-                      child: Text('• $r', style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                    )),
+                          padding: const EdgeInsets.only(bottom: 2, left: 4),
+                          child: Text('• $r',
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 11)),
+                        )),
                     const SizedBox(height: 10),
                   ],
                   if (s.quickWins.isNotEmpty) ...[
-                    Text(l10n.ecoQuickWinsTitle, style: const TextStyle(color: _kCyan,
-                        fontWeight: FontWeight.w600, fontSize: 12)),
+                    Text(l10n.ecoQuickWinsTitle,
+                        style: const TextStyle(
+                            color: _kCyan,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12)),
                     const SizedBox(height: 4),
                     ...s.quickWins.map((q) => Padding(
-                      padding: const EdgeInsets.only(bottom: 2, left: 4),
-                      child: Text('⚡ $q', style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                    )),
+                          padding: const EdgeInsets.only(bottom: 2, left: 4),
+                          child: Text('⚡ $q',
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 11)),
+                        )),
                   ],
                 ],
               ),
@@ -920,8 +1089,10 @@ class _ScoreRow extends StatelessWidget {
     final color = _scoreColor(value);
     return Row(
       children: [
-        SizedBox(width: 90, child: Text(label,
-            style: const TextStyle(color: Colors.white54, fontSize: 10))),
+        SizedBox(
+            width: 90,
+            child: Text(label,
+                style: const TextStyle(color: Colors.white54, fontSize: 10))),
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(2),
@@ -934,7 +1105,9 @@ class _ScoreRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        Text('$value', style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+        Text('$value',
+            style: TextStyle(
+                color: color, fontSize: 10, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -952,27 +1125,31 @@ class _RecsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recsAsync       = ref.watch(priorityRecommendationsProvider);
+    final recsAsync = ref.watch(priorityRecommendationsProvider);
     final validationAsync = ref.watch(decisionValidationMapProvider);
-    final labAsync        = ref.watch(opportunityLabProvider);
-    final l10n            = AppLocalizations.of(context)!;
+    final labAsync = ref.watch(opportunityLabProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return recsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-      error: (e, _) => Center(child: Text(l10n.ecoErrorGeneric(extractErrorMessage(e, l10n)), style: const TextStyle(color: _kRed))),
+      loading: () =>
+          const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      error: (e, _) => Center(
+          child: Text(l10n.ecoErrorGeneric(extractErrorMessage(e, l10n)),
+              style: const TextStyle(color: _kRed))),
       data: (recs) {
         if (recs.isEmpty) {
           return Center(
-            child: Text(l10n.ecoRecsEmpty,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54)));
+              child: Text(l10n.ecoRecsEmpty,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white54)));
         }
 
         final validationMap = validationAsync.value ?? {};
-        final labItems      = labAsync.value ?? [];
+        final labItems = labAsync.value ?? [];
 
         return ListView.separated(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.fromLTRB(
+              16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           itemCount: recs.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (_, i) {
@@ -1030,12 +1207,16 @@ class _ValidationGateCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(l10n.ecoBlockedBadge,
-                    style: const TextStyle(color: _kOrange, fontSize: 10, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        color: _kOrange,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(recommendationTypeLabel(rec.type, l10n),
-                    style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                    style:
+                        const TextStyle(color: Colors.white38, fontSize: 10)),
               ),
             ],
           ),
@@ -1059,25 +1240,43 @@ class _ValidationGateCard extends StatelessWidget {
               children: [
                 Text('⚠️ ${validation.blockMessage(l10n)}',
                     style: const TextStyle(
-                        color: _kOrange, fontSize: 12, fontWeight: FontWeight.w600)),
+                        color: _kOrange,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
                 const SizedBox(height: 10),
-                _GateMetricRow(label: l10n.ecoGateKnowledgeCoverage, value: validation.coverageLabel(l10n)),
-                _GateMetricRow(label: l10n.ecoGateLearningScore, value: validation.learningLabel(l10n)),
-                _GateMetricRow(label: l10n.ecoGateIntelligenceProfile, value: validation.profileLabel(l10n)),
+                _GateMetricRow(
+                    label: l10n.ecoGateKnowledgeCoverage,
+                    value: validation.coverageLabel(l10n)),
+                _GateMetricRow(
+                    label: l10n.ecoGateLearningScore,
+                    value: validation.learningLabel(l10n)),
+                _GateMetricRow(
+                    label: l10n.ecoGateIntelligenceProfile,
+                    value: validation.profileLabel(l10n)),
                 const Divider(color: Colors.white12, height: 16),
-                _GateMetricRow(label: l10n.ecoGateDocuments, value: '${validation.documentCount}'),
-                _GateMetricRow(label: l10n.ecoGateIndexing, value: validation.indexingStatus(l10n)),
-                _GateMetricRow(label: l10n.ecoGateAssets, value: '${validation.assetCount}'),
-                _GateMetricRow(label: l10n.ecoGateOpportunities, value: '${validation.opportunityCount}'),
+                _GateMetricRow(
+                    label: l10n.ecoGateDocuments,
+                    value: '${validation.documentCount}'),
+                _GateMetricRow(
+                    label: l10n.ecoGateIndexing,
+                    value: validation.indexingStatus(l10n)),
+                _GateMetricRow(
+                    label: l10n.ecoGateAssets,
+                    value: '${validation.assetCount}'),
+                _GateMetricRow(
+                    label: l10n.ecoGateOpportunities,
+                    value: '${validation.opportunityCount}'),
                 if (validation.blockReasons.isNotEmpty) ...[
                   const Divider(color: Colors.white12, height: 16),
                   Text(l10n.ecoGateBlockReasons,
-                      style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 10)),
                   const SizedBox(height: 4),
                   ...validation.blockReasons.map((r) => Padding(
                         padding: const EdgeInsets.only(bottom: 2),
                         child: Text('• $r',
-                            style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 10)),
                       )),
                 ],
               ],
@@ -1122,25 +1321,39 @@ class _RecCard extends ConsumerWidget {
 
   Color get _typeColor {
     switch (rec.type) {
-      case RecommendationType.investProject:      return _kGold;
-      case RecommendationType.executeOpportunity: return _kCyan;
-      case RecommendationType.runAction:          return _kPrimary;
-      case RecommendationType.pauseProject:       return _kOrange;
-      case RecommendationType.mitigateRisk:       return _kRed;
-      case RecommendationType.quickWin:           return _kGreen;
-      case RecommendationType.waste:              return Colors.grey;
+      case RecommendationType.investProject:
+        return _kGold;
+      case RecommendationType.executeOpportunity:
+        return _kCyan;
+      case RecommendationType.runAction:
+        return _kPrimary;
+      case RecommendationType.pauseProject:
+        return _kOrange;
+      case RecommendationType.mitigateRisk:
+        return _kRed;
+      case RecommendationType.quickWin:
+        return _kGreen;
+      case RecommendationType.waste:
+        return Colors.grey;
     }
   }
 
   String get _typeEmoji {
     switch (rec.type) {
-      case RecommendationType.investProject:      return '💰';
-      case RecommendationType.executeOpportunity: return '🚀';
-      case RecommendationType.runAction:          return '⚡';
-      case RecommendationType.pauseProject:       return '⏸️';
-      case RecommendationType.mitigateRisk:       return '🛡️';
-      case RecommendationType.quickWin:           return '✅';
-      case RecommendationType.waste:              return '🗑️';
+      case RecommendationType.investProject:
+        return '💰';
+      case RecommendationType.executeOpportunity:
+        return '🚀';
+      case RecommendationType.runAction:
+        return '⚡';
+      case RecommendationType.pauseProject:
+        return '⏸️';
+      case RecommendationType.mitigateRisk:
+        return '🛡️';
+      case RecommendationType.quickWin:
+        return '✅';
+      case RecommendationType.waste:
+        return '🗑️';
     }
   }
 
@@ -1148,13 +1361,21 @@ class _RecCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     IveDetailSheet.show(
       context,
-      title:            rec.title,
-      emoji:            _typeEmoji,
-      humanExplanation: '${rec.reason}\n\n${l10n.ecoExpectedImpact(rec.expectedImpact)}',
+      title: rec.title,
+      emoji: _typeEmoji,
+      humanExplanation:
+          '${rec.reason}\n\n${l10n.ecoExpectedImpact(rec.expectedImpact)}',
       evidence: [
-        IveEvidence(emoji: '📊', label: l10n.ecoLabelType,       value: recommendationTypeLabel(rec.type, l10n)),
-        IveEvidence(emoji: '🎯', label: l10n.ecoLabelConfidence, value: '${rec.confidence}%'),
-        IveEvidence(emoji: '💡', label: l10n.ecoLabelDataUsed,   value: rec.dataUsed),
+        IveEvidence(
+            emoji: '📊',
+            label: l10n.ecoLabelType,
+            value: recommendationTypeLabel(rec.type, l10n)),
+        IveEvidence(
+            emoji: '🎯',
+            label: l10n.ecoLabelConfidence,
+            value: '${rec.confidence}%'),
+        IveEvidence(
+            emoji: '💡', label: l10n.ecoLabelDataUsed, value: rec.dataUsed),
       ],
       suggestedActions: [
         IveAction(
@@ -1174,18 +1395,19 @@ class _RecCard extends ConsumerWidget {
             // real ao modelo de recomendação é trabalho de Fase D (ver
             // docs/commercial/COMMERCIAL_PRODUCT_ARCHITECTURE.md §11).
             final ctx = ref.read(iveContextDataProvider(null)).valueOrNull;
-            final contextData =
-                ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+            final contextData = ctx != null
+                ? CopilotContextData.fromIveContext(ctx)
+                : const CopilotContextData();
             showCopilotChat(
               context,
-              screenName:     'Decisões',
-              contextData:    contextData,
+              screenName: 'Decisões',
+              contextData: contextData,
               initialMessage: l10n.ecoIveAskRecommendation(rec.title),
               request: IveInteractionRequest(
-                sourceModule:     'ecosystem_decision_center',
+                sourceModule: 'ecosystem_decision_center',
                 sourceEntityType: 'recommendation',
-                sourceEntityId:   rec.entityId,
-                operationType:    IveOperationType.ask,
+                sourceEntityId: rec.entityId,
+                operationType: IveOperationType.ask,
               ),
             );
           },
@@ -1201,48 +1423,57 @@ class _RecCard extends ConsumerWidget {
     return GestureDetector(
       onTap: () => _showDetail(context, ref),
       child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: _typeColor, width: 3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _typeColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(4),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border(left: BorderSide(color: _typeColor, width: 3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _typeColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(recommendationTypeLabel(rec.type, l10n),
+                      style: TextStyle(
+                          color: _typeColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold)),
                 ),
-                child: Text(recommendationTypeLabel(rec.type, l10n),
-                  style: TextStyle(color: _typeColor, fontSize: 10, fontWeight: FontWeight.bold)),
-              ),
-              const Spacer(),
-              Text(l10n.ecoConfidencePct(rec.confidence),
+                const Spacer(),
+                Text(l10n.ecoConfidencePct(rec.confidence),
+                    style:
+                        const TextStyle(color: Colors.white38, fontSize: 10)),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right_rounded,
+                    color: Colors.white24, size: 14),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(rec.title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13)),
+            const SizedBox(height: 6),
+            Text(rec.reason,
+                style: const TextStyle(color: Colors.white70, fontSize: 11)),
+            const SizedBox(height: 6),
+            const Divider(color: Colors.white12, height: 1),
+            const SizedBox(height: 6),
+            Text(l10n.ecoExpectedImpact(rec.expectedImpact),
                 style: const TextStyle(color: Colors.white38, fontSize: 10)),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right_rounded, color: Colors.white24, size: 14),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(rec.title,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-          const SizedBox(height: 6),
-          Text(rec.reason,
-            style: const TextStyle(color: Colors.white70, fontSize: 11)),
-          const SizedBox(height: 6),
-          const Divider(color: Colors.white12, height: 1),
-          const SizedBox(height: 6),
-          Text(l10n.ecoExpectedImpact(rec.expectedImpact),
-            style: const TextStyle(color: Colors.white38, fontSize: 10)),
-          Text(l10n.ecoDataPrefix(rec.dataUsed),
-            style: const TextStyle(color: Colors.white24, fontSize: 10)),
-        ],
-      ),
+            Text(l10n.ecoDataPrefix(rec.dataUsed),
+                style: const TextStyle(color: Colors.white24, fontSize: 10)),
+          ],
+        ),
       ),
     );
   }

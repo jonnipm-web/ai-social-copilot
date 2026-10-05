@@ -14,19 +14,22 @@ import 'package:ai_social_copilot/providers/auto_bootstrap_provider.dart';
 void main() {
   group('R16 AI request bodies carry the presentation language', () {
     test('improve-post body sends the given output language', () {
-      final body = buildImprovePostBody('Texto original em português', language: 'en-US');
+      final body = buildImprovePostBody('Texto original em português',
+          language: 'en-US');
       expect(body['language'], 'en-US');
       expect(body['text'], 'Texto original em português');
       expect(body.containsKey('idempotency_key'), isFalse);
     });
 
     test('improve-post body keeps the idempotency key when given', () {
-      final body = buildImprovePostBody('Hello world text', language: 'pt-BR', idempotencyKey: 'k-1');
+      final body = buildImprovePostBody('Hello world text',
+          language: 'pt-BR', idempotencyKey: 'k-1');
       expect(body['language'], 'pt-BR');
       expect(body['idempotency_key'], 'k-1');
     });
 
-    test('extract-knowledge body uses output language, never a source language', () {
+    test('extract-knowledge body uses output language, never a source language',
+        () {
       // Source document is Portuguese; the UI is English -> output must be en-US.
       final body = buildExtractKnowledgeBody(
         content: 'Conteúdo do documento em português do Brasil.',
@@ -45,7 +48,8 @@ void main() {
     test('English', () {
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(
-        BootstrapState.buildProgressText(l10n, 1, 3, l10n.bootstrapStepGeneratingActions),
+        BootstrapState.buildProgressText(
+            l10n, 1, 3, l10n.bootstrapStepGeneratingActions),
         'Project 1/3 — Generating actions',
       );
       expect(BootstrapState.buildProgressText(l10n, 2, 3, null), 'Project 2/3');
@@ -54,7 +58,8 @@ void main() {
     test('Portuguese', () {
       final l10n = lookupAppLocalizations(const Locale('pt'));
       expect(
-        BootstrapState.buildProgressText(l10n, 1, 3, l10n.bootstrapStepGeneratingActions),
+        BootstrapState.buildProgressText(
+            l10n, 1, 3, l10n.bootstrapStepGeneratingActions),
         'Projeto 1/3 — Gerando ações',
       );
     });

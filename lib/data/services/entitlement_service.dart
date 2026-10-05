@@ -12,7 +12,8 @@ class EntitlementService {
   final _client = Supabase.instance.client;
 
   Future<ServerModuleAccess> fetchModuleAccess() async {
-    final res = await _client.functions.invoke(AppConstants.edgeFunctionModuleAccess);
+    final res =
+        await _client.functions.invoke(AppConstants.edgeFunctionModuleAccess);
     final data = res.data;
     if (data is Map && data['error'] != null) {
       throw Exception(data['error']);

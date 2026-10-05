@@ -37,7 +37,8 @@ void main() {
     });
 
     test('budgetAllocatedDisplay converte cents para valor decimal exato', () {
-      final a = ProjectResourceAllocation.empty('p1').copyWith(budgetAllocatedCents: 123456);
+      final a = ProjectResourceAllocation.empty('p1')
+          .copyWith(budgetAllocatedCents: 123456);
       expect(a.budgetAllocatedDisplay, 1234.56);
     });
 
@@ -81,11 +82,13 @@ void main() {
 
     test('rejeita acima do limite máximo (Codex Gate 1 P2)', () {
       expect(
-        validateBudgetAllocatedCents(ProjectResourceAllocation.maxBudgetAllocatedCents),
+        validateBudgetAllocatedCents(
+            ProjectResourceAllocation.maxBudgetAllocatedCents),
         isNull,
       );
       expect(
-        validateBudgetAllocatedCents(ProjectResourceAllocation.maxBudgetAllocatedCents + 1),
+        validateBudgetAllocatedCents(
+            ProjectResourceAllocation.maxBudgetAllocatedCents + 1),
         isNotNull,
       );
     });
@@ -101,7 +104,8 @@ void main() {
       expect(parseMoneyInputToCents('10,10'), 1010);
     });
 
-    test('não sofre o erro clássico de ponto-flutuante para valores como 10.10', () {
+    test('não sofre o erro clássico de ponto-flutuante para valores como 10.10',
+        () {
       // O parser nunca passa pelo intermediário double — compara dígito a
       // dígito via regex, então produz exatamente 1010, nunca 1009 ou 1011
       // por causa de arredondamento binário.

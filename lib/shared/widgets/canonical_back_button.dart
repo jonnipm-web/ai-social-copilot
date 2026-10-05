@@ -30,7 +30,8 @@ class CanonicalBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       icon: const Icon(Icons.arrow_back),
-      onPressed: () => context.canPop() ? context.pop() : context.go(fallbackRoute),
+      onPressed: () =>
+          context.canPop() ? context.pop() : context.go(fallbackRoute),
     );
   }
 }

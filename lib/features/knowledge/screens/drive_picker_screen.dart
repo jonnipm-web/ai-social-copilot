@@ -22,7 +22,8 @@ void _logDrive(
   diagnosticLogger.logEvent(
     category: DiagnosticCategory.drive,
     eventName: eventName,
-    severity: status == 'failure' ? DiagnosticSeverity.warn : DiagnosticSeverity.info,
+    severity:
+        status == 'failure' ? DiagnosticSeverity.warn : DiagnosticSeverity.info,
     status: status,
     metadata: metadata,
     error: error,
@@ -30,11 +31,11 @@ void _logDrive(
   );
 }
 
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGreen   = Color(0xFF4CAF50);
-const _kRed     = Color(0xFFF44336);
+const _kGreen = Color(0xFF4CAF50);
+const _kRed = Color(0xFFF44336);
 
 class DrivePickerScreen extends StatefulWidget {
   const DrivePickerScreen({super.key});
@@ -44,16 +45,16 @@ class DrivePickerScreen extends StatefulWidget {
 }
 
 class _DrivePickerScreenState extends State<DrivePickerScreen> {
-  final _drive          = DriveService();
-  final _searchCtrl     = TextEditingController();
+  final _drive = DriveService();
+  final _searchCtrl = TextEditingController();
 
-  bool             _signing  = false;
-  bool             _loading  = false;
-  bool             _downloading = false;
-  bool             _signedIn = false;
-  String?          _userName;
-  List<DriveFile>  _files    = [];
-  String?          _error;
+  bool _signing = false;
+  bool _loading = false;
+  bool _downloading = false;
+  bool _signedIn = false;
+  String? _userName;
+  List<DriveFile> _files = [];
+  String? _error;
 
   @override
   void initState() {
@@ -85,7 +86,8 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
     // de login em vez de para uma lista que sabemos que vai falhar.
     try {
       final usable = await _drive.hasUsableSession();
-      _logDrive('drive_session_check', status: usable ? 'success' : 'not_connected');
+      _logDrive('drive_session_check',
+          status: usable ? 'success' : 'not_connected');
       if (usable) {
         if (!mounted) return;
         setState(() => _signedIn = true);
@@ -99,19 +101,25 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
   }
 
   Future<void> _signIn() async {
-    setState(() { _signing = true; _error = null; });
+    setState(() {
+      _signing = true;
+      _error = null;
+    });
     try {
       final account = await _drive.signIn();
       if (account == null) {
         _logDrive('drive_sign_in', status: 'cancelled');
         if (!mounted) return;
-        setState(() { _signing = false; _error = AppLocalizations.of(context)!.uxDriveLoginCancelled; });
+        setState(() {
+          _signing = false;
+          _error = AppLocalizations.of(context)!.uxDriveLoginCancelled;
+        });
         return;
       }
       _logDrive('drive_sign_in', status: 'success');
       setState(() {
         _signedIn = true;
-        _signing  = false;
+        _signing = false;
         _userName = account.displayName ?? account.email;
       });
       await _loadFiles();
@@ -129,25 +137,42 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
         // R16 — raw Google/plugin text stays in the diagnostic log only.
         errorMsg = l10n.uxDriveConnectError;
       }
-      setState(() { _signing = false; _error = errorMsg; });
+      setState(() {
+        _signing = false;
+        _error = errorMsg;
+      });
     }
   }
 
   Future<void> _signOut() async {
     await _drive.signOut();
-    setState(() { _signedIn = false; _files = []; _userName = null; });
+    setState(() {
+      _signedIn = false;
+      _files = [];
+      _userName = null;
+    });
   }
 
   Future<void> _loadFiles({String search = ''}) async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final files = await _drive.listFiles(search: search);
-      _logDrive('drive_list_files', status: 'success', metadata: {'count': files.length});
-      setState(() { _files = files; _loading = false; });
+      _logDrive('drive_list_files',
+          status: 'success', metadata: {'count': files.length});
+      setState(() {
+        _files = files;
+        _loading = false;
+      });
     } catch (e) {
       _logDrive('drive_list_files', status: 'failure', error: e);
       if (!mounted) return;
-      setState(() { _loading = false; _error = AppLocalizations.of(context)!.uxDriveLoadError; });
+      setState(() {
+        _loading = false;
+        _error = AppLocalizations.of(context)!.uxDriveLoadError;
+      });
     }
   }
 
@@ -161,8 +186,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
         metadata: {'mime_type': file.mimeType},
       );
       if (mounted) {
-        Navigator.of(context)
-            .pop({'name': file.name, 'content': content});
+        Navigator.of(context).pop({'name': file.name, 'content': content});
       }
     } catch (e) {
       _logDrive(
@@ -201,8 +225,11 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
               if (_signedIn)
                 TextButton.icon(
                   onPressed: _signOut,
-                  icon: const Icon(Icons.logout_rounded, size: 16, color: Colors.white54),
-                  label: Text(l10n.uxDriveSignOut, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  icon: const Icon(Icons.logout_rounded,
+                      size: 16, color: Colors.white54),
+                  label: Text(l10n.uxDriveSignOut,
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12)),
                 ),
             ],
           ),
@@ -263,7 +290,8 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                   const SizedBox(height: 8),
                   Text(
                     l10n.uxDriveConnectBody,
-                    style: const TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+                    style: const TextStyle(
+                        color: Colors.white54, fontSize: 13, height: 1.5),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -285,7 +313,9 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                                   strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.login_rounded),
-                      label: Text(_signing ? l10n.uxDriveConnecting : l10n.uxDriveSignInGoogle),
+                      label: Text(_signing
+                          ? l10n.uxDriveConnecting
+                          : l10n.uxDriveSignInGoogle),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kPrimary,
                         foregroundColor: Colors.white,
@@ -321,7 +351,8 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                     const SizedBox(width: 6),
                     Text(
                       l10n.uxDriveConnectedAs(_userName!),
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                   ],
                 ),
@@ -332,7 +363,8 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                 decoration: InputDecoration(
                   hintText: l10n.uxDriveSearchHint,
                   hintStyle: const TextStyle(color: Colors.white38),
-                  prefixIcon: const Icon(Icons.search_rounded, color: Colors.white38),
+                  prefixIcon:
+                      const Icon(Icons.search_rounded, color: Colors.white38),
                   suffixIcon: _searchCtrl.text.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear_rounded,
@@ -384,7 +416,8 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                       ? Center(
                           child: Text(
                             l10n.uxDriveNoFiles,
-                            style: const TextStyle(color: Colors.white38, height: 1.6),
+                            style: const TextStyle(
+                                color: Colors.white38, height: 1.6),
                             textAlign: TextAlign.center,
                           ),
                         )
@@ -406,7 +439,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
 
 class _FileTile extends StatelessWidget {
   const _FileTile({required this.file, required this.onTap});
-  final DriveFile  file;
+  final DriveFile file;
   final VoidCallback onTap;
 
   @override

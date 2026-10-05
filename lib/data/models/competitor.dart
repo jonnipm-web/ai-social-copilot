@@ -25,7 +25,8 @@ class Competitor {
     required this.createdAt,
   });
 
-  int get overallScore => ((similarityScore + authorityScore + relevanceScore) / 3).round();
+  int get overallScore =>
+      ((similarityScore + authorityScore + relevanceScore) / 3).round();
 
   List<String> get strengths => _list(detailsJson['strengths']);
   List<String> get weaknesses => _list(detailsJson['weaknesses']);
@@ -39,16 +40,16 @@ class Competitor {
 
   factory Competitor.fromMap(Map<String, dynamic> map) {
     return Competitor(
-      id:                 map['id'] as String,
-      userId:             map['user_id'] as String,
-      marketAnalysisId:   map['market_analysis_id'] as String?,
-      name:               map['name'] as String,
-      url:                map['url'] as String,
-      type:               map['type'] as String? ?? 'direct',
-      similarityScore:    map['similarity_score'] as int? ?? 0,
-      authorityScore:     map['authority_score'] as int? ?? 0,
-      relevanceScore:     map['relevance_score'] as int? ?? 0,
-      detailsJson:        map['details_json'] is Map
+      id: map['id'] as String,
+      userId: map['user_id'] as String,
+      marketAnalysisId: map['market_analysis_id'] as String?,
+      name: map['name'] as String,
+      url: map['url'] as String,
+      type: map['type'] as String? ?? 'direct',
+      similarityScore: map['similarity_score'] as int? ?? 0,
+      authorityScore: map['authority_score'] as int? ?? 0,
+      relevanceScore: map['relevance_score'] as int? ?? 0,
+      detailsJson: map['details_json'] is Map
           ? Map<String, dynamic>.from(map['details_json'] as Map)
           : {},
       createdAt: DateTime.parse(map['created_at'] as String),
@@ -56,14 +57,14 @@ class Competitor {
   }
 
   Map<String, dynamic> toInsertMap() => {
-    'user_id':            userId,
-    'market_analysis_id': marketAnalysisId,
-    'name':               name,
-    'url':                url,
-    'type':               type,
-    'similarity_score':   similarityScore,
-    'authority_score':    authorityScore,
-    'relevance_score':    relevanceScore,
-    'details_json':       detailsJson,
-  };
+        'user_id': userId,
+        'market_analysis_id': marketAnalysisId,
+        'name': name,
+        'url': url,
+        'type': type,
+        'similarity_score': similarityScore,
+        'authority_score': authorityScore,
+        'relevance_score': relevanceScore,
+        'details_json': detailsJson,
+      };
 }

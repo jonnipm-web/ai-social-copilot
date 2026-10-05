@@ -19,7 +19,8 @@ ModuleLifecycle _lifecycle(String wire) =>
 ModulePlan _plan(String wire) =>
     ModulePlan.values.firstWhere((p) => p.wireName == wire);
 
-ModuleDefinition _module(ModuleLifecycle lifecycle, ModulePlan plan) => ModuleDefinition(
+ModuleDefinition _module(ModuleLifecycle lifecycle, ModulePlan plan) =>
+    ModuleDefinition(
       moduleId: 'vector',
       namePt: 'Vetor',
       nameEn: 'Vector',
@@ -43,7 +44,8 @@ Profile _profile(String role) => Profile(
       updatedAt: DateTime.utc(2026),
     );
 
-String _expectedClientDecision(String serverExpected) => switch (serverExpected) {
+String _expectedClientDecision(String serverExpected) =>
+    switch (serverExpected) {
       'ALLOW' => RouteDecision.allow.name,
       'PLAN_REQUIRED' => RouteDecision.redirectUpgrade.name,
       _ => RouteDecision.redirectDenied.name,
@@ -59,12 +61,15 @@ void main() {
     expect(cases.length, 105);
   });
 
-  test('client route guard matches every server decision vector (legacy Profile getters)', () {
+  test(
+      'client route guard matches every server decision vector (legacy Profile getters)',
+      () {
     final mismatches = <String>[];
     for (final c in cases) {
       final profile = _profile(c['legacyRole'] as String);
       final decision = decideForModule(
-        module: _module(_lifecycle(c['lifecycle'] as String), _plan(c['minimumPlan'] as String)),
+        module: _module(_lifecycle(c['lifecycle'] as String),
+            _plan(c['minimumPlan'] as String)),
         isAlwaysAllowed: false,
         isAdmin: profile.isAdmin,
         isPro: profile.isPro,
@@ -78,7 +83,9 @@ void main() {
     expect(mismatches, isEmpty);
   });
 
-  test('forged local state cannot exceed the server: an unresolved profile never unlocks a paid or beta module', () {
+  test(
+      'forged local state cannot exceed the server: an unresolved profile never unlocks a paid or beta module',
+      () {
     for (final lifecycle in ModuleLifecycle.values) {
       for (final plan in [ModulePlan.pro, ModulePlan.premium]) {
         final d = decideForModule(

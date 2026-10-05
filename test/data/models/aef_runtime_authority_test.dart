@@ -17,7 +17,11 @@ final _hash = 'a' * 64;
 const _rid = '0e000000-0000-4000-8000-00000000000e';
 final _rh = 'c' * 64;
 
-Map<String, dynamic> _reply(String phase, {bool completed = false, Map<String, dynamic>? receipt, String? operationId = _op}) => {
+Map<String, dynamic> _reply(String phase,
+        {bool completed = false,
+        Map<String, dynamic>? receipt,
+        String? operationId = _op}) =>
+    {
       'phase': phase,
       'completed': completed,
       'reconciliationRequired': phase == 'UNKNOWN_OUTCOME',
@@ -27,42 +31,83 @@ Map<String, dynamic> _reply(String phase, {bool completed = false, Map<String, d
       // AWAITING_APPROVAL parses only with a gate (AefRuntimeResult.fromMap) --
       // include one so the malformed cases below exercise the mapping's own
       // guard, not fromMap's earlier fail-closed rejection.
-      'gate': phase == 'AWAITING_APPROVAL' ? {'gateId': _gate, 'bindingHash': _hash, 'expiresAt': '2026-01-01T00:00:00Z'} : null,
+      'gate': phase == 'AWAITING_APPROVAL'
+          ? {
+              'gateId': _gate,
+              'bindingHash': _hash,
+              'expiresAt': '2026-01-01T00:00:00Z'
+            }
+          : null,
       'receipt': receipt,
       'replayed': false,
     };
 
 AefRuntimeResult _withOutcome(String outcome) => AefRuntimeResult.fromMap(
-      _reply('SUCCEEDED', completed: outcome == 'SUCCESS', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': outcome}),
+      _reply('SUCCEEDED',
+          completed: outcome == 'SUCCESS',
+          receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': outcome}),
     );
 
 void main() {
   group('aefReceiptOutcomeToActionStatus (authority boundary)', () {
     test('a real SUCCESS receipt maps to completed', () {
-      expect(aefReceiptOutcomeToActionStatus(_withOutcome('SUCCESS')), 'completed');
+      expect(aefReceiptOutcomeToActionStatus(_withOutcome('SUCCESS')),
+          'completed');
     });
 
-    test('FAILURE and NOT_EXECUTED revert to approved -- governance says nothing happened', () {
+    test(
+        'FAILURE and NOT_EXECUTED revert to approved -- governance says nothing happened',
+        () {
       // Per the server's own table (aef/persistence/receipt_v1_1.ts
       // OUTCOME_FOR), FAILURE only pairs with phase FAILED; NOT_EXECUTED
       // only pairs with REJECTED/EXPIRED/CANCELLED/INVALIDATED.
-      final failure = AefRuntimeResult.fromMap(_reply('FAILED', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'FAILURE'}));
-      final notExecuted = AefRuntimeResult.fromMap(_reply('REJECTED', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'NOT_EXECUTED'}));
+      final failure = AefRuntimeResult.fromMap(_reply('FAILED', receipt: {
+        'receiptId': _rid,
+        'receiptHash': _rh,
+        'outcome': 'FAILURE'
+      }));
+      final notExecuted = AefRuntimeResult.fromMap(_reply('REJECTED', receipt: {
+        'receiptId': _rid,
+        'receiptHash': _rh,
+        'outcome': 'NOT_EXECUTED'
+      }));
       expect(aefReceiptOutcomeToActionStatus(failure), 'approved');
       expect(aefReceiptOutcomeToActionStatus(notExecuted), 'approved');
     });
 
-    test('PARTIAL and UNKNOWN_OUTCOME require reconciliation -- never shown as done or failed', () {
+    test(
+        'PARTIAL and UNKNOWN_OUTCOME require reconciliation -- never shown as done or failed',
+        () {
       // PARTIAL only pairs with phase FAILED; UNKNOWN_OUTCOME only with
       // phase UNKNOWN_OUTCOME (same table as above).
-      final partial = AefRuntimeResult.fromMap(_reply('FAILED', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'PARTIAL'}));
-      final unknown = AefRuntimeResult.fromMap(_reply('UNKNOWN_OUTCOME', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'UNKNOWN_OUTCOME'}));
+      final partial = AefRuntimeResult.fromMap(_reply('FAILED', receipt: {
+        'receiptId': _rid,
+        'receiptHash': _rh,
+        'outcome': 'PARTIAL'
+      }));
+      final unknown = AefRuntimeResult.fromMap(_reply('UNKNOWN_OUTCOME',
+          receipt: {
+            'receiptId': _rid,
+            'receiptHash': _rh,
+            'outcome': 'UNKNOWN_OUTCOME'
+          }));
       expect(aefReceiptOutcomeToActionStatus(partial), 'executing');
       expect(aefReceiptOutcomeToActionStatus(unknown), 'executing');
     });
 
-    test('refuses a result with no receipt at all, at any phase -- no status may be invented', () {
-      for (final phase in ['AWAITING_APPROVAL', 'AUTHORIZED', 'EXECUTING', 'REJECTED', 'EXPIRED', 'CANCELLED', 'INVALIDATED', 'DENIED']) {
+    test(
+        'refuses a result with no receipt at all, at any phase -- no status may be invented',
+        () {
+      for (final phase in [
+        'AWAITING_APPROVAL',
+        'AUTHORIZED',
+        'EXECUTING',
+        'REJECTED',
+        'EXPIRED',
+        'CANCELLED',
+        'INVALIDATED',
+        'DENIED'
+      ]) {
         final r = AefRuntimeResult.fromMap(_reply(phase));
         expect(
           () => aefReceiptOutcomeToActionStatus(r),
@@ -72,9 +117,15 @@ void main() {
       }
     });
 
-    test('refuses an unreadable/malformed reply -- a network blip is never a status write', () {
-      expect(() => aefReceiptOutcomeToActionStatus(AefRuntimeResult.unreadable), throwsA(isA<ArgumentError>()));
-      expect(() => aefReceiptOutcomeToActionStatus(AefRuntimeResult.denied('NETWORK_INTERRUPTED')), throwsA(isA<ArgumentError>()));
+    test(
+        'refuses an unreadable/malformed reply -- a network blip is never a status write',
+        () {
+      expect(() => aefReceiptOutcomeToActionStatus(AefRuntimeResult.unreadable),
+          throwsA(isA<ArgumentError>()));
+      expect(
+          () => aefReceiptOutcomeToActionStatus(
+              AefRuntimeResult.denied('NETWORK_INTERRUPTED')),
+          throwsA(isA<ArgumentError>()));
     });
 
     // Codex final audit (P1) -- these four are exactly the cases the
@@ -83,25 +134,59 @@ void main() {
     // outcome, so a non-terminal phase or an inconsistent completed flag
     // could still carry a syntactically valid receipt and reach a status
     // write. None of these may ever be reachable now.
-    test('a non-terminal phase (AWAITING_APPROVAL) carrying a SUCCESS receipt is refused, not treated as done', () {
-      final r = AefRuntimeResult.fromMap(_reply('AWAITING_APPROVAL', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'SUCCESS'}));
-      expect(r.phase, AefPhase.awaitingApproval, reason: 'sanity: this reply must actually parse, not fall back to unreadable');
-      expect(() => aefReceiptOutcomeToActionStatus(r), throwsA(isA<ArgumentError>()));
+    test(
+        'a non-terminal phase (AWAITING_APPROVAL) carrying a SUCCESS receipt is refused, not treated as done',
+        () {
+      final r = AefRuntimeResult.fromMap(_reply('AWAITING_APPROVAL', receipt: {
+        'receiptId': _rid,
+        'receiptHash': _rh,
+        'outcome': 'SUCCESS'
+      }));
+      expect(r.phase, AefPhase.awaitingApproval,
+          reason:
+              'sanity: this reply must actually parse, not fall back to unreadable');
+      expect(() => aefReceiptOutcomeToActionStatus(r),
+          throwsA(isA<ArgumentError>()));
     });
 
-    test('phase SUCCEEDED with a SUCCESS receipt but completed=false is refused (server never confirmed it ran)', () {
-      final r = AefRuntimeResult.fromMap(_reply('SUCCEEDED', completed: false, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'SUCCESS'}));
-      expect(() => aefReceiptOutcomeToActionStatus(r), throwsA(isA<ArgumentError>()));
+    test(
+        'phase SUCCEEDED with a SUCCESS receipt but completed=false is refused (server never confirmed it ran)',
+        () {
+      final r = AefRuntimeResult.fromMap(_reply('SUCCEEDED',
+          completed: false,
+          receipt: {
+            'receiptId': _rid,
+            'receiptHash': _rh,
+            'outcome': 'SUCCESS'
+          }));
+      expect(() => aefReceiptOutcomeToActionStatus(r),
+          throwsA(isA<ArgumentError>()));
     });
 
-    test('a terminal, receipted result with no operation id is refused -- provenance would be unrecordable', () {
-      final r = AefRuntimeResult.fromMap(_reply('FAILED', operationId: null, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'FAILURE'}));
-      expect(() => aefReceiptOutcomeToActionStatus(r), throwsA(isA<ArgumentError>()));
+    test(
+        'a terminal, receipted result with no operation id is refused -- provenance would be unrecordable',
+        () {
+      final r = AefRuntimeResult.fromMap(_reply('FAILED',
+          operationId: null,
+          receipt: {
+            'receiptId': _rid,
+            'receiptHash': _rh,
+            'outcome': 'FAILURE'
+          }));
+      expect(() => aefReceiptOutcomeToActionStatus(r),
+          throwsA(isA<ArgumentError>()));
     });
 
-    test('mismatched phase/outcome (FAILED phase with a SUCCESS receipt) never maps to completed', () {
-      final r = AefRuntimeResult.fromMap(_reply('FAILED', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'SUCCESS'}));
-      expect(() => aefReceiptOutcomeToActionStatus(r), throwsA(isA<ArgumentError>()));
+    test(
+        'mismatched phase/outcome (FAILED phase with a SUCCESS receipt) never maps to completed',
+        () {
+      final r = AefRuntimeResult.fromMap(_reply('FAILED', receipt: {
+        'receiptId': _rid,
+        'receiptHash': _rh,
+        'outcome': 'SUCCESS'
+      }));
+      expect(() => aefReceiptOutcomeToActionStatus(r),
+          throwsA(isA<ArgumentError>()));
     });
 
     // Codex re-verification (Macro-03) — the first fix required SOME
@@ -110,7 +195,9 @@ void main() {
     // (self-contradictory -- if it succeeded, the receipt cannot say it
     // failed) still passed. This exhaustive table is the server's own
     // (aef/persistence/receipt_v1_1.ts OUTCOME_FOR), mirrored exactly.
-    test('exhaustive phase<->outcome compatibility -- every invalid pairing is refused, every valid one accepted', () {
+    test(
+        'exhaustive phase<->outcome compatibility -- every invalid pairing is refused, every valid one accepted',
+        () {
       const validPairs = {
         'SUCCEEDED': ['SUCCESS'],
         'FAILED': ['FAILURE', 'PARTIAL'],
@@ -120,29 +207,57 @@ void main() {
         'CANCELLED': ['NOT_EXECUTED'],
         'INVALIDATED': ['NOT_EXECUTED'],
       };
-      const allOutcomes = ['SUCCESS', 'FAILURE', 'PARTIAL', 'NOT_EXECUTED', 'UNKNOWN_OUTCOME'];
+      const allOutcomes = [
+        'SUCCESS',
+        'FAILURE',
+        'PARTIAL',
+        'NOT_EXECUTED',
+        'UNKNOWN_OUTCOME'
+      ];
       for (final phase in validPairs.keys) {
         for (final outcome in allOutcomes) {
           final completed = phase == 'SUCCEEDED' && outcome == 'SUCCESS';
-          final r = AefRuntimeResult.fromMap(_reply(phase, completed: completed, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': outcome}));
+          final r = AefRuntimeResult.fromMap(_reply(phase,
+              completed: completed,
+              receipt: {
+                'receiptId': _rid,
+                'receiptHash': _rh,
+                'outcome': outcome
+              }));
           final isValid = validPairs[phase]!.contains(outcome);
           if (isValid) {
-            expect(() => aefReceiptOutcomeToActionStatus(r), returnsNormally, reason: '$phase+$outcome must be accepted');
+            expect(() => aefReceiptOutcomeToActionStatus(r), returnsNormally,
+                reason: '$phase+$outcome must be accepted');
           } else {
-            expect(() => aefReceiptOutcomeToActionStatus(r), throwsA(isA<ArgumentError>()), reason: '$phase+$outcome must be refused');
+            expect(() => aefReceiptOutcomeToActionStatus(r),
+                throwsA(isA<ArgumentError>()),
+                reason: '$phase+$outcome must be refused');
           }
         }
       }
     });
 
-    test('FAILED phase with a PARTIAL receipt is valid and maps to executing (reconciliation required)', () {
-      final r = AefRuntimeResult.fromMap(_reply('FAILED', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'PARTIAL'}));
+    test(
+        'FAILED phase with a PARTIAL receipt is valid and maps to executing (reconciliation required)',
+        () {
+      final r = AefRuntimeResult.fromMap(_reply('FAILED', receipt: {
+        'receiptId': _rid,
+        'receiptHash': _rh,
+        'outcome': 'PARTIAL'
+      }));
       expect(aefReceiptOutcomeToActionStatus(r), 'executing');
     });
 
-    test('a REJECTED phase can never carry a receipt -- nothing ran, so nothing to receipt', () {
-      final r = AefRuntimeResult.fromMap(_reply('REJECTED', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'FAILURE'}));
-      expect(() => aefReceiptOutcomeToActionStatus(r), throwsA(isA<ArgumentError>()));
+    test(
+        'a REJECTED phase can never carry a receipt -- nothing ran, so nothing to receipt',
+        () {
+      final r = AefRuntimeResult.fromMap(_reply('REJECTED', receipt: {
+        'receiptId': _rid,
+        'receiptHash': _rh,
+        'outcome': 'FAILURE'
+      }));
+      expect(() => aefReceiptOutcomeToActionStatus(r),
+          throwsA(isA<ArgumentError>()));
     });
   });
 }

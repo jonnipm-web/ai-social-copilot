@@ -27,8 +27,17 @@ void main() {
         'Identified by Market Intelligence based on the analysis of example.com.');
     expect(t.risks, ['Effort: Medium']);
     expect(t.actionSteps, ['Estimated timeframe: 3-6 months']);
-    final all = [t.description, t.rationale, ...t.risks, ...t.actionSteps].join(' ');
-    for (final w in ['Impacto', 'Esforço', 'Prazo', 'Identificado', 'Médio', 'Alto', 'meses']) {
+    final all =
+        [t.description, t.rationale, ...t.risks, ...t.actionSteps].join(' ');
+    for (final w in [
+      'Impacto',
+      'Esforço',
+      'Prazo',
+      'Identificado',
+      'Médio',
+      'Alto',
+      'meses'
+    ]) {
       expect(all.contains(w), isFalse, reason: 'leaked PT word: $w');
     }
   });
@@ -53,7 +62,9 @@ void main() {
 
   test('AI-provided rationale is kept verbatim', () {
     final t = buildOpportunitySeedTexts(
-        const {'action': 'x', 'rationale': 'Because demand is rising.'}, 'in', pt);
+        const {'action': 'x', 'rationale': 'Because demand is rising.'},
+        'in',
+        pt);
     expect(t.rationale, 'Because demand is rising.');
   });
 }

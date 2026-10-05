@@ -19,17 +19,21 @@ class RobustnessEvidenceSection extends ConsumerStatefulWidget {
   final String strategyVersionId;
 
   @override
-  ConsumerState<RobustnessEvidenceSection> createState() => _RobustnessEvidenceSectionState();
+  ConsumerState<RobustnessEvidenceSection> createState() =>
+      _RobustnessEvidenceSectionState();
 }
 
-class _RobustnessEvidenceSectionState extends ConsumerState<RobustnessEvidenceSection> {
+class _RobustnessEvidenceSectionState
+    extends ConsumerState<RobustnessEvidenceSection> {
   bool _busy = false;
   List<dynamic>? _claims;
   String? _error;
 
   Future<void> _analyze() async {
     setState(() => _busy = true);
-    final result = await ref.read(strategyBuilderApiProvider).analyzeBacktestResult(widget.strategyVersionId);
+    final result = await ref
+        .read(strategyBuilderApiProvider)
+        .analyzeBacktestResult(widget.strategyVersionId);
     if (!mounted) return;
     setState(() {
       _busy = false;
@@ -48,21 +52,33 @@ class _RobustnessEvidenceSectionState extends ConsumerState<RobustnessEvidenceSe
         OutlinedButton.icon(
           key: const Key('strategyDetailAnalyzeRobustness'),
           onPressed: _busy ? null : _analyze,
-          icon: _busy ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.fact_check_outlined),
+          icon: _busy
+              ? const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.fact_check_outlined),
           label: Text(l.strategyDetailAnalyzeRobustness),
         ),
-        if (_error != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(l.strategyDetailRecordExperimentError(_error!), style: const TextStyle(fontSize: 12))),
+        if (_error != null)
+          Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(l.strategyDetailRecordExperimentError(_error!),
+                  style: const TextStyle(fontSize: 12))),
         if (claims != null) ...[
           const SizedBox(height: 8),
-          Text(l.strategyDetailRobustnessEvidenceTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
-          if (claims.isEmpty) Text(l.strategyDetailNoRobustnessClaims, key: const Key('strategyDetailRobustnessEmpty')),
+          Text(l.strategyDetailRobustnessEvidenceTitle,
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          if (claims.isEmpty)
+            Text(l.strategyDetailNoRobustnessClaims,
+                key: const Key('strategyDetailRobustnessEmpty')),
           for (final raw in claims)
             Builder(builder: (context) {
               final c = raw as Map<String, dynamic>;
               final status = c['status'] as String? ?? 'UNKNOWN';
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Text('• [$status] ${c['statement']}', style: const TextStyle(fontSize: 12)),
+                child: Text('• [$status] ${c['statement']}',
+                    style: const TextStyle(fontSize: 12)),
               );
             }),
         ],

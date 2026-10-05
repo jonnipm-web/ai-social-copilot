@@ -26,7 +26,8 @@ class BootstrapProjectResult {
   String get summary {
     if (!success) return '❌ Falha: ${error ?? "erro desconhecido"}';
     final parts = <String>[];
-    if (opportunitiesCreated > 0) parts.add('$opportunitiesCreated oportunidades');
+    if (opportunitiesCreated > 0)
+      parts.add('$opportunitiesCreated oportunidades');
     if (actionsCreated > 0) parts.add('$actionsCreated ações');
     if (revenuePlanCreated) parts.add('plano de receita');
     if (roadmapCreated) parts.add('roadmap');
@@ -49,7 +50,9 @@ class BootstrapReport {
   int get projectsBootstrapped => projectResults.where((r) => r.success).length;
   int get totalOpportunities =>
       projectResults.fold(0, (s, r) => s + r.opportunitiesCreated);
-  int get totalActions => projectResults.fold(0, (s, r) => s + r.actionsCreated);
-  int get totalRevenuePlans => projectResults.where((r) => r.revenuePlanCreated).length;
+  int get totalActions =>
+      projectResults.fold(0, (s, r) => s + r.actionsCreated);
+  int get totalRevenuePlans =>
+      projectResults.where((r) => r.revenuePlanCreated).length;
   bool get hasErrors => projectResults.any((r) => r.hasIssue);
 }

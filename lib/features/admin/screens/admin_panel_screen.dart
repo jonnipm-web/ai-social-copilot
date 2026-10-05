@@ -35,7 +35,9 @@ class AdminPanelScreen extends ConsumerWidget {
     // admin anterior (copyWithPrevious do Riverpod) e vazar pelo
     // valueOrNull. Nenhum caminho deste repositório hoje faz refresh deste
     // provider a ponto de produzir esse estado, mas o check custa nada.
-    final isAdmin = profileAsync.hasValue && !profileAsync.hasError && (profileAsync.value?.isAdmin ?? false);
+    final isAdmin = profileAsync.hasValue &&
+        !profileAsync.hasError &&
+        (profileAsync.value?.isAdmin ?? false);
     final l10n = AppLocalizations.of(context)!;
     if (!isAdmin) {
       return Scaffold(
@@ -100,8 +102,10 @@ class _UsersTab extends ConsumerWidget {
 
     return usersAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error:   (e, _) => Center(child: Text(extractErrorMessage(e, l10n), style: const TextStyle(color: Colors.white54))),
-      data:    (users) {
+      error: (e, _) => Center(
+          child: Text(extractErrorMessage(e, l10n),
+              style: const TextStyle(color: Colors.white54))),
+      data: (users) {
         if (users.isEmpty) {
           return Center(
             child: Text(l10n.uxAdminNoUsers,
@@ -111,7 +115,8 @@ class _UsersTab extends ConsumerWidget {
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: users.length,
-          separatorBuilder: (_, __) => const Divider(color: Colors.white12, height: 1),
+          separatorBuilder: (_, __) =>
+              const Divider(color: Colors.white12, height: 1),
           itemBuilder: (context, i) => _UserTile(user: users[i], ref: ref),
         );
       },
@@ -121,7 +126,7 @@ class _UsersTab extends ConsumerWidget {
 
 class _UserTile extends StatelessWidget {
   const _UserTile({required this.user, required this.ref});
-  final Profile   user;
+  final Profile user;
   final WidgetRef ref;
 
   @override
@@ -175,17 +180,33 @@ class _UserTile extends StatelessWidget {
           }
         },
         itemBuilder: (_) => [
-          PopupMenuItem(value: 'free',        child: Text(l10n.uxfAdminSetRole(l10n.planNameFree),          style: const TextStyle(color: Colors.white70))),
-          PopupMenuItem(value: 'pro',         child: Text(l10n.uxfAdminSetRole(l10n.planNamePro),           style: const TextStyle(color: Colors.white70))),
-          PopupMenuItem(value: 'premium',     child: Text(l10n.uxfAdminSetRole(l10n.planNamePremium),       style: const TextStyle(color: Colors.white70))),
-          PopupMenuItem(value: 'beta_tester', child: Text(l10n.uxfAdminSetRole(l10n.uxfAdminRoleBetaTester), style: const TextStyle(color: Colors.white70))),
-          PopupMenuItem(value: 'admin',       child: Text(l10n.uxfAdminSetRole(l10n.uxfAdminRoleAdmin),      style: const TextStyle(color: Color(0xFFFFD700)))),
+          PopupMenuItem(
+              value: 'free',
+              child: Text(l10n.uxfAdminSetRole(l10n.planNameFree),
+                  style: const TextStyle(color: Colors.white70))),
+          PopupMenuItem(
+              value: 'pro',
+              child: Text(l10n.uxfAdminSetRole(l10n.planNamePro),
+                  style: const TextStyle(color: Colors.white70))),
+          PopupMenuItem(
+              value: 'premium',
+              child: Text(l10n.uxfAdminSetRole(l10n.planNamePremium),
+                  style: const TextStyle(color: Colors.white70))),
+          PopupMenuItem(
+              value: 'beta_tester',
+              child: Text(l10n.uxfAdminSetRole(l10n.uxfAdminRoleBetaTester),
+                  style: const TextStyle(color: Colors.white70))),
+          PopupMenuItem(
+              value: 'admin',
+              child: Text(l10n.uxfAdminSetRole(l10n.uxfAdminRoleAdmin),
+                  style: const TextStyle(color: Color(0xFFFFD700)))),
           const PopupMenuDivider(),
           PopupMenuItem(
             value: 'toggle',
             child: Text(
               user.isActive ? l10n.uxAdminDeactivate : l10n.uxAdminActivate,
-              style: TextStyle(color: user.isActive ? Colors.red : Colors.green),
+              style:
+                  TextStyle(color: user.isActive ? Colors.red : Colors.green),
             ),
           ),
         ],
@@ -195,11 +216,16 @@ class _UserTile extends StatelessWidget {
 
   Color _roleColor(String role) {
     switch (role) {
-      case 'admin':       return const Color(0xFFFFD700);
-      case 'premium':     return const Color(0xFFB44FE8);
-      case 'pro':         return const Color(0xFF6C63FF);
-      case 'beta_tester': return Colors.teal;
-      default:            return Colors.white38;
+      case 'admin':
+        return const Color(0xFFFFD700);
+      case 'premium':
+        return const Color(0xFFB44FE8);
+      case 'pro':
+        return const Color(0xFF6C63FF);
+      case 'beta_tester':
+        return Colors.teal;
+      default:
+        return Colors.white38;
     }
   }
 }
@@ -212,6 +238,7 @@ class _PersonasAdminTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
@@ -230,7 +257,8 @@ class _PersonasAdminTab extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFFD700),
                   foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   textStyle: const TextStyle(fontSize: 13),
                 ),
               ),
@@ -272,7 +300,8 @@ class _OverviewTab extends ConsumerWidget {
         children: [
           Text(
             l10n.uxAdminUserDistribution,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 16),
           ...['admin', 'premium', 'pro', 'beta_tester', 'free'].map((role) {
@@ -302,23 +331,30 @@ class _OverviewTab extends ConsumerWidget {
 }
 
 class _RoleBar extends StatelessWidget {
-  const _RoleBar({required this.role, required this.count, required this.total});
+  const _RoleBar(
+      {required this.role, required this.count, required this.total});
   final String role;
-  final int    count;
-  final int    total;
+  final int count;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
     final labels = {
-      'admin': 'Admin', 'premium': 'Premium',
-      'pro': 'Pro', 'beta_tester': 'Beta', 'free': 'Free',
+      'admin': 'Admin',
+      'premium': 'Premium',
+      'pro': 'Pro',
+      'beta_tester': 'Beta',
+      'free': 'Free',
     };
     final colors = {
-      'admin': const Color(0xFFFFD700), 'premium': const Color(0xFFB44FE8),
-      'pro': const Color(0xFF6C63FF), 'beta_tester': Colors.teal, 'free': Colors.white38,
+      'admin': const Color(0xFFFFD700),
+      'premium': const Color(0xFFB44FE8),
+      'pro': const Color(0xFF6C63FF),
+      'beta_tester': Colors.teal,
+      'free': Colors.white38,
     };
     final color = colors[role] ?? Colors.white38;
-    final pct   = total > 0 ? count / total : 0.0;
+    final pct = total > 0 ? count / total : 0.0;
 
     return Row(
       children: [
@@ -363,16 +399,19 @@ class _ModulesAdminTab extends StatelessWidget {
     // adminVisible -- hoje todo módulo tem adminVisible=true (então isto
     // era latente, não uma exposição ativa), mas o campo existe
     // exatamente para este filtro e deve ser respeitado de verdade.
-    final visibleModules = kModuleRegistry.where((m) => m.adminVisible).toList();
+    final visibleModules =
+        kModuleRegistry.where((m) => m.adminVisible).toList();
 
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: visibleModules.length,
-      separatorBuilder: (_, __) => const Divider(color: Colors.white12, height: 1),
+      separatorBuilder: (_, __) =>
+          const Divider(color: Colors.white12, height: 1),
       itemBuilder: (context, i) {
         final module = visibleModules[i];
         return ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
           title: Row(
             children: [
               Expanded(
@@ -389,9 +428,13 @@ class _ModulesAdminTab extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  module.commercialEnabled ? Icons.check_circle_outline_rounded : Icons.remove_circle_outline_rounded,
+                  module.commercialEnabled
+                      ? Icons.check_circle_outline_rounded
+                      : Icons.remove_circle_outline_rounded,
                   size: 13,
-                  color: module.commercialEnabled ? Colors.tealAccent : Colors.white24,
+                  color: module.commercialEnabled
+                      ? Colors.tealAccent
+                      : Colors.white24,
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -402,7 +445,9 @@ class _ModulesAdminTab extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  isEnglish ? module.minimumPlan.labelEn : module.minimumPlan.labelPt,
+                  isEnglish
+                      ? module.minimumPlan.labelEn
+                      : module.minimumPlan.labelPt,
                   style: const TextStyle(color: Colors.white38, fontSize: 11),
                 ),
               ],
@@ -410,13 +455,15 @@ class _ModulesAdminTab extends StatelessWidget {
           ),
           trailing: module.adminClickable
               ? const Icon(Icons.chevron_right_rounded, color: Colors.white38)
-              : const Icon(Icons.block_rounded, color: Colors.white12, size: 18),
+              : const Icon(Icons.block_rounded,
+                  color: Colors.white12, size: 18),
           onTap: module.adminClickable
               ? () => showModalBottomSheet(
                     context: context,
                     backgroundColor: const Color(0xFF141425),
                     isScrollControlled: true,
-                    builder: (_) => AdminModuleDetailSheet(module: module, isEnglish: isEnglish),
+                    builder: (_) => AdminModuleDetailSheet(
+                        module: module, isEnglish: isEnglish),
                   )
               : null,
         );
@@ -450,7 +497,8 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         isEnglish ? status.labelEn : status.labelPt,
-        style: TextStyle(color: _color, fontSize: 10, fontWeight: FontWeight.w700),
+        style:
+            TextStyle(color: _color, fontSize: 10, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -465,11 +513,14 @@ class _StatusBadge extends StatelessWidget {
 /// the route entitlement policy (EXPERIMENTAL ⇒ admin only), so this adds no
 /// access, only a path.
 String? moduleOpenRoute(ModuleDefinition module) =>
-    module.adminClickable && !module.commercialEnabled && module.route != null ? module.route : null;
+    module.adminClickable && !module.commercialEnabled && module.route != null
+        ? module.route
+        : null;
 
 /// Public for widget tests (Quant READINESS-03).
 class AdminModuleDetailSheet extends StatelessWidget {
-  const AdminModuleDetailSheet({super.key, required this.module, required this.isEnglish});
+  const AdminModuleDetailSheet(
+      {super.key, required this.module, required this.isEnglish});
   final ModuleDefinition module;
   final bool isEnglish;
 
@@ -489,32 +540,66 @@ class AdminModuleDetailSheet extends StatelessWidget {
                 Expanded(
                   child: Text(
                     isEnglish ? module.nameEn : module.namePt,
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700),
                   ),
                 ),
                 _StatusBadge(status: module.status, isEnglish: isEnglish),
               ],
             ),
             const SizedBox(height: 4),
-            Text(module.moduleId, style: const TextStyle(color: Colors.white24, fontSize: 11, fontFamily: 'monospace')),
+            Text(module.moduleId,
+                style: const TextStyle(
+                    color: Colors.white24,
+                    fontSize: 11,
+                    fontFamily: 'monospace')),
             const Divider(color: Colors.white12, height: 28),
-            _DetailRow(label: t.adminModulesCommercial, value: module.commercialEnabled ? t.adminModulesYes : t.adminModulesNo),
-            _DetailRow(label: t.adminModulesPlan, value: isEnglish ? module.minimumPlan.labelEn : module.minimumPlan.labelPt),
-            _DetailRow(label: t.adminModulesRoute, value: module.route ?? t.adminModulesNoRoute),
-            _DetailRow(label: t.adminModulesAi, value: module.aiDependency ? t.adminModulesYes : t.adminModulesNo),
+            _DetailRow(
+                label: t.adminModulesCommercial,
+                value: module.commercialEnabled
+                    ? t.adminModulesYes
+                    : t.adminModulesNo),
+            _DetailRow(
+                label: t.adminModulesPlan,
+                value: isEnglish
+                    ? module.minimumPlan.labelEn
+                    : module.minimumPlan.labelPt),
+            _DetailRow(
+                label: t.adminModulesRoute,
+                value: module.route ?? t.adminModulesNoRoute),
+            _DetailRow(
+                label: t.adminModulesAi,
+                value:
+                    module.aiDependency ? t.adminModulesYes : t.adminModulesNo),
             if (module.edgeFunctions.isNotEmpty)
-              _DetailRow(label: 'Edge Functions', value: module.edgeFunctions.join(', ')),
+              _DetailRow(
+                  label: 'Edge Functions',
+                  value: module.edgeFunctions.join(', ')),
             if (module.databaseDependencies.isNotEmpty)
-              _DetailRow(label: t.uxAdminModuleTables, value: module.databaseDependencies.join(', ')),
+              _DetailRow(
+                  label: t.uxAdminModuleTables,
+                  value: module.databaseDependencies.join(', ')),
             const SizedBox(height: 12),
-            Text(t.adminModulesReadiness, style: const TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(t.adminModulesReadiness,
+                style: const TextStyle(
+                    color: Colors.white38,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
-            Text(isEnglish ? module.readinessEn : module.readinessPt, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            Text(isEnglish ? module.readinessEn : module.readinessPt,
+                style: const TextStyle(color: Colors.white70, fontSize: 13)),
             if (module.notes.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text(t.adminModulesNotes, style: const TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text(t.adminModulesNotes,
+                  style: const TextStyle(
+                      color: Colors.white38,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
-              Text(module.notes, style: const TextStyle(color: Colors.amber, fontSize: 13)),
+              Text(module.notes,
+                  style: const TextStyle(color: Colors.amber, fontSize: 13)),
             ],
             if (moduleOpenRoute(module) != null) ...[
               const SizedBox(height: 16),
@@ -555,8 +640,13 @@ class _DetailRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 110, child: Text(label, style: const TextStyle(color: Colors.white38, fontSize: 12))),
-          Expanded(child: Text(value, style: const TextStyle(color: Colors.white70, fontSize: 12))),
+          SizedBox(
+              width: 110,
+              child: Text(label,
+                  style: const TextStyle(color: Colors.white38, fontSize: 12))),
+          Expanded(
+              child: Text(value,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12))),
         ],
       ),
     );

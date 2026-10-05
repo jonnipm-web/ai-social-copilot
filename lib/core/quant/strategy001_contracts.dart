@@ -204,8 +204,11 @@ String eventKindToAcknowledgmentValue(EventKind kind) => switch (kind) {
 /// interpretation, no decision of any kind. Display convenience only,
 /// never trusted: the server re-validates every field regardless, exactly
 /// like Action Engine's own `initialValues` (aef_action_card.dart).
-Map<String, String> strategyEventToAcknowledgmentParameters(StrategyEvent event, {required String signalId}) => {
+Map<String, String> strategyEventToAcknowledgmentParameters(StrategyEvent event,
+        {required String signalId}) =>
+    {
       'signal_id': signalId,
       'event_kind': eventKindToAcknowledgmentValue(event.kind),
-      'note': '${event.reason} (bar ${event.barIndex}: ${event.stateFrom.name} -> ${event.stateTo.name})',
+      'note':
+          '${event.reason} (bar ${event.barIndex}: ${event.stateFrom.name} -> ${event.stateTo.name})',
     };

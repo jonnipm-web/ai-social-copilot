@@ -13,8 +13,7 @@ final monthlyUsageProvider = FutureProvider.autoDispose<int>((ref) {
 });
 
 // Provider do histórico
-final historyProvider =
-    FutureProvider.autoDispose<List<PostGeneration>>((ref) {
+final historyProvider = FutureProvider.autoDispose<List<PostGeneration>>((ref) {
   return ref.watch(postServiceProvider).fetchHistory();
 });
 
@@ -31,7 +30,8 @@ class PostNotifier extends StateNotifier<AsyncValue<PostGeneration?>> {
   final PostService _service;
   final Ref _ref;
 
-  Future<PostGeneration?> improvePost(String text, {String? idempotencyKey}) async {
+  Future<PostGeneration?> improvePost(String text,
+      {String? idempotencyKey}) async {
     state = const AsyncValue.loading();
 
     final result = await AsyncValue.guard<PostGeneration?>(() async {
@@ -61,8 +61,7 @@ class PostNotifier extends StateNotifier<AsyncValue<PostGeneration?>> {
   }
 }
 
-final postNotifierProvider =
-    StateNotifierProvider.autoDispose<PostNotifier, AsyncValue<PostGeneration?>>(
-        (ref) {
+final postNotifierProvider = StateNotifierProvider.autoDispose<PostNotifier,
+    AsyncValue<PostGeneration?>>((ref) {
   return PostNotifier(ref.watch(postServiceProvider), ref);
 });

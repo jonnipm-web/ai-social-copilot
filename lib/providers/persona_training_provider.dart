@@ -10,9 +10,8 @@ import '../l10n/app_localizations.dart';
 final personaTrainingServiceProvider =
     Provider<PersonaTrainingService>((_) => PersonaTrainingService());
 
-final personaTrainingProvider =
-    FutureProvider.autoDispose.family<List<PersonaTraining>, String>(
-        (ref, personaId) {
+final personaTrainingProvider = FutureProvider.autoDispose
+    .family<List<PersonaTraining>, String>((ref, personaId) {
   return ref.watch(personaTrainingServiceProvider).fetchForPersona(personaId);
 });
 
@@ -29,6 +28,7 @@ class PersonaTrainingNotifier
         super(const AsyncValue.data(null));
 
   final PersonaTrainingService _service;
+
   /// R16 — current UI-language localizations for persisted summary text.
   final AppLocalizations Function()? _l10n;
 
@@ -47,9 +47,9 @@ class PersonaTrainingNotifier
     try {
       final result = await _service.trainFromAnalysis(
         personaId: personaId,
-        item:      item,
-        analysis:  analysis,
-        l10n:      l10n,
+        item: item,
+        analysis: analysis,
+        l10n: l10n,
       );
       state = AsyncValue.data(result);
       return result;

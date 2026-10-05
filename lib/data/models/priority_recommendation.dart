@@ -34,5 +34,6 @@ class PriorityRecommendation {
 
   /// R16 — localized display label; single source is
   /// [recommendationTypeLabel] in core/utils/ecosystem_labels.dart.
-  String typeLabel(AppLocalizations l10n) => recommendationTypeLabel(type, l10n);
+  String typeLabel(AppLocalizations l10n) =>
+      recommendationTypeLabel(type, l10n);
 }

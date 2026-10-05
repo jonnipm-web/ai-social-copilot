@@ -54,83 +54,88 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
         // AND every entry point reaches this screen via `context.go()`
         // (which replaces the navigation stack), so there was nothing to
         // pop even if a back arrow had appeared.
-        leading: const CanonicalBackButton(fallbackRoute: AppConstants.routeWebsiteAnalyzer),
+        leading: const CanonicalBackButton(
+            fallbackRoute: AppConstants.routeWebsiteAnalyzer),
         actions: [
           analysisAsync.whenOrNull(
-            data: (analysis) => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.websiteResultSavedSnack),
-                        backgroundColor: Colors.green,
+                data: (analysis) => Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.websiteResultSavedSnack),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.lock, size: 16, color: _accent),
+                      label: Text(
+                        l10n.websiteResultSaveToVault,
+                        style: const TextStyle(color: _accent, fontSize: 13),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.lock, size: 16, color: _accent),
-                  label: Text(
-                    l10n.websiteResultSaveToVault,
-                    style: const TextStyle(color: _accent, fontSize: 13),
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: () {
-                    context.go(
-                      '/knowledge/new',
-                      extra: {'prefillUrl': analysis.url},
-                    );
-                  },
-                  icon: const Icon(Icons.auto_awesome, size: 16, color: _primary),
-                  label: Text(
-                    l10n.websiteResultCreateStrategy,
-                    style: const TextStyle(color: _primary, fontSize: 13),
-                  ),
-                ),
-                // IVE-EXPERIENCE-V1-06 (Section 21) — first contextual IVE
-                // entry point in this module. WebsiteAnalysis has no
-                // projectId (it isn't project-scoped, see
-                // data/models/website_analysis.dart), so this reuses the
-                // existing "genuinely project-agnostic surface" case
-                // (docs/commercial/PROJECT_CONTEXT_CONTRACT.md §3.1) —
-                // iveContextDataProvider(null), the same pattern the global
-                // overlay itself uses. Explains only what this analysis
-                // already produced (scores/strengths/weaknesses) — no
-                // Phase-9 SEO/AdSense capability is implied.
-                TextButton.icon(
-                  onPressed: () {
-                    final ctx = ref.read(iveContextDataProvider(null)).valueOrNull;
-                    final contextData =
-                        ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
-                    showCopilotChat(
-                      context,
-                      screenName: l10n.navWebsiteAnalyzer,
-                      contextData: contextData,
-                      initialMessage: l10n.websiteResultExplainPrompt(
-                        analysis.url,
-                        analysis.scoreWebsite.toString(),
-                        analysis.scoreSeo.toString(),
-                        analysis.scoreAdsense.toString(),
-                        analysis.scoreMonetization.toString(),
+                    ),
+                    TextButton.icon(
+                      onPressed: () {
+                        context.go(
+                          '/knowledge/new',
+                          extra: {'prefillUrl': analysis.url},
+                        );
+                      },
+                      icon: const Icon(Icons.auto_awesome,
+                          size: 16, color: _primary),
+                      label: Text(
+                        l10n.websiteResultCreateStrategy,
+                        style: const TextStyle(color: _primary, fontSize: 13),
                       ),
-                      request: IveInteractionRequest(
-                        sourceModule:     'website_analyzer',
-                        sourceEntityType: 'website_analysis',
-                        sourceEntityId:   analysis.id,
-                        operationType:    IveOperationType.explain,
+                    ),
+                    // IVE-EXPERIENCE-V1-06 (Section 21) — first contextual IVE
+                    // entry point in this module. WebsiteAnalysis has no
+                    // projectId (it isn't project-scoped, see
+                    // data/models/website_analysis.dart), so this reuses the
+                    // existing "genuinely project-agnostic surface" case
+                    // (docs/commercial/PROJECT_CONTEXT_CONTRACT.md §3.1) —
+                    // iveContextDataProvider(null), the same pattern the global
+                    // overlay itself uses. Explains only what this analysis
+                    // already produced (scores/strengths/weaknesses) — no
+                    // Phase-9 SEO/AdSense capability is implied.
+                    TextButton.icon(
+                      onPressed: () {
+                        final ctx =
+                            ref.read(iveContextDataProvider(null)).valueOrNull;
+                        final contextData = ctx != null
+                            ? CopilotContextData.fromIveContext(ctx)
+                            : const CopilotContextData();
+                        showCopilotChat(
+                          context,
+                          screenName: l10n.navWebsiteAnalyzer,
+                          contextData: contextData,
+                          initialMessage: l10n.websiteResultExplainPrompt(
+                            analysis.url,
+                            analysis.scoreWebsite.toString(),
+                            analysis.scoreSeo.toString(),
+                            analysis.scoreAdsense.toString(),
+                            analysis.scoreMonetization.toString(),
+                          ),
+                          request: IveInteractionRequest(
+                            sourceModule: 'website_analyzer',
+                            sourceEntityType: 'website_analysis',
+                            sourceEntityId: analysis.id,
+                            operationType: IveOperationType.explain,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.auto_awesome_rounded,
+                          size: 16, color: _accent),
+                      label: Text(
+                        l10n.knowledgeVaultExplainWithIve,
+                        style: const TextStyle(color: _accent, fontSize: 13),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.auto_awesome_rounded, size: 16, color: _accent),
-                  label: Text(
-                    l10n.knowledgeVaultExplainWithIve,
-                    style: const TextStyle(color: _accent, fontSize: 13),
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ) ??
+              ) ??
               const SizedBox.shrink(),
         ],
       ),
@@ -255,7 +260,8 @@ class _AnalysisContent extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.copy, color: Colors.white.withOpacity(0.5), size: 18),
+                  icon: Icon(Icons.copy,
+                      color: Colors.white.withOpacity(0.5), size: 18),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: analysis.url));
                   },
@@ -339,8 +345,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.strengths.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.strengths.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.weaknesses.isNotEmpty)
             _ExpandableSection(
@@ -354,8 +359,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.weaknesses.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.weaknesses.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.criticalIssues.isNotEmpty)
             _ExpandableSection(
@@ -369,8 +373,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.criticalIssues.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.criticalIssues.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.seoAnalysis.isNotEmpty)
             _ExpandableSection(
@@ -381,8 +384,7 @@ class _AnalysisContent extends StatelessWidget {
               child: _MapContent(data: analysis.seoAnalysis),
             ),
 
-          if (analysis.seoAnalysis.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.seoAnalysis.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.adsenseAnalysis.isNotEmpty)
             _ExpandableSection(
@@ -393,8 +395,7 @@ class _AnalysisContent extends StatelessWidget {
               child: _AdsenseContent(analysis: analysis, l10n: l10n),
             ),
 
-          if (analysis.adsenseAnalysis.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.adsenseAnalysis.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.quickWins.isNotEmpty)
             _ExpandableSection(
@@ -409,8 +410,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.quickWins.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.quickWins.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.plan7Days.isNotEmpty)
             _ExpandableSection(
@@ -421,8 +421,7 @@ class _AnalysisContent extends StatelessWidget {
               child: _NumberedList(items: analysis.plan7Days),
             ),
 
-          if (analysis.plan7Days.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.plan7Days.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.plan30Days.isNotEmpty)
             _ExpandableSection(
@@ -433,8 +432,7 @@ class _AnalysisContent extends StatelessWidget {
               child: _NumberedList(items: analysis.plan30Days),
             ),
 
-          if (analysis.plan30Days.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.plan30Days.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.articleIdeas.isNotEmpty)
             _ExpandableSection(
@@ -448,8 +446,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.articleIdeas.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.articleIdeas.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.monetizationOpportunities.isNotEmpty)
             _ExpandableSection(
@@ -605,7 +602,9 @@ class _ExpandableSectionState extends State<_ExpandableSection> {
                     ),
                   ),
                   Icon(
-                    _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    _expanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     color: Colors.white.withOpacity(0.5),
                   ),
                 ],
@@ -682,7 +681,8 @@ class _DiagnosticContent extends StatelessWidget {
             children: mainTopics
                 .map(
                   (topic) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFF6C63FF).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
@@ -692,7 +692,8 @@ class _DiagnosticContent extends StatelessWidget {
                     ),
                     child: Text(
                       topic,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ),
                 )
@@ -815,7 +816,8 @@ class _MapContent extends StatelessWidget {
         final key = entry.key
             .replaceAll('_', ' ')
             .split(' ')
-            .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
+            .map((w) =>
+                w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
             .join(' ');
         final value = entry.value;
 

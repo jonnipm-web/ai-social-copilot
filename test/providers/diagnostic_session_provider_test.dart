@@ -18,7 +18,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:ai_social_copilot/core/diagnostics/diagnostic_logger_service.dart';
 import 'package:ai_social_copilot/providers/diagnostic_session_provider.dart';
 
-class MockDiagnosticLoggerService extends Mock implements DiagnosticLoggerService {}
+class MockDiagnosticLoggerService extends Mock
+    implements DiagnosticLoggerService {}
 
 void main() {
   late MockDiagnosticLoggerService logger;
@@ -50,7 +51,8 @@ void main() {
       verifyNever(() => logger.findMyActiveSession());
     });
 
-    test('no server-active session -> state stays inactive, nothing adopted', () async {
+    test('no server-active session -> state stays inactive, nothing adopted',
+        () async {
       when(() => logger.findMyActiveSession()).thenAnswer((_) async => null);
 
       await notifier.recover();
@@ -59,8 +61,10 @@ void main() {
       verifyNever(() => logger.adoptActiveSession(any()));
     });
 
-    test('a real server-active session -> adopted and reflected in state', () async {
-      when(() => logger.findMyActiveSession()).thenAnswer((_) async => sessionRow('session-123'));
+    test('a real server-active session -> adopted and reflected in state',
+        () async {
+      when(() => logger.findMyActiveSession())
+          .thenAnswer((_) async => sessionRow('session-123'));
 
       await notifier.recover();
 
@@ -73,7 +77,8 @@ void main() {
       'already tracking an active session locally -> no-op, never re-queries the server '
       '(mission section 05: "do not create a polling loop")',
       () async {
-        when(() => logger.findMyActiveSession()).thenAnswer((_) async => sessionRow('session-already-active'));
+        when(() => logger.findMyActiveSession())
+            .thenAnswer((_) async => sessionRow('session-already-active'));
         await notifier.recover(); // first call adopts it
         clearInteractions(logger);
 
@@ -106,7 +111,8 @@ void main() {
       'a failed query (exception) is caught, never rethrown, and does not corrupt state '
       '(Codex Gate P2: observability must not throw during bootstrap)',
       () async {
-        when(() => logger.findMyActiveSession()).thenThrow(Exception('network down'));
+        when(() => logger.findMyActiveSession())
+            .thenThrow(Exception('network down'));
 
         await expectLater(notifier.recover(), completes);
 
@@ -135,9 +141,13 @@ void main() {
     );
   });
 
-  group('reset() — mission section 10 (logout clears runtime session state)', () {
-    test('clears in-memory state and detaches the logger, without a server call', () async {
-      when(() => logger.findMyActiveSession()).thenAnswer((_) async => sessionRow('session-to-clear'));
+  group('reset() — mission section 10 (logout clears runtime session state)',
+      () {
+    test(
+        'clears in-memory state and detaches the logger, without a server call',
+        () async {
+      when(() => logger.findMyActiveSession())
+          .thenAnswer((_) async => sessionRow('session-to-clear'));
       await notifier.recover();
       expect(notifier.state.isActive, isTrue);
 
@@ -152,15 +162,19 @@ void main() {
       verifyNever(() => logger.stopSession());
     });
 
-    test('after reset(), a subsequent recover() for a DIFFERENT user re-queries fresh (user-switch isolation)', () async {
+    test(
+        'after reset(), a subsequent recover() for a DIFFERENT user re-queries fresh (user-switch isolation)',
+        () async {
       when(() => logger.currentUserId).thenReturn('user-a');
-      when(() => logger.findMyActiveSession()).thenAnswer((_) async => sessionRow('user-a-session'));
+      when(() => logger.findMyActiveSession())
+          .thenAnswer((_) async => sessionRow('user-a-session'));
       await notifier.recover();
       when(() => logger.forgetActiveSession()).thenReturn(null);
       notifier.reset();
 
       when(() => logger.currentUserId).thenReturn('user-b');
-      when(() => logger.findMyActiveSession()).thenAnswer((_) async => sessionRow('user-b-session'));
+      when(() => logger.findMyActiveSession())
+          .thenAnswer((_) async => sessionRow('user-b-session'));
       await notifier.recover();
 
       expect(notifier.state.sessionId, 'user-b-session');
@@ -171,7 +185,8 @@ void main() {
       're-queries fresh, not permanently suppressed by the earlier attempt',
       () async {
         when(() => logger.currentUserId).thenReturn('user-a');
-        when(() => logger.findMyActiveSession()).thenAnswer((_) async => sessionRow('user-a-first-session'));
+        when(() => logger.findMyActiveSession())
+            .thenAnswer((_) async => sessionRow('user-a-first-session'));
         await notifier.recover();
         expect(notifier.state.sessionId, 'user-a-first-session');
 
@@ -180,7 +195,8 @@ void main() {
 
         // Same user id signs back in and a NEW session is now active
         // server-side.
-        when(() => logger.findMyActiveSession()).thenAnswer((_) async => sessionRow('user-a-second-session'));
+        when(() => logger.findMyActiveSession())
+            .thenAnswer((_) async => sessionRow('user-a-second-session'));
         await notifier.recover();
 
         expect(notifier.state.sessionId, 'user-a-second-session');

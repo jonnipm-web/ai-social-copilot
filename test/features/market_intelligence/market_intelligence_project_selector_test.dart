@@ -51,7 +51,8 @@ Future<void> _pump(WidgetTester tester) async {
   await tester.pumpWidget(ProviderScope(
     overrides: [
       projectsNotifierProvider.overrideWith(_FakeProjectsNotifier.new),
-      marketAnalysesProvider.overrideWith((ref) async => const <MarketAnalysis>[]),
+      marketAnalysesProvider
+          .overrideWith((ref) async => const <MarketAnalysis>[]),
     ],
     child: MaterialApp.router(
       routerConfig: router,

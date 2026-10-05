@@ -9,7 +9,8 @@ import 'package:ai_social_copilot/l10n/app_localizations.dart';
 // action_detail_screen.dart's _TypeBadge rendering item.actionType
 // .toUpperCase() raw (same bug class as PQ-05's competitor.type).
 void main() {
-  test('actionEngineTypeLabel maps known canonical values, PT and EN', () async {
+  test('actionEngineTypeLabel maps known canonical values, PT and EN',
+      () async {
     final pt = await AppLocalizations.delegate.load(const Locale('pt'));
     final en = await AppLocalizations.delegate.load(const Locale('en'));
 
@@ -19,8 +20,10 @@ void main() {
     expect(actionEngineTypeLabel(en, 'opportunity'), 'Opportunity');
   });
 
-  test('unmapped/legacy actionType falls back to itself rather than throwing', () async {
+  test('unmapped/legacy actionType falls back to itself rather than throwing',
+      () async {
     final pt = await AppLocalizations.delegate.load(const Locale('pt'));
-    expect(actionEngineTypeLabel(pt, 'valor-legado-desconhecido'), 'valor-legado-desconhecido');
+    expect(actionEngineTypeLabel(pt, 'valor-legado-desconhecido'),
+        'valor-legado-desconhecido');
   });
 }

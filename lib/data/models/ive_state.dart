@@ -11,38 +11,39 @@ enum IveExpression { happy, thinking, excited, neutral, winking }
 enum IveInteractionState { thinking, speaking }
 
 class IveState {
-  final String              screenName;
-  final String              message;
-  final IveExpression       expression;
-  final bool                bubbleVisible;
-  final IveIssue?           activeIssue;
+  final String screenName;
+  final String message;
+  final IveExpression expression;
+  final bool bubbleVisible;
+  final IveIssue? activeIssue;
   final IveInteractionState? interaction;
 
   const IveState({
-    this.screenName    = '',
-    this.message       = '',
-    this.expression    = IveExpression.happy,
+    this.screenName = '',
+    this.message = '',
+    this.expression = IveExpression.happy,
     this.bubbleVisible = false,
     this.activeIssue,
     this.interaction,
   });
 
   IveState copyWith({
-    String?              screenName,
-    String?              message,
-    IveExpression?       expression,
-    bool?                bubbleVisible,
-    IveIssue?            activeIssue,
-    bool                 clearIssue = false,
+    String? screenName,
+    String? message,
+    IveExpression? expression,
+    bool? bubbleVisible,
+    IveIssue? activeIssue,
+    bool clearIssue = false,
     IveInteractionState? interaction,
-    bool                 clearInteraction = false,
+    bool clearInteraction = false,
   }) =>
       IveState(
-        screenName:    screenName    ?? this.screenName,
-        message:       message       ?? this.message,
-        expression:    expression    ?? this.expression,
+        screenName: screenName ?? this.screenName,
+        message: message ?? this.message,
+        expression: expression ?? this.expression,
         bubbleVisible: bubbleVisible ?? this.bubbleVisible,
-        activeIssue:   clearIssue ? null : (activeIssue ?? this.activeIssue),
-        interaction:   clearInteraction ? null : (interaction ?? this.interaction),
+        activeIssue: clearIssue ? null : (activeIssue ?? this.activeIssue),
+        interaction:
+            clearInteraction ? null : (interaction ?? this.interaction),
       );
 }

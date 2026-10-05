@@ -14,7 +14,8 @@ import '../widgets/impact_widgets.dart';
 /// Reached from the dossier screen already behind its admin gate; it only
 /// renders data that screen received from the server.
 class ImpactClaimScreen extends StatelessWidget {
-  const ImpactClaimScreen({super.key, required this.dossier, required this.claim});
+  const ImpactClaimScreen(
+      {super.key, required this.dossier, required this.claim});
 
   final DossierView dossier;
   final ClaimView claim;
@@ -24,7 +25,8 @@ class ImpactClaimScreen extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     final l = dossier.labels;
     final v = claim.verification;
-    final disputes = dossier.disputes.where((d) => d.claimRef == claim.ref).toList();
+    final disputes =
+        dossier.disputes.where((d) => d.claimRef == claim.ref).toList();
     final claimLimitations = dossier.limitationsForClaim(claim);
     return Scaffold(
       appBar: AppBar(title: Text(t.impactClaimDetail)),
@@ -35,19 +37,30 @@ class ImpactClaimScreen extends StatelessWidget {
           children: [
             // Codex I5G1-04 — the dossier's caveats come before the claim.
             // PF-02: never under the floating IVE avatar.
-            IveExclusionRegion(child: ImpactSection(
+            IveExclusionRegion(
+                child: ImpactSection(
               title: t.impactClaimCaveats,
               icon: Icons.do_not_disturb_on_outlined,
               emphasis: true,
               children: [
-                Text(t.impactNotEstablished, style: Theme.of(context).textTheme.labelLarge),
-                for (final code in dossier.doesNotEstablish) ImpactLine(l.nonFinding(code), icon: Icons.remove, muted: true),
+                Text(t.impactNotEstablished,
+                    style: Theme.of(context).textTheme.labelLarge),
+                for (final code in dossier.doesNotEstablish)
+                  ImpactLine(l.nonFinding(code),
+                      icon: Icons.remove, muted: true),
                 const SizedBox(height: 8),
-                Text(t.impactClaimLimitations, style: Theme.of(context).textTheme.labelLarge),
-                if (claimLimitations.isEmpty) ImpactLine(t.impactNoLimitations, muted: true),
+                Text(t.impactClaimLimitations,
+                    style: Theme.of(context).textTheme.labelLarge),
+                if (claimLimitations.isEmpty)
+                  ImpactLine(t.impactNoLimitations, muted: true),
                 for (final lim in claimLimitations)
-                  ImpactLine(lim.ref == null ? l.limitation(lim.code) : '${l.limitation(lim.code)} (${lim.ref})', icon: Icons.warning_amber_outlined),
-                ImpactLine(t.impactExportLimitations(dossier.limitationCount), muted: true),
+                  ImpactLine(
+                      lim.ref == null
+                          ? l.limitation(lim.code)
+                          : '${l.limitation(lim.code)} (${lim.ref})',
+                      icon: Icons.warning_amber_outlined),
+                ImpactLine(t.impactExportLimitations(dossier.limitationCount),
+                    muted: true),
               ],
             )),
             ImpactQuote(
@@ -56,7 +69,9 @@ class ImpactClaimScreen extends StatelessWidget {
               redacted: claim.textRedacted,
               withheld: claim.textWithheld != null,
             ),
-            ImpactLine('${claim.ref} · ${claim.kind ?? '—'} · ${claim.sourceRef ?? '—'}', muted: true),
+            ImpactLine(
+                '${claim.ref} · ${claim.kind ?? '—'} · ${claim.sourceRef ?? '—'}',
+                muted: true),
             ImpactLine(t.impactClaimScopeNote, icon: Icons.info_outline),
             const SizedBox(height: 8),
             if (v == null)
@@ -71,12 +86,19 @@ class ImpactClaimScreen extends StatelessWidget {
                 icon: Icons.fact_check_outlined,
                 children: [
                   Wrap(spacing: 8, runSpacing: 8, children: [
-                    ImpactChip(label: l.status(v.status), icon: impactStatusIcon(v.status)),
-                    ImpactChip(label: l.displayClass(v.displayClass), icon: Icons.label_outline),
-                    ImpactChip(label: l.sufficiency(v.sufficiency), icon: Icons.stacked_bar_chart_outlined),
+                    ImpactChip(
+                        label: l.status(v.status),
+                        icon: impactStatusIcon(v.status)),
+                    ImpactChip(
+                        label: l.displayClass(v.displayClass),
+                        icon: Icons.label_outline),
+                    ImpactChip(
+                        label: l.sufficiency(v.sufficiency),
+                        icon: Icons.stacked_bar_chart_outlined),
                   ]),
                   const SizedBox(height: 8),
-                  ImpactLine(t.impactVoices(v.independentVoices, v.documents), icon: Icons.record_voice_over_outlined),
+                  ImpactLine(t.impactVoices(v.independentVoices, v.documents),
+                      icon: Icons.record_voice_over_outlined),
                   ImpactLine(t.impactVoicesNote, muted: true),
                 ],
               ),
@@ -86,8 +108,11 @@ class ImpactClaimScreen extends StatelessWidget {
                 icon: Icons.compare_arrows,
                 children: [
                   if (v.conflicts.isEmpty) ImpactLine(t.impactNoConflicts),
-                  if (v.conflicts.isNotEmpty) ImpactLine(t.impactPositionsNoWinner, icon: Icons.info_outline),
-                  for (final c in v.conflicts) _ConflictBlock(labels: l, conflict: c),
+                  if (v.conflicts.isNotEmpty)
+                    ImpactLine(t.impactPositionsNoWinner,
+                        icon: Icons.info_outline),
+                  for (final c in v.conflicts)
+                    _ConflictBlock(labels: l, conflict: c),
                 ],
               ),
               ImpactSection(
@@ -95,11 +120,15 @@ class ImpactClaimScreen extends StatelessWidget {
                 icon: Icons.help_center_outlined,
                 children: [
                   if (v.gaps.isEmpty) ImpactLine('—', muted: true),
-                  for (final g in v.gaps) ImpactLine(l.gap(g), icon: Icons.remove),
+                  for (final g in v.gaps)
+                    ImpactLine(l.gap(g), icon: Icons.remove),
                   const SizedBox(height: 8),
-                  Text(t.impactRules, style: Theme.of(context).textTheme.labelMedium),
+                  Text(t.impactRules,
+                      style: Theme.of(context).textTheme.labelMedium),
                   for (final r in v.rulesApplied) ImpactLine(r, muted: true),
-                  ImpactLine('${v.policyVersion ?? '—'} · ${v.evaluatedAt ?? '—'}', muted: true),
+                  ImpactLine(
+                      '${v.policyVersion ?? '—'} · ${v.evaluatedAt ?? '—'}',
+                      muted: true),
                 ],
               ),
             ],
@@ -108,7 +137,10 @@ class ImpactClaimScreen extends StatelessWidget {
                 title: t.impactReverifyPending,
                 icon: Icons.update,
                 emphasis: true,
-                children: [for (final r in claim.reverificationReasons) ImpactLine(l.reverifyReason(r), icon: Icons.remove)],
+                children: [
+                  for (final r in claim.reverificationReasons)
+                    ImpactLine(l.reverifyReason(r), icon: Icons.remove)
+                ],
               ),
             ImpactSection(
               title: l.section('DISPUTES'),
@@ -117,7 +149,12 @@ class ImpactClaimScreen extends StatelessWidget {
                 if (disputes.isEmpty) ImpactLine(t.impactNoDisputes),
                 for (final d in disputes)
                   ImpactLine(
-                    [d.ref, d.kind ?? '—', d.open ? t.impactOpenDisputes : (d.resolution ?? '—'), d.openedAt ?? ''].join(' · '),
+                    [
+                      d.ref,
+                      d.kind ?? '—',
+                      d.open ? t.impactOpenDisputes : (d.resolution ?? '—'),
+                      d.openedAt ?? ''
+                    ].join(' · '),
                     icon: Icons.forum_outlined,
                   ),
               ],
@@ -152,7 +189,9 @@ class _EvidenceGroups extends StatelessWidget {
       children: [
         if (groups.isEmpty) ImpactLine(t.impactNoEvidence),
         for (final g in groups) ...[
-          Semantics(header: true, child: Text(g.$1, style: Theme.of(context).textTheme.titleSmall)),
+          Semantics(
+              header: true,
+              child: Text(g.$1, style: Theme.of(context).textTheme.titleSmall)),
           const SizedBox(height: 6),
           for (final a in g.$2) _EvidenceCard(dossier: dossier, assessed: a),
           const SizedBox(height: 8),
@@ -193,9 +232,14 @@ class _EvidenceCard extends StatelessWidget {
                 withheld: e.excerptWithheld != null,
               ),
             if (s != null) ...[
-              ImpactLine('${t.impactPublisher}: «${s.publisher ?? '—'}» (${s.type ?? '—'})'),
-              if (s.hostProvider != null) ImpactLine(t.impactHostedOn(s.hostProvider!), icon: Icons.cloud_outlined, muted: true),
-              if (s.userSubmitted) ImpactLine(t.impactUserSubmitted, icon: Icons.upload_file_outlined, muted: true),
+              ImpactLine(
+                  '${t.impactPublisher}: «${s.publisher ?? '—'}» (${s.type ?? '—'})'),
+              if (s.hostProvider != null)
+                ImpactLine(t.impactHostedOn(s.hostProvider!),
+                    icon: Icons.cloud_outlined, muted: true),
+              if (s.userSubmitted)
+                ImpactLine(t.impactUserSubmitted,
+                    icon: Icons.upload_file_outlined, muted: true),
             ],
             if (e != null)
               ImpactLine(
@@ -233,11 +277,14 @@ class _ConflictBlock extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(t.impactPosition(i + 1, total), style: Theme.of(context).textTheme.labelSmall),
-                Text('«${p.publisher}»', style: Theme.of(context).textTheme.titleSmall),
+                Text(t.impactPosition(i + 1, total),
+                    style: Theme.of(context).textTheme.labelSmall),
+                Text('«${p.publisher}»',
+                    style: Theme.of(context).textTheme.titleSmall),
                 ImpactLine('${p.evidenceId} · ${p.sourceId}', muted: true),
                 ImpactLine(p.relationship ?? '—'),
-                if (p.reportedValue != null) ImpactLine('${p.reportedValue}', icon: Icons.numbers),
+                if (p.reportedValue != null)
+                  ImpactLine('${p.reportedValue}', icon: Icons.numbers),
               ],
             ),
           ),
@@ -257,7 +304,9 @@ class _ConflictBlock extends StatelessWidget {
             // the server's — no position is promoted.
             // I5G3-05 — more than three positions are stacked (each labelled
             // "position i of n") instead of squeezed into narrow columns.
-            if (!Breakpoints.isTablet(c.maxWidth) || cards.length < 2 || cards.length > 3) return Column(children: cards);
+            if (!Breakpoints.isTablet(c.maxWidth) ||
+                cards.length < 2 ||
+                cards.length > 3) return Column(children: cards);
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [for (final card in cards) Expanded(child: card)],

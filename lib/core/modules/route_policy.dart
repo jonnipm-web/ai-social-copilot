@@ -101,6 +101,7 @@ const Map<String, String> kRouteModuleOwnership = {
   AppConstants.routeImpactDossier: 'impact',
   AppConstants.routeQuantLab: 'quant-analytics',
   AppConstants.routeStrategyLab: 'strategy-builder',
+  AppConstants.routeProjectAnalysis: 'projects',
 };
 
 /// Routes that must always remain reachable by any authenticated user,

@@ -22,7 +22,9 @@ import 'package:ai_social_copilot/providers/action_queue_provider.dart';
 const _rid = '0e000000-0000-4000-8000-00000000000e';
 final _rh = 'c' * 64;
 
-Map<String, dynamic> _reply(String phase, {bool completed = false, Map<String, dynamic>? receipt}) => {
+Map<String, dynamic> _reply(String phase,
+        {bool completed = false, Map<String, dynamic>? receipt}) =>
+    {
       'phase': phase,
       'completed': completed,
       'reconciliationRequired': phase == 'UNKNOWN_OUTCOME',
@@ -35,7 +37,11 @@ Map<String, dynamic> _reply(String phase, {bool completed = false, Map<String, d
     };
 
 AefRuntimeResult _succeeded() => AefRuntimeResult.fromMap(
-      _reply('SUCCEEDED', completed: true, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'SUCCESS'}),
+      _reply('SUCCEEDED', completed: true, receipt: {
+        'receiptId': _rid,
+        'receiptHash': _rh,
+        'outcome': 'SUCCESS'
+      }),
     );
 
 ActionQueueItem _item(String status) => ActionQueueItem(
@@ -51,7 +57,8 @@ class FakeActionQueueService extends ActionQueueService {
   String currentStatus = 'approved';
 
   @override
-  Future<List<ActionQueueItem>> fetchAll({String? projectId, String? status}) async {
+  Future<List<ActionQueueItem>> fetchAll(
+      {String? projectId, String? status}) async {
     calls.add('fetchAll');
     return [_item(currentStatus)];
   }
@@ -64,7 +71,8 @@ class FakeActionQueueService extends ActionQueueService {
   }
 
   @override
-  Future<ActionQueueItem> applyAefResult(String id, AefRuntimeResult result) async {
+  Future<ActionQueueItem> applyAefResult(
+      String id, AefRuntimeResult result) async {
     calls.add('applyAefResult:${result.receiptOutcome}');
     // Real invariant preserved even in the fake: no status without a receipt.
     currentStatus = aefReceiptOutcomeToActionStatus(result);
@@ -74,10 +82,12 @@ class FakeActionQueueService extends ActionQueueService {
 
 void main() {
   group('ActionQueueNotifier.applyGovernedResult (authority boundary)', () {
-    test('a receipted SUCCESS goes through applyAefResult, never updateStatus', () async {
+    test('a receipted SUCCESS goes through applyAefResult, never updateStatus',
+        () async {
       final svc = FakeActionQueueService();
       final notifier = ActionQueueNotifier(svc);
-      await Future<void>.delayed(Duration.zero); // let the initial load() settle
+      await Future<void>.delayed(
+          Duration.zero); // let the initial load() settle
 
       await notifier.applyGovernedResult('a1', _succeeded());
 
@@ -86,7 +96,9 @@ void main() {
       expect(notifier.state.value!.single.status, 'completed');
     });
 
-    test('a non-receipted result is refused before it ever reaches the service (fail closed)', () async {
+    test(
+        'a non-receipted result is refused before it ever reaches the service (fail closed)',
+        () async {
       final svc = FakeActionQueueService();
       final notifier = ActionQueueNotifier(svc);
       await Future<void>.delayed(Duration.zero);
@@ -98,7 +110,9 @@ void main() {
       );
     });
 
-    test('approve() and cancel() remain direct status writes -- unrelated to AEF governance', () async {
+    test(
+        'approve() and cancel() remain direct status writes -- unrelated to AEF governance',
+        () async {
       final svc = FakeActionQueueService();
       final notifier = ActionQueueNotifier(svc);
       await Future<void>.delayed(Duration.zero);

@@ -16,7 +16,8 @@ class NicheDiscoveryScreen extends ConsumerStatefulWidget {
   final String analysisId;
 
   @override
-  ConsumerState<NicheDiscoveryScreen> createState() => _NicheDiscoveryScreenState();
+  ConsumerState<NicheDiscoveryScreen> createState() =>
+      _NicheDiscoveryScreenState();
 }
 
 // IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 finding) — see
@@ -36,33 +37,34 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
   Future<void> _discover() async {
     setState(() => _error = null);
     try {
-      final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      final analysis =
+          await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
       if (!mounted) return;
       await _exec.run<List<NicheRanking>>(
         context: context,
         ref: ref,
         analysisLabel: AppLocalizations.of(context)!.miNicheTitle,
         request: IveInteractionRequest(
-          projectId:        analysis.projectId,
-          sourceModule:     'market_intelligence',
+          projectId: analysis.projectId,
+          sourceModule: 'market_intelligence',
           sourceEntityType: 'niche_discovery',
-          sourceEntityId:   widget.analysisId,
-          operationType:    IveOperationType.analyze,
+          sourceEntityId: widget.analysisId,
+          operationType: IveOperationType.analyze,
         ),
-        action: (idempotencyKey) => ref
-            .read(marketAnalysisServiceProvider)
-            .discoverNiches(
-              widget.analysisId,
-              analysis.input,
-              language: backendLanguageCode(context),
-              idempotencyKey: idempotencyKey,
-            ),
+        action: (idempotencyKey) =>
+            ref.read(marketAnalysisServiceProvider).discoverNiches(
+                  widget.analysisId,
+                  analysis.input,
+                  language: backendLanguageCode(context),
+                  idempotencyKey: idempotencyKey,
+                ),
       );
       if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(nichesByAnalysisProvider(widget.analysisId));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
+      setState(
+          () => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
     } finally {
       if (mounted) setState(() {});
     }
@@ -84,12 +86,14 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
-        title: Text(l10n.miNicheTitle, style: const TextStyle(color: Colors.white)),
+        title: Text(l10n.miNicheTitle,
+            style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go(
-            AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', widget.analysisId),
+            AppConstants.routeMarketIntelligenceHub
+                .replaceFirst(':id', widget.analysisId),
           ),
         ),
         actions: [
@@ -97,8 +101,10 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
             onPressed: _running ? null : _discover,
             icon: _running
                 ? const SizedBox(
-                    width: 16, height: 16,
-                    child: CircularProgressIndicator(color: Color(0xFF4D96FF), strokeWidth: 2),
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        color: Color(0xFF4D96FF), strokeWidth: 2),
                   )
                 : const Icon(Icons.hub_rounded, color: Color(0xFF4D96FF)),
             label: Text(
@@ -119,28 +125,37 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.red.withOpacity(0.3)),
               ),
-              child: Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+              child: Text(_error!,
+                  style:
+                      const TextStyle(color: Colors.redAccent, fontSize: 13)),
             ),
           Expanded(
             child: asyncList.when(
-              loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF4D96FF))),
+              loading: () => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF4D96FF))),
               error: (e, _) => Center(
-                  child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
+                  child: Text(
+                      l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
                       style: const TextStyle(color: Colors.redAccent))),
               data: (niches) => niches.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.hub_outlined, color: Colors.white24, size: 64),
+                          const Icon(Icons.hub_outlined,
+                              color: Colors.white24, size: 64),
                           const SizedBox(height: 16),
-                          Text(l10n.miNicheEmptyTitle, style: const TextStyle(color: Colors.white38)),
+                          Text(l10n.miNicheEmptyTitle,
+                              style: const TextStyle(color: Colors.white38)),
                           const SizedBox(height: 8),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Text(l10n.miNicheEmptyBody,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white24, fontSize: 12, height: 1.4)),
+                                style: const TextStyle(
+                                    color: Colors.white24,
+                                    fontSize: 12,
+                                    height: 1.4)),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
@@ -157,7 +172,8 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: niches.length,
-                      itemBuilder: (_, i) => _NicheCard(niche: niches[i], rank: i + 1),
+                      itemBuilder: (_, i) =>
+                          _NicheCard(niche: niches[i], rank: i + 1),
                     ),
             ),
           ),
@@ -174,17 +190,23 @@ class _NicheCard extends StatelessWidget {
 
   Color get _levelColor {
     switch (niche.level) {
-      case 'niche': return const Color(0xFF4D96FF);
-      case 'sub_niche': return const Color(0xFFAB83FF);
-      default: return const Color(0xFF00BCD4);
+      case 'niche':
+        return const Color(0xFF4D96FF);
+      case 'sub_niche':
+        return const Color(0xFFAB83FF);
+      default:
+        return const Color(0xFF00BCD4);
     }
   }
 
   String _levelLabel(AppLocalizations l10n) {
     switch (niche.level) {
-      case 'niche': return l10n.miNicheLevelNiche;
-      case 'sub_niche': return l10n.miNicheLevelSubNiche;
-      default: return l10n.miNicheLevelMicroNiche;
+      case 'niche':
+        return l10n.miNicheLevelNiche;
+      case 'sub_niche':
+        return l10n.miNicheLevelSubNiche;
+      default:
+        return l10n.miNicheLevelMicroNiche;
     }
   }
 
@@ -214,7 +236,10 @@ class _NicheCard extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text('#$rank',
-                      style: TextStyle(color: _levelColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          color: _levelColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(width: 10),
@@ -223,8 +248,12 @@ class _NicheCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(niche.name,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                    Text(_levelLabel(l10n), style: TextStyle(color: _levelColor, fontSize: 11)),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14)),
+                    Text(_levelLabel(l10n),
+                        style: TextStyle(color: _levelColor, fontSize: 11)),
                   ],
                 ),
               ),
@@ -232,8 +261,13 @@ class _NicheCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text('${niche.overallScore}',
-                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                  Text(l10n.miNicheScoreLabel, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold)),
+                  Text(l10n.miNicheScoreLabel,
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 10)),
                 ],
               ),
             ],
@@ -241,7 +275,8 @@ class _NicheCard extends StatelessWidget {
           if (niche.description.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(niche.description,
-                style: const TextStyle(color: Colors.white60, fontSize: 12, height: 1.4),
+                style: const TextStyle(
+                    color: Colors.white60, fontSize: 12, height: 1.4),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis),
           ],
@@ -249,17 +284,29 @@ class _NicheCard extends StatelessWidget {
           // Score grid
           Row(
             children: [
-              _MiniBar(label: l10n.miNicheScorePotential, value: niche.potentialScore, color: const Color(0xFF6BCB77)),
+              _MiniBar(
+                  label: l10n.miNicheScorePotential,
+                  value: niche.potentialScore,
+                  color: const Color(0xFF6BCB77)),
               const SizedBox(width: 8),
-              _MiniBar(label: l10n.miNicheScoreGrowth, value: niche.growthScore, color: const Color(0xFF4D96FF)),
+              _MiniBar(
+                  label: l10n.miNicheScoreGrowth,
+                  value: niche.growthScore,
+                  color: const Color(0xFF4D96FF)),
             ],
           ),
           const SizedBox(height: 6),
           Row(
             children: [
-              _MiniBar(label: l10n.miNicheScoreMonetization, value: niche.monetizationScore, color: const Color(0xFFFFD93D)),
+              _MiniBar(
+                  label: l10n.miNicheScoreMonetization,
+                  value: niche.monetizationScore,
+                  color: const Color(0xFFFFD93D)),
               const SizedBox(width: 8),
-              _MiniBar(label: l10n.miNicheScoreTrend, value: niche.trendScore, color: const Color(0xFFAB83FF)),
+              _MiniBar(
+                  label: l10n.miNicheScoreTrend,
+                  value: niche.trendScore,
+                  color: const Color(0xFFAB83FF)),
             ],
           ),
           if (niche.keywords.isNotEmpty) ...[
@@ -267,17 +314,22 @@ class _NicheCard extends StatelessWidget {
             Wrap(
               spacing: 6,
               runSpacing: 4,
-              children: niche.keywords.take(5).map(
-                (k) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: _levelColor.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _levelColor.withOpacity(0.3)),
-                  ),
-                  child: Text(k, style: TextStyle(color: _levelColor, fontSize: 11)),
-                ),
-              ).toList(),
+              children: niche.keywords
+                  .take(5)
+                  .map(
+                    (k) => Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _levelColor.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _levelColor.withOpacity(0.3)),
+                      ),
+                      child: Text(k,
+                          style: TextStyle(color: _levelColor, fontSize: 11)),
+                    ),
+                  )
+                  .toList(),
             ),
           ],
         ],
@@ -287,7 +339,8 @@ class _NicheCard extends StatelessWidget {
 }
 
 class _MiniBar extends StatelessWidget {
-  const _MiniBar({required this.label, required this.value, required this.color});
+  const _MiniBar(
+      {required this.label, required this.value, required this.color});
   final String label;
   final int value;
   final Color color;
@@ -301,8 +354,11 @@ class _MiniBar extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
-              Text('$value', style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+              Text(label,
+                  style: const TextStyle(color: Colors.white54, fontSize: 10)),
+              Text('$value',
+                  style: TextStyle(
+                      color: color, fontSize: 10, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 3),

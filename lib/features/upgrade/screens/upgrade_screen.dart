@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage, showErrorSnack;
+import '../../../core/utils/snackbar_utils.dart'
+    show extractErrorMessage, showErrorSnack;
 import '../../../data/models/quota_info.dart';
 import '../../../data/services/billing_service.dart';
 import '../../../l10n/app_localizations.dart';
@@ -26,7 +27,8 @@ class UpgradeScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(20),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+            constraints:
+                const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
             child: quotaAsync.when(
               loading: () => const Padding(
                 padding: EdgeInsets.symmetric(vertical: 60),
@@ -81,7 +83,7 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
         const SizedBox(height: 28),
         _PlanCard(
           title: t.planFree,
-          subtitle: t.upgradeFreeSubtitle,
+          subtitle: quota.isAdmin ? '' : t.upgradeFreeSubtitle,
           price: t.planFreePrice,
           period: '',
           isHighlighted: false,
@@ -95,7 +97,8 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
             _Feature(t.upgradeFeaturePriority, false),
             _Feature(t.upgradeFeatureSupport, false),
           ],
-          buttonLabel: quota.isCommercialPro ? t.upgradePreviousPlan : t.planCurrentPlan,
+          buttonLabel:
+              quota.isCommercialPro ? t.upgradePreviousPlan : t.planCurrentPlan,
           onPressed: null,
         ),
         const SizedBox(height: 16),
@@ -106,7 +109,9 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
           period: t.planProPricePeriod,
           isHighlighted: !quota.isCommercialPro,
           isCurrentPlan: quota.isCommercialPro,
-          badge: quota.isCommercialPro ? t.upgradeCurrentPlanBadge : t.upgradeMostPopular,
+          badge: quota.isCommercialPro
+              ? t.upgradeCurrentPlanBadge
+              : t.upgradeMostPopular,
           features: [
             _Feature(t.planProAnalyses(displayedProLimit), true),
             _Feature(t.upgradeFeatureWebsiteAnalysis, true),
@@ -118,7 +123,9 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
           buttonLabel: quota.isCommercialPro
               ? t.planCurrentPlan
               : (_isRedirecting ? t.checkoutOpening : t.upgradeSubscribeCta),
-          onPressed: quota.isCommercialPro || quota.isAdmin || _isRedirecting ? null : _onUpgradeTap,
+          onPressed: quota.isCommercialPro || quota.isAdmin || _isRedirecting
+              ? null
+              : _onUpgradeTap,
         ),
         const SizedBox(height: 12),
         Text(
@@ -127,7 +134,9 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
           style: const TextStyle(color: Colors.white38, fontSize: 11),
         ),
         const SizedBox(height: 32),
-        _FaqSection(freeLimit: _UpgradeContent._freeLimit, proLimit: _UpgradeContent._proLimit),
+        _FaqSection(
+            freeLimit: _UpgradeContent._freeLimit,
+            proLimit: _UpgradeContent._proLimit),
       ],
     );
   }
@@ -137,12 +146,15 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
     setState(() => _isRedirecting = true);
     try {
       final url = await _billingService.createCheckoutSession();
-      final launched = await launchUrl(Uri.parse(url), webOnlyWindowName: '_blank');
+      final launched =
+          await launchUrl(Uri.parse(url), webOnlyWindowName: '_blank');
       if (!launched && mounted) {
         showErrorSnack(context, t.checkoutOpeningError);
       }
     } catch (e) {
-      if (mounted) showErrorSnack(context, extractErrorMessage(e, t, t.checkoutOpeningError));
+      if (mounted)
+        showErrorSnack(
+            context, extractErrorMessage(e, t, t.checkoutOpeningError));
     } finally {
       if (mounted) setState(() => _isRedirecting = false);
     }
@@ -170,7 +182,8 @@ class _UsageBanner extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.bolt_rounded, size: 18, color: Color(0xFF6C63FF)),
+              const Icon(Icons.bolt_rounded,
+                  size: 18, color: Color(0xFF6C63FF)),
               const SizedBox(width: 6),
               Text(
                 t.upgradeUsageThisMonth,
@@ -181,7 +194,9 @@ class _UsageBanner extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                quota.isAdmin ? '${quota.used} / 99.999' : '${quota.used} / ${quota.limit}',
+                quota.isAdmin
+                    ? '${quota.used} / 99.999'
+                    : '${quota.used} / ${quota.limit}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -206,11 +221,14 @@ class _UsageBanner extends StatelessWidget {
             quota.isAdmin
                 ? t.upgradeAnalysesRemaining(remaining, 'Admin')
                 : (remaining > 0
-                    ? t.upgradeAnalysesRemaining(remaining, quota.isCommercialPro ? t.planPro : t.planFree)
+                    ? t.upgradeAnalysesRemaining(remaining,
+                        quota.isCommercialPro ? t.planPro : t.planFree)
                     : t.upgradeUsedAllAnalyses),
             style: TextStyle(
               fontSize: 12,
-              color: remaining > 0 || quota.isAdmin ? Colors.white54 : Colors.red.shade300,
+              color: remaining > 0 || quota.isAdmin
+                  ? Colors.white54
+                  : Colors.red.shade300,
             ),
           ),
         ],
@@ -281,7 +299,8 @@ class _PlanCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               decoration: BoxDecoration(
                 color: isCurrentPlan ? const Color(0xFF03DAC6) : _primary,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(14)),
               ),
               child: Text(
                 badge!,

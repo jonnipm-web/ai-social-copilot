@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/diagnostics/diagnostic_models.dart';
 import '../../data/models/ive_interaction_request.dart';
 import '../../l10n/app_localizations.dart';
-import '../../providers/diagnostic_session_provider.dart' show diagnosticLoggerProvider;
+import '../../providers/diagnostic_session_provider.dart'
+    show diagnosticLoggerProvider;
 import '../../providers/quota_provider.dart';
 
 // IVE-COMMERCIAL-FOUNDATION-11 — the ONE reusable AI-execution
@@ -118,8 +119,10 @@ class AiExecutionController extends ChangeNotifier {
       module: request.sourceModule,
       metadata: {
         if (request.projectId != null) 'project_id': request.projectId,
-        if (request.sourceEntityType != null) 'source_entity_type': request.sourceEntityType,
-        if (request.sourceEntityId != null) 'source_entity_id': request.sourceEntityId,
+        if (request.sourceEntityType != null)
+          'source_entity_type': request.sourceEntityType,
+        if (request.sourceEntityId != null)
+          'source_entity_id': request.sourceEntityId,
       },
     );
     _setState(AiExecutionState.thinking);
@@ -128,12 +131,12 @@ class AiExecutionController extends ChangeNotifier {
       final result = await action(request.idempotencyKey);
       _setState(AiExecutionState.success);
       ref.read(diagnosticLoggerProvider).logEvent(
-        category: DiagnosticCategory.ai,
-        eventName: 'ai_analysis_succeeded',
-        correlationId: request.correlationId,
-        module: request.sourceModule,
-        status: 'success',
-      );
+            category: DiagnosticCategory.ai,
+            eventName: 'ai_analysis_succeeded',
+            correlationId: request.correlationId,
+            module: request.sourceModule,
+            status: 'success',
+          );
       return result;
     } catch (e) {
       _setState(AiExecutionState.error);
@@ -145,14 +148,14 @@ class AiExecutionController extends ChangeNotifier {
       // client-side would violate Section 10's explicit rule against
       // "claiming backend outcomes the client cannot know."
       ref.read(diagnosticLoggerProvider).logEvent(
-        category: DiagnosticCategory.ai,
-        eventName: 'ai_analysis_failed',
-        severity: DiagnosticSeverity.warn,
-        correlationId: request.correlationId,
-        module: request.sourceModule,
-        status: 'failure',
-        error: e,
-      );
+            category: DiagnosticCategory.ai,
+            eventName: 'ai_analysis_failed',
+            severity: DiagnosticSeverity.warn,
+            correlationId: request.correlationId,
+            module: request.sourceModule,
+            status: 'failure',
+            error: e,
+          );
       rethrow;
     }
   }
@@ -202,8 +205,10 @@ class AiExecutionController extends ChangeNotifier {
       module: request.sourceModule,
       metadata: {
         if (request.projectId != null) 'project_id': request.projectId,
-        if (request.sourceEntityType != null) 'source_entity_type': request.sourceEntityType,
-        if (request.sourceEntityId != null) 'source_entity_id': request.sourceEntityId,
+        if (request.sourceEntityType != null)
+          'source_entity_type': request.sourceEntityType,
+        if (request.sourceEntityId != null)
+          'source_entity_id': request.sourceEntityId,
         'operation_type': request.operationType.name,
       },
     );
@@ -267,7 +272,8 @@ class AiExecutionController extends ChangeNotifier {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1E1B2E),
-        title: Text(l10n.aiConfirmTitle, style: const TextStyle(color: Colors.white)),
+        title: Text(l10n.aiConfirmTitle,
+            style: const TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,7 +318,8 @@ class QuotaInfoSnapshot {
 /// shared widget. A simple animated three-dot pulse, not a full custom
 /// animation system: this is UI polish, not a new architecture surface.
 class AiThinkingIndicator extends StatefulWidget {
-  const AiThinkingIndicator({super.key, this.color = const Color(0xFFFFD93D), this.size = 6});
+  const AiThinkingIndicator(
+      {super.key, this.color = const Color(0xFFFFD93D), this.size = 6});
   final Color color;
   final double size;
 
@@ -327,7 +334,8 @@ class _AiThinkingIndicatorState extends State<AiThinkingIndicator>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200))
       ..repeat();
   }
 
@@ -345,7 +353,8 @@ class _AiThinkingIndicatorState extends State<AiThinkingIndicator>
         mainAxisSize: MainAxisSize.min,
         children: List.generate(3, (i) {
           final t = (_ctrl.value - (i * 0.2)) % 1.0;
-          final opacity = (0.3 + 0.7 * (1 - (t - 0.5).abs() * 2)).clamp(0.3, 1.0);
+          final opacity =
+              (0.3 + 0.7 * (1 - (t - 0.5).abs() * 2)).clamp(0.3, 1.0);
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Opacity(
@@ -353,7 +362,8 @@ class _AiThinkingIndicatorState extends State<AiThinkingIndicator>
               child: Container(
                 width: widget.size,
                 height: widget.size,
-                decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
+                decoration:
+                    BoxDecoration(color: widget.color, shape: BoxShape.circle),
               ),
             ),
           );

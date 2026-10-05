@@ -41,33 +41,34 @@ class _CompetitorDiscoveryScreenState
   Future<void> _discover() async {
     setState(() => _error = null);
     try {
-      final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      final analysis =
+          await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
       if (!mounted) return;
       await _exec.run<List<Competitor>>(
         context: context,
         ref: ref,
         analysisLabel: AppLocalizations.of(context)!.miCompetitorTitle,
         request: IveInteractionRequest(
-          projectId:        analysis.projectId,
-          sourceModule:     'market_intelligence',
+          projectId: analysis.projectId,
+          sourceModule: 'market_intelligence',
           sourceEntityType: 'competitor_discovery',
-          sourceEntityId:   widget.analysisId,
-          operationType:    IveOperationType.analyze,
+          sourceEntityId: widget.analysisId,
+          operationType: IveOperationType.analyze,
         ),
-        action: (idempotencyKey) => ref
-            .read(marketAnalysisServiceProvider)
-            .discoverCompetitors(
-              widget.analysisId,
-              analysis.input,
-              language: backendLanguageCode(context),
-              idempotencyKey: idempotencyKey,
-            ),
+        action: (idempotencyKey) =>
+            ref.read(marketAnalysisServiceProvider).discoverCompetitors(
+                  widget.analysisId,
+                  analysis.input,
+                  language: backendLanguageCode(context),
+                  idempotencyKey: idempotencyKey,
+                ),
       );
       if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(competitorsByAnalysisProvider(widget.analysisId));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
+      setState(
+          () => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
     } finally {
       if (mounted) setState(() {});
     }
@@ -83,18 +84,21 @@ class _CompetitorDiscoveryScreenState
 
   Widget _buildScaffold(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final asyncList = ref.watch(competitorsByAnalysisProvider(widget.analysisId));
+    final asyncList =
+        ref.watch(competitorsByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
-        title: Text(l10n.miCompetitorTitle, style: const TextStyle(color: Colors.white)),
+        title: Text(l10n.miCompetitorTitle,
+            style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go(
-            AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', widget.analysisId),
+            AppConstants.routeMarketIntelligenceHub
+                .replaceFirst(':id', widget.analysisId),
           ),
         ),
         actions: [
@@ -104,11 +108,14 @@ class _CompetitorDiscoveryScreenState
                 ? const SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(color: Color(0xFFFF6B6B), strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                        color: Color(0xFFFF6B6B), strokeWidth: 2),
                   )
                 : const Icon(Icons.search_rounded, color: Color(0xFFFF6B6B)),
             label: Text(
-              _running ? l10n.miCompetitorSearching : l10n.miCompetitorDiscoverButton,
+              _running
+                  ? l10n.miCompetitorSearching
+                  : l10n.miCompetitorDiscoverButton,
               style: const TextStyle(color: Color(0xFFFF6B6B)),
             ),
           ),
@@ -125,20 +132,25 @@ class _CompetitorDiscoveryScreenState
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.red.withOpacity(0.3)),
               ),
-              child: Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+              child: Text(_error!,
+                  style:
+                      const TextStyle(color: Colors.redAccent, fontSize: 13)),
             ),
           Expanded(
             child: asyncList.when(
-              loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B))),
+              loading: () => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFFF6B6B))),
               error: (e, _) => Center(
-                  child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
+                  child: Text(
+                      l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
                       style: const TextStyle(color: Colors.redAccent))),
               data: (competitors) => competitors.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.people_alt_outlined, color: Colors.white24, size: 64),
+                          const Icon(Icons.people_alt_outlined,
+                              color: Colors.white24, size: 64),
                           const SizedBox(height: 16),
                           Text(l10n.miCompetitorEmptyTitle,
                               style: const TextStyle(color: Colors.white38)),
@@ -147,7 +159,10 @@ class _CompetitorDiscoveryScreenState
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Text(l10n.miCompetitorEmptyBody,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white24, fontSize: 12, height: 1.4)),
+                                style: const TextStyle(
+                                    color: Colors.white24,
+                                    fontSize: 12,
+                                    height: 1.4)),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
@@ -164,7 +179,8 @@ class _CompetitorDiscoveryScreenState
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: competitors.length,
-                      itemBuilder: (_, i) => _CompetitorCard(competitor: competitors[i]),
+                      itemBuilder: (_, i) =>
+                          _CompetitorCard(competitor: competitors[i]),
                     ),
             ),
           ),
@@ -180,9 +196,12 @@ class _CompetitorCard extends StatelessWidget {
 
   Color get _typeColor {
     switch (competitor.type) {
-      case 'direct': return const Color(0xFFFF6B6B);
-      case 'indirect': return const Color(0xFFFFD93D);
-      default: return const Color(0xFF6BCB77);
+      case 'direct':
+        return const Color(0xFFFF6B6B);
+      case 'indirect':
+        return const Color(0xFFFFD93D);
+      default:
+        return const Color(0xFF6BCB77);
     }
   }
 
@@ -207,10 +226,14 @@ class _CompetitorCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(competitor.name,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15)),
                     const SizedBox(height: 2),
                     Text(competitor.url,
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                   ],
@@ -225,7 +248,10 @@ class _CompetitorCard extends StatelessWidget {
                 ),
                 child: Text(
                   competitorTypeLabel(competitor.type, l10n).toUpperCase(),
-                  style: TextStyle(color: _typeColor, fontSize: 10, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: _typeColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -233,38 +259,56 @@ class _CompetitorCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              _ScoreItem(label: l10n.miCompetitorScoreSimilarity, value: competitor.similarityScore, color: const Color(0xFF4D96FF)),
+              _ScoreItem(
+                  label: l10n.miCompetitorScoreSimilarity,
+                  value: competitor.similarityScore,
+                  color: const Color(0xFF4D96FF)),
               const SizedBox(width: 12),
-              _ScoreItem(label: l10n.miCompetitorScoreAuthority, value: competitor.authorityScore, color: const Color(0xFFFFD93D)),
+              _ScoreItem(
+                  label: l10n.miCompetitorScoreAuthority,
+                  value: competitor.authorityScore,
+                  color: const Color(0xFFFFD93D)),
               const SizedBox(width: 12),
-              _ScoreItem(label: l10n.miCompetitorScoreRelevance, value: competitor.relevanceScore, color: const Color(0xFF6BCB77)),
+              _ScoreItem(
+                  label: l10n.miCompetitorScoreRelevance,
+                  value: competitor.relevanceScore,
+                  color: const Color(0xFF6BCB77)),
               const SizedBox(width: 12),
-              _ScoreItem(label: l10n.miCompetitorScoreOverall, value: competitor.overallScore, color: const Color(0xFFFF6B6B)),
+              _ScoreItem(
+                  label: l10n.miCompetitorScoreOverall,
+                  value: competitor.overallScore,
+                  color: const Color(0xFFFF6B6B)),
             ],
           ),
           if (competitor.description.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(competitor.description,
-                style: const TextStyle(color: Colors.white60, fontSize: 12, height: 1.4),
+                style: const TextStyle(
+                    color: Colors.white60, fontSize: 12, height: 1.4),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis),
           ],
           if (competitor.strengths.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text(l10n.miCompetitorStrengthsLabel, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(l10n.miCompetitorStrengthsLabel,
+                style: const TextStyle(color: Colors.white54, fontSize: 11)),
             const SizedBox(height: 4),
             ...competitor.strengths.take(3).map(
-              (s) => Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle_rounded, color: Color(0xFF6BCB77), size: 12),
-                    const SizedBox(width: 6),
-                    Expanded(child: Text(s, style: const TextStyle(color: Colors.white70, fontSize: 12))),
-                  ],
+                  (s) => Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle_rounded,
+                            color: Color(0xFF6BCB77), size: 12),
+                        const SizedBox(width: 6),
+                        Expanded(
+                            child: Text(s,
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 12))),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
           ],
           // COMMERCIAL-V1-UX-RECONCILIATION (R2/R5) — Competitor.weaknesses
           // already existed on the model (populated by the same AI response
@@ -274,20 +318,25 @@ class _CompetitorCard extends StatelessWidget {
           // fortes" above.
           if (competitor.weaknesses.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text(l10n.miCompetitorWeaknessesLabel, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(l10n.miCompetitorWeaknessesLabel,
+                style: const TextStyle(color: Colors.white54, fontSize: 11)),
             const SizedBox(height: 4),
             ...competitor.weaknesses.take(3).map(
-              (w) => Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Row(
-                  children: [
-                    const Icon(Icons.cancel_rounded, color: Color(0xFFFF6B6B), size: 12),
-                    const SizedBox(width: 6),
-                    Expanded(child: Text(w, style: const TextStyle(color: Colors.white70, fontSize: 12))),
-                  ],
+                  (w) => Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.cancel_rounded,
+                            color: Color(0xFFFF6B6B), size: 12),
+                        const SizedBox(width: 6),
+                        Expanded(
+                            child: Text(w,
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 12))),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
           ],
         ],
       ),
@@ -296,7 +345,8 @@ class _CompetitorCard extends StatelessWidget {
 }
 
 class _ScoreItem extends StatelessWidget {
-  const _ScoreItem({required this.label, required this.value, required this.color});
+  const _ScoreItem(
+      {required this.label, required this.value, required this.color});
   final String label;
   final int value;
   final Color color;
@@ -305,8 +355,11 @@ class _ScoreItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text('$value', style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16)),
-        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+        Text('$value',
+            style: TextStyle(
+                color: color, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label,
+            style: const TextStyle(color: Colors.white38, fontSize: 10)),
       ],
     );
   }

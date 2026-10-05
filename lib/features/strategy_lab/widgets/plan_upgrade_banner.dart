@@ -21,13 +21,15 @@ String planDisplayName(AppLocalizations l, String? plan) => switch (plan) {
     };
 
 class PlanUpgradeBanner extends StatelessWidget {
-  const PlanUpgradeBanner({super.key, required this.requiredPlan, required this.currentPlan});
+  const PlanUpgradeBanner(
+      {super.key, required this.requiredPlan, required this.currentPlan});
 
   final String? requiredPlan;
   final String? currentPlan;
 
   factory PlanUpgradeBanner.fromResult(StrategyBuilderResult result) =>
-      PlanUpgradeBanner(requiredPlan: result.requiredPlan, currentPlan: result.currentPlan);
+      PlanUpgradeBanner(
+          requiredPlan: result.requiredPlan, currentPlan: result.currentPlan);
 
   @override
   Widget build(BuildContext context) {
@@ -51,8 +53,13 @@ class PlanUpgradeBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(l.planUpgradeBannerTitle(required), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color)),
-                Text(l.planUpgradeBannerBody(current, required), style: TextStyle(fontSize: 12, color: color)),
+                Text(l.planUpgradeBannerTitle(required),
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: color)),
+                Text(l.planUpgradeBannerBody(current, required),
+                    style: TextStyle(fontSize: 12, color: color)),
               ],
             ),
           ),
@@ -60,7 +67,10 @@ class PlanUpgradeBanner extends StatelessWidget {
           TextButton(
             key: const Key('planUpgradeBannerCta'),
             onPressed: () => context.push(AppConstants.routeUpgrade),
-            style: TextButton.styleFrom(foregroundColor: color, textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+            style: TextButton.styleFrom(
+                foregroundColor: color,
+                textStyle:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
             child: Text(l.planUpgradeBannerCta),
           ),
         ],

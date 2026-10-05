@@ -14,11 +14,14 @@ import '../data/impact_lab_api.dart';
 
 const kDossierSchemaVersion = 'impact-dossier/1';
 
-Map<String, dynamic> _map(Object? v) => v is Map<String, dynamic> ? v : const {};
-List<Map<String, dynamic>> _maps(Object? v) =>
-    v is List ? v.whereType<Map<String, dynamic>>().toList(growable: false) : const [];
-List<String> _strings(Object? v) =>
-    v is List ? v.whereType<String>().map(displaySafe).toList(growable: false) : const [];
+Map<String, dynamic> _map(Object? v) =>
+    v is Map<String, dynamic> ? v : const {};
+List<Map<String, dynamic>> _maps(Object? v) => v is List
+    ? v.whereType<Map<String, dynamic>>().toList(growable: false)
+    : const [];
+List<String> _strings(Object? v) => v is List
+    ? v.whereType<String>().map(displaySafe).toList(growable: false)
+    : const [];
 String? _str(Object? v) => v is String ? displaySafe(v) : null;
 
 /// Codex I5G3-01 — server strings are DATA, rendered inside UI chrome. Strip
@@ -28,13 +31,17 @@ String? _str(Object? v) => v is String ? displaySafe(v) : null;
 /// text or break the layout. Display only: export copies the untouched
 /// server document.
 const kMaxDisplayChars = 2000;
-final _invisible = RegExp('[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u00AD\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF]');
+final _invisible = RegExp(
+    '[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u00AD\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF]');
 final _breaks = RegExp('[\r\n\t\u2028\u2029]+');
 
 String displaySafe(String s) {
   final flat = s.replaceAll(_invisible, '').replaceAll(_breaks, ' ');
-  return flat.length <= kMaxDisplayChars ? flat : '${flat.substring(0, kMaxDisplayChars)}…';
+  return flat.length <= kMaxDisplayChars
+      ? flat
+      : '${flat.substring(0, kMaxDisplayChars)}…';
 }
+
 int _int(Object? v) => v is int ? v : 0;
 bool _bool(Object? v) => v == true;
 
@@ -46,9 +53,15 @@ Never _contract() => throw const ImpactApiException(ImpactErrorKind.contract);
 // document, so a partial or truncated dossier can never look complete.
 const kEnvelopeKinds = {'LIVE', 'SNAPSHOT'};
 const kVerifyStates = {'CURRENT', 'STALE', 'NOT_ISSUED'};
-const kEnvelopeStates = {'MATCHES_REGISTRATION', 'MISMATCH', 'LIVE_VIEW_NOT_A_SNAPSHOT', 'NOT_PROVIDED'};
+const kEnvelopeStates = {
+  'MATCHES_REGISTRATION',
+  'MISMATCH',
+  'LIVE_VIEW_NOT_A_SNAPSHOT',
+  'NOT_PROVIDED'
+};
 
-List<Map<String, dynamic>> _strictMaps(Object? v, List<String> requiredStrings) {
+List<Map<String, dynamic>> _strictMaps(
+    Object? v, List<String> requiredStrings) {
   if (v is! List) _contract();
   final out = <Map<String, dynamic>>[];
   for (final e in v) {
@@ -84,7 +97,13 @@ void _validateContent(Map<String, dynamic> c) {
     for (final k in const ['status', 'displayClass', 'sufficiency']) {
       if (v[k] is! String) _contract();
     }
-    for (final k in const ['supporting', 'partiallySupporting', 'contradicting', 'contextual', 'excluded']) {
+    for (final k in const [
+      'supporting',
+      'partiallySupporting',
+      'contradicting',
+      'contextual',
+      'excluded'
+    ]) {
       if (v[k] != null) _strictMaps(v[k], const []);
     }
     if (v['conflicts'] != null) {
@@ -101,16 +120,19 @@ void _validateContent(Map<String, dynamic> c) {
   _strictMaps(c['registryConflicts'], const ['kind']);
   if (_strictStrings(c['doesNotEstablish']).isEmpty) _contract();
   final subject = c['subject'];
-  if (subject is! Map<String, dynamic> || subject['identityStatus'] is! String) _contract();
+  if (subject is! Map<String, dynamic> || subject['identityStatus'] is! String)
+    _contract();
   final summary = c['summary'];
   if (summary is! Map<String, dynamic>) _contract();
   final byStatus = summary['byStatus'];
-  if (byStatus is! Map<String, dynamic> || byStatus.values.any((x) => x is! int)) _contract();
+  if (byStatus is! Map<String, dynamic> ||
+      byStatus.values.any((x) => x is! int)) _contract();
   if (_strictInt(summary, 'claims') != claims.length ||
       _strictInt(summary, 'evidence') != evidence.length ||
       _strictInt(summary, 'sources') != sources.length ||
       _strictInt(summary, 'limitations') != limitations.length ||
-      _strictInt(summary, 'openDisputes') != disputes.where((d) => d['open'] == true).length) {
+      _strictInt(summary, 'openDisputes') !=
+          disputes.where((d) => d['open'] == true).length) {
     _contract(); // truncated or inconsistent: never shown as complete
   }
   _strictInt(summary, 'notVerified');
@@ -118,7 +140,11 @@ void _validateContent(Map<String, dynamic> c) {
 }
 
 class InvestigationSummary {
-  const InvestigationSummary({required this.id, required this.subjectOrgRef, required this.status, this.createdAt});
+  const InvestigationSummary(
+      {required this.id,
+      required this.subjectOrgRef,
+      required this.status,
+      this.createdAt});
 
   final String id;
   final String subjectOrgRef;
@@ -146,7 +172,8 @@ class DossierLabels {
             if (e.value is Map)
               e.key: {
                 for (final l in (e.value as Map).entries)
-                  if (l.key is String && l.value is String) l.key as String: l.value as String,
+                  if (l.key is String && l.value is String)
+                    l.key as String: l.value as String,
               },
         };
 
@@ -178,7 +205,9 @@ class DossierSubject {
       : ref = _str(m['ref']) ?? '—',
         type = _str(m['type']),
         // '—' is the server's withheld marker (I6 privacy): show the subject ref instead.
-        legalName = _str(_map(m['declaredIdentity'])['legalName']) == '—' ? null : _str(_map(m['declaredIdentity'])['legalName']),
+        legalName = _str(_map(m['declaredIdentity'])['legalName']) == '—'
+            ? null
+            : _str(_map(m['declaredIdentity'])['legalName']),
         registrations = [
           for (final r in _maps(_map(m['declaredIdentity'])['registrations']))
             [
@@ -252,7 +281,8 @@ class ConflictPosition {
         sourceId = _str(m['sourceId']) ?? '—',
         publisher = _str(m['publisher']) ?? '—',
         relationship = _str(m['relationship']),
-        reportedValue = m['reportedValue'] is num ? m['reportedValue'] as num : null;
+        reportedValue =
+            m['reportedValue'] is num ? m['reportedValue'] as num : null;
 
   final String evidenceId;
   final String sourceId;
@@ -265,7 +295,9 @@ class ConflictView {
   ConflictView(Map<String, dynamic> m)
       : kind = _str(m['kind']),
         basis = _str(m['basis']),
-        positions = [for (final p in _maps(m['positions'])) ConflictPosition(p)];
+        positions = [
+          for (final p in _maps(m['positions'])) ConflictPosition(p)
+        ];
 
   final String? kind;
   final String? basis;
@@ -281,10 +313,18 @@ class VerificationView {
         rulesApplied = _strings(m['rulesApplied']),
         policyVersion = _str(m['policyVersion']),
         evaluatedAt = _str(m['evaluatedAt']),
-        supporting = [for (final x in _maps(m['supporting'])) AssessedEvidence(x)],
-        partiallySupporting = [for (final x in _maps(m['partiallySupporting'])) AssessedEvidence(x)],
-        contradicting = [for (final x in _maps(m['contradicting'])) AssessedEvidence(x)],
-        contextual = [for (final x in _maps(m['contextual'])) AssessedEvidence(x)],
+        supporting = [
+          for (final x in _maps(m['supporting'])) AssessedEvidence(x)
+        ],
+        partiallySupporting = [
+          for (final x in _maps(m['partiallySupporting'])) AssessedEvidence(x)
+        ],
+        contradicting = [
+          for (final x in _maps(m['contradicting'])) AssessedEvidence(x)
+        ],
+        contextual = [
+          for (final x in _maps(m['contextual'])) AssessedEvidence(x)
+        ],
         excluded = [for (final x in _maps(m['excluded'])) AssessedEvidence(x)],
         conflicts = [for (final x in _maps(m['conflicts'])) ConflictView(x)],
         independentVoices = _int(_map(m['independence'])['independentVoices']),
@@ -318,7 +358,9 @@ class ClaimView {
         textRedacted = _bool(m['textRedacted']),
         textAttribution = _str(m['textAttribution']),
         sourceRef = _str(m['sourceRef']),
-        quantity = m['quantity'] is Map<String, dynamic> ? m['quantity'] as Map<String, dynamic> : null,
+        quantity = m['quantity'] is Map<String, dynamic>
+            ? m['quantity'] as Map<String, dynamic>
+            : null,
         verification = m['verification'] is Map<String, dynamic>
             ? VerificationView(m['verification'] as Map<String, dynamic>)
             : null,
@@ -355,7 +397,8 @@ class EvidenceView {
         excerptAttribution = _str(m['excerptAttribution']),
         locatorState = _str(m['locatorState']),
         locatorArtifactRef = _str(_map(_map(m['locator'])['artifact'])['ref']),
-        locatorLines = _lines(_map(_map(_map(m['locator'])['artifact'])['locator']));
+        locatorLines =
+            _lines(_map(_map(_map(m['locator'])['artifact'])['locator']));
 
   static String? _lines(Map<String, dynamic> l) {
     final a = l['lineStart'], b = l['lineEnd'];
@@ -446,7 +489,9 @@ class DossierIntegrity {
 
 class DossierEnvelope {
   DossierEnvelope(this.raw)
-      : kind = kEnvelopeKinds.contains(raw['kind']) ? raw['kind'] as String : _contract(),
+      : kind = kEnvelopeKinds.contains(raw['kind'])
+            ? raw['kind'] as String
+            : _contract(),
         generatedAt = _str(raw['generatedAt']),
         snapshotRef = _str(raw['snapshotRef']),
         auditSeq = _int(raw['auditSeq']) {
@@ -491,13 +536,18 @@ class DossierView {
   /// contract error on an unknown schema or a missing hash/envelope.
   factory DossierView.fromResponse(Map<String, dynamic> data) {
     final doc = data['dossier'];
-    if (doc is! Map<String, dynamic> || doc['schemaVersion'] != kDossierSchemaVersion) _contract();
+    if (doc is! Map<String, dynamic> ||
+        doc['schemaVersion'] != kDossierSchemaVersion) _contract();
     final c = doc['content'];
-    if (c is! Map<String, dynamic> || c['schemaVersion'] != kDossierSchemaVersion) _contract();
+    if (c is! Map<String, dynamic> ||
+        c['schemaVersion'] != kDossierSchemaVersion) _contract();
     // The contract's own non-finding flags must be present and unchanged.
-    if (c['isFindingOfWrongdoing'] != false || c['isPublication'] != false) _contract();
+    if (c['isFindingOfWrongdoing'] != false || c['isPublication'] != false)
+      _contract();
     _validateContent(c);
-    if (data['text'] is! String || (data['text'] as String).isEmpty || data['labels'] is! Map<String, dynamic>) _contract();
+    if (data['text'] is! String ||
+        (data['text'] as String).isEmpty ||
+        data['labels'] is! Map<String, dynamic>) _contract();
     return DossierView._(
       document: doc,
       // Raw on purpose: the export must be the server's bytes (display-safe
@@ -510,8 +560,12 @@ class DossierView {
       asOf: _str(c['asOf']),
       dossierStatus: _str(c['dossierStatus']),
       subject: DossierSubject(_map(c['subject'])),
-      registryFacts: [for (final x in _maps(c['registryFacts'])) RegistryFact(x)],
-      registryConflicts: [for (final x in _maps(c['registryConflicts'])) RegistryConflict(x)],
+      registryFacts: [
+        for (final x in _maps(c['registryFacts'])) RegistryFact(x)
+      ],
+      registryConflicts: [
+        for (final x in _maps(c['registryConflicts'])) RegistryConflict(x)
+      ],
       claims: [for (final x in _maps(c['claims'])) ClaimView(x)],
       evidence: [for (final x in _maps(c['evidence'])) EvidenceView(x)],
       sources: [for (final x in _maps(c['sources'])) SourceView(x)],
@@ -549,11 +603,13 @@ class DossierView {
   final List<DisputeView> disputes;
   final List<LimitationView> limitations;
   final List<String> doesNotEstablish;
+
   /// Server counts (`content.summary`) — the UI never recounts truth.
   final Map<String, int> summary;
   final Map<String, int> byStatus;
 
-  String get documentJson => const JsonEncoder.withIndent('  ').convert(document);
+  String get documentJson =>
+      const JsonEncoder.withIndent('  ').convert(document);
 
   List<EvidenceView> evidenceFor(String claimRef) =>
       evidence.where((e) => e.claimRef == claimRef).toList(growable: false);
@@ -591,7 +647,9 @@ class DossierView {
   List<LimitationView> limitationsForClaim(ClaimView claim) {
     final evRefs = evidenceFor(claim.ref).map((e) => e.ref).toSet();
     return limitations
-        .where((l) => (l.scope == 'CLAIM' && l.ref == claim.ref) || (l.scope == 'EVIDENCE' && evRefs.contains(l.ref)))
+        .where((l) =>
+            (l.scope == 'CLAIM' && l.ref == claim.ref) ||
+            (l.scope == 'EVIDENCE' && evRefs.contains(l.ref)))
         .toList(growable: false);
   }
 }
@@ -609,7 +667,9 @@ class VerifyResult {
     final envelopeState = d['envelopeState'];
     // Only the enumerated server answers are accepted; an unknown state is
     // never mapped to "not issued" or anything else (I5G1-03).
-    if (!kVerifyStates.contains(state) || !kEnvelopeStates.contains(envelopeState) || d['integrityIsNotTruth'] != true) {
+    if (!kVerifyStates.contains(state) ||
+        !kEnvelopeStates.contains(envelopeState) ||
+        d['integrityIsNotTruth'] != true) {
       _contract();
     }
     return VerifyResult._(

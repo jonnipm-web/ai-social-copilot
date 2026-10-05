@@ -20,10 +20,12 @@ Competitor _competitor(String type) => Competitor(
       createdAt: DateTime(2026, 1, 1),
     );
 
-Future<void> _pump(WidgetTester tester, Locale locale, String competitorType) async {
+Future<void> _pump(
+    WidgetTester tester, Locale locale, String competitorType) async {
   await tester.pumpWidget(ProviderScope(
     overrides: [
-      competitorsByAnalysisProvider('a1').overrideWith((ref) async => [_competitor(competitorType)]),
+      competitorsByAnalysisProvider('a1')
+          .overrideWith((ref) async => [_competitor(competitorType)]),
     ],
     child: MaterialApp(
       locale: locale,
@@ -37,20 +39,25 @@ Future<void> _pump(WidgetTester tester, Locale locale, String competitorType) as
 }
 
 void main() {
-  testWidgets('PT locale: aspirational competitor shows "ASPIRACIONAL", never the raw English value', (tester) async {
+  testWidgets(
+      'PT locale: aspirational competitor shows "ASPIRACIONAL", never the raw English value',
+      (tester) async {
     await _pump(tester, const Locale('pt'), 'aspirational');
 
     expect(find.text('ASPIRACIONAL'), findsOneWidget);
     expect(find.text('ASPIRATIONAL'), findsNothing);
   });
 
-  testWidgets('EN locale: aspirational competitor shows "ASPIRATIONAL"', (tester) async {
+  testWidgets('EN locale: aspirational competitor shows "ASPIRATIONAL"',
+      (tester) async {
     await _pump(tester, const Locale('en'), 'aspirational');
 
     expect(find.text('ASPIRATIONAL'), findsOneWidget);
   });
 
-  testWidgets('PT locale: direct competitor shows "DIRETO", never the raw English value', (tester) async {
+  testWidgets(
+      'PT locale: direct competitor shows "DIRETO", never the raw English value',
+      (tester) async {
     await _pump(tester, const Locale('pt'), 'direct');
 
     expect(find.text('DIRETO'), findsOneWidget);

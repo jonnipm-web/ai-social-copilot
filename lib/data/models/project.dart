@@ -2,6 +2,7 @@ class Project {
   /// R16: detected source language when the presentation text of this row
   /// was translated for display (null = shown in its original language).
   final String? localizedFrom;
+
   /// R16: description translated for display; [description] keeps the
   /// ORIGINAL text so edit forms never overwrite it with a translation.
   final String? descriptionLocalized;
@@ -52,7 +53,8 @@ class Project {
   /// R16: details_json translated for DISPLAY only; [detailsJson] stays the
   /// original and is the only map used for logic and writes.
   final Map<String, dynamic>? detailsJsonLocalized;
-  Map<String, dynamic> get _presentedDetails => detailsJsonLocalized ?? detailsJson;
+  Map<String, dynamic> get _presentedDetails =>
+      detailsJsonLocalized ?? detailsJson;
 
   List<String> get nextActions => _list(_presentedDetails['next_actions']);
   List<String> get risks => _list(_presentedDetails['risks']);
@@ -71,25 +73,25 @@ class Project {
     }
 
     return Project(
-      id:                  map['id'] as String,
+      id: map['id'] as String,
       localizedFrom: map['r16_localized_from'] as String?,
       descriptionLocalized: map['description_localized'] as String?,
       detailsJsonLocalized: map['details_json_localized'] is Map
           ? Map<String, dynamic>.from(map['details_json_localized'] as Map)
           : null,
-      userId:              map['user_id'] as String,
-      name:                map['name'] as String,
-      description:         map['description'] as String? ?? '',
-      type:                map['type'] as String? ?? 'website',
-      url:                 map['url'] as String?,
-      opportunityScore:    map['opportunity_score'] as int? ?? 0,
-      revenuePotential:    _d(map['revenue_potential']),
-      complexityScore:     map['complexity_score'] as int? ?? 0,
-      priorityScore:       map['priority_score'] as int? ?? 0,
-      timeToRevenueDays:   map['time_to_revenue_days'] as int? ?? 0,
-      status:              map['status'] as String? ?? 'idea',
-      marketAnalysisId:    map['market_analysis_id'] as String?,
-      detailsJson:         map['details_json'] is Map
+      userId: map['user_id'] as String,
+      name: map['name'] as String,
+      description: map['description'] as String? ?? '',
+      type: map['type'] as String? ?? 'website',
+      url: map['url'] as String?,
+      opportunityScore: map['opportunity_score'] as int? ?? 0,
+      revenuePotential: _d(map['revenue_potential']),
+      complexityScore: map['complexity_score'] as int? ?? 0,
+      priorityScore: map['priority_score'] as int? ?? 0,
+      timeToRevenueDays: map['time_to_revenue_days'] as int? ?? 0,
+      status: map['status'] as String? ?? 'idea',
+      marketAnalysisId: map['market_analysis_id'] as String?,
+      detailsJson: map['details_json'] is Map
           ? Map<String, dynamic>.from(map['details_json'] as Map)
           : {},
       createdAt: DateTime.parse(map['created_at'] as String),
@@ -98,42 +100,42 @@ class Project {
   }
 
   Map<String, dynamic> toInsertMap() => {
-    'user_id':               userId,
-    'name':                  name,
-    'description':           description,
-    'type':                  type,
-    'url':                   url,
-    'opportunity_score':     opportunityScore,
-    'revenue_potential':     revenuePotential,
-    'complexity_score':      complexityScore,
-    'priority_score':        priorityScore,
-    'time_to_revenue_days':  timeToRevenueDays,
-    'status':                status,
-    'market_analysis_id':    marketAnalysisId,
-    'details_json':          detailsJson,
-  };
+        'user_id': userId,
+        'name': name,
+        'description': description,
+        'type': type,
+        'url': url,
+        'opportunity_score': opportunityScore,
+        'revenue_potential': revenuePotential,
+        'complexity_score': complexityScore,
+        'priority_score': priorityScore,
+        'time_to_revenue_days': timeToRevenueDays,
+        'status': status,
+        'market_analysis_id': marketAnalysisId,
+        'details_json': detailsJson,
+      };
 
   Project copyWith({String? status, int? priorityScore}) {
     return Project(
-      id:                  id,
+      id: id,
       localizedFrom: localizedFrom,
       descriptionLocalized: descriptionLocalized,
       detailsJsonLocalized: detailsJsonLocalized,
-      userId:              userId,
-      name:                name,
-      description:         description,
-      type:                type,
-      url:                 url,
-      opportunityScore:    opportunityScore,
-      revenuePotential:    revenuePotential,
-      complexityScore:     complexityScore,
-      priorityScore:       priorityScore ?? this.priorityScore,
-      timeToRevenueDays:   timeToRevenueDays,
-      status:              status ?? this.status,
-      marketAnalysisId:    marketAnalysisId,
-      detailsJson:         detailsJson,
-      createdAt:           createdAt,
-      updatedAt:           updatedAt,
+      userId: userId,
+      name: name,
+      description: description,
+      type: type,
+      url: url,
+      opportunityScore: opportunityScore,
+      revenuePotential: revenuePotential,
+      complexityScore: complexityScore,
+      priorityScore: priorityScore ?? this.priorityScore,
+      timeToRevenueDays: timeToRevenueDays,
+      status: status ?? this.status,
+      marketAnalysisId: marketAnalysisId,
+      detailsJson: detailsJson,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 }

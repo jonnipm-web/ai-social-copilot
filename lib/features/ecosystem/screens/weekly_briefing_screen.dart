@@ -13,15 +13,15 @@ import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
-const _kBg      = Color(0xFF0A0A14);
-const _kCard    = Color(0xFF12121E);
-const _kBorder  = Color(0xFF1E1E30);
+const _kBg = Color(0xFF0A0A14);
+const _kCard = Color(0xFF12121E);
+const _kBorder = Color(0xFF1E1E30);
 const _kPrimary = Color(0xFF7C4DFF);
-const _kGreen   = Color(0xFF00E676);
-const _kOrange  = Color(0xFFFF9100);
-const _kRed     = Color(0xFFFF1744);
-const _kGold    = Color(0xFFFFD700);
-const _kCyan    = Color(0xFF00E5FF);
+const _kGreen = Color(0xFF00E676);
+const _kOrange = Color(0xFFFF9100);
+const _kRed = Color(0xFFFF1744);
+const _kGold = Color(0xFFFFD700);
+const _kCyan = Color(0xFF00E5FF);
 
 // ════════════════════════════════════════════════════════════════════════════
 // Weekly Executive Briefing Screen — Módulo 7
@@ -32,7 +32,7 @@ class WeeklyBriefingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final briefingAsync = ref.watch(weeklyBriefingProvider);
-    final l10n          = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -41,12 +41,15 @@ class WeeklyBriefingScreen extends ConsumerWidget {
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppConstants.routeEcosystem),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppConstants.routeEcosystem),
         ),
         title: Text(l10n.ecoWeeklyBriefingTitle,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white54),
@@ -64,10 +67,12 @@ class WeeklyBriefingScreen extends ConsumerWidget {
       body: SafeArea(
         top: false,
         child: briefingAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
+          loading: () =>
+              const Center(child: CircularProgressIndicator(color: _kPrimary)),
           error: (e, _) => Center(
-            child: Text(l10n.ecoBriefingError(extractErrorMessage(e, l10n)),
-              style: const TextStyle(color: _kRed), textAlign: TextAlign.center)),
+              child: Text(l10n.ecoBriefingError(extractErrorMessage(e, l10n)),
+                  style: const TextStyle(color: _kRed),
+                  textAlign: TextAlign.center)),
           data: (b) => _BriefingBody(briefing: b),
         ),
       ),
@@ -81,35 +86,54 @@ class _BriefingBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final day   = briefing.generatedAt.day.toString().padLeft(2, '0');
+    final day = briefing.generatedAt.day.toString().padLeft(2, '0');
     final month = briefing.generatedAt.month.toString().padLeft(2, '0');
-    final year  = briefing.generatedAt.year;
+    final year = briefing.generatedAt.year;
     final bottomPad = MediaQuery.of(context).padding.bottom;
-    final l10n      = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context)!;
 
     return LayoutBuilder(
       builder: (ctx, constraints) {
         final isDesktop = constraints.maxWidth >= 1024;
         final hPad = isDesktop ? 32.0 : 16.0;
 
-        final header = _Header(briefing: briefing, dateStr: '$day/$month/$year');
+        final header =
+            _Header(briefing: briefing, dateStr: '$day/$month/$year');
         final dataOrigin = _DataOriginCard(briefing: briefing);
         final summary = _SummaryCard(text: briefing.executiveSummary);
 
         final mainSections = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Section(title: l10n.ecoBriefSectionChanged,  color: _kCyan,   items: briefing.whatChanged),
+            _Section(
+                title: l10n.ecoBriefSectionChanged,
+                color: _kCyan,
+                items: briefing.whatChanged),
             const SizedBox(height: 12),
-            _Section(title: l10n.ecoBriefSectionGrew,     color: _kGreen,  items: briefing.whatGrew),
+            _Section(
+                title: l10n.ecoBriefSectionGrew,
+                color: _kGreen,
+                items: briefing.whatGrew),
             const SizedBox(height: 12),
-            _Section(title: l10n.ecoBriefSectionDeclined, color: _kRed,    items: briefing.whatDeclined),
+            _Section(
+                title: l10n.ecoBriefSectionDeclined,
+                color: _kRed,
+                items: briefing.whatDeclined),
             const SizedBox(height: 12),
-            _Section(title: l10n.ecoBriefSectionPriorities, color: _kGold, items: briefing.topPriorities),
+            _Section(
+                title: l10n.ecoBriefSectionPriorities,
+                color: _kGold,
+                items: briefing.topPriorities),
             const SizedBox(height: 12),
-            _Section(title: l10n.ecoBriefSectionPause,    color: _kOrange, items: briefing.toPause),
+            _Section(
+                title: l10n.ecoBriefSectionPause,
+                color: _kOrange,
+                items: briefing.toPause),
             const SizedBox(height: 12),
-            _Section(title: l10n.ecoBriefSectionNewOpps,  color: _kCyan,   items: briefing.newOpportunities),
+            _Section(
+                title: l10n.ecoBriefSectionNewOpps,
+                color: _kCyan,
+                items: briefing.newOpportunities),
           ],
         );
 
@@ -118,7 +142,10 @@ class _BriefingBody extends StatelessWidget {
           children: [
             _HealthSideCard(briefing: briefing),
             const SizedBox(height: 12),
-            _Section(title: l10n.ecoBriefSectionRisks,    color: _kRed,    items: briefing.risks),
+            _Section(
+                title: l10n.ecoBriefSectionRisks,
+                color: _kRed,
+                items: briefing.risks),
           ],
         );
 
@@ -137,7 +164,10 @@ class _BriefingBody extends StatelessWidget {
             children: [
               mainSections,
               const SizedBox(height: 12),
-              _Section(title: l10n.ecoBriefSectionRisksIdentified, color: _kRed, items: briefing.risks),
+              _Section(
+                  title: l10n.ecoBriefSectionRisksIdentified,
+                  color: _kRed,
+                  items: briefing.risks),
             ],
           );
         }
@@ -197,10 +227,12 @@ class _HealthSideCard extends StatelessWidget {
               Text(briefing.healthEmoji, style: const TextStyle(fontSize: 20)),
               const SizedBox(width: 8),
               Text(l10n.ecoBriefOverallHealth,
-                  style: TextStyle(color: hc, fontSize: 13, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: hc, fontSize: 13, fontWeight: FontWeight.bold)),
               const Spacer(),
               Text('${briefing.overallHealthScore}/100',
-                  style: TextStyle(color: hc, fontSize: 22, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: hc, fontSize: 22, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 10),
@@ -215,7 +247,8 @@ class _HealthSideCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               l10n.ecoBriefLowScoreHint,
-              style: const TextStyle(color: Colors.orange, fontSize: 11, height: 1.4),
+              style: const TextStyle(
+                  color: Colors.orange, fontSize: 11, height: 1.4),
             ),
           ],
         ],
@@ -250,15 +283,22 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(l10n.ecoBriefHeaderLabel,
-                  style: const TextStyle(color: _kPrimary, fontWeight: FontWeight.bold,
-                      fontSize: 11, letterSpacing: 1.5)),
+                    style: const TextStyle(
+                        color: _kPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                        letterSpacing: 1.5)),
                 const SizedBox(height: 4),
                 Text(l10n.ecoBriefWeekOf(dateStr),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                    style:
+                        const TextStyle(color: Colors.white54, fontSize: 12)),
                 const SizedBox(height: 8),
-                Text('${briefing.healthEmoji}  ${l10n.ecoBriefOverallHealthValue(briefing.overallHealthScore)}',
-                  style: const TextStyle(color: Colors.white, fontSize: 15,
-                      fontWeight: FontWeight.bold)),
+                Text(
+                    '${briefing.healthEmoji}  ${l10n.ecoBriefOverallHealthValue(briefing.overallHealthScore)}',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -272,14 +312,15 @@ class _Header extends StatelessWidget {
                   value: briefing.overallHealthScore / 100,
                   strokeWidth: 6,
                   backgroundColor: Colors.white10,
-                  valueColor: AlwaysStoppedAnimation(_healthColor(briefing.overallHealthScore)),
+                  valueColor: AlwaysStoppedAnimation(
+                      _healthColor(briefing.overallHealthScore)),
                 ),
                 Text('${briefing.overallHealthScore}',
-                  style: TextStyle(
-                    color: _healthColor(briefing.overallHealthScore),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  )),
+                    style: TextStyle(
+                      color: _healthColor(briefing.overallHealthScore),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    )),
               ],
             ),
           ),
@@ -312,10 +353,15 @@ class _SummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(AppLocalizations.of(context)!.ecoBriefExecutiveSummary,
-            style: const TextStyle(color: Colors.white54, fontSize: 11,
-                fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+              style: const TextStyle(
+                  color: Colors.white54,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5)),
           const SizedBox(height: 6),
-          Text(text, style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.5)),
+          Text(text,
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 13, height: 1.5)),
         ],
       ),
     );
@@ -326,7 +372,8 @@ class _Section extends StatelessWidget {
   final String title;
   final Color color;
   final List<BriefingItem> items;
-  const _Section({required this.title, required this.color, required this.items});
+  const _Section(
+      {required this.title, required this.color, required this.items});
 
   @override
   Widget build(BuildContext context) {
@@ -334,13 +381,14 @@ class _Section extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title,
-          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+            style: TextStyle(
+                color: color, fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 8),
         if (items.isEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 8),
             child: Text(AppLocalizations.of(context)!.ecoBriefNoItemsThisWeek,
-              style: TextStyle(color: color.withOpacity(0.4), fontSize: 12)),
+                style: TextStyle(color: color.withOpacity(0.4), fontSize: 12)),
           )
         else
           ...items.map((item) => _BriefingRow(item: item, color: color)),
@@ -368,11 +416,14 @@ class _BriefingRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(item.title,
-            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500)),
           if (item.detail.isNotEmpty) ...[
             const SizedBox(height: 2),
             Text(item.detail,
-              style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                style: const TextStyle(color: Colors.white54, fontSize: 11)),
           ],
         ],
       ),
@@ -387,11 +438,11 @@ class _DataOriginCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h  = briefing.generatedAt.hour.toString().padLeft(2, '0');
-    final m  = briefing.generatedAt.minute.toString().padLeft(2, '0');
-    final d  = briefing.generatedAt.day.toString().padLeft(2, '0');
+    final h = briefing.generatedAt.hour.toString().padLeft(2, '0');
+    final m = briefing.generatedAt.minute.toString().padLeft(2, '0');
+    final d = briefing.generatedAt.day.toString().padLeft(2, '0');
     final mo = briefing.generatedAt.month.toString().padLeft(2, '0');
-    final y  = briefing.generatedAt.year;
+    final y = briefing.generatedAt.year;
     final l10n = AppLocalizations.of(context)!;
 
     return Container(
@@ -466,18 +517,23 @@ class _DataOriginCard extends StatelessWidget {
             Wrap(
               spacing: 6,
               runSpacing: 4,
-              children: briefing.analyzedProjectNames.map((name) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _kPrimary.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _kPrimary.withOpacity(0.25)),
-                ),
-                child: Text(
-                  name,
-                  style: const TextStyle(color: Colors.white70, fontSize: 10),
-                ),
-              )).toList(),
+              children: briefing.analyzedProjectNames
+                  .map((name) => Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _kPrimary.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(20),
+                          border:
+                              Border.all(color: _kPrimary.withOpacity(0.25)),
+                        ),
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 10),
+                        ),
+                      ))
+                  .toList(),
             ),
           ],
         ],
@@ -487,10 +543,11 @@ class _DataOriginCard extends StatelessWidget {
 }
 
 class _CountChip extends StatelessWidget {
-  const _CountChip({required this.label, required this.value, required this.color});
+  const _CountChip(
+      {required this.label, required this.value, required this.color});
   final String label;
-  final int    value;
-  final Color  color;
+  final int value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {

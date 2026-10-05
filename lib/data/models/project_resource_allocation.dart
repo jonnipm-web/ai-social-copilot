@@ -36,12 +36,14 @@ class ProjectResourceAllocation {
   // under PostgreSQL bigint's real ~9.2e18 max, but a sane one for any
   // realistic project budget, and one this app can actually round-trip
   // through a 64-bit int without surprises on Dart web/JS).
-  static const int maxBudgetAllocatedCents = 999999999999; // R$ 9.999.999.999,99
+  static const int maxBudgetAllocatedCents =
+      999999999999; // R$ 9.999.999.999,99
 
   /// The zero-state for a project that has never saved an allocation —
   /// distinct from "failed to load" (that stays a thrown error / null,
   /// never silently coerced to this).
-  factory ProjectResourceAllocation.empty(String projectId) => ProjectResourceAllocation(
+  factory ProjectResourceAllocation.empty(String projectId) =>
+      ProjectResourceAllocation(
         projectId: projectId,
         hoursAllocated: 0,
         budgetAllocatedCents: 0,
@@ -49,7 +51,8 @@ class ProjectResourceAllocation {
         updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
       );
 
-  factory ProjectResourceAllocation.fromMap(Map<String, dynamic> map) => ProjectResourceAllocation(
+  factory ProjectResourceAllocation.fromMap(Map<String, dynamic> map) =>
+      ProjectResourceAllocation(
         projectId: map['project_id'] as String,
         hoursAllocated: (map['hours_allocated'] as num).toInt(),
         budgetAllocatedCents: (map['budget_allocated_cents'] as num).toInt(),
@@ -68,7 +71,8 @@ class ProjectResourceAllocation {
   /// value (that always goes through the exact-integer cents field).
   double get budgetAllocatedDisplay => budgetAllocatedCents / 100;
 
-  ProjectResourceAllocation copyWith({int? hoursAllocated, int? budgetAllocatedCents, String? currency}) =>
+  ProjectResourceAllocation copyWith(
+          {int? hoursAllocated, int? budgetAllocatedCents, String? currency}) =>
       ProjectResourceAllocation(
         projectId: projectId,
         hoursAllocated: hoursAllocated ?? this.hoursAllocated,
@@ -125,9 +129,7 @@ int? parseMoneyInputToCents(String input) {
   if (match == null) return null;
   final whole = int.parse(match.group(1)!);
   final fraction = match.group(2);
-  final cents = fraction == null
-      ? 0
-      : int.parse(fraction.padRight(2, '0'));
+  final cents = fraction == null ? 0 : int.parse(fraction.padRight(2, '0'));
   final total = whole * 100 + cents;
   if (total > ProjectResourceAllocation.maxBudgetAllocatedCents) return null;
   return total;

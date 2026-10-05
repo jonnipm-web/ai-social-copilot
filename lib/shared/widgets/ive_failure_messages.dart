@@ -4,7 +4,8 @@ import '../../l10n/app_localizations.dart';
 /// IVE-INTELLIGENCE-CORE-01 — one localized message per structured failure,
 /// so the chat never shows raw exception text and never collapses every
 /// failure into "something went wrong".
-String iveFailureMessage(AppLocalizations l, IveFailure failure) => switch (failure) {
+String iveFailureMessage(AppLocalizations l, IveFailure failure) =>
+    switch (failure) {
       IveFailure.authRequired => l.iveCoreSessionExpired,
       IveFailure.invalidRequest => l.iveCoreInvalidRequest,
       IveFailure.surfaceNotSupported => l.iveCoreSurfaceNotSupported,

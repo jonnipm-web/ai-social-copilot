@@ -3,16 +3,22 @@ import '../models/website_analysis.dart';
 import 'content_localization_service.dart';
 
 class WebsiteAnalyzerService {
-  WebsiteAnalyzerService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+  WebsiteAnalyzerService({RowLocalizer? localizer})
+      : _localizer = localizer ?? identityLocalizer;
 
   // R16 — presentation localization of persisted content (never modifies the
   // stored row; see content_localization_service.dart).
   final RowLocalizer _localizer;
 
   Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
-      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+      _localizer(
+          table,
+          (rows as List)
+              .map((r) => Map<String, dynamic>.from(r as Map))
+              .toList());
 
-  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+  Future<Map<String, dynamic>> _locOne(
+          String table, Map<String, dynamic> row) async =>
       (await _localizer(table, [row])).first;
 
   final _client = Supabase.instance.client;
@@ -25,16 +31,16 @@ class WebsiteAnalyzerService {
         .from(_table)
         .select()
         .order('created_at', ascending: false);
-    return (await _loc('website_analyses', rows)).map((r) => WebsiteAnalysis.fromMap(r)).toList();
+    return (await _loc('website_analyses', rows))
+        .map((r) => WebsiteAnalysis.fromMap(r))
+        .toList();
   }
 
   Future<WebsiteAnalysis?> fetchById(String id) async {
-    final row = await _client
-        .from(_table)
-        .select()
-        .eq('id', id)
-        .maybeSingle();
-    return row == null ? null : WebsiteAnalysis.fromMap(await _locOne('website_analyses', row));
+    final row = await _client.from(_table).select().eq('id', id).maybeSingle();
+    return row == null
+        ? null
+        : WebsiteAnalysis.fromMap(await _locOne('website_analyses', row));
   }
 
   Future<void> delete(String id) async {
@@ -69,21 +75,21 @@ class WebsiteAnalyzerService {
 
     final int scoreWebsite = _int(data['score_website']);
     final int scoreAdsense = _int(data['score_adsense']);
-    final int scoreSeo     = _int(data['score_seo']);
+    final int scoreSeo = _int(data['score_seo']);
     final int scoreMonetization = _int(data['score_monetization']);
 
     final row = await _client
         .from(_table)
         .insert({
-          'user_id':            uid,
-          'url':                url,
-          'title':              data['title'] as String?,
-          'description':        data['description'] as String?,
-          'score_website':      scoreWebsite,
-          'score_adsense':      scoreAdsense,
-          'score_seo':          scoreSeo,
+          'user_id': uid,
+          'url': url,
+          'title': data['title'] as String?,
+          'description': data['description'] as String?,
+          'score_website': scoreWebsite,
+          'score_adsense': scoreAdsense,
+          'score_seo': scoreSeo,
           'score_monetization': scoreMonetization,
-          'analysis_json':      data,
+          'analysis_json': data,
         })
         .select()
         .single();

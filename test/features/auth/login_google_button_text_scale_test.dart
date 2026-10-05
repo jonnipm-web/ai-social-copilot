@@ -75,7 +75,8 @@ void main() {
       testWidgets(
           'does not overflow at ${scale}x scale ("Continuar com Google")',
           (tester) async {
-        await pumpAtScale(tester, label: 'Continuar com Google', textScale: scale);
+        await pumpAtScale(tester,
+            label: 'Continuar com Google', textScale: scale);
         await tester.pump();
 
         expect(tester.takeException(), isNull,
@@ -85,7 +86,8 @@ void main() {
       });
     }
 
-    testWidgets('does not overflow at 1.3x scale (English label, loading state)',
+    testWidgets(
+        'does not overflow at 1.3x scale (English label, loading state)',
         (tester) async {
       await pumpAtScale(
         tester,
@@ -98,7 +100,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('ellipsizes instead of overflowing when the label is too long '
+    testWidgets(
+        'ellipsizes instead of overflowing when the label is too long '
         'for the available width even at normal scale', (tester) async {
       // A pathological case (very narrow button) to prove Flexible +
       // ellipsis is actually doing the shrinking, not just "happens to fit".
@@ -111,7 +114,8 @@ void main() {
       await tester.pump();
 
       expect(tester.takeException(), isNull);
-      final text = tester.widget<Text>(find.text('Continuar com Google', findRichText: false));
+      final text = tester
+          .widget<Text>(find.text('Continuar com Google', findRichText: false));
       expect(text.overflow, TextOverflow.ellipsis);
     });
   });

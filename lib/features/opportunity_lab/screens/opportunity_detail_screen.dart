@@ -23,13 +23,13 @@ import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 import '../../../shared/widgets/translated_content_notice.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGreen   = Color(0xFF4CAF50);
-const _kOrange  = Color(0xFFFF9800);
-const _kRed     = Color(0xFFF44336);
-const _kTeal    = Color(0xFF00BCD4);
+const _kGreen = Color(0xFF4CAF50);
+const _kOrange = Color(0xFFFF9800);
+const _kRed = Color(0xFFF44336);
+const _kTeal = Color(0xFF00BCD4);
 
 Color _scoreColor(int s) {
   if (s >= 80) return _kGreen;
@@ -56,7 +56,8 @@ class OpportunityDetailScreen extends ConsumerWidget {
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeOpportunityLab),
@@ -79,7 +80,8 @@ class OpportunityDetailScreen extends ConsumerWidget {
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
         error: (e, _) => Center(
-          child: Text(l10n.opportunityDetailLoadError(extractErrorMessage(e, l10n)),
+          child: Text(
+              l10n.opportunityDetailLoadError(extractErrorMessage(e, l10n)),
               style: const TextStyle(color: Colors.white54)),
         ),
         data: (item) => item == null
@@ -97,7 +99,7 @@ class _StatusMenu extends StatelessWidget {
   const _StatusMenu({required this.item, required this.ref});
 
   final OpportunityLabItem item;
-  final WidgetRef          ref;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +187,8 @@ class _StatusMenu extends StatelessWidget {
           ),
         PopupMenuItem(
           value: 'delete',
-          child: Text(l10n.opportunityDetailDelete, style: const TextStyle(color: _kRed)),
+          child: Text(l10n.opportunityDetailDelete,
+              style: const TextStyle(color: _kRed)),
         ),
       ],
     );
@@ -197,7 +200,7 @@ class _DetailBody extends StatelessWidget {
   const _DetailBody({required this.item, required this.ref});
 
   final OpportunityLabItem item;
-  final WidgetRef          ref;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +209,10 @@ class _DetailBody extends StatelessWidget {
     final projects = projectsAsync.valueOrNull ?? [];
     final projectName = item.projectId == null
         ? null
-        : projects.where((p) => p.id == item.projectId).map((p) => p.name).firstOrNull;
+        : projects
+            .where((p) => p.id == item.projectId)
+            .map((p) => p.name)
+            .firstOrNull;
 
     // COMMERCIAL-V1-UX-RECONCILIATION (R2/R5/R8) — physical baseline
     // (COMMERCIAL_UI_STANDARD.md) flagged raw truncated UUIDs as a
@@ -337,9 +343,7 @@ class _HeroHeader extends StatelessWidget {
                 child: Text(
                   '$score',
                   style: TextStyle(
-                      color: scoreC,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold),
+                      color: scoreC, fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -387,7 +391,7 @@ class _HeroHeader extends StatelessWidget {
 class _RingPainter extends CustomPainter {
   const _RingPainter({required this.score, required this.color});
 
-  final int   score;
+  final int score;
   final Color color;
 
   @override
@@ -429,15 +433,37 @@ class _ScoreBreakdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final dims = [
-      (l10n.opportunityDetailScoreMarket,        item.marketScore,      const Color(0xFF6C63FF)),
-      (l10n.opportunityDetailScoreRevenue,       item.revenueScore,     const Color(0xFF4CAF50)),
-      (l10n.opportunityDetailScoreCompetition,   item.competitionScore, const Color(0xFFFF9800)),
-      (l10n.opportunityDetailScoreSynergy,       item.synergyScore,     const Color(0xFF00BCD4)),
-      (l10n.opportunityDetailScoreStrategicFit,  item.strategicFit,     const Color(0xFFB44FE8)),
+      (
+        l10n.opportunityDetailScoreMarket,
+        item.marketScore,
+        const Color(0xFF6C63FF)
+      ),
+      (
+        l10n.opportunityDetailScoreRevenue,
+        item.revenueScore,
+        const Color(0xFF4CAF50)
+      ),
+      (
+        l10n.opportunityDetailScoreCompetition,
+        item.competitionScore,
+        const Color(0xFFFF9800)
+      ),
+      (
+        l10n.opportunityDetailScoreSynergy,
+        item.synergyScore,
+        const Color(0xFF00BCD4)
+      ),
+      (
+        l10n.opportunityDetailScoreStrategicFit,
+        item.strategicFit,
+        const Color(0xFFB44FE8)
+      ),
     ];
 
     return Column(
-      children: dims.map((d) => _ScoreRow(label: d.$1, value: d.$2, color: d.$3)).toList(),
+      children: dims
+          .map((d) => _ScoreRow(label: d.$1, value: d.$2, color: d.$3))
+          .toList(),
     );
   }
 }
@@ -450,8 +476,8 @@ class _ScoreRow extends StatelessWidget {
   });
 
   final String label;
-  final int    value;
-  final Color  color;
+  final int value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -482,9 +508,7 @@ class _ScoreRow extends StatelessWidget {
               '$value',
               textAlign: TextAlign.right,
               style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold),
+                  color: color, fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -495,11 +519,12 @@ class _ScoreRow extends StatelessWidget {
 
 // ── Origin section ────────────────────────────────────────────────────────────
 class _OriginSection extends StatelessWidget {
-  const _OriginSection({required this.item, this.projectName, this.marketAnalysisLabel});
+  const _OriginSection(
+      {required this.item, this.projectName, this.marketAnalysisLabel});
 
   final OpportunityLabItem item;
-  final String?            projectName;
-  final String?            marketAnalysisLabel;
+  final String? projectName;
+  final String? marketAnalysisLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -552,8 +577,8 @@ class _InfoRow extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
-  final String   value;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
@@ -568,7 +593,9 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(value,
                 style: const TextStyle(
-                    color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500)),
           ),
         ],
       ),
@@ -599,12 +626,10 @@ class _SourcesList extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.link_rounded,
-                        color: _kPrimary, size: 12),
+                    const Icon(Icons.link_rounded, color: _kPrimary, size: 12),
                     const SizedBox(width: 4),
                     Text(s,
-                        style: const TextStyle(
-                            color: _kPrimary, fontSize: 11)),
+                        style: const TextStyle(color: _kPrimary, fontSize: 11)),
                   ],
                 ),
               ))
@@ -631,8 +656,7 @@ class _RationaleCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.format_quote_rounded,
-              color: _kPrimary, size: 20),
+          const Icon(Icons.format_quote_rounded, color: _kPrimary, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -679,9 +703,7 @@ class _ConfidenceMeter extends StatelessWidget {
         const SizedBox(width: 12),
         Text('$value% $label',
             style: TextStyle(
-                color: color,
-                fontSize: 13,
-                fontWeight: FontWeight.bold)),
+                color: color, fontSize: 13, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -708,7 +730,9 @@ class _RisksList extends StatelessWidget {
                     Expanded(
                       child: Text(r,
                           style: const TextStyle(
-                              color: Colors.white70, fontSize: 12, height: 1.4)),
+                              color: Colors.white70,
+                              fontSize: 12,
+                              height: 1.4)),
                     ),
                   ],
                 ),
@@ -777,8 +801,8 @@ class _Section extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   title;
-  final Widget   child;
+  final String title;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -841,9 +865,9 @@ class _StatusBadge extends StatelessWidget {
 
   static Color _color(String s) {
     const m = {
-      'approved':  _kGreen,
+      'approved': _kGreen,
       'executing': _kTeal,
-      'rejected':  _kRed,
+      'rejected': _kRed,
     };
     return m[s] ?? _kOrange;
   }
@@ -859,8 +883,7 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         opportunityStatusLabel(status, AppLocalizations.of(context)!),
-        style: TextStyle(
-            color: c, fontSize: 9, fontWeight: FontWeight.bold),
+        style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -871,7 +894,7 @@ class _ActionButtons extends StatelessWidget {
   const _ActionButtons({required this.item, required this.ref});
 
   final OpportunityLabItem item;
-  final WidgetRef          ref;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -918,7 +941,9 @@ class _ActionButtons extends StatelessWidget {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(l10n.opportunityDetailApprovedCreateActionError(extractErrorMessage(e, l10n))),
+                      content: Text(
+                          l10n.opportunityDetailApprovedCreateActionError(
+                              extractErrorMessage(e, l10n))),
                       backgroundColor: _kOrange,
                     ));
                   }
@@ -962,7 +987,8 @@ class _ActionButtons extends StatelessWidget {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(l10n.opportunityDetailGenericError(extractErrorMessage(e, l10n))),
+                      content: Text(l10n.opportunityDetailGenericError(
+                          extractErrorMessage(e, l10n))),
                       backgroundColor: _kRed,
                     ));
                   }
@@ -1004,21 +1030,25 @@ class _ActionButtons extends StatelessWidget {
                 // IVE_INTERACTION_AND_QUOTA_CONTRACT.md §1.1). Agora abre o
                 // diálogo contextual diretamente, escopado por esta
                 // oportunidade e seu projeto.
-                final ctx = ref.read(iveContextDataProvider(item.projectId)).valueOrNull;
-                final contextData =
-                    ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+                final ctx = ref
+                    .read(iveContextDataProvider(item.projectId))
+                    .valueOrNull;
+                final contextData = ctx != null
+                    ? CopilotContextData.fromIveContext(ctx)
+                    : const CopilotContextData();
                 showCopilotChat(
                   context,
-                  screenName: 'Oportunidades', // canonical key (localized by the copilot widget)
+                  screenName:
+                      'Oportunidades', // canonical key (localized by the copilot widget)
                   contextData: contextData,
                   initialMessage:
                       l10n.uxOppAskIveMessage(item.title, '${item.finalScore}'),
                   request: IveInteractionRequest(
-                    projectId:        item.projectId,
-                    sourceModule:     'opportunity_lab',
+                    projectId: item.projectId,
+                    sourceModule: 'opportunity_lab',
                     sourceEntityType: 'opportunity',
-                    sourceEntityId:   item.id,
-                    operationType:    IveOperationType.ask,
+                    sourceEntityId: item.id,
+                    operationType: IveOperationType.ask,
                   ),
                 );
               },
@@ -1057,7 +1087,10 @@ class _LinkedKnowledgeSection extends ConsumerWidget {
         children: [
           Text(
             l10n.oppLinkedKnowledgeTitle,
-            style: const TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 11,
+                fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -1066,9 +1099,11 @@ class _LinkedKnowledgeSection extends ConsumerWidget {
             children: knowledgeItemIds.map((id) {
               final async = ref.watch(knowledgeItemByIdProvider(id));
               final title = async.valueOrNull?.title;
-              if (title == null || title.isEmpty) return const SizedBox.shrink();
+              if (title == null || title.isEmpty)
+                return const SizedBox.shrink();
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(8),

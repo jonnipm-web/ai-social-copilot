@@ -20,10 +20,13 @@ void main() {
     'no commercially-enabled module exposes a parameterized route '
     '(app_drawer.dart would render it as a broken top-level nav item)',
     () {
-      final offenders = kModuleRegistry.where((m) {
-        final route = m.route;
-        return m.commercialEnabled && route != null && route.contains(':');
-      }).map((m) => m.moduleId).toList();
+      final offenders = kModuleRegistry
+          .where((m) {
+            final route = m.route;
+            return m.commercialEnabled && route != null && route.contains(':');
+          })
+          .map((m) => m.moduleId)
+          .toList();
 
       expect(
         offenders,

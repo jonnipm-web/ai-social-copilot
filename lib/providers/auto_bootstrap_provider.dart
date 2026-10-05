@@ -19,15 +19,15 @@ final _bootstrapService = AutoBootstrapService();
 // ── Projects that need bootstrapping ──────────────────────────────────────
 final projectsNeedingBootstrapProvider =
     FutureProvider.autoDispose<List<Project>>((ref) async {
-  final projects      = await ref.watch(projectsProvider.future);
-  final actions       = await ref.watch(actionQueueProvider.future);
-  final labItems      = await ref.watch(opportunityLabProvider.future);
+  final projects = await ref.watch(projectsProvider.future);
+  final actions = await ref.watch(actionQueueProvider.future);
+  final labItems = await ref.watch(opportunityLabProvider.future);
   final knowledgeList = await ref.watch(knowledgeItemsProvider.future);
 
   return _bootstrapService.detectNeedingBootstrap(
-    projects:      projects,
-    actions:       actions,
-    labItems:      labItems,
+    projects: projects,
+    actions: actions,
+    labItems: labItems,
     knowledgeItems: knowledgeList,
   );
 });
@@ -66,24 +66,26 @@ class BootstrapState {
     String? progressText,
   }) =>
       BootstrapState(
-        isRunning:       isRunning ?? this.isRunning,
-        currentStep:     currentStep ?? this.currentStep,
-        currentProject:  currentProject ?? this.currentProject,
-        totalProjects:   totalProjects ?? this.totalProjects,
-        report:          report ?? this.report,
-        error:           error ?? this.error,
-        progressText:    progressText ?? this.progressText,
+        isRunning: isRunning ?? this.isRunning,
+        currentStep: currentStep ?? this.currentStep,
+        currentProject: currentProject ?? this.currentProject,
+        totalProjects: totalProjects ?? this.totalProjects,
+        report: report ?? this.report,
+        error: error ?? this.error,
+        progressText: progressText ?? this.progressText,
       );
 
   bool get isDone => !isRunning && report != null;
   String get progressLabel {
     if (!isRunning) return '';
-    return progressText ?? '$currentProject/$totalProjects${currentStep != null ? " — $currentStep" : ""}';
+    return progressText ??
+        '$currentProject/$totalProjects${currentStep != null ? " — $currentStep" : ""}';
   }
 
   /// R16 — builds the localized progress text for [current]/[total] and an
   /// optional (already localized) [step].
-  static String buildProgressText(AppLocalizations l10n, int current, int total, String? step) =>
+  static String buildProgressText(
+          AppLocalizations l10n, int current, int total, String? step) =>
       step == null
           ? l10n.bootstrapProgressProject(current, total)
           : l10n.bootstrapProgressProjectStep(current, total, step);
@@ -99,18 +101,18 @@ class AutoBootstrapNotifier extends StateNotifier<BootstrapState> {
 
     try {
       // Gather needed data
-      final projects       = await _ref.read(projectsProvider.future);
-      final actions        = await _ref.read(actionQueueProvider.future);
-      final labItems       = await _ref.read(opportunityLabProvider.future);
+      final projects = await _ref.read(projectsProvider.future);
+      final actions = await _ref.read(actionQueueProvider.future);
+      final labItems = await _ref.read(opportunityLabProvider.future);
       final knowledgeItems = await _ref.read(knowledgeItemsProvider.future);
-      final personas       = await _ref.read(personasProvider.future);
-      final trainings      = await _ref.read(allPersonaTrainingsProvider.future);
-      final analyses       = await _ref.read(marketAnalysesProvider.future);
+      final personas = await _ref.read(personasProvider.future);
+      final trainings = await _ref.read(allPersonaTrainingsProvider.future);
+      final analyses = await _ref.read(marketAnalysesProvider.future);
 
       final toBootstrap = _bootstrapService.detectNeedingBootstrap(
-        projects:       projects,
-        actions:        actions,
-        labItems:       labItems,
+        projects: projects,
+        actions: actions,
+        labItems: labItems,
         knowledgeItems: knowledgeItems,
       );
 
@@ -120,11 +122,11 @@ class AutoBootstrapNotifier extends StateNotifier<BootstrapState> {
       final aiAnalyses = await _bootstrapService.fetchAnalysesWithTraining();
 
       state = state.copyWith(
-        isRunning:      true,
-        totalProjects:  toBootstrap.length,
+        isRunning: true,
+        totalProjects: toBootstrap.length,
         currentProject: 0,
-        report:         null,
-        error:          null,
+        report: null,
+        error: null,
       );
 
       final results = <BootstrapProjectResult>[];
@@ -142,22 +144,24 @@ class AutoBootstrapNotifier extends StateNotifier<BootstrapState> {
         final startingStep = l10n.bootstrapStepStarting;
         state = state.copyWith(
           currentProject: i + 1,
-          currentStep:    startingStep,
-          progressText:   BootstrapState.buildProgressText(l10n, i + 1, toBootstrap.length, startingStep),
+          currentStep: startingStep,
+          progressText: BootstrapState.buildProgressText(
+              l10n, i + 1, toBootstrap.length, startingStep),
         );
 
         final result = await _bootstrapService.bootstrapProject(
-          project:          project,
-          knowledgeItems:   knowledgeItems,
-          analyses:         aiAnalyses,
-          personas:         personas,
+          project: project,
+          knowledgeItems: knowledgeItems,
+          analyses: aiAnalyses,
+          personas: personas,
           existingTrainings: trainings,
-          linkedAnalysis:   linkedAnalysis.isEmpty ? null : linkedAnalysis.first,
-          outputLanguage:   outputLanguage,
-          l10n:             l10n,
+          linkedAnalysis: linkedAnalysis.isEmpty ? null : linkedAnalysis.first,
+          outputLanguage: outputLanguage,
+          l10n: l10n,
           onStep: (step) => state = state.copyWith(
-            currentStep:  step,
-            progressText: BootstrapState.buildProgressText(l10n, i + 1, toBootstrap.length, step),
+            currentStep: step,
+            progressText: BootstrapState.buildProgressText(
+                l10n, i + 1, toBootstrap.length, step),
           ),
         );
 
@@ -166,9 +170,9 @@ class AutoBootstrapNotifier extends StateNotifier<BootstrapState> {
       }
 
       final report = BootstrapReport(
-        projectResults:      results,
+        projectResults: results,
         personasTrainedTotal: totalPersonasTrained,
-        completedAt:         DateTime.now(),
+        completedAt: DateTime.now(),
       );
 
       // Invalidate all affected providers so UI refreshes
@@ -181,9 +185,11 @@ class AutoBootstrapNotifier extends StateNotifier<BootstrapState> {
       _ref.invalidate(personaLearningProfilesProvider);
       _ref.invalidate(projectsNeedingBootstrapProvider);
 
-      state = state.copyWith(isRunning: false, currentStep: null, report: report);
+      state =
+          state.copyWith(isRunning: false, currentStep: null, report: report);
     } catch (e) {
-      state = state.copyWith(isRunning: false, currentStep: null, error: e.toString());
+      state = state.copyWith(
+          isRunning: false, currentStep: null, error: e.toString());
     }
   }
 

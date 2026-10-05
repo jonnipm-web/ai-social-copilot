@@ -36,13 +36,14 @@ Future<KnowledgeStrategy?> _confirmAndGenerateStrategy(
   return exec.run<KnowledgeStrategy?>(
     context: context,
     ref: ref,
-    analysisLabel: AppLocalizations.of(context)!.knowledgeStrategyGenerateButton,
+    analysisLabel:
+        AppLocalizations.of(context)!.knowledgeStrategyGenerateButton,
     request: IveInteractionRequest(
-      projectId:        item.projectId,
-      sourceModule:     'knowledge_vault',
+      projectId: item.projectId,
+      sourceModule: 'knowledge_vault',
       sourceEntityType: 'knowledge_strategy',
-      sourceEntityId:   item.id,
-      operationType:    IveOperationType.analyze,
+      sourceEntityId: item.id,
+      operationType: IveOperationType.analyze,
     ),
     action: (idempotencyKey) => ref
         .read(strategyNotifierProvider.notifier)
@@ -70,9 +71,9 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n           = AppLocalizations.of(context)!;
-    final itemId        = widget.itemId;
-    final itemAsync     = ref.watch(knowledgeItemByIdProvider(itemId));
+    final l10n = AppLocalizations.of(context)!;
+    final itemId = widget.itemId;
+    final itemAsync = ref.watch(knowledgeItemByIdProvider(itemId));
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(itemId));
     final strategyAsync = ref.watch(knowledgeStrategyProvider(itemId));
 
@@ -89,7 +90,9 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
       body: itemAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-            child: Text(l10n.knowledgeStrategyGenericError(extractErrorMessage(e, l10n)),
+            child: Text(
+                l10n.knowledgeStrategyGenericError(
+                    extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: Colors.white70))),
         data: (item) {
           if (item == null) {
@@ -100,7 +103,9 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
           return analysisAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(
-                child: Text(l10n.knowledgeStrategyGenericError(extractErrorMessage(e, l10n)),
+                child: Text(
+                    l10n.knowledgeStrategyGenericError(
+                        extractErrorMessage(e, l10n)),
                     style: const TextStyle(color: Colors.white70))),
             data: (analysis) {
               if (analysis == null) {
@@ -108,10 +113,19 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
               }
               return strategyAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error:   (e, _) => _GeneratePrompt(item: item, analysis: analysis, exec: _exec, error: extractErrorMessage(e, l10n)),
-                data:    (strategy) => strategy == null
-                    ? _GeneratePrompt(item: item, analysis: analysis, exec: _exec)
-                    : _StrategyContent(item: item, strategy: strategy, analysis: analysis, exec: _exec),
+                error: (e, _) => _GeneratePrompt(
+                    item: item,
+                    analysis: analysis,
+                    exec: _exec,
+                    error: extractErrorMessage(e, l10n)),
+                data: (strategy) => strategy == null
+                    ? _GeneratePrompt(
+                        item: item, analysis: analysis, exec: _exec)
+                    : _StrategyContent(
+                        item: item,
+                        strategy: strategy,
+                        analysis: analysis,
+                        exec: _exec),
               );
             },
           );
@@ -134,11 +148,15 @@ class _NoAnalysis extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.analytics_outlined, size: 64, color: Color(0xFF6C63FF)),
+            const Icon(Icons.analytics_outlined,
+                size: 64, color: Color(0xFF6C63FF)),
             const SizedBox(height: 16),
             Text(
               l10n.knowledgeStrategyAnalysisRequiredTitle,
-              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
@@ -164,11 +182,15 @@ class _NoAnalysis extends StatelessWidget {
 }
 
 class _GeneratePrompt extends ConsumerWidget {
-  const _GeneratePrompt({required this.item, required this.analysis, required this.exec, this.error});
-  final KnowledgeItem     item;
+  const _GeneratePrompt(
+      {required this.item,
+      required this.analysis,
+      required this.exec,
+      this.error});
+  final KnowledgeItem item;
   final KnowledgeAnalysis analysis;
   final AiExecutionController exec;
-  final String?           error;
+  final String? error;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -187,7 +209,8 @@ class _GeneratePrompt extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFF6C63FF).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+                border:
+                    Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
               ),
               child: const Icon(Icons.rocket_launch_rounded,
                   size: 48, color: Color(0xFF6C63FF)),
@@ -195,13 +218,17 @@ class _GeneratePrompt extends ConsumerWidget {
             const SizedBox(height: 20),
             Text(
               l10n.knowledgeStrategyGenerateTitle,
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
               l10n.knowledgeStrategyGenerateBody,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+              style: const TextStyle(
+                  color: Colors.white54, fontSize: 13, height: 1.5),
             ),
             if (error != null) ...[
               const SizedBox(height: 12),
@@ -222,14 +249,17 @@ class _GeneratePrompt extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6C63FF),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.rocket_launch_rounded),
-                label: Text(l10n.knowledgeStrategyGenerateButton, style: const TextStyle(fontSize: 15)),
+                label: Text(l10n.knowledgeStrategyGenerateButton,
+                    style: const TextStyle(fontSize: 15)),
                 onPressed: () async {
-                  final strategy = await _confirmAndGenerateStrategy(context, ref, item, analysis, exec);
+                  final strategy = await _confirmAndGenerateStrategy(
+                      context, ref, item, analysis, exec);
                   if (strategy != null) {
                     ref.invalidate(knowledgeStrategyProvider(item.id));
                   }
@@ -250,7 +280,7 @@ class _StrategyContent extends ConsumerWidget {
     required this.exec,
   });
 
-  final KnowledgeItem     item;
+  final KnowledgeItem item;
   final KnowledgeStrategy strategy;
   final KnowledgeAnalysis analysis;
   final AiExecutionController exec;
@@ -269,21 +299,24 @@ class _StrategyContent extends ConsumerWidget {
 
         // Resumo estratégico
         if (strategy.strategicSummary.isNotEmpty) ...[
-          _Section(l10n.knowledgeStrategySectionSummary, Icons.summarize_rounded, const Color(0xFF6C63FF)),
+          _Section(l10n.knowledgeStrategySectionSummary,
+              Icons.summarize_rounded, const Color(0xFF6C63FF)),
           _HighlightCard(strategy.strategicSummary, const Color(0xFF6C63FF)),
           const SizedBox(height: 16),
         ],
 
         // Proposta de valor
         if (strategy.valueProposition.isNotEmpty) ...[
-          _Section(l10n.knowledgeStrategySectionValueProp, Icons.diamond_rounded, const Color(0xFFFFD700)),
+          _Section(l10n.knowledgeStrategySectionValueProp,
+              Icons.diamond_rounded, const Color(0xFFFFD700)),
           _HighlightCard(strategy.valueProposition, const Color(0xFFFFD700)),
           const SizedBox(height: 16),
         ],
 
         // Posicionamento
         if (strategy.positioning.isNotEmpty) ...[
-          _Section(l10n.knowledgeStrategySectionPositioning, Icons.flag_rounded, const Color(0xFF00BCD4)),
+          _Section(l10n.knowledgeStrategySectionPositioning, Icons.flag_rounded,
+              const Color(0xFF00BCD4)),
           _HighlightCard(strategy.positioning, const Color(0xFF00BCD4)),
           const SizedBox(height: 16),
         ],
@@ -293,7 +326,8 @@ class _StrategyContent extends ConsumerWidget {
 
         // Canais recomendados
         if (strategy.recommendedChannels.isNotEmpty) ...[
-          _Section(l10n.knowledgeStrategySectionChannels, Icons.broadcast_on_personal_rounded, const Color(0xFF4CAF50)),
+          _Section(l10n.knowledgeStrategySectionChannels,
+              Icons.broadcast_on_personal_rounded, const Color(0xFF4CAF50)),
           const SizedBox(height: 8),
           ...strategy.recommendedChannels.map((ch) => _ChannelTile(ch)),
           const SizedBox(height: 16),
@@ -301,7 +335,8 @@ class _StrategyContent extends ConsumerWidget {
 
         // Funil
         if (strategy.funnel.isNotEmpty) ...[
-          _Section(l10n.knowledgeStrategySectionFunnel, Icons.filter_alt_rounded, const Color(0xFFFF9800)),
+          _Section(l10n.knowledgeStrategySectionFunnel,
+              Icons.filter_alt_rounded, const Color(0xFFFF9800)),
           const SizedBox(height: 8),
           _FunnelCard(strategy.funnel, l10n),
           const SizedBox(height: 16),
@@ -309,7 +344,8 @@ class _StrategyContent extends ConsumerWidget {
 
         // Oportunidades comerciais
         if (strategy.commercialOpportunities.isNotEmpty) ...[
-          _Section(l10n.knowledgeStrategySectionOpportunities, Icons.monetization_on_rounded, const Color(0xFFFFD700)),
+          _Section(l10n.knowledgeStrategySectionOpportunities,
+              Icons.monetization_on_rounded, const Color(0xFFFFD700)),
           const SizedBox(height: 8),
           ...strategy.commercialOpportunities.map((op) => _OpportunityTile(op)),
           const SizedBox(height: 16),
@@ -317,7 +353,8 @@ class _StrategyContent extends ConsumerWidget {
 
         // Keywords prioritárias
         if (strategy.priorityKeywords.isNotEmpty) ...[
-          _Section(l10n.knowledgeStrategySectionKeywords, Icons.key_rounded, const Color(0xFF9C27B0)),
+          _Section(l10n.knowledgeStrategySectionKeywords, Icons.key_rounded,
+              const Color(0xFF9C27B0)),
           const SizedBox(height: 8),
           _ChipRow(strategy.priorityKeywords, const Color(0xFF9C27B0)),
           const SizedBox(height: 16),
@@ -325,15 +362,18 @@ class _StrategyContent extends ConsumerWidget {
 
         // Quick wins
         if (strategy.quickWins.isNotEmpty) ...[
-          _Section(l10n.knowledgeStrategySectionQuickWins, Icons.bolt_rounded, const Color(0xFFFF5722)),
+          _Section(l10n.knowledgeStrategySectionQuickWins, Icons.bolt_rounded,
+              const Color(0xFFFF5722)),
           const SizedBox(height: 8),
-          ...strategy.quickWins.map((w) => _BulletItem(w, const Color(0xFFFF5722))),
+          ...strategy.quickWins
+              .map((w) => _BulletItem(w, const Color(0xFFFF5722))),
           const SizedBox(height: 16),
         ],
 
         // Plano de crescimento
         if (strategy.growthPlan.isNotEmpty) ...[
-          _Section(l10n.knowledgeStrategySectionGrowthPlan, Icons.trending_up_rounded, const Color(0xFF4CAF50)),
+          _Section(l10n.knowledgeStrategySectionGrowthPlan,
+              Icons.trending_up_rounded, const Color(0xFF4CAF50)),
           const SizedBox(height: 8),
           _GrowthCard(strategy.growthPlan, l10n),
           const SizedBox(height: 16),
@@ -348,9 +388,11 @@ class _StrategyContent extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 12),
           ),
           icon: const Icon(Icons.refresh_rounded, size: 16),
-          label: Text(l10n.knowledgeStrategyRegenerateButton, style: const TextStyle(fontSize: 13)),
+          label: Text(l10n.knowledgeStrategyRegenerateButton,
+              style: const TextStyle(fontSize: 13)),
           onPressed: () async {
-            await _confirmAndGenerateStrategy(context, ref, item, analysis, exec);
+            await _confirmAndGenerateStrategy(
+                context, ref, item, analysis, exec);
             ref.invalidate(knowledgeStrategyProvider(item.id));
           },
         ),
@@ -361,13 +403,16 @@ class _StrategyContent extends ConsumerWidget {
   Widget _buildAudience(Map<String, dynamic> s, AppLocalizations l10n) {
     final audience = s['target_audience'];
     if (audience == null) return const SizedBox.shrink();
-    final a = audience is Map ? Map<String, dynamic>.from(audience) : <String, dynamic>{};
+    final a = audience is Map
+        ? Map<String, dynamic>.from(audience)
+        : <String, dynamic>{};
     if (a.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Section(l10n.knowledgeStrategySectionAudience, Icons.people_rounded, const Color(0xFFE91E63)),
+        _Section(l10n.knowledgeStrategySectionAudience, Icons.people_rounded,
+            const Color(0xFFE91E63)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(14),
@@ -379,11 +424,14 @@ class _StrategyContent extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (a['primary'] != null)
-                _AudienceRow(l10n.knowledgeStrategyAudiencePrimary, a['primary'].toString(), const Color(0xFFE91E63)),
+                _AudienceRow(l10n.knowledgeStrategyAudiencePrimary,
+                    a['primary'].toString(), const Color(0xFFE91E63)),
               if (a['secondary'] != null)
-                _AudienceRow(l10n.knowledgeStrategyAudienceSecondary, a['secondary'].toString(), Colors.white54),
+                _AudienceRow(l10n.knowledgeStrategyAudienceSecondary,
+                    a['secondary'].toString(), Colors.white54),
               if (a['age_range'] != null)
-                _AudienceRow(l10n.knowledgeStrategyAudienceAgeRange, a['age_range'].toString(), Colors.white38),
+                _AudienceRow(l10n.knowledgeStrategyAudienceAgeRange,
+                    a['age_range'].toString(), Colors.white38),
             ],
           ),
         ),
@@ -395,7 +443,7 @@ class _StrategyContent extends ConsumerWidget {
 
 class _StratHeader extends StatelessWidget {
   const _StratHeader({required this.title, this.niche});
-  final String  title;
+  final String title;
   final String? niche;
 
   @override
@@ -414,7 +462,8 @@ class _StratHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.rocket_launch_rounded, color: Color(0xFF6C63FF), size: 28),
+          const Icon(Icons.rocket_launch_rounded,
+              color: Color(0xFF6C63FF), size: 28),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -427,7 +476,8 @@ class _StratHeader extends StatelessWidget {
                         fontWeight: FontWeight.bold)),
                 if (niche != null)
                   Text(niche!,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12)),
               ],
             ),
           ),
@@ -439,9 +489,9 @@ class _StratHeader extends StatelessWidget {
 
 class _Section extends StatelessWidget {
   const _Section(this.title, this.icon, this.color);
-  final String   title;
+  final String title;
   final IconData icon;
-  final Color    color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -465,7 +515,7 @@ class _Section extends StatelessWidget {
 class _HighlightCard extends StatelessWidget {
   const _HighlightCard(this.text, this.color);
   final String text;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -474,7 +524,8 @@ class _HighlightCard extends StatelessWidget {
         Clipboard.setData(ClipboardData(text: text));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.knowledgeStrategyCopied),
+            content:
+                Text(AppLocalizations.of(context)!.knowledgeStrategyCopied),
             duration: const Duration(seconds: 1),
             backgroundColor: const Color(0xFF1A1A2E),
           ),
@@ -514,18 +565,21 @@ class _ChannelTile extends StatelessWidget {
   Color _priorityColor(String p) {
     switch (aiLevel(p)) {
       case AiLevel.high:
-      case AiLevel.critical: return const Color(0xFF4CAF50);
-      case AiLevel.medium:   return const Color(0xFFFF9800);
-      default:               return Colors.white38;
+      case AiLevel.critical:
+        return const Color(0xFF4CAF50);
+      case AiLevel.medium:
+        return const Color(0xFFFF9800);
+      default:
+        return Colors.white38;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final channel  = data['channel'] as String? ?? '';
+    final channel = data['channel'] as String? ?? '';
     final priority = data['priority'] as String? ?? '';
-    final reason   = data['reason'] as String? ?? '';
-    final color    = _priorityColor(priority);
+    final reason = data['reason'] as String? ?? '';
+    final color = _priorityColor(priority);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -543,7 +597,8 @@ class _ChannelTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: color.withOpacity(0.4)),
             ),
-            child: Text(aiPriorityLabel(priority, AppLocalizations.of(context)!),
+            child: Text(
+                aiPriorityLabel(priority, AppLocalizations.of(context)!),
                 style: TextStyle(
                     color: color, fontSize: 10, fontWeight: FontWeight.w600)),
           ),
@@ -559,7 +614,8 @@ class _ChannelTile extends StatelessWidget {
                         fontWeight: FontWeight.w600)),
                 if (reason.isNotEmpty)
                   Text(reason,
-                      style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 11)),
               ],
             ),
           ),
@@ -577,10 +633,26 @@ class _FunnelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stages = [
-      (l10n.knowledgeStrategyFunnelAwareness, funnel['awareness'], const Color(0xFF6C63FF)),
-      (l10n.knowledgeStrategyFunnelConsideration, funnel['consideration'], const Color(0xFF00BCD4)),
-      (l10n.knowledgeStrategyFunnelConversion, funnel['conversion'], const Color(0xFF4CAF50)),
-      (l10n.knowledgeStrategyFunnelRetention, funnel['retention'], const Color(0xFFFFD700)),
+      (
+        l10n.knowledgeStrategyFunnelAwareness,
+        funnel['awareness'],
+        const Color(0xFF6C63FF)
+      ),
+      (
+        l10n.knowledgeStrategyFunnelConsideration,
+        funnel['consideration'],
+        const Color(0xFF00BCD4)
+      ),
+      (
+        l10n.knowledgeStrategyFunnelConversion,
+        funnel['conversion'],
+        const Color(0xFF4CAF50)
+      ),
+      (
+        l10n.knowledgeStrategyFunnelRetention,
+        funnel['retention'],
+        const Color(0xFFFFD700)
+      ),
     ];
 
     return Column(
@@ -608,7 +680,9 @@ class _FunnelCard extends StatelessWidget {
                     Expanded(
                       child: Text(s.$2.toString(),
                           style: const TextStyle(
-                              color: Colors.white60, fontSize: 12, height: 1.4)),
+                              color: Colors.white60,
+                              fontSize: 12,
+                              height: 1.4)),
                     ),
                   ],
                 ),
@@ -625,18 +699,21 @@ class _OpportunityTile extends StatelessWidget {
   Color _potentialColor(String p) {
     switch (aiLevel(p)) {
       case AiLevel.high:
-      case AiLevel.critical: return const Color(0xFF4CAF50);
-      case AiLevel.medium:   return const Color(0xFFFF9800);
-      default:               return Colors.white38;
+      case AiLevel.critical:
+        return const Color(0xFF4CAF50);
+      case AiLevel.medium:
+        return const Color(0xFFFF9800);
+      default:
+        return Colors.white38;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final type        = data['type'] as String? ?? '';
+    final type = data['type'] as String? ?? '';
     final description = data['description'] as String? ?? '';
-    final potential   = data['potential'] as String? ?? '';
-    final color       = _potentialColor(potential);
+    final potential = data['potential'] as String? ?? '';
+    final color = _potentialColor(potential);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -662,7 +739,8 @@ class _OpportunityTile extends StatelessWidget {
                         fontWeight: FontWeight.w600)),
                 if (description.isNotEmpty)
                   Text(description,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12)),
               ],
             ),
           ),
@@ -673,7 +751,8 @@ class _OpportunityTile extends StatelessWidget {
                 color: color.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(aiLevelLabel(potential, AppLocalizations.of(context)!),
+              child: Text(
+                  aiLevelLabel(potential, AppLocalizations.of(context)!),
                   style: TextStyle(
                       color: color, fontSize: 10, fontWeight: FontWeight.w600)),
             ),
@@ -686,7 +765,7 @@ class _OpportunityTile extends StatelessWidget {
 class _ChipRow extends StatelessWidget {
   const _ChipRow(this.items, this.color);
   final List<String> items;
-  final Color        color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -699,14 +778,16 @@ class _ChipRow extends StatelessWidget {
                   Clipboard.setData(ClipboardData(text: kw));
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(AppLocalizations.of(context)!.knowledgeStrategyCopiedKeyword(kw)),
+                      content: Text(AppLocalizations.of(context)!
+                          .knowledgeStrategyCopiedKeyword(kw)),
                       duration: const Duration(seconds: 1),
                       backgroundColor: const Color(0xFF1A1A2E),
                     ),
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -727,7 +808,7 @@ class _ChipRow extends StatelessWidget {
 class _BulletItem extends StatelessWidget {
   const _BulletItem(this.text, this.color);
   final String text;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -765,7 +846,8 @@ class _GrowthCard extends StatelessWidget {
     ];
 
     final kpis = plan['kpis'];
-    final kpiList = kpis is List ? kpis.map((e) => e.toString()).toList() : <String>[];
+    final kpiList =
+        kpis is List ? kpis.map((e) => e.toString()).toList() : <String>[];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -834,7 +916,7 @@ class _AudienceRow extends StatelessWidget {
   const _AudienceRow(this.label, this.value, this.color);
   final String label;
   final String value;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {

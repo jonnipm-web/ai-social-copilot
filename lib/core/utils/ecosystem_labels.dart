@@ -11,13 +11,20 @@ import '../../l10n/app_localizations.dart';
 /// Unknown codes are returned unchanged.
 String ecosystemVerdictLabel(String code, AppLocalizations l10n) {
   switch (code) {
-    case 'ESCALAR':            return l10n.ecoVerdictScale;
-    case 'ACELERAR':           return l10n.ecoVerdictAccelerate;
-    case 'MANTER':             return l10n.ecoVerdictMaintain;
-    case 'VALIDAR':            return l10n.ecoVerdictValidate;
-    case 'PAUSAR':             return l10n.ecoVerdictPause;
-    case 'ANÁLISE INCOMPLETA': return l10n.ecoVerdictIncomplete;
-    default:                   return code;
+    case 'ESCALAR':
+      return l10n.ecoVerdictScale;
+    case 'ACELERAR':
+      return l10n.ecoVerdictAccelerate;
+    case 'MANTER':
+      return l10n.ecoVerdictMaintain;
+    case 'VALIDAR':
+      return l10n.ecoVerdictValidate;
+    case 'PAUSAR':
+      return l10n.ecoVerdictPause;
+    case 'ANÁLISE INCOMPLETA':
+      return l10n.ecoVerdictIncomplete;
+    default:
+      return code;
   }
 }
 
@@ -25,12 +32,19 @@ String ecosystemVerdictLabel(String code, AppLocalizations l10n) {
 /// `PriorityRecommendation.typeLabel` getter for display purposes).
 String recommendationTypeLabel(RecommendationType type, AppLocalizations l10n) {
   switch (type) {
-    case RecommendationType.investProject:      return l10n.ecoRecTypeInvest;
-    case RecommendationType.executeOpportunity: return l10n.ecoRecTypeExecute;
-    case RecommendationType.runAction:          return l10n.ecoRecTypeAction;
-    case RecommendationType.pauseProject:       return l10n.ecoRecTypePause;
-    case RecommendationType.mitigateRisk:       return l10n.ecoRecTypeRisk;
-    case RecommendationType.quickWin:           return l10n.ecoRecTypeQuickWin;
-    case RecommendationType.waste:              return l10n.ecoRecTypeWaste;
+    case RecommendationType.investProject:
+      return l10n.ecoRecTypeInvest;
+    case RecommendationType.executeOpportunity:
+      return l10n.ecoRecTypeExecute;
+    case RecommendationType.runAction:
+      return l10n.ecoRecTypeAction;
+    case RecommendationType.pauseProject:
+      return l10n.ecoRecTypePause;
+    case RecommendationType.mitigateRisk:
+      return l10n.ecoRecTypeRisk;
+    case RecommendationType.quickWin:
+      return l10n.ecoRecTypeQuickWin;
+    case RecommendationType.waste:
+      return l10n.ecoRecTypeWaste;
   }
 }

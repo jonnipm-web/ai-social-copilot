@@ -52,8 +52,7 @@ void main() {
       expect(notifyCount, 1);
     });
 
-    test('stops notifying after dispose (subscription is cancelled)',
-        () async {
+    test('stops notifying after dispose (subscription is cancelled)', () async {
       final controller = StreamController<int>.broadcast();
       addTearDown(controller.close);
 
@@ -227,6 +226,6 @@ class _InitStateStreamFirerState extends State<_InitStateStreamFirer> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      const Directionality(textDirection: TextDirection.ltr, child: SizedBox.shrink());
+  Widget build(BuildContext context) => const Directionality(
+      textDirection: TextDirection.ltr, child: SizedBox.shrink());
 }

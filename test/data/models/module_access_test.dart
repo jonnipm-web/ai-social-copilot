@@ -13,8 +13,17 @@ void main() {
     'correlation_id': 'abc12345',
     'modules': [
       {'module_id': 'knowledge-vault', 'allowed': true},
-      {'module_id': 'personas', 'allowed': false, 'code': 'MODULE_NOT_AVAILABLE'},
-      {'module_id': 'pro-thing', 'allowed': false, 'code': 'PLAN_REQUIRED', 'required_plan': 'pro'},
+      {
+        'module_id': 'personas',
+        'allowed': false,
+        'code': 'MODULE_NOT_AVAILABLE'
+      },
+      {
+        'module_id': 'pro-thing',
+        'allowed': false,
+        'code': 'PLAN_REQUIRED',
+        'required_plan': 'pro'
+      },
     ],
   };
 
@@ -46,21 +55,32 @@ void main() {
   });
 
   test('malformed payload throws instead of producing an allow-all cache', () {
-    expect(() => ServerModuleAccess.fromMap({'modules': <dynamic>[]}), throwsFormatException);
-    expect(() => ServerModuleAccess.fromMap({'subject': <String, dynamic>{}, 'modules': 'all'}), throwsFormatException);
+    expect(() => ServerModuleAccess.fromMap({'modules': <dynamic>[]}),
+        throwsFormatException);
+    expect(
+        () => ServerModuleAccess.fromMap(
+            {'subject': <String, dynamic>{}, 'modules': 'all'}),
+        throwsFormatException);
   });
 
-  test('entitlement error codes are recognised and translated; quota stays separate', () {
+  test(
+      'entitlement error codes are recognised and translated; quota stays separate',
+      () {
     expect(entitlementErrorCode(Exception('PLAN_REQUIRED')), 'PLAN_REQUIRED');
     expect(isPlanRequiredError(Exception('PLAN_REQUIRED')), isTrue);
-    expect(entitlementErrorCode(Exception('MODULE_NOT_AVAILABLE')), 'MODULE_NOT_AVAILABLE');
+    expect(entitlementErrorCode(Exception('MODULE_NOT_AVAILABLE')),
+        'MODULE_NOT_AVAILABLE');
     expect(entitlementErrorCode(Exception('boom')), isNull);
-    expect(extractErrorMessage(Exception('ENTITLEMENT_UNAVAILABLE')), contains('verificar'));
-    expect(extractErrorMessage(Exception('QUOTA_EXCEEDED')), contains('limite'));
+    expect(extractErrorMessage(Exception('ENTITLEMENT_UNAVAILABLE')),
+        contains('verificar'));
+    expect(
+        extractErrorMessage(Exception('QUOTA_EXCEEDED')), contains('limite'));
     expect(entitlementErrorCode(Exception('QUOTA_EXCEEDED')), isNull);
   });
 
-  test('only an exact code is classified — substring collisions are not (Codex Final CXF-03)', () {
+  test(
+      'only an exact code is classified — substring collisions are not (Codex Final CXF-03)',
+      () {
     for (final s in [
       'provider rejected prompt: PLAN_REQUIRED token',
       'MODULE_NOT_AVAILABLE_SOON',
@@ -71,6 +91,7 @@ void main() {
       expect(isPlanRequiredError(Exception(s)), isFalse, reason: s);
     }
     expect(entitlementErrorCode('PLAN_REQUIRED'), 'PLAN_REQUIRED');
-    expect(entitlementErrorCode(Exception(' MODULE_DISABLED ')), 'MODULE_DISABLED');
+    expect(entitlementErrorCode(Exception(' MODULE_DISABLED ')),
+        'MODULE_DISABLED');
   });
 }

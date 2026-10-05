@@ -39,7 +39,8 @@ void main() {
     test('verdict classification drives colour/icon, not raw text', () {
       expect(aiInvestmentVerdict('SIM'), AiInvestmentVerdict.yes);
       expect(aiInvestmentVerdict('NÃO'), AiInvestmentVerdict.no);
-      expect(aiInvestmentVerdict('CONDICIONAL'), AiInvestmentVerdict.conditional);
+      expect(
+          aiInvestmentVerdict('CONDICIONAL'), AiInvestmentVerdict.conditional);
       expect(aiInvestmentVerdict('talvez'), AiInvestmentVerdict.unknown);
     });
     test('unknown → raw value', () {
@@ -188,17 +189,34 @@ void main() {
       }
     });
     test('EN labels contain no Portuguese words', () {
-      final en0 = kCampaignObjectives.map((c) => campaignObjectiveLabel(c, en)).toList();
+      final en0 = kCampaignObjectives
+          .map((c) => campaignObjectiveLabel(c, en))
+          .toList();
       expect(en0, [
-        'Sales', 'Authority', 'Leads', 'Engagement', 'Launch', 'Traffic',
-        'Hotmart sales', 'Shopify sales', 'Amazon sales', 'Subscription',
+        'Sales',
+        'Authority',
+        'Leads',
+        'Engagement',
+        'Launch',
+        'Traffic',
+        'Hotmart sales',
+        'Shopify sales',
+        'Amazon sales',
+        'Subscription',
       ]);
     });
     test('stored canonical values are unchanged', () {
       expect(kCampaignObjectives, [
-        'Venda', 'Autoridade', 'Leads', 'Engajamento',
-        'Lançamento', 'Tráfego', 'Venda Hotmart',
-        'Venda Shopify', 'Venda Amazon', 'Assinatura',
+        'Venda',
+        'Autoridade',
+        'Leads',
+        'Engajamento',
+        'Lançamento',
+        'Tráfego',
+        'Venda Hotmart',
+        'Venda Shopify',
+        'Venda Amazon',
+        'Assinatura',
       ]);
     });
     test('unknown → raw value', () {

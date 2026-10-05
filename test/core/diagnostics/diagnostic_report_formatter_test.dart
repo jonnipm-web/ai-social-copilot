@@ -51,7 +51,11 @@ void main() {
 
   test('handles an active session (no ended_at) and events with no error', () {
     final report = formatDiagnosticReport(
-      session: {'id': 'x', 'started_at': '2026-09-14T10:00:00Z', 'ended_at': null},
+      session: {
+        'id': 'x',
+        'started_at': '2026-09-14T10:00:00Z',
+        'ended_at': null
+      },
       events: [],
     );
     expect(report, contains('(active)'));
@@ -88,7 +92,8 @@ void main() {
 
       expect(report, contains('Session build_sha'));
       expect(report, contains('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'));
-      expect(report, contains('event_build_sha=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'));
+      expect(report,
+          contains('event_build_sha=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'));
     },
   );
 }

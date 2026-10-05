@@ -28,7 +28,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/aef_action_card.dart';
 
 class SimulationGovernanceSection extends ConsumerStatefulWidget {
-  const SimulationGovernanceSection({super.key, required this.experimentId, required this.strategyId});
+  const SimulationGovernanceSection(
+      {super.key, required this.experimentId, required this.strategyId});
 
   /// A real strategy_experiments.id, already persisted server-side by
   /// run_simulation -- never client-invented.
@@ -36,10 +37,12 @@ class SimulationGovernanceSection extends ConsumerStatefulWidget {
   final String strategyId;
 
   @override
-  ConsumerState<SimulationGovernanceSection> createState() => _SimulationGovernanceSectionState();
+  ConsumerState<SimulationGovernanceSection> createState() =>
+      _SimulationGovernanceSectionState();
 }
 
-class _SimulationGovernanceSectionState extends ConsumerState<SimulationGovernanceSection> {
+class _SimulationGovernanceSectionState
+    extends ConsumerState<SimulationGovernanceSection> {
   AefRuntimeResult? _lastResult;
 
   @override
@@ -48,13 +51,17 @@ class _SimulationGovernanceSectionState extends ConsumerState<SimulationGovernan
     if (!kAefRuntimeLabEnabled) {
       return Padding(
         padding: const EdgeInsets.only(top: 12),
-        child: Text(l.strategyDetailSimulationRuntimeUnavailable, key: const Key('strategyDetailSimulationRuntimeUnavailable')),
+        child: Text(l.strategyDetailSimulationRuntimeUnavailable,
+            key: const Key('strategyDetailSimulationRuntimeUnavailable')),
       );
     }
     final code = _lastResult?.denialCode;
     final friendly = switch (code) {
       null => null,
-      'MODULE_NOT_AVAILABLE' || 'PLAN_REQUIRED' || 'AUTH_REQUIRED' => l.strategyDetailSimulationRuntimePlanRequired,
+      'MODULE_NOT_AVAILABLE' ||
+      'PLAN_REQUIRED' ||
+      'AUTH_REQUIRED' =>
+        l.strategyDetailSimulationRuntimePlanRequired,
       'RUNTIME_DISABLED' => l.strategyDetailSimulationRuntimeUnavailable,
       _ => l.strategyDetailSimulationRuntimePolicyBlocked(code),
     };
@@ -63,7 +70,8 @@ class _SimulationGovernanceSectionState extends ConsumerState<SimulationGovernan
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l.strategyDetailSimulationGovernanceTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(l.strategyDetailSimulationGovernanceTitle,
+              style: const TextStyle(fontWeight: FontWeight.w600)),
           AefActionCard(
             key: const Key('strategyDetailSimulationGate'),
             intent: IveActionIntentData(
@@ -81,7 +89,10 @@ class _SimulationGovernanceSectionState extends ConsumerState<SimulationGovernan
           if (friendly != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(friendly, key: const Key('strategyDetailSimulationGovernanceDenialText'), style: const TextStyle(fontSize: 12)),
+              child: Text(friendly,
+                  key:
+                      const Key('strategyDetailSimulationGovernanceDenialText'),
+                  style: const TextStyle(fontSize: 12)),
             ),
         ],
       ),

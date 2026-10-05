@@ -19,7 +19,8 @@ import 'package:ai_social_copilot/shared/widgets/ai_execution_confirmation.dart'
 // separate module-level ProviderContainer this test's ProviderScope
 // cannot reach at all) is exactly why AiExecutionController takes `ref`
 // and uses `ref.read(diagnosticLoggerProvider)` instead of that getter.
-class MockDiagnosticLoggerService extends Mock implements DiagnosticLoggerService {}
+class MockDiagnosticLoggerService extends Mock
+    implements DiagnosticLoggerService {}
 
 // IVE-COMMERCIAL-FOUNDATION-11 — covers the reusable AI-execution
 // confirmation mechanism (mission Sections 07-08). This is the ONLY
@@ -41,7 +42,8 @@ void main() {
         currentQuotaProvider.overrideWith(
           (ref) async => const QuotaInfo(role: 'free', limit: 15, used: 2),
         ),
-        diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+        diagnosticLoggerProvider
+            .overrideWithValue(MockDiagnosticLoggerService()),
       ],
       child: MaterialApp(
         locale: const Locale('pt'),
@@ -60,10 +62,11 @@ void main() {
     );
   }
 
-  IveInteractionRequest req() =>
-      IveInteractionRequest(sourceModule: 'test', operationType: IveOperationType.analyze);
+  IveInteractionRequest req() => IveInteractionRequest(
+      sourceModule: 'test', operationType: IveOperationType.analyze);
 
-  testWidgets('CANCELAR: nenhuma chamada de ação é feita, estado volta a idle', (tester) async {
+  testWidgets('CANCELAR: nenhuma chamada de ação é feita, estado volta a idle',
+      (tester) async {
     var calls = 0;
     final controller = AiExecutionController();
     await tester.pumpWidget(harness());
@@ -89,7 +92,8 @@ void main() {
     expect(controller.state, AiExecutionState.idle);
   });
 
-  testWidgets('CONFIRMAR: exatamente uma chamada de ação é feita, estado vira success',
+  testWidgets(
+      'CONFIRMAR: exatamente uma chamada de ação é feita, estado vira success',
       (tester) async {
     var calls = 0;
     final controller = AiExecutionController();
@@ -163,7 +167,8 @@ void main() {
     },
   );
 
-  testWidgets('ERRO na ação: estado vira error e a exceção propaga para quem chamou run()',
+  testWidgets(
+      'ERRO na ação: estado vira error e a exceção propaga para quem chamou run()',
       (tester) async {
     final controller = AiExecutionController();
     await tester.pumpWidget(harness());
@@ -249,7 +254,8 @@ void main() {
     },
   );
 
-  testWidgets('isBusy é false antes de run() e volta a false após success/cancel',
+  testWidgets(
+      'isBusy é false antes de run() e volta a false após success/cancel',
       (tester) async {
     final controller = AiExecutionController();
     await tester.pumpWidget(harness());
@@ -312,7 +318,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('vai consumir 1 das suas análises mensais'), findsOneWidget);
+      expect(find.textContaining('vai consumir 1 das suas análises mensais'),
+          findsOneWidget);
 
       await tester.tap(find.text('CANCELAR'));
       await tester.pumpAndSettle();

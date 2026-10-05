@@ -18,10 +18,10 @@ class TrendSignal {
   });
 
   factory TrendSignal.fromMap(Map<String, dynamic> map) => TrendSignal(
-        id:         map['id'] as String,
-        userId:     map['user_id'] as String,
-        source:     map['source'] as String? ?? '',
-        keyword:    map['keyword'] as String? ?? '',
+        id: map['id'] as String,
+        userId: map['user_id'] as String,
+        source: map['source'] as String? ?? '',
+        keyword: map['keyword'] as String? ?? '',
         trendScore: map['trend_score'] as int? ?? 0,
         growthRate: _toDouble(map['growth_rate']),
         detectedAt: DateTime.parse(map['detected_at'] as String),
@@ -34,9 +34,9 @@ class TrendSignal {
   }
 
   Map<String, dynamic> toInsertMap() => {
-        'user_id':     userId,
-        'source':      source,
-        'keyword':     keyword,
+        'user_id': userId,
+        'source': source,
+        'keyword': keyword,
         'trend_score': trendScore,
         'growth_rate': growthRate,
       };

@@ -8,11 +8,10 @@ import '../data/models/knowledge_strategy.dart';
 import '../data/services/campaign_service.dart';
 import '../data/services/content_localization_service.dart';
 
-final campaignServiceProvider =
-    Provider<CampaignService>((ref) => CampaignService(localizer: ref.watch(rowLocalizerProvider)));
+final campaignServiceProvider = Provider<CampaignService>(
+    (ref) => CampaignService(localizer: ref.watch(rowLocalizerProvider)));
 
-final campaignsProvider =
-    FutureProvider.autoDispose<List<Campaign>>((ref) {
+final campaignsProvider = FutureProvider.autoDispose<List<Campaign>>((ref) {
   return ref.watch(campaignServiceProvider).fetchAll();
 });
 
@@ -27,7 +26,8 @@ final campaignByIdProvider =
 });
 
 class CampaignNotifier extends StateNotifier<AsyncValue<Campaign?>> {
-  CampaignNotifier(this._service, this._ref) : super(const AsyncValue.data(null));
+  CampaignNotifier(this._service, this._ref)
+      : super(const AsyncValue.data(null));
 
   final CampaignService _service;
   final Ref _ref;
@@ -44,12 +44,12 @@ class CampaignNotifier extends StateNotifier<AsyncValue<Campaign?>> {
     state = const AsyncValue.loading();
     try {
       final result = await _service.generate(
-        item:          item,
-        analysis:      analysis,
-        strategy:      strategy,
-        objective:     objective,
-        durationDays:  durationDays,
-        channels:      channels,
+        item: item,
+        analysis: analysis,
+        strategy: strategy,
+        objective: objective,
+        durationDays: durationDays,
+        channels: channels,
         // R16 — output language = presentation language, not item.language.
         outputLanguage: _ref.read(outputLanguageCodeProvider),
         idempotencyKey: idempotencyKey,
@@ -73,7 +73,7 @@ class CampaignNotifier extends StateNotifier<AsyncValue<Campaign?>> {
   }
 }
 
-final campaignNotifierProvider = StateNotifierProvider.autoDispose<
-    CampaignNotifier, AsyncValue<Campaign?>>(
+final campaignNotifierProvider =
+    StateNotifierProvider.autoDispose<CampaignNotifier, AsyncValue<Campaign?>>(
   (ref) => CampaignNotifier(ref.watch(campaignServiceProvider), ref),
 );

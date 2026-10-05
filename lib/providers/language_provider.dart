@@ -12,7 +12,8 @@ const _kSupportedLanguageCodes = {'pt', 'en'};
 
 Locale _deviceDefaultLocale() {
   final deviceCode = PlatformDispatcher.instance.locale.languageCode;
-  return Locale(_kSupportedLanguageCodes.contains(deviceCode) ? deviceCode : 'pt');
+  return Locale(
+      _kSupportedLanguageCodes.contains(deviceCode) ? deviceCode : 'pt');
 }
 
 class LanguageNotifier extends StateNotifier<Locale> {

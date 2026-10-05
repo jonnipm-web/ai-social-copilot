@@ -20,8 +20,8 @@ class IveSpeechAnchor extends StatelessWidget {
     this.alignment = IveSpeechAlignment.topLeft,
   });
 
-  final double             avatarSize;
-  final Widget             child;
+  final double avatarSize;
+  final Widget child;
   final IveSpeechAlignment alignment;
 
   @override

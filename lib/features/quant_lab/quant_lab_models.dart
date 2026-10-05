@@ -11,7 +11,12 @@ const kQuantLabAssetClasses = ['EQUITY', 'ETF', 'INDEX'];
 /// Venues with a supported market calendar (others are analyzed calendar-naive).
 const kQuantLabMics = ['XNAS', 'XNYS', 'XLON'];
 
-const kQuantLabAdjustments = ['UNKNOWN', 'UNADJUSTED', 'SPLIT_ADJUSTED', 'SPLIT_AND_DIVIDEND_ADJUSTED'];
+const kQuantLabAdjustments = [
+  'UNKNOWN',
+  'UNADJUSTED',
+  'SPLIT_ADJUSTED',
+  'SPLIT_AND_DIVIDEND_ADJUSTED'
+];
 
 /// Synthetic sample (the Foundation golden series G1) — not market data.
 const kQuantLabSampleCsv = 'date,open,high,low,close,volume\n'
@@ -52,7 +57,12 @@ class QuantAnalyzeInput {
           if (mic != null && mic!.isNotEmpty) 'exchange_mic': mic,
           'currency': currency.trim(),
         },
-        'dataset': {'format': 'csv', 'frequency': 'DAILY', 'adjustment': adjustment, 'csv': csv},
+        'dataset': {
+          'format': 'csv',
+          'frequency': 'DAILY',
+          'adjustment': adjustment,
+          'csv': csv
+        },
         'options': {
           'periods_per_year': periodsPerYear,
           if (smaWindows.isNotEmpty) 'sma_windows': smaWindows,
@@ -62,7 +72,8 @@ class QuantAnalyzeInput {
 
 /// Parses "20, 50" → [20, 50]; returns null when any token is not a positive integer.
 List<int>? parseSmaWindows(String raw) {
-  final parts = raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+  final parts =
+      raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
   final out = <int>[];
   for (final p in parts) {
     final v = int.tryParse(p);
@@ -170,7 +181,8 @@ class QuantAnalysisView {
     } on FormatException {
       rethrow;
     } catch (e) {
-      throw FormatException('quant-analyze: malformed response (${e.runtimeType})');
+      throw FormatException(
+          'quant-analyze: malformed response (${e.runtimeType})');
     }
   }
 
@@ -179,12 +191,14 @@ class QuantAnalysisView {
 
   /// The UI shows the first 16 chars; anything else is a malformed response (Codex Gate 3).
   static String _hash(String h) {
-    if (!_hexHash.hasMatch(h)) throw const FormatException('quant-analyze: bad contentHash');
+    if (!_hexHash.hasMatch(h))
+      throw const FormatException('quant-analyze: bad contentHash');
     return h;
   }
 
   static String _day(String iso) {
-    if (!_isoDay.hasMatch(iso)) throw FormatException('quant-analyze: bad date $iso');
+    if (!_isoDay.hasMatch(iso))
+      throw FormatException('quant-analyze: bad date $iso');
     return iso.substring(0, 10);
   }
 
@@ -195,22 +209,27 @@ class QuantAnalysisView {
       return v;
     }
 
-    Map<String, dynamic> obj(Map<String, dynamic> m, String k) => Map<String, dynamic>.from(req<Map>(m, k));
+    Map<String, dynamic> obj(Map<String, dynamic> m, String k) =>
+        Map<String, dynamic>.from(req<Map>(m, k));
     final instruments = req<List>(json, 'instruments');
-    if (instruments.isEmpty) throw const FormatException('quant-analyze: no instrument');
+    if (instruments.isEmpty)
+      throw const FormatException('quant-analyze: no instrument');
     final instrument = Map<String, dynamic>.from(instruments.first as Map);
     final period = obj(json, 'period');
     final snap = obj(json, 'dataSnapshot');
     final prov = obj(snap, 'provenance');
     final fresh = obj(snap, 'freshness');
     final cal = obj(snap, 'calendar');
-    final risk = json['risk'] is Map ? Map<String, dynamic>.from(json['risk'] as Map) : null;
+    final risk = json['risk'] is Map
+        ? Map<String, dynamic>.from(json['risk'] as Map)
+        : null;
     final mic = instrument['exchangeMic'] as String?;
     final currency = req<String>(instrument, 'currency');
     return QuantAnalysisView(
       analysisId: req<String>(json, 'analysisId'),
       engineVersion: req<String>(json, 'engineVersion'),
-      instrumentLabel: '${req<String>(instrument, 'assetClass')} · ${req<String>(instrument, 'symbol')}'
+      instrumentLabel:
+          '${req<String>(instrument, 'assetClass')} · ${req<String>(instrument, 'symbol')}'
           '${mic != null ? ' · $mic' : ''} · $currency',
       currency: currency,
       periodStart: _day(req<String>(period, 'start')),
@@ -241,13 +260,22 @@ class QuantAnalysisView {
           ),
       ],
       assumptions: [
-        for (final a in req<List>(json, 'assumptions')) '${(a as Map)['code']}${a['value'] != null ? ' = ${a['value']}' : ''}',
+        for (final a in req<List>(json, 'assumptions'))
+          '${(a as Map)['code']}${a['value'] != null ? ' = ${a['value']}' : ''}',
       ],
       warnings: [
-        for (final w in req<List>(json, 'warnings')) QuantWarningView((w as Map)['code'] as String, w['message'] as String? ?? ''),
+        for (final w in req<List>(json, 'warnings'))
+          QuantWarningView(
+              (w as Map)['code'] as String, w['message'] as String? ?? ''),
       ],
-      riskNotImplemented: [for (final r in (risk?['notImplemented'] as List? ?? const [])) r as String],
-      signals: [for (final s in req<List>(json, 'signals')) (s as Map)['description'] as String],
+      riskNotImplemented: [
+        for (final r in (risk?['notImplemented'] as List? ?? const []))
+          r as String
+      ],
+      signals: [
+        for (final s in req<List>(json, 'signals'))
+          (s as Map)['description'] as String
+      ],
     );
   }
 }
@@ -257,7 +285,8 @@ class QuantAnalyzeOutcome {
   const QuantAnalyzeOutcome.success(QuantAnalysisView this.analysis)
       : errorCode = null,
         errorField = null;
-  const QuantAnalyzeOutcome.failure(String this.errorCode, {this.errorField}) : analysis = null;
+  const QuantAnalyzeOutcome.failure(String this.errorCode, {this.errorField})
+      : analysis = null;
 
   final QuantAnalysisView? analysis;
   final String? errorCode;
@@ -274,7 +303,9 @@ const kQuantMaxSeriesPerAnalysis = 10;
 /// quant.analyze.watchlist.v1 — only ids travel; the server reads the
 /// instruments from the caller's own watchlist and the data from its own
 /// provider (the client can supply neither).
-Map<String, dynamic> watchlistAnalysisBody(String watchlistId, List<String> itemIds) => {
+Map<String, dynamic> watchlistAnalysisBody(
+        String watchlistId, List<String> itemIds) =>
+    {
       'contract_version': 'quant.analyze.watchlist.v1',
       'watchlist_id': watchlistId,
       if (itemIds.isNotEmpty) 'item_ids': itemIds,
@@ -289,7 +320,8 @@ class QuantWatchlistItemView {
 }
 
 class QuantWatchlistView {
-  const QuantWatchlistView({required this.id, required this.name, required this.items});
+  const QuantWatchlistView(
+      {required this.id, required this.name, required this.items});
   final String id;
   final String name;
   final List<QuantWatchlistItemView> items;
@@ -297,7 +329,8 @@ class QuantWatchlistView {
   factory QuantWatchlistView.fromJson(Map<String, dynamic> j) {
     String s(Map m, String k) {
       final v = m[k];
-      if (v is! String) throw FormatException('quant-watchlists: unexpected field $k');
+      if (v is! String)
+        throw FormatException('quant-watchlists: unexpected field $k');
       return v;
     }
 
@@ -308,7 +341,8 @@ class QuantWatchlistView {
         for (final it in (j['items'] as List? ?? const []))
           QuantWatchlistItemView(
             id: s(it as Map, 'id'),
-            label: '${s(it, 'symbol')}${it['exchange_mic'] is String ? ' · ${it['exchange_mic']}' : ''} · ${s(it, 'currency')}',
+            label:
+                '${s(it, 'symbol')}${it['exchange_mic'] is String ? ' · ${it['exchange_mic']}' : ''} · ${s(it, 'currency')}',
           ),
       ],
     );
@@ -316,8 +350,10 @@ class QuantWatchlistView {
 }
 
 class QuantWatchlistsOutcome {
-  const QuantWatchlistsOutcome.success(List<QuantWatchlistView> this.watchlists) : errorCode = null;
-  const QuantWatchlistsOutcome.failure(String this.errorCode) : watchlists = null;
+  const QuantWatchlistsOutcome.success(List<QuantWatchlistView> this.watchlists)
+      : errorCode = null;
+  const QuantWatchlistsOutcome.failure(String this.errorCode)
+      : watchlists = null;
   final List<QuantWatchlistView>? watchlists;
   final String? errorCode;
 }
@@ -349,7 +385,8 @@ class QuantSeriesSummaryView {
 }
 
 class QuantCorrelationView {
-  const QuantCorrelationView(this.a, this.b, this.value, this.observations, this.error);
+  const QuantCorrelationView(
+      this.a, this.b, this.value, this.observations, this.error);
   final String a;
   final String b;
   final double? value;
@@ -395,7 +432,8 @@ class QuantMultiView {
     } on FormatException {
       rethrow;
     } catch (e) {
-      throw FormatException('quant-analyze: malformed multi response (${e.runtimeType})');
+      throw FormatException(
+          'quant-analyze: malformed multi response (${e.runtimeType})');
     }
   }
 
@@ -409,7 +447,9 @@ class QuantMultiView {
     final keys = <String>{};
     for (final s in series) {
       final k = (s as Map)['instrumentKey'];
-      if (k is! String || !keys.add(k)) throw const FormatException('quant-analyze: missing or duplicate instrumentKey');
+      if (k is! String || !keys.add(k))
+        throw const FormatException(
+            'quant-analyze: missing or duplicate instrumentKey');
     }
     final symbols = <String, int>{};
     for (final s in series) {
@@ -418,7 +458,8 @@ class QuantMultiView {
     }
     return {
       for (final s in series)
-        if ((s as Map)['instrumentKey'] is String && (s['instrument'] as Map?)?['symbol'] is String)
+        if ((s as Map)['instrumentKey'] is String &&
+            (s['instrument'] as Map?)?['symbol'] is String)
           s['instrumentKey'] as String: () {
             final inst = s['instrument'] as Map;
             final sym = inst['symbol'] as String;
@@ -438,11 +479,16 @@ class QuantMultiView {
     final alignment = req<Map>(json, 'alignment');
     final ds = json['dataSource'] is Map ? json['dataSource'] as Map : null;
     final cache = ds?['cache'] is Map ? ds!['cache'] as Map : null;
-    final portfolio = json['portfolio'] is Map ? json['portfolio'] as Map : null;
-    String? day(Object? v) => v is String && v.length >= 10 ? v.substring(0, 10) : null;
+    final portfolio =
+        json['portfolio'] is Map ? json['portfolio'] as Map : null;
+    String? day(Object? v) =>
+        v is String && v.length >= 10 ? v.substring(0, 10) : null;
     final labels = _labelsByKey(req<List>(json, 'series'));
     // A correlation cell must reference a series of this response (Codex Gate 3).
-    String label(String key) => labels[key] ?? (throw FormatException('quant-analyze: correlation references an unknown series'));
+    String label(String key) =>
+        labels[key] ??
+        (throw FormatException(
+            'quant-analyze: correlation references an unknown series'));
     return QuantMultiView(
       id: req<String>(json, 'multiAnalysisId'),
       series: [
@@ -453,7 +499,8 @@ class QuantMultiView {
             final prov = req<Map>(snap, 'provenance');
             final inst = req<Map>(s, 'instrument');
             return QuantSeriesSummaryView(
-              label: '${req<String>(inst, 'symbol')}${inst['exchangeMic'] is String ? ' · ${inst['exchangeMic']}' : ''} · ${req<String>(inst, 'currency')}',
+              label:
+                  '${req<String>(inst, 'symbol')}${inst['exchangeMic'] is String ? ' · ${inst['exchangeMic']}' : ''} · ${req<String>(inst, 'currency')}',
               alignedReturn: req<num>(s, 'alignedCumulativeReturn').toDouble(),
               dropped: req<int>(s, 'droppedFromAlignment'),
               freshnessState: req<String>(req<Map>(snap, 'freshness'), 'state'),
@@ -478,10 +525,13 @@ class QuantMultiView {
           ),
       ],
       warnings: [
-        for (final w in req<List>(json, 'warnings')) QuantWarningView((w as Map)['code'] as String, w['message'] as String? ?? ''),
+        for (final w in req<List>(json, 'warnings'))
+          QuantWarningView(
+              (w as Map)['code'] as String, w['message'] as String? ?? ''),
       ],
       assumptions: [
-        for (final a in req<List>(json, 'assumptions')) '${(a as Map)['code']}${a['value'] != null ? ' = ${a['value']}' : ''}',
+        for (final a in req<List>(json, 'assumptions'))
+          '${(a as Map)['code']}${a['value'] != null ? ' = ${a['value']}' : ''}',
       ],
       portfolioReturn: (portfolio?['buyAndHoldReturn'] as num?)?.toDouble(),
       dataSourceKind: ds?['kind'] as String?,
@@ -495,7 +545,8 @@ class QuantMultiOutcome {
   const QuantMultiOutcome.success(QuantMultiView this.result)
       : errorCode = null,
         errorField = null;
-  const QuantMultiOutcome.failure(String this.errorCode, {this.errorField}) : result = null;
+  const QuantMultiOutcome.failure(String this.errorCode, {this.errorField})
+      : result = null;
   final QuantMultiView? result;
   final String? errorCode;
   final String? errorField;

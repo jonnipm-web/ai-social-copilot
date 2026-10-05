@@ -46,35 +46,35 @@ void expectPortuguese(String text, {String? reason}) {
 }
 
 Project _project(String id, {String name = 'Alpha'}) => Project(
-      id:        id,
-      userId:    'user-1',
-      name:      name,
+      id: id,
+      userId: 'user-1',
+      name: name,
       createdAt: DateTime(2026, 1, 1),
       updatedAt: DateTime(2026, 1, 1),
     );
 
 EcosystemScore _score(String id, int eco) => EcosystemScore(
-      project:          _project(id),
+      project: _project(id),
       opportunityScore: 0,
-      strategicFit:     0,
-      synergyScore:     0,
-      roiScore:         0,
-      momentumScore:    0,
-      ecosystemScore:   eco,
-      recommendation:   'MANTER',
-      strengths:        const [],
-      risks:            const [],
-      quickWins:        const [],
-      totalRoi:         0,
-      actionCount:      0,
+      strategicFit: 0,
+      synergyScore: 0,
+      roiScore: 0,
+      momentumScore: 0,
+      ecosystemScore: eco,
+      recommendation: 'MANTER',
+      strengths: const [],
+      risks: const [],
+      quickWins: const [],
+      totalRoi: 0,
+      actionCount: 0,
       completedActions: 0,
-      labItemCount:     0,
+      labItemCount: 0,
     );
 
 ActionQueueItem _action(String id) => ActionQueueItem(
-      id:        id,
-      userId:    'user-1',
-      title:     'Task $id',
+      id: id,
+      userId: 'user-1',
+      title: 'Task $id',
       createdAt: DateTime(2026, 1, 1),
     );
 
@@ -119,11 +119,11 @@ void main() {
 
   group('R16 — IVE context-aware bubble', () {
     const ctx = IveContextData(
-      healthScore:               62,
-      pendingActionsCount:       4,
+      healthScore: 62,
+      pendingActionsCount: 4,
       pendingOpportunitiesCount: 3,
-      topProjectName:            'Alpha',
-      topProjectScore:           81,
+      topProjectName: 'Alpha',
+      topProjectScore: 81,
     );
 
     test('EN output is English for every mapped route', () {
@@ -139,9 +139,12 @@ void main() {
     });
 
     test('PT output is Portuguese', () {
-      expectPortuguese(buildIveContextMessage(ctx, AppConstants.routeProjects, _pt));
-      expectPortuguese(buildIveContextMessage(ctx, AppConstants.routeActionEngine, _pt));
-      expectPortuguese(buildIveContextMessage(ctx, AppConstants.routeEcosystem, _pt));
+      expectPortuguese(
+          buildIveContextMessage(ctx, AppConstants.routeProjects, _pt));
+      expectPortuguese(
+          buildIveContextMessage(ctx, AppConstants.routeActionEngine, _pt));
+      expectPortuguese(
+          buildIveContextMessage(ctx, AppConstants.routeEcosystem, _pt));
     });
 
     test('bottleneck fallback is localized', () {
@@ -152,15 +155,18 @@ void main() {
 
     test('health 0 (no data) still yields no message', () {
       const empty = IveContextData();
-      expect(buildIveContextMessage(empty, AppConstants.routeEcosystem, _en), isEmpty);
+      expect(buildIveContextMessage(empty, AppConstants.routeEcosystem, _en),
+          isEmpty);
     });
   });
 
   group('R16 — ecosystem alerts (shown in UI and sent to the AI)', () {
     test('health-low alert follows the locale', () {
       final scores = [_score('p1', 35)];
-      final en = selectEcosystemAlert(scores: scores, health: 35, pending: const [], l10n: _en);
-      final pt = selectEcosystemAlert(scores: scores, health: 35, pending: const [], l10n: _pt);
+      final en = selectEcosystemAlert(
+          scores: scores, health: 35, pending: const [], l10n: _en);
+      final pt = selectEcosystemAlert(
+          scores: scores, health: 35, pending: const [], l10n: _pt);
       expectEnglish(en.alertMessage);
       expectPortuguese(pt.alertMessage);
       expect(en.alertId, pt.alertId); // ids are language-neutral
@@ -168,15 +174,18 @@ void main() {
 
     test('critical-project alert follows the locale', () {
       final scores = [_score('ok', 90), _score('bad', 20)];
-      final en = selectEcosystemAlert(scores: scores, health: 55, pending: const [], l10n: _en);
+      final en = selectEcosystemAlert(
+          scores: scores, health: 55, pending: const [], l10n: _en);
       expectEnglish(en.alertMessage);
       expect(en.alertId, 'score_critical_bad');
     });
 
     test('overdue-actions alert follows the locale', () {
       final pending = List.generate(6, (i) => _action('a$i'));
-      final en = selectEcosystemAlert(scores: const [], health: 0, pending: pending, l10n: _en);
-      final pt = selectEcosystemAlert(scores: const [], health: 0, pending: pending, l10n: _pt);
+      final en = selectEcosystemAlert(
+          scores: const [], health: 0, pending: pending, l10n: _en);
+      final pt = selectEcosystemAlert(
+          scores: const [], health: 0, pending: pending, l10n: _pt);
       expectEnglish(en.alertMessage);
       expectPortuguese(pt.alertMessage);
     });
@@ -184,22 +193,26 @@ void main() {
 
   group('R16 — grounding warnings', () {
     KnowledgeItem item(String id, String content) => KnowledgeItem(
-          id:        id,
-          userId:    'uid',
-          title:     'Doc $id',
-          content:   content,
+          id: id,
+          userId: 'uid',
+          title: 'Doc $id',
+          content: content,
           createdAt: DateTime(2026),
           updatedAt: DateTime(2026),
         );
 
-    test('EMPTY_CONTENT / BUDGET_EXCEEDED messages follow the locale; codes unchanged', () {
+    test(
+        'EMPTY_CONTENT / BUDGET_EXCEEDED messages follow the locale; codes unchanged',
+        () {
       final items = [
         item('1', ''),
         item('2', 'word ' * 400),
         item('3', 'text ' * 400),
       ];
-      final en = DocumentContextBuilder.buildGrounding(items, maxChars: 300, l10n: _en);
-      final pt = DocumentContextBuilder.buildGrounding(items, maxChars: 300, l10n: _pt);
+      final en = DocumentContextBuilder.buildGrounding(items,
+          maxChars: 300, l10n: _en);
+      final pt = DocumentContextBuilder.buildGrounding(items,
+          maxChars: 300, l10n: _pt);
       expect(en.warnings.map((w) => w.code), contains('EMPTY_CONTENT'));
       expect(en.warnings.map((w) => w.code), contains('BUDGET_EXCEEDED'));
       for (final w in en.warnings) {
@@ -211,13 +224,15 @@ void main() {
 
   group('R16 — IveIssue localization', () {
     test('factory issues render in the presentation language', () {
-      final issue = IveIssue.actionMutationFailed(actionTitle: 'Approve', technicalError: 'x');
+      final issue = IveIssue.actionMutationFailed(
+          actionTitle: 'Approve', technicalError: 'x');
       expectEnglish(issue.localizedMessage(_en));
       expectPortuguese(issue.localizedMessage(_pt));
       for (final a in issue.recommendedActions) {
         expectEnglish(a.localizedLabel(_en));
       }
-      final dl = IveIssue.knowledgeDownloadFailed(itemId: 'k', itemName: 'Deck', technicalError: 'x');
+      final dl = IveIssue.knowledgeDownloadFailed(
+          itemId: 'k', itemName: 'Deck', technicalError: 'x');
       expectEnglish(dl.localizedMessage(_en));
       expect(dl.recommendedActions.map((a) => a.localizedLabel(_en)),
           everyElement(isNot(isEmpty)));
@@ -225,13 +240,13 @@ void main() {
 
     test('custom issue codes fall back to their own userMessage', () {
       final custom = IveIssue(
-        errorCode:        'CUSTOM',
-        stage:            IveIssueStage.unknown,
-        severity:         IveIssueSeverity.info,
-        recoverable:      true,
-        userMessage:      'custom text',
+        errorCode: 'CUSTOM',
+        stage: IveIssueStage.unknown,
+        severity: IveIssueSeverity.info,
+        recoverable: true,
+        userMessage: 'custom text',
         technicalMessage: '',
-        occurredAt:       DateTime(2026),
+        occurredAt: DateTime(2026),
       );
       expect(custom.localizedMessage(_en), 'custom text');
     });
@@ -239,16 +254,16 @@ void main() {
 
   group('R16 — decision validation labels', () {
     const v = DecisionValidation(
-      entityName:       'Alpha',
-      status:           DecisionValidationStatus.structuring,
-      coverageScore:    40,
-      learningScore:    70,
-      profileComplete:  false,
-      documentCount:    5,
+      entityName: 'Alpha',
+      status: DecisionValidationStatus.structuring,
+      coverageScore: 40,
+      learningScore: 70,
+      profileComplete: false,
+      documentCount: 5,
       indexedDocuments: 3,
-      assetCount:       0,
+      assetCount: 0,
       opportunityCount: 0,
-      blockReasons:     [],
+      blockReasons: [],
     );
 
     test('EN labels are English', () {
@@ -268,22 +283,26 @@ void main() {
 
   group('R16 — project intelligence profile', () {
     final profiles = ProjectIntelligenceService().computeProfiles(
-      projects:            [_project('p1')],
-      analyses:            const [],
-      actions:             const [],
-      labItems:            const [],
-      revenuePlans:        const [],
+      projects: [_project('p1')],
+      analyses: const [],
+      actions: const [],
+      labItems: const [],
+      revenuePlans: const [],
       totalKnowledgeItems: 0,
     );
     final p = profiles.single;
 
-    test('unknown identity fields are empty (no PT sentinel), with a localized display label', () {
+    test(
+        'unknown identity fields are empty (no PT sentinel), with a localized display label',
+        () {
       expect(p.niche, isEmpty);
       expect(p.targetAudience, isEmpty);
       expect(p.monetizationModel, isEmpty);
       expect(p.hasNiche, isFalse);
-      expect(ProjectIntelligenceProfile.displayOrNotDefined(p.niche, _en), _en.ctxProfileNotDefined);
-      expectEnglish(ProjectIntelligenceProfile.displayOrNotDefined(p.niche, _en));
+      expect(ProjectIntelligenceProfile.displayOrNotDefined(p.niche, _en),
+          _en.ctxProfileNotDefined);
+      expectEnglish(
+          ProjectIntelligenceProfile.displayOrNotDefined(p.niche, _en));
     });
 
     test('maturity stage stays canonical; label is localized', () {
@@ -298,7 +317,8 @@ void main() {
       for (final g in p.missingKnowledge) {
         expectEnglish(KnowledgeCoverage.gapLabel(g, _en), reason: g);
       }
-      expectPortuguese(KnowledgeCoverage.gapLabel(KnowledgeCoverage.kGapNoActions, _pt));
+      expectPortuguese(
+          KnowledgeCoverage.gapLabel(KnowledgeCoverage.kGapNoActions, _pt));
       expectEnglish(p.coverage.coverageLabel(_en));
     });
   });

@@ -67,15 +67,14 @@ class FileImportService {
 
     if (file == null) return null;
 
-    final fileName  = file.name;
-    final extension = fileName.contains('.')
-        ? fileName.split('.').last.toLowerCase()
-        : 'txt';
+    final fileName = file.name;
+    final extension =
+        fileName.contains('.') ? fileName.split('.').last.toLowerCase() : 'txt';
 
     final bytes = await file.readAsBytes().timeout(
-      _readTimeout,
-      onTimeout: () => throw const AppException(AppErrorCode.fileTimeout),
-    );
+          _readTimeout,
+          onTimeout: () => throw const AppException(AppErrorCode.fileTimeout),
+        );
     if (bytes.isEmpty) throw const AppException(AppErrorCode.fileUnreadable);
 
     // TXT e CSV nunca passam pelo process-file (que já checa tamanho antes
@@ -90,9 +89,9 @@ class FileImportService {
       }
       final text = utf8.decode(bytes, allowMalformed: true);
       return FileImportResult(
-        text:      text,
-        fileName:  fileName,
-        fileType:  extension,
+        text: text,
+        fileName: fileName,
+        fileType: extension,
         charCount: text.length,
       );
     }
@@ -111,7 +110,7 @@ class FileImportService {
       _processFileFunction,
       body: {
         'file_base64': base64Content,
-        'file_type':   extension,
+        'file_type': extension,
       },
     ).timeout(
       _extractTimeout,
@@ -131,9 +130,9 @@ class FileImportService {
     }
 
     return FileImportResult(
-      text:      text,
-      fileName:  fileName,
-      fileType:  extension,
+      text: text,
+      fileName: fileName,
+      fileType: extension,
       charCount: (data['char_count'] as int?) ?? text.length,
     );
   }

@@ -106,7 +106,9 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   // authenticated destination.
   bool _routeReady() {
     final route = IveForensicSnapshot.settledRoute;
-    return route.isNotEmpty && route != AppConstants.routeSplash && route != AppConstants.routeLogin;
+    return route.isNotEmpty &&
+        route != AppConstants.routeSplash &&
+        route != AppConstants.routeLogin;
   }
 
   // STABILITY-09-FIX (Codex Gate round 5, P1) — `settledRoute` (and
@@ -134,7 +136,8 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   // pre-existing characteristic of currentProfileProvider shared by the
   // whole app, not something this mission introduced or is scoped to fix
   // (mission section 16).
-  bool _hasLiveSession() => ref.read(authStateProvider).valueOrNull?.session != null;
+  bool _hasLiveSession() =>
+      ref.read(authStateProvider).valueOrNull?.session != null;
 
   @override
   void initState() {
@@ -166,7 +169,11 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   }
 
   void _maybeSchedule(Profile? profile, IveIntroState introState) {
-    if (_presented || profile == null || !introState.shouldShow || !_routeReady() || !_hasLiveSession()) {
+    if (_presented ||
+        profile == null ||
+        !introState.shouldShow ||
+        !_routeReady() ||
+        !_hasLiveSession()) {
       return;
     }
     _presented = true;
@@ -177,7 +184,7 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(currentProfileProvider);
-    final introState   = ref.watch(iveIntroProvider);
+    final introState = ref.watch(iveIntroProvider);
     // Watched (not just read) so an external auth-state change (session
     // expiry, sign-out in another tab) rebuilds this widget on its own --
     // see _hasLiveSession's own comment.

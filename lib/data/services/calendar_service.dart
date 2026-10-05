@@ -36,7 +36,10 @@ class CalendarService {
   Future<CalendarItem> updateStatus(String id, String status) async {
     final row = await _client
         .from(AppConstants.tableCalendarItems)
-        .update({'status': status, 'updated_at': DateTime.now().toUtc().toIso8601String()})
+        .update({
+          'status': status,
+          'updated_at': DateTime.now().toUtc().toIso8601String()
+        })
         .eq('id', id)
         .select()
         .single();
@@ -55,9 +58,6 @@ class CalendarService {
   }
 
   Future<void> delete(String id) async {
-    await _client
-        .from(AppConstants.tableCalendarItems)
-        .delete()
-        .eq('id', id);
+    await _client.from(AppConstants.tableCalendarItems).delete().eq('id', id);
   }
 }

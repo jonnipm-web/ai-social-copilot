@@ -22,15 +22,15 @@ import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 import '../../../shared/widgets/translated_content_notice.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGreen   = Color(0xFF4CAF50);
-const _kOrange  = Color(0xFFFF9800);
-const _kRed     = Color(0xFFF44336);
-const _kGold    = Color(0xFFFFD700);
-const _kCyan    = Color(0xFF00BCD4);
-const _kPink    = Color(0xFFE91E63);
+const _kGreen = Color(0xFF4CAF50);
+const _kOrange = Color(0xFFFF9800);
+const _kRed = Color(0xFFF44336);
+const _kGold = Color(0xFFFFD700);
+const _kCyan = Color(0xFF00BCD4);
+const _kPink = Color(0xFFE91E63);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 Color _scoreColor(int score) {
@@ -68,7 +68,7 @@ class MarketIntelligenceHubScreen extends ConsumerStatefulWidget {
 
 class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
   bool _roiSaving = false;
-  bool _roiSaved  = false;
+  bool _roiSaved = false;
 
   Future<void> _saveToRoi(
     MarketAnalysis analysis,
@@ -83,9 +83,9 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
 
       if (analysis.opportunityScore > 0) {
         await svc.create(
-          metricType:  'opportunity_score',
+          metricType: 'opportunity_score',
           metricValue: analysis.opportunityScore.toDouble(),
-          notes:       'Market Intelligence: ${analysis.input}',
+          notes: 'Market Intelligence: ${analysis.input}',
         );
       }
 
@@ -95,9 +95,9 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                 .reduce((a, b) => a + b) /
             opportunities.length;
         await svc.create(
-          metricType:  'avg_opportunity_score',
+          metricType: 'avg_opportunity_score',
           metricValue: avg,
-          notes:       noteL10n.uxMiRoiNoteOpportunities(
+          notes: noteL10n.uxMiRoiNoteOpportunities(
               '${opportunities.length}', analysis.input),
         );
       }
@@ -105,20 +105,27 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
       final monthly = plan?.monthlyModerate ?? analysis.revenueMonthlyMax;
       if (monthly > 0) {
         await svc.create(
-          metricType:  'revenue_potential',
+          metricType: 'revenue_potential',
           metricValue: monthly,
-          notes:       'Market Intelligence: ${analysis.niche ?? analysis.input}',
+          notes: 'Market Intelligence: ${analysis.niche ?? analysis.input}',
         );
       }
 
       ref.invalidate(roiMetricsProvider);
-      if (mounted) setState(() { _roiSaved = true; _roiSaving = false; });
+      if (mounted)
+        setState(() {
+          _roiSaved = true;
+          _roiSaving = false;
+        });
     } catch (e) {
       if (mounted) {
         setState(() => _roiSaving = false);
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.miHubRoiSaveError(extractErrorMessage(e, l10n))), backgroundColor: _kRed),
+          SnackBar(
+              content:
+                  Text(l10n.miHubRoiSaveError(extractErrorMessage(e, l10n))),
+              backgroundColor: _kRed),
         );
       }
     }
@@ -127,17 +134,23 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final analysisAsync      = ref.watch(marketAnalysisByIdProvider(widget.analysisId));
-    final competitorsAsync   = ref.watch(competitorsByAnalysisProvider(widget.analysisId));
-    final gapAsync           = ref.watch(gapAnalysisByAnalysisProvider(widget.analysisId));
-    final opportunitiesAsync = ref.watch(opportunitiesByAnalysisProvider(widget.analysisId));
-    final revenuePlanAsync   = ref.watch(revenuePlanByAnalysisProvider(widget.analysisId));
+    final analysisAsync =
+        ref.watch(marketAnalysisByIdProvider(widget.analysisId));
+    final competitorsAsync =
+        ref.watch(competitorsByAnalysisProvider(widget.analysisId));
+    final gapAsync =
+        ref.watch(gapAnalysisByAnalysisProvider(widget.analysisId));
+    final opportunitiesAsync =
+        ref.watch(opportunitiesByAnalysisProvider(widget.analysisId));
+    final revenuePlanAsync =
+        ref.watch(revenuePlanByAnalysisProvider(widget.analysisId));
     // COMMERCIAL-V1-PHYSICAL-QA-RECOVERY (PQ-02) — Niches and Content
     // Cluster previously had no dedicated Hub card at all (only the
     // generic icon+label nav tile), which is exactly the "giant low-
     // information card" the Owner flagged physically.
-    final nichesAsync        = ref.watch(nichesByAnalysisProvider(widget.analysisId));
-    final contentClusterAsync = ref.watch(contentClusterByAnalysisProvider(widget.analysisId));
+    final nichesAsync = ref.watch(nichesByAnalysisProvider(widget.analysisId));
+    final contentClusterAsync =
+        ref.watch(contentClusterByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -145,14 +158,16 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeMarketIntelligence),
         ),
         title: Text(
           l10n.miHubAppBarTitle,
-          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+              color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
           // IVE-EXPERIENCE-V1-06 (Section 20) — first (and only, per mission
@@ -165,24 +180,29 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
           // model) rather than assuming project-agnostic.
           if (analysisAsync.valueOrNull != null)
             IconButton(
-              icon: const Icon(Icons.auto_awesome_rounded, color: Colors.white54),
+              icon:
+                  const Icon(Icons.auto_awesome_rounded, color: Colors.white54),
               tooltip: l10n.miHubCompareWithIveTooltip,
               onPressed: () {
                 final analysis = analysisAsync.value!;
-                final ctx = ref.read(iveContextDataProvider(analysis.projectId)).valueOrNull;
-                final contextData =
-                    ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+                final ctx = ref
+                    .read(iveContextDataProvider(analysis.projectId))
+                    .valueOrNull;
+                final contextData = ctx != null
+                    ? CopilotContextData.fromIveContext(ctx)
+                    : const CopilotContextData();
                 showCopilotChat(
                   context,
                   screenName: 'Market Intelligence', // canonical key
                   contextData: contextData,
-                  initialMessage: l10n.miHubCompareInitialMessage(analysis.niche ?? analysis.input),
+                  initialMessage: l10n.miHubCompareInitialMessage(
+                      analysis.niche ?? analysis.input),
                   request: IveInteractionRequest(
-                    projectId:        analysis.projectId,
-                    sourceModule:     'market_intelligence',
+                    projectId: analysis.projectId,
+                    sourceModule: 'market_intelligence',
                     sourceEntityType: 'market_analysis',
-                    sourceEntityId:   analysis.id,
-                    operationType:    IveOperationType.compare,
+                    sourceEntityId: analysis.id,
+                    operationType: IveOperationType.compare,
                   ),
                 );
               },
@@ -195,10 +215,12 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
               ref.invalidate(marketAnalysisByIdProvider(widget.analysisId));
               ref.invalidate(competitorsByAnalysisProvider(widget.analysisId));
               ref.invalidate(gapAnalysisByAnalysisProvider(widget.analysisId));
-              ref.invalidate(opportunitiesByAnalysisProvider(widget.analysisId));
+              ref.invalidate(
+                  opportunitiesByAnalysisProvider(widget.analysisId));
               ref.invalidate(revenuePlanByAnalysisProvider(widget.analysisId));
               ref.invalidate(nichesByAnalysisProvider(widget.analysisId));
-              ref.invalidate(contentClusterByAnalysisProvider(widget.analysisId));
+              ref.invalidate(
+                  contentClusterByAnalysisProvider(widget.analysisId));
             },
           ),
         ],
@@ -226,13 +248,12 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
         data: (analysis) {
           final competitors = (competitorsAsync.value ?? <Competitor>[])
               .toList()
-              ..sort((a, b) => b.overallScore.compareTo(a.overallScore));
-          final gap   = gapAsync.value;
-          final opps  = (opportunitiesAsync.value ?? <Opportunity>[])
-              .toList()
-              ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
-          final plan    = revenuePlanAsync.value;
-          final niches  = nichesAsync.value ?? <NicheRanking>[];
+            ..sort((a, b) => b.overallScore.compareTo(a.overallScore));
+          final gap = gapAsync.value;
+          final opps = (opportunitiesAsync.value ?? <Opportunity>[]).toList()
+            ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
+          final plan = revenuePlanAsync.value;
+          final niches = nichesAsync.value ?? <NicheRanking>[];
           final cluster = contentClusterAsync.value;
 
           return SingleChildScrollView(
@@ -250,7 +271,9 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(child: _RevenuePotentialCard(analysis: analysis, plan: plan)),
+                      Expanded(
+                          child: _RevenuePotentialCard(
+                              analysis: analysis, plan: plan)),
                       const SizedBox(width: 10),
                       Expanded(child: _InvestmentCard(analysis: analysis)),
                     ],
@@ -265,15 +288,15 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                 // M3 — Competitor Discovery Visual
                 _CompetitorRankingCard(
                   competitors: competitors,
-                  isLoading:   competitorsAsync.isLoading,
-                  analysisId:  widget.analysisId,
+                  isLoading: competitorsAsync.isLoading,
+                  analysisId: widget.analysisId,
                 ),
                 const SizedBox(height: 12),
 
                 // M4 — Gap Summary
                 _GapSummaryCard(
-                  gap:        gap,
-                  isLoading:  gapAsync.isLoading,
+                  gap: gap,
+                  isLoading: gapAsync.isLoading,
                   analysisId: widget.analysisId,
                 ),
                 const SizedBox(height: 12),
@@ -281,8 +304,8 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                 // M5 — Opportunities Panel
                 _OpportunitiesCard(
                   opportunities: opps,
-                  isLoading:     opportunitiesAsync.isLoading,
-                  analysisId:    widget.analysisId,
+                  isLoading: opportunitiesAsync.isLoading,
+                  analysisId: widget.analysisId,
                 ),
                 const SizedBox(height: 12),
 
@@ -295,33 +318,33 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                 // real "view all"/navigate CTA, so a separate icon-grid
                 // nav section was redundant chrome between real content.
                 _NicheSummaryCard(
-                  niches:     niches,
-                  isLoading:  nichesAsync.isLoading,
+                  niches: niches,
+                  isLoading: nichesAsync.isLoading,
                   analysisId: widget.analysisId,
                 ),
                 const SizedBox(height: 12),
 
                 _ContentClusterSummaryCard(
-                  cluster:    cluster,
-                  isLoading:  contentClusterAsync.isLoading,
+                  cluster: cluster,
+                  isLoading: contentClusterAsync.isLoading,
                   analysisId: widget.analysisId,
                 ),
                 const SizedBox(height: 12),
 
                 _RevenuePlannerSummaryCard(
-                  plan:       plan,
-                  isLoading:  revenuePlanAsync.isLoading,
+                  plan: plan,
+                  isLoading: revenuePlanAsync.isLoading,
                   analysisId: widget.analysisId,
                 ),
                 const SizedBox(height: 12),
 
                 // M8 — ROI Tracker Integration
                 _RoiIntegrationCard(
-                  analysis:      analysis,
+                  analysis: analysis,
                   opportunities: opps,
-                  plan:          plan,
-                  isSaving:      _roiSaving,
-                  isSaved:       _roiSaved,
+                  plan: plan,
+                  isSaving: _roiSaving,
+                  isSaved: _roiSaved,
                   onSave: () => _saveToRoi(analysis, opps, plan),
                 ),
               ],
@@ -395,7 +418,8 @@ class _ExecScoreCard extends StatelessWidget {
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 130),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: _kPrimary.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
@@ -404,7 +428,9 @@ class _ExecScoreCard extends StatelessWidget {
                     child: Text(
                       analysis.niche!,
                       style: const TextStyle(
-                          color: _kPrimary, fontSize: 10, fontWeight: FontWeight.w600),
+                          color: _kPrimary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -452,16 +478,20 @@ class _ExecScoreCard extends StatelessWidget {
                 ],
               );
               final contextColumn = Column(
-                crossAxisAlignment:
-                    isNarrow ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                crossAxisAlignment: isNarrow
+                    ? CrossAxisAlignment.start
+                    : CrossAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: isNarrow ? double.infinity : 140),
+                    constraints: BoxConstraints(
+                        maxWidth: isNarrow ? double.infinity : 140),
                     child: Text(
                       analysis.input,
                       style: const TextStyle(
-                          color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w500),
+                          color: Colors.white60,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 2,
                       textAlign: isNarrow ? TextAlign.start : TextAlign.end,
@@ -469,7 +499,8 @@ class _ExecScoreCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
@@ -477,7 +508,9 @@ class _ExecScoreCard extends StatelessWidget {
                     child: Text(
                       _rec(l10n),
                       style: TextStyle(
-                          color: color, fontSize: 11, fontWeight: FontWeight.w700),
+                          color: color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700),
                     ),
                   ),
                 ],
@@ -506,13 +539,18 @@ class _ExecScoreCard extends StatelessWidget {
           const SizedBox(height: 18),
           Row(
             children: [
-              _ScoreBar(label: l10n.miHubScoreSeo,          score: analysis.scoreSeo),
+              _ScoreBar(label: l10n.miHubScoreSeo, score: analysis.scoreSeo),
               const SizedBox(width: 8),
-              _ScoreBar(label: l10n.miHubScoreMonetization, score: analysis.scoreMonetization),
+              _ScoreBar(
+                  label: l10n.miHubScoreMonetization,
+                  score: analysis.scoreMonetization),
               const SizedBox(width: 8),
-              _ScoreBar(label: l10n.miHubScoreCompetition,  score: analysis.scoreCompetition),
+              _ScoreBar(
+                  label: l10n.miHubScoreCompetition,
+                  score: analysis.scoreCompetition),
               const SizedBox(width: 8),
-              _ScoreBar(label: l10n.miHubScoreGrowth,       score: analysis.scoreGrowth),
+              _ScoreBar(
+                  label: l10n.miHubScoreGrowth, score: analysis.scoreGrowth),
             ],
           ),
           const SizedBox(height: 14),
@@ -524,7 +562,8 @@ class _ExecScoreCard extends StatelessWidget {
             ),
             child: Text(
               _desc(l10n),
-              style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+              style: const TextStyle(
+                  color: Colors.white70, fontSize: 13, height: 1.5),
             ),
           ),
         ],
@@ -545,7 +584,8 @@ class _ScoreBar extends StatelessWidget {
       child: Column(
         children: [
           Text('$score',
-              style: TextStyle(color: c, fontSize: 13, fontWeight: FontWeight.bold)),
+              style: TextStyle(
+                  color: c, fontSize: 13, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
@@ -577,10 +617,10 @@ class _RevenuePotentialCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final minVal  = plan?.monthlyConservative ?? analysis.revenueMonthlyMin;
-    final maxVal  = plan?.monthlyAggressive   ?? analysis.revenueMonthlyMax;
-    final months  = analysis.monthsToRevenue;
-    final conf    = plan != null ? 88 : analysis.revenueConfidence;
+    final minVal = plan?.monthlyConservative ?? analysis.revenueMonthlyMin;
+    final maxVal = plan?.monthlyAggressive ?? analysis.revenueMonthlyMax;
+    final months = analysis.monthsToRevenue;
+    final conf = plan != null ? 88 : analysis.revenueConfidence;
     final hasData = minVal > 0 || maxVal > 0;
 
     return Container(
@@ -601,26 +641,34 @@ class _RevenuePotentialCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubRevenuePotentialTitle,
                   style: const TextStyle(
-                      color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 14),
           if (!hasData) ...[
-            const Icon(Icons.bar_chart_rounded, color: Colors.white24, size: 28),
+            const Icon(Icons.bar_chart_rounded,
+                color: Colors.white24, size: 28),
             const SizedBox(height: 6),
             Text(
               l10n.miHubRevenueNoDataHint,
-              style: const TextStyle(color: Colors.white38, fontSize: 11, height: 1.4),
+              style: const TextStyle(
+                  color: Colors.white38, fontSize: 11, height: 1.4),
             ),
           ] else ...[
             Text(
               minVal > 0
-                  ? l10n.miHubRevenueRangeMonthly(_formatBRL(minVal), _formatBRL(maxVal))
+                  ? l10n.miHubRevenueRangeMonthly(
+                      _formatBRL(minVal), _formatBRL(maxVal))
                   : l10n.miHubRevenueSingleMonthly(_formatBRL(maxVal)),
               style: const TextStyle(
-                  color: _kCyan, fontSize: 14, fontWeight: FontWeight.bold, height: 1.2),
+                  color: _kCyan,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  height: 1.2),
             ),
             if (plan != null) ...[
               const SizedBox(height: 4),
@@ -630,9 +678,15 @@ class _RevenuePotentialCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 12),
-            _InfoRow2(icon: Icons.timer_rounded,   label: l10n.miHubLabelDeadline,   value: l10n.miHubMonthsValue(months)),
+            _InfoRow2(
+                icon: Icons.timer_rounded,
+                label: l10n.miHubLabelDeadline,
+                value: l10n.miHubMonthsValue(months)),
             const SizedBox(height: 6),
-            _InfoRow2(icon: Icons.verified_rounded, label: l10n.miHubLabelConfidence, value: '$conf%'),
+            _InfoRow2(
+                icon: Icons.verified_rounded,
+                label: l10n.miHubLabelConfidence,
+                value: '$conf%'),
           ],
         ],
       ),
@@ -649,15 +703,17 @@ class _InvestmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n  = AppLocalizations.of(context)!;
-    final rec   = analysis.investmentRecommendation;
+    final l10n = AppLocalizations.of(context)!;
+    final rec = analysis.investmentRecommendation;
     final score = analysis.investmentScore;
-    final just  = analysis.investmentJustification;
+    final just = analysis.investmentJustification;
     final verdict = aiInvestmentVerdict(rec);
     final color = verdict == AiInvestmentVerdict.yes
         ? _kGreen
-        : verdict == AiInvestmentVerdict.no ? _kRed : _kOrange;
-    final icon  = verdict == AiInvestmentVerdict.yes
+        : verdict == AiInvestmentVerdict.no
+            ? _kRed
+            : _kOrange;
+    final icon = verdict == AiInvestmentVerdict.yes
         ? Icons.thumb_up_alt_rounded
         : verdict == AiInvestmentVerdict.no
             ? Icons.thumb_down_alt_rounded
@@ -676,7 +732,9 @@ class _InvestmentCard extends StatelessWidget {
           Text(
             l10n.miHubInvestmentTitle,
             style: const TextStyle(
-                color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                color: Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 14),
           Row(
@@ -741,25 +799,28 @@ class _PriorityActionsCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.rocket_launch_rounded, color: _kPrimary, size: 18),
+              const Icon(Icons.rocket_launch_rounded,
+                  color: _kPrimary, size: 18),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
                   l10n.miHubNextActionsTitle,
                   style: const TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
           ...actions.asMap().entries.map((e) {
-            final action   = e.value;
-            final name     = action['action']       as String? ?? '';
-            final impact   = action['impact']       as String? ?? 'Médio';
-            final effort   = action['effort']       as String? ?? 'Médio';
-            final roi      = action['roi_expected'] as String? ?? '';
-            final priority = action['priority']     as int?    ?? (e.key + 1);
+            final action = e.value;
+            final name = action['action'] as String? ?? '';
+            final impact = action['impact'] as String? ?? 'Médio';
+            final effort = action['effort'] as String? ?? 'Médio';
+            final roi = action['roi_expected'] as String? ?? '';
+            final priority = action['priority'] as int? ?? (e.key + 1);
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 14),
@@ -778,7 +839,9 @@ class _PriorityActionsCard extends StatelessWidget {
                     child: Text(
                       '$priority',
                       style: const TextStyle(
-                          color: _kPrimary, fontSize: 12, fontWeight: FontWeight.bold),
+                          color: _kPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -798,9 +861,16 @@ class _PriorityActionsCard extends StatelessWidget {
                           spacing: 6,
                           runSpacing: 4,
                           children: [
-                            _Badge(l10n.miHubBadgeImpact(aiLevelLabel(impact, l10n)), _impactColor(impact)),
-                            _Badge(l10n.miHubBadgeEffort(aiLevelLabel(effort, l10n)),  Colors.white38),
-                            if (roi.isNotEmpty) _Badge(l10n.miHubBadgeRoi(roi), _kCyan),
+                            _Badge(
+                                l10n.miHubBadgeImpact(
+                                    aiLevelLabel(impact, l10n)),
+                                _impactColor(impact)),
+                            _Badge(
+                                l10n.miHubBadgeEffort(
+                                    aiLevelLabel(effort, l10n)),
+                                Colors.white38),
+                            if (roi.isNotEmpty)
+                              _Badge(l10n.miHubBadgeRoi(roi), _kCyan),
                           ],
                         ),
                       ],
@@ -831,10 +901,10 @@ class _CompetitorRankingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n  = AppLocalizations.of(context)!;
-    final top   = competitors.take(5).toList();
-    final route = _routeFor(
-        AppConstants.routeMarketIntelligenceCompetitors, analysisId);
+    final l10n = AppLocalizations.of(context)!;
+    final top = competitors.take(5).toList();
+    final route =
+        _routeFor(AppConstants.routeMarketIntelligenceCompetitors, analysisId);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -854,7 +924,9 @@ class _CompetitorRankingCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubCompetitorsTitle,
                   style: const TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               TextButton(
@@ -872,15 +944,16 @@ class _CompetitorRankingCard extends StatelessWidget {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
+                child:
+                    CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
               ),
             )
           else if (top.isEmpty)
             _EmptyState(
-              icon:        Icons.manage_search_rounded,
-              message:     l10n.miHubCompetitorsEmptyMessage,
+              icon: Icons.manage_search_rounded,
+              message: l10n.miHubCompetitorsEmptyMessage,
               buttonLabel: l10n.miHubCompetitorsEmptyCta,
-              onTap:       () => context.push(route),
+              onTap: () => context.push(route),
             )
           else ...[
             Row(
@@ -894,7 +967,7 @@ class _CompetitorRankingCard extends StatelessWidget {
             const Divider(color: Colors.white12, height: 14),
             ...top.asMap().entries.map((e) {
               final idx = e.key;
-              final c   = e.value;
+              final c = e.value;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
@@ -958,13 +1031,16 @@ class _CompetitorRankingCard extends StatelessWidget {
             const SizedBox(height: 6),
             OutlinedButton.icon(
               onPressed: () => context.push(route),
-              icon:  const Icon(Icons.search_rounded, size: 14),
-              label: Text(l10n.miHubAnalyzeCompetitorCta, style: const TextStyle(fontSize: 12)),
+              icon: const Icon(Icons.search_rounded, size: 14),
+              label: Text(l10n.miHubAnalyzeCompetitorCta,
+                  style: const TextStyle(fontSize: 12)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: _kOrange,
                 side: const BorderSide(color: _kOrange, width: 0.8),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ],
@@ -989,7 +1065,7 @@ class _GapSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n  = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context)!;
     final route =
         _routeFor(AppConstants.routeMarketIntelligenceGaps, analysisId);
 
@@ -1011,7 +1087,9 @@ class _GapSummaryCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubGapSummaryTitle,
                   style: const TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               TextButton(
@@ -1029,22 +1107,28 @@ class _GapSummaryCard extends StatelessWidget {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
+                child:
+                    CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
               ),
             )
           else if (gap == null)
             _EmptyState(
-              icon:        Icons.analytics_outlined,
-              message:     l10n.miHubGapEmptyMessage,
+              icon: Icons.analytics_outlined,
+              message: l10n.miHubGapEmptyMessage,
               buttonLabel: l10n.miHubGapEmptyCta,
-              onTap:       () => context.push(route),
+              onTap: () => context.push(route),
             )
           else ...[
-            _GapRow(Icons.search_rounded,         l10n.miHubGapSeo,          gap!.seoGaps,          _kCyan),
-            _GapRow(Icons.article_rounded,        l10n.miHubGapContent,      gap!.contentGaps,      _kOrange),
-            _GapRow(Icons.verified_user_rounded,  l10n.miHubGapAuthority,    gap!.authorityGaps,    _kPrimary),
-            _GapRow(Icons.attach_money_rounded,   l10n.miHubGapMonetization, gap!.monetizationGaps, _kGreen),
-            _GapRow(Icons.inventory_2_rounded,    l10n.miHubGapProduct,      gap!.productGaps,      _kGold),
+            _GapRow(
+                Icons.search_rounded, l10n.miHubGapSeo, gap!.seoGaps, _kCyan),
+            _GapRow(Icons.article_rounded, l10n.miHubGapContent,
+                gap!.contentGaps, _kOrange),
+            _GapRow(Icons.verified_user_rounded, l10n.miHubGapAuthority,
+                gap!.authorityGaps, _kPrimary),
+            _GapRow(Icons.attach_money_rounded, l10n.miHubGapMonetization,
+                gap!.monetizationGaps, _kGreen),
+            _GapRow(Icons.inventory_2_rounded, l10n.miHubGapProduct,
+                gap!.productGaps, _kGold),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1094,7 +1178,8 @@ class _GapRow extends StatelessWidget {
                             fontWeight: FontWeight.w600)),
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(10),
@@ -1102,7 +1187,9 @@ class _GapRow extends StatelessWidget {
                       child: Text(
                         '${items.length}',
                         style: TextStyle(
-                            color: color, fontSize: 10, fontWeight: FontWeight.bold),
+                            color: color,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -1112,7 +1199,8 @@ class _GapRow extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       items.first,
-                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 11),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1141,8 +1229,8 @@ class _OpportunitiesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n  = AppLocalizations.of(context)!;
-    final top   = opportunities.take(3).toList();
+    final l10n = AppLocalizations.of(context)!;
+    final top = opportunities.take(3).toList();
     final route = _routeFor(
         AppConstants.routeMarketIntelligenceOpportunities, analysisId);
 
@@ -1164,7 +1252,9 @@ class _OpportunitiesCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubOpportunitiesTitle,
                   style: const TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               TextButton(
@@ -1182,15 +1272,16 @@ class _OpportunitiesCard extends StatelessWidget {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
+                child:
+                    CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
               ),
             )
           else if (top.isEmpty)
             _EmptyState(
-              icon:        Icons.lightbulb_outline_rounded,
-              message:     l10n.miHubOpportunitiesEmptyMessage,
+              icon: Icons.lightbulb_outline_rounded,
+              message: l10n.miHubOpportunitiesEmptyMessage,
               buttonLabel: l10n.miHubOpportunitiesEmptyCta,
-              onTap:       () => context.push(route),
+              onTap: () => context.push(route),
             )
           else
             ...top.map((o) {
@@ -1248,15 +1339,21 @@ class _OpportunitiesCard extends StatelessWidget {
                         spacing: 6,
                         runSpacing: 4,
                         children: [
-                          if (o.timeframe.isNotEmpty) _Badge(aiTimeframeLabel(o.timeframe, l10n), _kCyan),
+                          if (o.timeframe.isNotEmpty)
+                            _Badge(aiTimeframeLabel(o.timeframe, l10n), _kCyan),
                           if (o.effort.isNotEmpty)
-                            _Badge(l10n.miHubOppEffortBadge(aiLevelLabel(o.effort, l10n)), Colors.white38),
+                            _Badge(
+                                l10n.miHubOppEffortBadge(
+                                    aiLevelLabel(o.effort, l10n)),
+                                Colors.white38),
                           _Badge(
-                            l10n.miHubOppRevenueBadge(_scoreLabel(l10n, o.monetizationScore)),
+                            l10n.miHubOppRevenueBadge(
+                                _scoreLabel(l10n, o.monetizationScore)),
                             _kGreen,
                           ),
                           _Badge(
-                            l10n.miHubOppDifficultyBadge(_scoreLabel(l10n, 100 - o.difficultyScore)),
+                            l10n.miHubOppDifficultyBadge(
+                                _scoreLabel(l10n, 100 - o.difficultyScore)),
                             _kOrange,
                           ),
                         ],
@@ -1288,10 +1385,12 @@ class _NicheSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n   = AppLocalizations.of(context)!;
-    final route  = _routeFor(AppConstants.routeMarketIntelligenceNiches, analysisId);
-    final sorted = niches.toList()..sort((a, b) => b.overallScore.compareTo(a.overallScore));
-    final best   = sorted.isEmpty ? null : sorted.first;
+    final l10n = AppLocalizations.of(context)!;
+    final route =
+        _routeFor(AppConstants.routeMarketIntelligenceNiches, analysisId);
+    final sorted = niches.toList()
+      ..sort((a, b) => b.overallScore.compareTo(a.overallScore));
+    final best = sorted.isEmpty ? null : sorted.first;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1311,7 +1410,9 @@ class _NicheSummaryCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubNichesSummaryTitle,
                   style: const TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               TextButton(
@@ -1329,15 +1430,16 @@ class _NicheSummaryCard extends StatelessWidget {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
+                child:
+                    CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
               ),
             )
           else if (best == null)
             _EmptyState(
-              icon:        Icons.trending_up_rounded,
-              message:     l10n.miHubNichesEmptyMessage,
+              icon: Icons.trending_up_rounded,
+              message: l10n.miHubNichesEmptyMessage,
               buttonLabel: l10n.miHubNichesEmptyCta,
-              onTap:       () => context.push(route),
+              onTap: () => context.push(route),
             )
           else ...[
             Container(
@@ -1355,12 +1457,15 @@ class _NicheSummaryCard extends StatelessWidget {
                       children: [
                         Text(best.name,
                             style: const TextStyle(
-                                color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 2),
                         Text(l10n.miHubNichesBestCandidateLabel,
-                            style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 11)),
                       ],
                     ),
                   ),
@@ -1397,8 +1502,9 @@ class _ContentClusterSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n  = AppLocalizations.of(context)!;
-    final route = _routeFor(AppConstants.routeMarketIntelligenceCluster, analysisId);
+    final l10n = AppLocalizations.of(context)!;
+    final route =
+        _routeFor(AppConstants.routeMarketIntelligenceCluster, analysisId);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1412,13 +1518,16 @@ class _ContentClusterSummaryCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.account_tree_rounded, color: _kPrimary, size: 18),
+              const Icon(Icons.account_tree_rounded,
+                  color: _kPrimary, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   l10n.miHubClusterSummaryTitle,
                   style: const TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               TextButton(
@@ -1436,21 +1545,24 @@ class _ContentClusterSummaryCard extends StatelessWidget {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
+                child:
+                    CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
               ),
             )
           else if (cluster == null)
             _EmptyState(
-              icon:        Icons.account_tree_rounded,
-              message:     l10n.miHubClusterEmptyMessage,
+              icon: Icons.account_tree_rounded,
+              message: l10n.miHubClusterEmptyMessage,
               buttonLabel: l10n.miHubClusterEmptyCta,
-              onTap:       () => context.push(route),
+              onTap: () => context.push(route),
             )
           else ...[
             Text(
               cluster!.mainKeyword,
               style: const TextStyle(
-                  color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -1459,8 +1571,10 @@ class _ContentClusterSummaryCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _Badge(l10n.miHubClusterCountBadge(cluster!.clusters.length), _kPrimary),
-                _Badge(l10n.miHubClusterArticlesBadge(cluster!.articles.length), _kCyan),
+                _Badge(l10n.miHubClusterCountBadge(cluster!.clusters.length),
+                    _kPrimary),
+                _Badge(l10n.miHubClusterArticlesBadge(cluster!.articles.length),
+                    _kCyan),
               ],
             ),
           ],
@@ -1489,8 +1603,9 @@ class _RevenuePlannerSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n  = AppLocalizations.of(context)!;
-    final route = _routeFor(AppConstants.routeMarketIntelligenceRevenue, analysisId);
+    final l10n = AppLocalizations.of(context)!;
+    final route =
+        _routeFor(AppConstants.routeMarketIntelligenceRevenue, analysisId);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1510,7 +1625,9 @@ class _RevenuePlannerSummaryCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubRevenuePlannerSummaryTitle,
                   style: const TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               TextButton(
@@ -1528,34 +1645,41 @@ class _RevenuePlannerSummaryCard extends StatelessWidget {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
+                child:
+                    CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
               ),
             )
           else if (plan == null)
             _EmptyState(
-              icon:        Icons.bar_chart_rounded,
-              message:     l10n.miHubRevenuePlannerEmptyMessage,
+              icon: Icons.bar_chart_rounded,
+              message: l10n.miHubRevenuePlannerEmptyMessage,
               buttonLabel: l10n.miHubRevenuePlannerEmptyCta,
-              onTap:       () => context.push(route),
+              onTap: () => context.push(route),
             )
           else ...[
             Text(
-              l10n.miHubRevenuePlannerMonthly(_formatBRL(plan!.monthlyModerate)),
-              style: const TextStyle(color: _kPink, fontSize: 14, fontWeight: FontWeight.bold),
+              l10n.miHubRevenuePlannerMonthly(
+                  _formatBRL(plan!.monthlyModerate)),
+              style: const TextStyle(
+                  color: _kPink, fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                _Badge(l10n.miHubRevenueMilestonesBadge(plan!.milestones.length), _kPink),
-                _Badge(l10n.miHubRevenueSourcesBadge(plan!.revenueSources.length), _kCyan),
+                _Badge(
+                    l10n.miHubRevenueMilestonesBadge(plan!.milestones.length),
+                    _kPink),
+                _Badge(
+                    l10n.miHubRevenueSourcesBadge(plan!.revenueSources.length),
+                    _kCyan),
               ],
             ),
             if (plan!.milestones.isNotEmpty) ...[
               const SizedBox(height: 8),
               _InfoRow2(
-                icon:  Icons.flag_rounded,
+                icon: Icons.flag_rounded,
                 label: l10n.miHubRevenueNextMilestoneLabel,
                 value: plan!.milestones.first['title']?.toString() ?? '',
               ),
@@ -1591,9 +1715,7 @@ class _RoiIntegrationCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final avgScore = opportunities.isEmpty
         ? 0.0
-        : opportunities
-                .map((o) => o.opportunityScore)
-                .reduce((a, b) => a + b) /
+        : opportunities.map((o) => o.opportunityScore).reduce((a, b) => a + b) /
             opportunities.length;
     final revenue = plan?.monthlyModerate ?? analysis.revenueMonthlyMax;
 
@@ -1614,7 +1736,9 @@ class _RoiIntegrationCard extends StatelessWidget {
               Text(
                 l10n.miHubRoiTrackerTitle,
                 style: const TextStyle(
-                    color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -1628,11 +1752,14 @@ class _RoiIntegrationCard extends StatelessWidget {
                 '${analysis.opportunityScore}/100',
                 _scoreColor(analysis.opportunityScore),
               ),
-              _RoiStat(l10n.miHubRoiOpportunitiesLabel, '${opportunities.length}', _kGold),
+              _RoiStat(l10n.miHubRoiOpportunitiesLabel,
+                  '${opportunities.length}', _kGold),
               if (avgScore > 0)
-                _RoiStat(l10n.miHubRoiAvgScoreLabel, '${avgScore.round()}', _kCyan),
+                _RoiStat(
+                    l10n.miHubRoiAvgScoreLabel, '${avgScore.round()}', _kCyan),
               if (revenue > 0)
-                _RoiStat(l10n.miHubRoiRevenueLabel, _formatBRL(revenue), _kGreen),
+                _RoiStat(
+                    l10n.miHubRoiRevenueLabel, _formatBRL(revenue), _kGreen),
             ],
           ),
           const SizedBox(height: 16),
@@ -1646,12 +1773,15 @@ class _RoiIntegrationCard extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle_rounded, color: _kGreen, size: 18),
+                  const Icon(Icons.check_circle_rounded,
+                      color: _kGreen, size: 18),
                   const SizedBox(width: 8),
                   Text(
                     l10n.miHubRoiSavedMessage,
                     style: const TextStyle(
-                        color: _kGreen, fontSize: 13, fontWeight: FontWeight.w600),
+                        color: _kGreen,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -1718,7 +1848,9 @@ class _InfoRow2 extends StatelessWidget {
           child: Text(value,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                  color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
+                  color: Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600)),
         ),
       ],
     );
@@ -1745,7 +1877,9 @@ class _ScoreTxt extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text('$score',
         style: TextStyle(
-            color: _scoreColor(score), fontSize: 12, fontWeight: FontWeight.w600));
+            color: _scoreColor(score),
+            fontSize: 12,
+            fontWeight: FontWeight.w600));
   }
 }
 

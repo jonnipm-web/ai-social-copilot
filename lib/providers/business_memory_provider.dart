@@ -43,12 +43,12 @@ class BusinessMemoryNotifier
     String? projectId,
   }) async {
     await _svc.create(
-      memoryType:      memoryType,
-      title:           title,
-      content:         content,
+      memoryType: memoryType,
+      title: title,
+      content: content,
       confidenceScore: confidenceScore,
-      source:          source,
-      projectId:       projectId,
+      source: source,
+      projectId: projectId,
     );
     await load();
   }

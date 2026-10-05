@@ -14,19 +14,24 @@ void main() {
   group('shouldRefreshProfileOnResume', () {
     test('resumed + authenticated -> true (the actual refresh trigger)', () {
       expect(
-        shouldRefreshProfileOnResume(state: AppLifecycleState.resumed, isAuthenticated: true),
+        shouldRefreshProfileOnResume(
+            state: AppLifecycleState.resumed, isAuthenticated: true),
         isTrue,
       );
     });
 
-    test('resumed + NOT authenticated -> false (never assume entitlement while signed out)', () {
+    test(
+        'resumed + NOT authenticated -> false (never assume entitlement while signed out)',
+        () {
       expect(
-        shouldRefreshProfileOnResume(state: AppLifecycleState.resumed, isAuthenticated: false),
+        shouldRefreshProfileOnResume(
+            state: AppLifecycleState.resumed, isAuthenticated: false),
         isFalse,
       );
     });
 
-    test('every non-resumed lifecycle state -> false, even while authenticated', () {
+    test('every non-resumed lifecycle state -> false, even while authenticated',
+        () {
       for (final state in [
         AppLifecycleState.inactive,
         AppLifecycleState.hidden,

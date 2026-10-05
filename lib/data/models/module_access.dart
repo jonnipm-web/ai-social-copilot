@@ -8,7 +8,8 @@
 /// can unlock a capability. Parsing is default-deny: an unknown module, a
 /// malformed entry or a malformed payload is reported as not allowed.
 class ModuleAccessEntry {
-  const ModuleAccessEntry({required this.allowed, this.code, this.requiredPlan});
+  const ModuleAccessEntry(
+      {required this.allowed, this.code, this.requiredPlan});
 
   final bool allowed;
 
@@ -34,8 +35,10 @@ class ServerModuleAccess {
   bool isAllowed(String moduleId) => modules[moduleId]?.allowed ?? false;
 
   /// Module ids the server authorized — what IVE may offer to the user.
-  Set<String> get allowedModuleIds =>
-      {for (final e in modules.entries) if (e.value.allowed) e.key};
+  Set<String> get allowedModuleIds => {
+        for (final e in modules.entries)
+          if (e.value.allowed) e.key
+      };
 
   factory ServerModuleAccess.fromMap(Map<String, dynamic> map) {
     final subject = map['subject'];
@@ -52,7 +55,9 @@ class ServerModuleAccess {
         // Only a literal `true` grants — anything else is a denial.
         allowed: raw['allowed'] == true,
         code: raw['code'] is String ? raw['code'] as String : null,
-        requiredPlan: raw['required_plan'] is String ? raw['required_plan'] as String : null,
+        requiredPlan: raw['required_plan'] is String
+            ? raw['required_plan'] as String
+            : null,
       );
     }
     final roles = subject['roles'];
@@ -60,7 +65,9 @@ class ServerModuleAccess {
       plan: subject['plan'] is String ? subject['plan'] as String : null,
       roles: roles is List ? roles.whereType<String>().toSet() : const {},
       modules: modules,
-      correlationId: map['correlation_id'] is String ? map['correlation_id'] as String : null,
+      correlationId: map['correlation_id'] is String
+          ? map['correlation_id'] as String
+          : null,
     );
   }
 }

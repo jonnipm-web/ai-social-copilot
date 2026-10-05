@@ -45,7 +45,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
         _saved = true;
         _isSaving = false;
       });
-      showSuccessSnack(context, AppLocalizations.of(context)!.uxResultSavedToHistory);
+      showSuccessSnack(
+          context, AppLocalizations.of(context)!.uxResultSavedToHistory);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
@@ -103,7 +104,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+          constraints:
+              const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [
@@ -120,7 +122,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        l10n.uxResultGeneratedIn(widget.processingSeconds!.toStringAsFixed(1)),
+                        l10n.uxResultGeneratedIn(
+                            widget.processingSeconds!.toStringAsFixed(1)),
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.white38,

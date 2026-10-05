@@ -36,13 +36,15 @@ class StrategyLabRule {
 class V10ReferenceStrategy {
   const V10ReferenceStrategy._();
 
-  static const name = 'Strategy #001 — Paulo Trend Fibonacci V10 (Bidirectional Stepped)';
+  static const name =
+      'Strategy #001 — Paulo Trend Fibonacci V10 (Bidirectional Stepped)';
   static const status = 'RESEARCH';
   static const instrumentSymbol = 'WIN1!';
   static const signalTimeframe = '5min';
   static const timezone = 'America/Sao_Paulo';
 
-  static const entry = StrategyLabRule('ENTRY.PULLBACK_IN_TREND', 'Pullback in the prevailing trend direction');
+  static const entry = StrategyLabRule(
+      'ENTRY.PULLBACK_IN_TREND', 'Pullback in the prevailing trend direction');
   static const stopDistance = 100.0;
   static const targetDistance = 250.0;
   static const breakEvenTriggerDistance = 50.0;

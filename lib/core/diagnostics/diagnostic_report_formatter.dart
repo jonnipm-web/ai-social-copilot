@@ -35,7 +35,8 @@ String formatDiagnosticReport({
     // event below actually fired (a session may survive many deploys).
     // Each event line has its OWN, authoritative build_sha for that
     // reason — always prefer the event's own value for symbolication.
-    ..writeln('Session build_sha (session-start, may be stale for later events): ${session['build_sha'] ?? '—'}')
+    ..writeln(
+        'Session build_sha (session-start, may be stale for later events): ${session['build_sha'] ?? '—'}')
     ..writeln()
     ..writeln('## Timeline (${events.length} events)')
     ..writeln();

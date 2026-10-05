@@ -16,24 +16,34 @@ class NotAuthenticatedException implements Exception {
 enum AppErrorCode {
   /// A backend call returned no/invalid data.
   emptyResponse,
+
   /// The requested record does not exist (or is not visible).
   notFound,
+
   /// A local/remote file exceeds the import limit (~6 MB).
   fileTooLarge,
+
   /// A picked file could not be read.
   fileUnreadable,
+
   /// Picking/reading a file timed out.
   fileTimeout,
+
   /// Server-side text extraction timed out.
   extractionTimeout,
+
   /// Extracted text was too short to be useful.
   extractedTextTooShort,
+
   /// Stripe checkout session could not be started.
   checkoutFailed,
+
   /// Google sign-in is not configured in this environment.
   googleSignInNotConfigured,
+
   /// Google credentials could not be obtained.
   googleCredentialsUnavailable,
+
   /// E-mail sign-up failed without a more specific reason.
   signUpFailed,
 }

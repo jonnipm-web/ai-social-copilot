@@ -62,10 +62,11 @@ class _MarketIntelligenceScreenState
     final extra = GoRouterState.of(context).extra;
     if (identical(extra, _lastProcessedExtra)) return;
     _lastProcessedExtra = extra;
-    final projectId =
-        extra is Map && extra['projectId'] is String && (extra['projectId'] as String).isNotEmpty
-            ? extra['projectId'] as String
-            : null;
+    final projectId = extra is Map &&
+            extra['projectId'] is String &&
+            (extra['projectId'] as String).isNotEmpty
+        ? extra['projectId'] as String
+        : null;
     setState(() {
       // Always reset, never leave a previous entry's binding in place —
       // a reused State with no projectId in its new extra must NOT keep
@@ -133,9 +134,9 @@ class _MarketIntelligenceScreenState
       ref: ref,
       analysisLabel: l10n.miRootAnalyzeCta,
       request: IveInteractionRequest(
-        sourceModule:     'market_intelligence',
+        sourceModule: 'market_intelligence',
         sourceEntityType: 'market_analysis',
-        operationType:    IveOperationType.analyze,
+        operationType: IveOperationType.analyze,
       ),
       action: (idempotencyKey) => notifier.analyze(
         input,
@@ -178,19 +179,27 @@ class _MarketIntelligenceScreenState
 
   static String _friendlyError(AppLocalizations t, String raw) {
     final lower = raw.toLowerCase();
-    if (lower.contains('404') || lower.contains('not_found') || lower.contains('not found')) {
+    if (lower.contains('404') ||
+        lower.contains('not_found') ||
+        lower.contains('not found')) {
       return t.miRootErrorNotFound;
     }
-    if (lower.contains('401') || lower.contains('unauthorized') || lower.contains('jwt')) {
+    if (lower.contains('401') ||
+        lower.contains('unauthorized') ||
+        lower.contains('jwt')) {
       return t.miRootErrorSession;
     }
     if (lower.contains('timeout') || lower.contains('timed out')) {
       return t.miRootErrorTimeout;
     }
-    if (lower.contains('network') || lower.contains('socket') || lower.contains('connection')) {
+    if (lower.contains('network') ||
+        lower.contains('socket') ||
+        lower.contains('connection')) {
       return t.miRootErrorNetwork;
     }
-    if (lower.contains('groq') || lower.contains('api key') || lower.contains('apikey')) {
+    if (lower.contains('groq') ||
+        lower.contains('api key') ||
+        lower.contains('apikey')) {
       return t.miRootErrorApiKey;
     }
     return t.miRootErrorGeneric;
@@ -222,9 +231,11 @@ class _MarketIntelligenceScreenState
         // this screen's own hand-rolled canPop()/go() with the shared
         // CanonicalBackButton (Architecture-10), same fallback target
         // (routeHome) this inline version already used.
-        leading: const CanonicalBackButton(fallbackRoute: AppConstants.routeHome),
+        leading:
+            const CanonicalBackButton(fallbackRoute: AppConstants.routeHome),
         backgroundColor: const Color(0xFF0F0F1A),
-        title: Text(t.navMarketIntelligence, style: const TextStyle(color: Colors.white)),
+        title: Text(t.navMarketIntelligence,
+            style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       drawer: const AppDrawer(),
@@ -242,14 +253,16 @@ class _MarketIntelligenceScreenState
                     colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
                   ),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF00BCD4).withOpacity(0.3)),
+                  border: Border.all(
+                      color: const Color(0xFF00BCD4).withOpacity(0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.analytics_rounded, color: Color(0xFF00BCD4), size: 28),
+                        const Icon(Icons.analytics_rounded,
+                            color: Color(0xFF00BCD4), size: 28),
                         const SizedBox(width: 12),
                         Flexible(
                           child: Text(
@@ -266,7 +279,8 @@ class _MarketIntelligenceScreenState
                     const SizedBox(height: 8),
                     Text(
                       t.miRootEngineSubtitle,
-                      style: const TextStyle(color: Colors.white60, fontSize: 13),
+                      style:
+                          const TextStyle(color: Colors.white60, fontSize: 13),
                     ),
                   ],
                 ),
@@ -287,7 +301,8 @@ class _MarketIntelligenceScreenState
               if (_projectId == null) ...[
                 const SizedBox(height: 16),
                 Text(t.miRootProjectSelectorLabel,
-                    style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 8),
                 Consumer(
                   builder: (context, ref, _) {
@@ -303,13 +318,16 @@ class _MarketIntelligenceScreenState
                         fillColor: const Color(0xFF1A1A2E),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF333355)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFF333355)),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF333355)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFF333355)),
                         ),
-                        prefixIcon: const Icon(Icons.folder_outlined, color: Colors.white38),
+                        prefixIcon: const Icon(Icons.folder_outlined,
+                            color: Colors.white38),
                       ),
                       hint: Text(t.miRootProjectSelectorNone,
                           style: const TextStyle(color: Colors.white38)),
@@ -321,7 +339,8 @@ class _MarketIntelligenceScreenState
                         ),
                         ...projects.map((p) => DropdownMenuItem<String?>(
                               value: p.id,
-                              child: Text(p.name, overflow: TextOverflow.ellipsis),
+                              child:
+                                  Text(p.name, overflow: TextOverflow.ellipsis),
                             )),
                       ],
                       onChanged: (value) => setState(() {
@@ -336,26 +355,32 @@ class _MarketIntelligenceScreenState
               // mitigation) — keeps the banner honest: never claims a link
               // will be made if the write path would actually reject it.
               if (_projectId != null &&
-                  (ref.watch(projectsNotifierProvider).valueOrNull
+                  (ref
+                          .watch(projectsNotifierProvider)
+                          .valueOrNull
                           ?.any((p) => p.id == _projectId) ??
                       false)) ...[
                 const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: const Color(0xFF6C63FF).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+                    border: Border.all(
+                        color: const Color(0xFF6C63FF).withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.push_pin_rounded, size: 13, color: Color(0xFF6C63FF)),
+                      const Icon(Icons.push_pin_rounded,
+                          size: 13, color: Color(0xFF6C63FF)),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           t.ideaAnalysisProjectBannerText,
-                          style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 11),
+                          style: const TextStyle(
+                              color: Color(0xFF6C63FF), fontSize: 11),
                         ),
                       ),
                     ],
@@ -365,7 +390,8 @@ class _MarketIntelligenceScreenState
               const SizedBox(height: 24),
 
               // Input type selector
-              Text(t.miRootInputTypeLabel, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              Text(t.miRootInputTypeLabel,
+                  style: const TextStyle(color: Colors.white70, fontSize: 13)),
               const SizedBox(height: 8),
               // Wrap, not Row: the "Projeto" chip goes bold when selected,
               // which widens it enough to overflow a Row at narrow (~390px)
@@ -375,9 +401,21 @@ class _MarketIntelligenceScreenState
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _TypeChip(label: t.miRootInputTypeUrl, value: 'url', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
-                  _TypeChip(label: t.miRootInputTypeNiche, value: 'niche', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
-                  _TypeChip(label: t.miRootInputTypeProject, value: 'project', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
+                  _TypeChip(
+                      label: t.miRootInputTypeUrl,
+                      value: 'url',
+                      selected: _inputType,
+                      onTap: (v) => setState(() => _inputType = v)),
+                  _TypeChip(
+                      label: t.miRootInputTypeNiche,
+                      value: 'niche',
+                      selected: _inputType,
+                      onTap: (v) => setState(() => _inputType = v)),
+                  _TypeChip(
+                      label: t.miRootInputTypeProject,
+                      value: 'project',
+                      selected: _inputType,
+                      onTap: (v) => setState(() => _inputType = v)),
                 ],
               ),
               const SizedBox(height: 16),
@@ -407,7 +445,8 @@ class _MarketIntelligenceScreenState
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: Color(0xFF00BCD4)),
                   ),
-                  prefixIcon: const Icon(Icons.search_rounded, color: Colors.white38),
+                  prefixIcon:
+                      const Icon(Icons.search_rounded, color: Colors.white38),
                 ),
               ),
               const SizedBox(height: 16),
@@ -422,17 +461,20 @@ class _MarketIntelligenceScreenState
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
                         )
                       : const Icon(Icons.rocket_launch_rounded),
                   label: Text(
                     busy ? t.miRootAnalyzing : t.miRootAnalyzeCta,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00BCD4),
                     foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -451,18 +493,23 @@ class _MarketIntelligenceScreenState
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 16),
+                          const Icon(Icons.error_outline_rounded,
+                              color: Colors.redAccent, size: 16),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(t.miRootConnectionErrorTitle,
-                                style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w600)),
+                                style: const TextStyle(
+                                    color: Colors.redAccent,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600)),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Text(
                         _friendlyError(t, state.error.toString()),
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12),
                       ),
                     ],
                   ),
@@ -472,15 +519,24 @@ class _MarketIntelligenceScreenState
               const SizedBox(height: 32),
 
               // History
-              Text(t.miRootPreviousAnalysesTitle, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              Text(t.miRootPreviousAnalysesTitle,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               analyses.when(
-                loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF00BCD4))),
-                error: (e, _) => Text(t.commonError, style: const TextStyle(color: Colors.redAccent)),
+                loading: () => const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF00BCD4))),
+                error: (e, _) => Text(t.commonError,
+                    style: const TextStyle(color: Colors.redAccent)),
                 data: (list) => list.isEmpty
-                    ? Text(t.miRootNoAnalysesYet, style: const TextStyle(color: Colors.white38))
+                    ? Text(t.miRootNoAnalysesYet,
+                        style: const TextStyle(color: Colors.white38))
                     : Column(
-                        children: list.map((a) => _AnalysisCard(analysis: a)).toList(),
+                        children: list
+                            .map((a) => _AnalysisCard(analysis: a))
+                            .toList(),
                       ),
               ),
             ],
@@ -515,7 +571,8 @@ class _TypeChip extends StatelessWidget {
           color: isSelected ? const Color(0xFF00BCD4) : const Color(0xFF1A1A2E),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF00BCD4) : const Color(0xFF333355),
+            color:
+                isSelected ? const Color(0xFF00BCD4) : const Color(0xFF333355),
           ),
         ),
         child: Text(
@@ -539,7 +596,8 @@ class _AnalysisCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => context.go(
-        AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', analysis.id),
+        AppConstants.routeMarketIntelligenceHub
+            .replaceFirst(':id', analysis.id),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -576,7 +634,8 @@ class _AnalysisCard extends StatelessWidget {
                 children: [
                   Text(
                     analysis.input,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w600),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

@@ -17,43 +17,43 @@ final _miServiceProvider = Provider<MarketIntelligenceService>(
 // ── Market Profiles ───────────────────────────────────────────────────────
 final marketProfilesProvider =
     FutureProvider.autoDispose<List<MarketProfile>>((ref) async {
-  final projects  = await ref.watch(projectsProvider.future);
-  final analyses  = await ref.watch(marketAnalysesProvider.future);
-  final labItems  = await ref.watch(opportunityLabProvider.future);
+  final projects = await ref.watch(projectsProvider.future);
+  final analyses = await ref.watch(marketAnalysesProvider.future);
+  final labItems = await ref.watch(opportunityLabProvider.future);
 
   return ref.watch(_miServiceProvider).computeMarketProfiles(
-    projects: projects,
-    analyses: analyses,
-    labItems: labItems,
-  );
+        projects: projects,
+        analyses: analyses,
+        labItems: labItems,
+      );
 });
 
 // ── Revenue Intelligence ──────────────────────────────────────────────────
 final revenueIntelligenceProvider =
     FutureProvider.autoDispose<List<RevenueIntelligence>>((ref) async {
-  final projects     = await ref.watch(projectsProvider.future);
-  final analyses     = await ref.watch(marketAnalysesProvider.future);
+  final projects = await ref.watch(projectsProvider.future);
+  final analyses = await ref.watch(marketAnalysesProvider.future);
   final revenuePlans = await ref.watch(allRevenuePlansProvider.future);
 
   return ref.watch(_miServiceProvider).computeRevenueIntelligence(
-    projects:     projects,
-    analyses:     analyses,
-    revenuePlans: revenuePlans,
-  );
+        projects: projects,
+        analyses: analyses,
+        revenuePlans: revenuePlans,
+      );
 });
 
 // ── Execution Scores ──────────────────────────────────────────────────────
 final executionScoresProvider =
     FutureProvider.autoDispose<List<ExecutionScore>>((ref) async {
   final projects = await ref.watch(projectsProvider.future);
-  final actions  = await ref.watch(actionQueueProvider.future);
+  final actions = await ref.watch(actionQueueProvider.future);
   final labItems = await ref.watch(opportunityLabProvider.future);
 
   return ref.watch(_miServiceProvider).computeExecutionScores(
-    projects: projects,
-    actions:  actions,
-    labItems: labItems,
-  );
+        projects: projects,
+        actions: actions,
+        labItems: labItems,
+      );
 });
 
 // ── Portfolio Market Health (avg market score across all projects) ────────
@@ -65,8 +65,7 @@ final portfolioMarketHealthProvider =
 });
 
 // ── Portfolio ROI Health (projects with revenue plans vs total) ───────────
-final portfolioRoiHealthProvider =
-    FutureProvider.autoDispose<int>((ref) async {
+final portfolioRoiHealthProvider = FutureProvider.autoDispose<int>((ref) async {
   final intel = await ref.watch(revenueIntelligenceProvider.future);
   if (intel.isEmpty) return 0;
   final withPlan = intel.where((i) => i.hasRealPlan).length;

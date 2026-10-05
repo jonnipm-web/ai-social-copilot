@@ -35,41 +35,46 @@ void main() {
   group('IveVisualStateMapper', () {
     IveState makeState({
       IveExpression expression = IveExpression.happy,
-      bool bubbleVisible       = false,
+      bool bubbleVisible = false,
     }) =>
         IveState(expression: expression, bubbleVisible: bubbleVisible);
 
     test('happy → idle', () {
       expect(
-        IveVisualStateMapper.fromIveState(makeState(expression: IveExpression.happy)),
+        IveVisualStateMapper.fromIveState(
+            makeState(expression: IveExpression.happy)),
         IveVisualState.idle,
       );
     });
 
     test('thinking → thinking', () {
       expect(
-        IveVisualStateMapper.fromIveState(makeState(expression: IveExpression.thinking)),
+        IveVisualStateMapper.fromIveState(
+            makeState(expression: IveExpression.thinking)),
         IveVisualState.thinking,
       );
     });
 
     test('excited → success', () {
       expect(
-        IveVisualStateMapper.fromIveState(makeState(expression: IveExpression.excited)),
+        IveVisualStateMapper.fromIveState(
+            makeState(expression: IveExpression.excited)),
         IveVisualState.success,
       );
     });
 
     test('neutral → attentive', () {
       expect(
-        IveVisualStateMapper.fromIveState(makeState(expression: IveExpression.neutral)),
+        IveVisualStateMapper.fromIveState(
+            makeState(expression: IveExpression.neutral)),
         IveVisualState.attentive,
       );
     });
 
     test('winking → opportunity', () {
       expect(
-        IveVisualStateMapper.fromIveState(makeState(expression: IveExpression.winking)),
+        IveVisualStateMapper.fromIveState(
+            makeState(expression: IveExpression.winking)),
         IveVisualState.opportunity,
       );
     });
@@ -79,7 +84,7 @@ void main() {
   group('IveVisualStateMapper — interaction overlay', () {
     test('thinking interaction overrides expression', () {
       final state = IveState(
-        expression:  IveExpression.winking,
+        expression: IveExpression.winking,
         interaction: IveInteractionState.thinking,
       );
       expect(IveVisualStateMapper.fromIveState(state), IveVisualState.thinking);
@@ -87,25 +92,28 @@ void main() {
 
     test('speaking interaction overrides an active issue', () {
       final issue = IveIssue(
-        errorCode:        'x',
-        stage:            IveIssueStage.network,
-        severity:         IveIssueSeverity.error,
-        recoverable:      true,
-        userMessage:      'msg',
+        errorCode: 'x',
+        stage: IveIssueStage.network,
+        severity: IveIssueSeverity.error,
+        recoverable: true,
+        userMessage: 'msg',
         technicalMessage: 'tech',
-        occurredAt:       DateTime.now(),
+        occurredAt: DateTime.now(),
       );
       final state = IveState(
-        activeIssue:   issue,
+        activeIssue: issue,
         bubbleVisible: true,
-        interaction:   IveInteractionState.speaking,
+        interaction: IveInteractionState.speaking,
       );
       expect(IveVisualStateMapper.fromIveState(state), IveVisualState.speaking);
     });
 
-    test('null interaction falls back to the live business state (opportunity preserved)', () {
+    test(
+        'null interaction falls back to the live business state (opportunity preserved)',
+        () {
       final state = IveState(expression: IveExpression.winking);
-      expect(IveVisualStateMapper.fromIveState(state), IveVisualState.opportunity);
+      expect(
+          IveVisualStateMapper.fromIveState(state), IveVisualState.opportunity);
     });
   });
 
@@ -164,7 +172,8 @@ void main() {
     test('controller is safe after dispose', () {
       ctrl.dispose();
       // Should not throw
-      expect(() => ctrl.applyVisualState(IveVisualState.success), returnsNormally);
+      expect(
+          () => ctrl.applyVisualState(IveVisualState.success), returnsNormally);
     });
 
     // IVE-AVATAR-COMMERCIAL-FALLBACK-04 — Rive is frozen by configuration.
@@ -193,14 +202,17 @@ void main() {
   // ── IveStatusRingPainter ──────────────────────────────────────────────────
   group('IveStatusRingPainter', () {
     test('shouldRepaint true on state change', () {
-      const p1 = IveStatusRingPainter(state: IveVisualState.idle,    glowPulse: 0);
-      const p2 = IveStatusRingPainter(state: IveVisualState.error,   glowPulse: 0);
+      const p1 = IveStatusRingPainter(state: IveVisualState.idle, glowPulse: 0);
+      const p2 =
+          IveStatusRingPainter(state: IveVisualState.error, glowPulse: 0);
       expect(p1.shouldRepaint(p2), isTrue);
     });
 
     test('shouldRepaint false on identical params', () {
-      const p1 = IveStatusRingPainter(state: IveVisualState.warning, glowPulse: 0.5);
-      const p2 = IveStatusRingPainter(state: IveVisualState.warning, glowPulse: 0.5);
+      const p1 =
+          IveStatusRingPainter(state: IveVisualState.warning, glowPulse: 0.5);
+      const p2 =
+          IveStatusRingPainter(state: IveVisualState.warning, glowPulse: 0.5);
       expect(p1.shouldRepaint(p2), isFalse);
     });
   });
@@ -234,7 +246,7 @@ void main() {
           home: Scaffold(
             body: IveVisualFallback(
               state: IveVisualState.idle,
-              size:  72,
+              size: 72,
             ),
           ),
         ),
@@ -259,7 +271,8 @@ void main() {
     // on disk) and that it genuinely loads -- if the asset failed to
     // resolve, `errorBuilder` would render `_Placeholder` (an
     // Icons.person_rounded icon) instead of the real Image.
-    testWidgets('displays the canonical portrait asset, not the missing-asset placeholder',
+    testWidgets(
+        'displays the canonical portrait asset, not the missing-asset placeholder',
         (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -276,8 +289,10 @@ void main() {
       // ResizeImage -- so w.image is a ResizeImage here, not a bare
       // AssetImage; unwrap it via its public `imageProvider` field.
       bool matchesAvatarPortrait(ImageProvider provider) {
-        if (provider is AssetImage) return provider.assetName == IveAssetPaths.avatarPortrait;
-        if (provider is ResizeImage) return matchesAvatarPortrait(provider.imageProvider);
+        if (provider is AssetImage)
+          return provider.assetName == IveAssetPaths.avatarPortrait;
+        if (provider is ResizeImage)
+          return matchesAvatarPortrait(provider.imageProvider);
         return false;
       }
 
@@ -286,7 +301,8 @@ void main() {
       );
       expect(imageFinder, findsOneWidget);
       expect(find.byIcon(Icons.person_rounded), findsNothing,
-          reason: 'errorBuilder placeholder must never trigger for the real canonical asset');
+          reason:
+              'errorBuilder placeholder must never trigger for the real canonical asset');
       expect(tester.takeException(), isNull);
     });
   });
@@ -299,9 +315,9 @@ void main() {
           child: MaterialApp(
             home: Scaffold(
               body: IveAvatar(
-                size:           IveAvatarSize.compact,
+                size: IveAvatarSize.compact,
                 showStatusRing: true,
-                interactive:    false,
+                interactive: false,
               ),
             ),
           ),
@@ -321,7 +337,7 @@ void main() {
           child: MaterialApp(
             home: Scaffold(
               body: IveAvatar(
-                size:        IveAvatarSize.compact,
+                size: IveAvatarSize.compact,
                 interactive: false,
               ),
             ),
@@ -346,9 +362,9 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: IveAvatar(
-                size:        IveAvatarSize.compact,
+                size: IveAvatarSize.compact,
                 interactive: true,
-                onTap:       () => tapped = true,
+                onTap: () => tapped = true,
               ),
             ),
           ),
@@ -368,7 +384,7 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: IveAvatar(
-                size:        IveAvatarSize.standard,
+                size: IveAvatarSize.standard,
                 interactive: true,
               ),
             ),
@@ -379,7 +395,7 @@ void main() {
       expect(
         tester.getSemantics(find.byType(IveAvatar)),
         matchesSemantics(
-          label:  'IVE, assistente executiva',
+          label: 'IVE, assistente executiva',
           isButton: true,
         ),
       );
@@ -401,7 +417,8 @@ void main() {
     // IveRiveFeatureGate (always off), so in practice only the fallback path
     // is ever active; the path-agnostic assertion is kept unchanged on
     // purpose so it stays valid if Rive is ever re-entered.
-    testWidgets('reflects thinking/speaking interaction through to the rendered avatar',
+    testWidgets(
+        'reflects thinking/speaking interaction through to the rendered avatar',
         (tester) async {
       // Disposed explicitly at the end of the test body (not via addTearDown):
       // testWidgets runs inside a FakeAsync zone whose pending-timer check

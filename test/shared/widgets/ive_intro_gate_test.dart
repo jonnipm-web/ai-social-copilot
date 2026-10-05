@@ -32,7 +32,8 @@ import 'package:ai_social_copilot/providers/diagnostic_session_provider.dart';
 import 'package:ai_social_copilot/providers/profile_provider.dart';
 import 'package:ai_social_copilot/shared/widgets/ive_intro_gate.dart';
 
-class MockDiagnosticLoggerService extends Mock implements DiagnosticLoggerService {}
+class MockDiagnosticLoggerService extends Mock
+    implements DiagnosticLoggerService {}
 
 // STABILITY-09-FIX (Codex Gate round 5) -- IveIntroGate now also gates on
 // authStateProvider (see its own comment), same pattern already established
@@ -40,8 +41,9 @@ class MockDiagnosticLoggerService extends Mock implements DiagnosticLoggerServic
 // of "auth-adjacent global overlay widget" concern.
 class MockSession extends Mock implements Session {}
 
-AuthState _authState({Session? session}) =>
-    AuthState(session != null ? AuthChangeEvent.signedIn : AuthChangeEvent.signedOut, session);
+AuthState _authState({Session? session}) => AuthState(
+    session != null ? AuthChangeEvent.signedIn : AuthChangeEvent.signedOut,
+    session);
 
 Profile _fakeProfile() => Profile(
       id: 'user-1',
@@ -80,7 +82,8 @@ void main() {
   // own entrance animation each take an unknown number of pumps to settle)
   // — polls in small steps up to a generous bound instead of asserting a
   // hardcoded pump count.
-  Future<void> pumpUntilFound(WidgetTester tester, Finder finder, {int maxSteps = 30}) async {
+  Future<void> pumpUntilFound(WidgetTester tester, Finder finder,
+      {int maxSteps = 30}) async {
     for (var i = 0; i < maxSteps; i++) {
       if (finder.evaluate().isNotEmpty) return;
       await tester.pump(const Duration(milliseconds: 50));
@@ -88,9 +91,11 @@ void main() {
   }
 
   List<Override> baseOverrides() => [
-        diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+        diagnosticLoggerProvider
+            .overrideWithValue(MockDiagnosticLoggerService()),
         currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-        authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+        authStateProvider.overrideWith(
+            (ref) => Stream.value(_authState(session: MockSession()))),
       ];
 
   // The exact real production topology: a real GoRouter-managed Navigator,
@@ -107,7 +112,9 @@ void main() {
       navigatorKey: navigatorKey,
       initialLocation: '/',
       routes: [
-        GoRoute(path: '/', builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+        GoRoute(
+            path: '/',
+            builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
       ],
     );
     return ProviderScope(
@@ -142,7 +149,9 @@ void main() {
           data: const MediaQueryData(),
           child: Directionality(
             textDirection: TextDirection.ltr,
-            child: Stack(children: [IveIntroGate(key: introKey, navigatorKey: navigatorKey)]),
+            child: Stack(children: [
+              IveIntroGate(key: introKey, navigatorKey: navigatorKey)
+            ]),
           ),
         ),
       );
@@ -181,7 +190,8 @@ void main() {
       // never throw, at any point, even though the key never attaches.
       for (var i = 0; i < 15; i++) {
         await tester.pump();
-        expect(tester.takeException(), isNull, reason: 'threw on pump #$i with navigatorKey never attached');
+        expect(tester.takeException(), isNull,
+            reason: 'threw on pump #$i with navigatorKey never attached');
       }
     },
   );
@@ -196,15 +206,22 @@ void main() {
       var navigatorReady = false;
 
       Widget buildTree() => navigatorReady
-          ? realRouterHarness(navigatorKey: navigatorKey, overrides: baseOverrides(), introKey: introKey)
-          : noNavigatorHarness(navigatorKey: navigatorKey, overrides: baseOverrides(), introKey: introKey);
+          ? realRouterHarness(
+              navigatorKey: navigatorKey,
+              overrides: baseOverrides(),
+              introKey: introKey)
+          : noNavigatorHarness(
+              navigatorKey: navigatorKey,
+              overrides: baseOverrides(),
+              introKey: introKey);
 
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
       final titleFinder = find.text(l10n.ivIntroTitle);
       simulateRouteSettledPastSplash();
 
       await tester.pumpWidget(buildTree());
-      await tester.pump(); // lets currentProfileProvider's Future resolve, schedules the callback
+      await tester
+          .pump(); // lets currentProfileProvider's Future resolve, schedules the callback
       // A couple of frames with the key genuinely unattached -- exactly the
       // transient window the production race exhibited.
       await tester.pump();
@@ -232,8 +249,14 @@ void main() {
       var navigatorReady = false;
 
       Widget buildTree() => navigatorReady
-          ? realRouterHarness(navigatorKey: navigatorKey, overrides: baseOverrides(), introKey: introKey)
-          : noNavigatorHarness(navigatorKey: navigatorKey, overrides: baseOverrides(), introKey: introKey);
+          ? realRouterHarness(
+              navigatorKey: navigatorKey,
+              overrides: baseOverrides(),
+              introKey: introKey)
+          : noNavigatorHarness(
+              navigatorKey: navigatorKey,
+              overrides: baseOverrides(),
+              introKey: introKey);
 
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
       final titleFinder = find.text(l10n.ivIntroTitle);
@@ -266,9 +289,11 @@ void main() {
       await tester.pumpWidget(noNavigatorHarness(
         navigatorKey: navigatorKey,
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => null),
-          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+          authStateProvider.overrideWith(
+              (ref) => Stream.value(_authState(session: MockSession()))),
         ],
       ));
       for (var i = 0; i < 5; i++) {
@@ -317,7 +342,8 @@ void main() {
       // bounded retry window; the intro must never appear.
       for (var i = 0; i < 15; i++) {
         await tester.pump();
-        expect(tester.takeException(), isNull, reason: 'threw on pump #$i while route was still Splash');
+        expect(tester.takeException(), isNull,
+            reason: 'threw on pump #$i while route was still Splash');
       }
       expect(titleFinder, findsNothing);
 
@@ -346,7 +372,8 @@ void main() {
       ));
       for (var i = 0; i < 20; i++) {
         await tester.pump();
-        expect(tester.takeException(), isNull, reason: 'threw on pump #$i with route stuck on Splash');
+        expect(tester.takeException(), isNull,
+            reason: 'threw on pump #$i with route stuck on Splash');
       }
 
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
@@ -380,7 +407,8 @@ void main() {
       ));
       for (var i = 0; i < 15; i++) {
         await tester.pump();
-        expect(tester.takeException(), isNull, reason: 'threw on pump #$i with an attempted (not settled) /login');
+        expect(tester.takeException(), isNull,
+            reason: 'threw on pump #$i with an attempted (not settled) /login');
       }
       // The attempted path alone must never be mistaken for arrival.
       expect(titleFinder, findsNothing);
@@ -416,7 +444,9 @@ void main() {
           // Mirrors _computeRedirect's own authenticated/login branch: an
           // authenticated session hitting /login is always redirected to
           // /dashboard; everything else settles where it is.
-          final redirectTarget = path == AppConstants.routeLogin ? AppConstants.routeDashboard : null;
+          final redirectTarget = path == AppConstants.routeLogin
+              ? AppConstants.routeDashboard
+              : null;
           if (redirectTarget == null &&
               (state.fullPath ?? '').isNotEmpty &&
               path != AppConstants.routeSplash &&
@@ -427,8 +457,12 @@ void main() {
           return redirectTarget;
         },
         routes: [
-          GoRoute(path: AppConstants.routeLogin, builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
-          GoRoute(path: AppConstants.routeDashboard, builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+          GoRoute(
+              path: AppConstants.routeLogin,
+              builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+          GoRoute(
+              path: AppConstants.routeDashboard,
+              builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
         ],
       );
 
@@ -439,7 +473,8 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           routerConfig: router,
-          builder: (context, child) => Stack(children: [child!, IveIntroGate(navigatorKey: navigatorKey)]),
+          builder: (context, child) => Stack(
+              children: [child!, IveIntroGate(navigatorKey: navigatorKey)]),
         ),
       ));
 
@@ -449,7 +484,9 @@ void main() {
       // recordRoute() calls happen along the way.
       for (var i = 0; i < 10; i++) {
         await tester.pump();
-        expect(tester.takeException(), isNull, reason: 'threw on pump #$i during the /login -> /dashboard redirect');
+        expect(tester.takeException(), isNull,
+            reason:
+                'threw on pump #$i during the /login -> /dashboard redirect');
       }
 
       // By now the redirect has settled at /dashboard (recordSettledRoute
@@ -479,7 +516,8 @@ void main() {
         redirect: (context, state) async {
           final path = state.fullPath ?? state.matchedLocation;
           IveForensicSnapshot.recordRoute(path);
-          const redirectTarget = null; // nothing special-cases an unmatched path either.
+          const redirectTarget =
+              null; // nothing special-cases an unmatched path either.
           if (redirectTarget == null &&
               (state.fullPath ?? '').isNotEmpty &&
               path != AppConstants.routeSplash &&
@@ -490,7 +528,9 @@ void main() {
           return redirectTarget;
         },
         routes: [
-          GoRoute(path: AppConstants.routeDashboard, builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+          GoRoute(
+              path: AppConstants.routeDashboard,
+              builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
         ],
       );
 
@@ -501,13 +541,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           routerConfig: router,
-          builder: (context, child) => Stack(children: [child!, IveIntroGate(navigatorKey: navigatorKey)]),
+          builder: (context, child) => Stack(
+              children: [child!, IveIntroGate(navigatorKey: navigatorKey)]),
         ),
       ));
 
       for (var i = 0; i < 15; i++) {
         await tester.pump();
-        expect(tester.takeException(), isNull, reason: 'threw on pump #$i on an unmatched location');
+        expect(tester.takeException(), isNull,
+            reason: 'threw on pump #$i on an unmatched location');
       }
       expect(titleFinder, findsNothing);
       expect(IveForensicSnapshot.settledRoute, '');
@@ -530,7 +572,8 @@ void main() {
         redirect: (context, state) async {
           final path = state.fullPath ?? state.matchedLocation;
           IveForensicSnapshot.recordRoute(path);
-          const redirectTarget = null; // /result is accepted at the redirect level either way.
+          const redirectTarget =
+              null; // /result is accepted at the redirect level either way.
           if (redirectTarget == null &&
               (state.fullPath ?? '').isNotEmpty &&
               path != AppConstants.routeSplash &&
@@ -548,13 +591,17 @@ void main() {
             // a post-frame callback, entirely inside this builder.
             builder: (context, state) {
               if (state.extra == null) {
-                WidgetsBinding.instance.addPostFrameCallback((_) => context.go(AppConstants.routeHome));
-                return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => context.go(AppConstants.routeHome));
+                return const Scaffold(
+                    body: Center(child: CircularProgressIndicator()));
               }
               return const Scaffold(body: Text('result'));
             },
           ),
-          GoRoute(path: AppConstants.routeHome, builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+          GoRoute(
+              path: AppConstants.routeHome,
+              builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
         ],
       );
 
@@ -565,7 +612,8 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           routerConfig: router,
-          builder: (context, child) => Stack(children: [child!, IveIntroGate(navigatorKey: navigatorKey)]),
+          builder: (context, child) => Stack(
+              children: [child!, IveIntroGate(navigatorKey: navigatorKey)]),
         ),
       ));
 
@@ -578,7 +626,8 @@ void main() {
       // regardless of timing -- proven below once everything settles.
       for (var i = 0; i < 5; i++) {
         await tester.pump();
-        expect(tester.takeException(), isNull, reason: 'threw on pump #$i while /result was self-redirecting');
+        expect(tester.takeException(), isNull,
+            reason: 'threw on pump #$i while /result was self-redirecting');
       }
 
       // /home is reached, genuinely settles, and the intro opens there --
@@ -620,7 +669,8 @@ void main() {
       await tester.pumpWidget(realRouterHarness(
         navigatorKey: navigatorKey,
         overrides: [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
           authStateProvider.overrideWith((ref) => Stream.value(_authState())),
         ],
@@ -628,7 +678,8 @@ void main() {
 
       for (var i = 0; i < 15; i++) {
         await tester.pump();
-        expect(tester.takeException(), isNull, reason: 'threw on pump #$i with no live session');
+        expect(tester.takeException(), isNull,
+            reason: 'threw on pump #$i with no live session');
       }
       expect(titleFinder, findsNothing);
     },
@@ -649,13 +700,20 @@ void main() {
 
       Widget buildTree() {
         final overrides = [
-          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          diagnosticLoggerProvider
+              .overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
           authStateProvider.overrideWith((ref) => authController.stream),
         ];
         return navigatorReady
-            ? realRouterHarness(navigatorKey: navigatorKey, overrides: overrides, introKey: introKey)
-            : noNavigatorHarness(navigatorKey: navigatorKey, overrides: overrides, introKey: introKey);
+            ? realRouterHarness(
+                navigatorKey: navigatorKey,
+                overrides: overrides,
+                introKey: introKey)
+            : noNavigatorHarness(
+                navigatorKey: navigatorKey,
+                overrides: overrides,
+                introKey: introKey);
       }
 
       simulateRouteSettledPastSplash();
@@ -691,7 +749,8 @@ void main() {
       await tester.pumpWidget(buildTree());
       for (var i = 0; i < 15; i++) {
         await tester.pump();
-        expect(tester.takeException(), isNull, reason: 'threw on pump #$i after external sign-out mid-retry');
+        expect(tester.takeException(), isNull,
+            reason: 'threw on pump #$i after external sign-out mid-retry');
       }
       expect(titleFinder, findsNothing);
     },

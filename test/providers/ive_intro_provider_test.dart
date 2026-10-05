@@ -29,7 +29,8 @@ void main() {
   }
 
   group('IveIntroState.shouldShow — primeira exibição', () {
-    test('mostra a introdução quando nunca houve interação (seenVersion null)', () async {
+    test('mostra a introdução quando nunca houve interação (seenVersion null)',
+        () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final state = await restored(container);
@@ -39,7 +40,8 @@ void main() {
       expect(state.seen, isFalse);
     });
 
-    test('não decide exibir enquanto loading (restauração ainda em andamento)', () {
+    test('não decide exibir enquanto loading (restauração ainda em andamento)',
+        () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final state = container.read(iveIntroProvider);
@@ -51,7 +53,8 @@ void main() {
   });
 
   group('IveIntroNotifier.skip', () {
-    test('skip() marca skipped=true e impede nova exibição na versão atual', () async {
+    test('skip() marca skipped=true e impede nova exibição na versão atual',
+        () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       await restored(container);
@@ -66,7 +69,9 @@ void main() {
       expect(state.seenVersion, kIveIntroCurrentVersion);
     });
 
-    test('skip() persiste — uma nova instância do notifier não mostra a introdução de novo', () async {
+    test(
+        'skip() persiste — uma nova instância do notifier não mostra a introdução de novo',
+        () async {
       final first = ProviderContainer();
       await restored(first);
       await first.read(iveIntroProvider.notifier).skip();
@@ -82,7 +87,9 @@ void main() {
   });
 
   group('IveIntroNotifier.complete', () {
-    test('complete() marca completed=true e impede nova exibição na versão atual', () async {
+    test(
+        'complete() marca completed=true e impede nova exibição na versão atual',
+        () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       await restored(container);
@@ -96,7 +103,9 @@ void main() {
       expect(state.shouldShow, isFalse);
     });
 
-    test('complete() persiste — uma nova instância do notifier não mostra a introdução de novo', () async {
+    test(
+        'complete() persiste — uma nova instância do notifier não mostra a introdução de novo',
+        () async {
       final first = ProviderContainer();
       await restored(first);
       await first.read(iveIntroProvider.notifier).complete();
@@ -112,7 +121,9 @@ void main() {
   });
 
   group('Versionamento (mission Section 06/15)', () {
-    test('uma versão de introdução mais nova que a já vista volta a ser exibida', () async {
+    test(
+        'uma versão de introdução mais nova que a já vista volta a ser exibida',
+        () async {
       SharedPreferences.setMockInitialValues({
         'ive_intro_completed': true,
         'ive_intro_skipped': false,
@@ -145,7 +156,9 @@ void main() {
     // não pode deixar completed=true e skipped=true persistidos ao mesmo
     // tempo (estado internamente contraditório), mesmo que shouldShow em si
     // já estivesse correto (só olha seenVersion).
-    test('skip() após complete() de uma versão anterior nunca deixa completed=true persistido', () async {
+    test(
+        'skip() após complete() de uma versão anterior nunca deixa completed=true persistido',
+        () async {
       SharedPreferences.setMockInitialValues({
         'ive_intro_completed': true,
         'ive_intro_skipped': false,
@@ -176,7 +189,8 @@ void main() {
     // os valores (então vazios) do SharedPreferences. skip()/complete()
     // agora marcam loading:false, e _restore() nunca sobrescreve depois
     // que loading já é false.
-    test('skip() chamado antes do restore terminar não é revertido por ele', () async {
+    test('skip() chamado antes do restore terminar não é revertido por ele',
+        () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -195,7 +209,8 @@ void main() {
       expect(state.loading, isFalse);
     });
 
-    test('complete() chamado antes do restore terminar não é revertido por ele', () async {
+    test('complete() chamado antes do restore terminar não é revertido por ele',
+        () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

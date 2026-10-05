@@ -37,15 +37,15 @@ class GapAnalysis {
 
   factory GapAnalysis.fromMap(Map<String, dynamic> map) {
     return GapAnalysis(
-      id:                 map['id'] as String,
-      userId:             map['user_id'] as String,
-      marketAnalysisId:   map['market_analysis_id'] as String?,
-      contentGaps:        _list(map['content_gaps']),
-      seoGaps:            _list(map['seo_gaps']),
-      authorityGaps:      _list(map['authority_gaps']),
-      monetizationGaps:   _list(map['monetization_gaps']),
-      productGaps:        _list(map['product_gaps']),
-      analysisJson:       map['analysis_json'] is Map
+      id: map['id'] as String,
+      userId: map['user_id'] as String,
+      marketAnalysisId: map['market_analysis_id'] as String?,
+      contentGaps: _list(map['content_gaps']),
+      seoGaps: _list(map['seo_gaps']),
+      authorityGaps: _list(map['authority_gaps']),
+      monetizationGaps: _list(map['monetization_gaps']),
+      productGaps: _list(map['product_gaps']),
+      analysisJson: map['analysis_json'] is Map
           ? Map<String, dynamic>.from(map['analysis_json'] as Map)
           : {},
       createdAt: DateTime.parse(map['created_at'] as String),
@@ -53,13 +53,13 @@ class GapAnalysis {
   }
 
   Map<String, dynamic> toInsertMap() => {
-    'user_id':            userId,
-    'market_analysis_id': marketAnalysisId,
-    'content_gaps':       contentGaps,
-    'seo_gaps':           seoGaps,
-    'authority_gaps':     authorityGaps,
-    'monetization_gaps':  monetizationGaps,
-    'product_gaps':       productGaps,
-    'analysis_json':      analysisJson,
-  };
+        'user_id': userId,
+        'market_analysis_id': marketAnalysisId,
+        'content_gaps': contentGaps,
+        'seo_gaps': seoGaps,
+        'authority_gaps': authorityGaps,
+        'monetization_gaps': monetizationGaps,
+        'product_gaps': productGaps,
+        'analysis_json': analysisJson,
+      };
 }

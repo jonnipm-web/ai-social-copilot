@@ -33,7 +33,8 @@ void main() {
     expect(merged['opportunity_type'], 'expansão'); // canonical code untouched
     expect(merged['final_score'], 82); // score untouched
     expect(oppRow['title'], 'Expandir para o Brasil'); // original not mutated
-    expect(merged['${kOriginalPrefix}title'], 'Expandir para o Brasil'); // original kept for logic
+    expect(merged['${kOriginalPrefix}title'],
+        'Expandir para o Brasil'); // original kept for logic
 
     final item = OpportunityLabItem.fromMap(merged);
     expect(item.title, 'Expand into Brazil');
@@ -48,17 +49,25 @@ void main() {
     expect(OpportunityLabItem.fromMap(merged).localizedFrom, isNull);
   });
 
-  test('unknown detected source language still marks the row as translated (R16 §9)', () {
+  test(
+      'unknown detected source language still marks the row as translated (R16 §9)',
+      () {
     final entry = debugLocalizedEntry(null, {'title': 'Expand into Brazil'});
     final merged = mergeLocalized('opportunity_lab', oppRow, entry, 'en-US');
     expect(merged[kLocalizedFromKey], 'und');
     expect(OpportunityLabItem.fromMap(merged).localizedFrom, 'und');
   });
 
-  test('market analysis keeps the original niche for language-independent logic (R16 §20)', () {
+  test(
+      'market analysis keeps the original niche for language-independent logic (R16 §20)',
+      () {
     final row = <String, dynamic>{
-      'id': 'm1', 'user_id': 'u1', 'input': 'rcbo', 'niche': 'Dispositivos elétricos',
-      'created_at': '2026-09-01T00:00:00Z', 'updated_at': '2026-09-01T00:00:00Z',
+      'id': 'm1',
+      'user_id': 'u1',
+      'input': 'rcbo',
+      'niche': 'Dispositivos elétricos',
+      'created_at': '2026-09-01T00:00:00Z',
+      'updated_at': '2026-09-01T00:00:00Z',
     };
     final merged = mergeLocalized('market_analyses', row,
         debugLocalizedEntry('pt-BR', {'niche': 'Electrical devices'}), 'en-US');
@@ -69,9 +78,15 @@ void main() {
   });
 
   test('missing/failed localization falls back to the original row', () {
-    expect(identical(mergeLocalized('opportunity_lab', oppRow, null, 'en-US'), oppRow), isTrue);
+    expect(
+        identical(
+            mergeLocalized('opportunity_lab', oppRow, null, 'en-US'), oppRow),
+        isTrue);
     final empty = debugLocalizedEntry(null, {});
-    expect(identical(mergeLocalized('opportunity_lab', oppRow, empty, 'en-US'), oppRow), isTrue);
+    expect(
+        identical(
+            mergeLocalized('opportunity_lab', oppRow, empty, 'en-US'), oppRow),
+        isTrue);
   });
 
   test('projects keep the ORIGINAL description editable (side-by-side)', () {
@@ -79,18 +94,22 @@ void main() {
       'id': 'p1',
       'user_id': 'u1',
       'name': 'RCBO Brasil',
-      'description': 'Projeto voltado à introdução e expansão do uso de dispositivos RCBO',
+      'description':
+          'Projeto voltado à introdução e expansão do uso de dispositivos RCBO',
       'created_at': '2026-09-01T00:00:00Z',
       'updated_at': '2026-09-02T00:00:00Z',
     };
     final entry = debugLocalizedEntry('pt-BR', {
-      'description': 'Project focused on introducing and expanding the use of RCBO devices',
+      'description':
+          'Project focused on introducing and expanding the use of RCBO devices',
     });
     final merged = mergeLocalized('projects', projectRow, entry, 'en-US');
     final project = Project.fromMap(merged);
 
-    expect(project.description, startsWith('Projeto voltado')); // original kept for edit forms
-    expect(project.presentedDescription, startsWith('Project focused')); // display uses translation
+    expect(project.description,
+        startsWith('Projeto voltado')); // original kept for edit forms
+    expect(project.presentedDescription,
+        startsWith('Project focused')); // display uses translation
     expect(project.name, 'RCBO Brasil'); // proper noun never translated
     expect(project.localizedFrom, 'pt-BR');
   });

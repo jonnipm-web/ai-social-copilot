@@ -76,7 +76,8 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
     return a.hasValue && a.value!.session == null;
   }
 
-  String? _sessionUserId() => ref.read(authStateProvider).valueOrNull?.session?.user.id;
+  String? _sessionUserId() =>
+      ref.read(authStateProvider).valueOrNull?.session?.user.id;
 
   Future<void> _analyze(AppLocalizations l) async {
     final sma = parseSmaWindows(_sma.text);
@@ -95,16 +96,17 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
       _localError = null;
     });
     final sessionBefore = _sessionUserId();
-    final outcome = await ref.read(quantLabApiProvider).analyze(QuantAnalyzeInput(
-          assetClass: _assetClass,
-          symbol: _symbol.text,
-          mic: _mic,
-          currency: _currency.text,
-          adjustment: _adjustment,
-          csv: _csv.text,
-          periodsPerYear: periods,
-          smaWindows: sma,
-        ));
+    final outcome =
+        await ref.read(quantLabApiProvider).analyze(QuantAnalyzeInput(
+              assetClass: _assetClass,
+              symbol: _symbol.text,
+              mic: _mic,
+              currency: _currency.text,
+              adjustment: _adjustment,
+              csv: _csv.text,
+              periodsPerYear: periods,
+              smaWindows: sma,
+            ));
     // A result that arrives after sign-out / a user switch is discarded (Codex Gate 3).
     if (mounted) {
       final sameUser = _sessionUserId() == sessionBefore && !_signedOut();
@@ -129,11 +131,15 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
     if (!profileAsync.hasValue && !profileAsync.hasError) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final isAdmin = profileAsync.hasValue && !profileAsync.hasError && (profileAsync.value?.isAdmin ?? false);
+    final isAdmin = profileAsync.hasValue &&
+        !profileAsync.hasError &&
+        (profileAsync.value?.isAdmin ?? false);
     // Fail closed on an explicit sign-out even before the profile refresh
     // completes (Codex Gate 3); the server stays authoritative regardless.
     ref.listen(authStateProvider, (_, next) {
-      if (next.hasValue && next.value!.session == null && (_outcome != null || _csv.text.isNotEmpty)) {
+      if (next.hasValue &&
+          next.value!.session == null &&
+          (_outcome != null || _csv.text.isNotEmpty)) {
         setState(() {
           _outcome = null;
           _csv.clear();
@@ -143,7 +149,11 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
     if (!isAdmin || _signedOut()) {
       return Scaffold(
         appBar: AppBar(title: Text(l.quantLabTitle)),
-        body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l.quantLabAccessDenied, textAlign: TextAlign.center))),
+        body: Center(
+            child: Padding(
+                padding: const EdgeInsets.all(24),
+                child:
+                    Text(l.quantLabAccessDenied, textAlign: TextAlign.center))),
       );
     }
 
@@ -156,7 +166,9 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
           title: Text(l.quantLabTitle),
           bottom: TabBar(tabs: [
             Tab(key: const Key('quantLabTabSingle'), text: l.quantLabTabSingle),
-            Tab(key: const Key('quantLabTabWatchlist'), text: l.quantLabTabWatchlist),
+            Tab(
+                key: const Key('quantLabTabWatchlist'),
+                text: l.quantLabTabWatchlist),
           ]),
         ),
         body: SafeArea(
@@ -164,11 +176,13 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
             _singleTab(l, form, result),
             SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                _Banner(text: l.quantLabInternalBanner),
-                const SizedBox(height: 12),
-                const QuantWatchlistPanel(),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _Banner(text: l.quantLabInternalBanner),
+                    const SizedBox(height: 12),
+                    const QuantWatchlistPanel(),
+                  ]),
             ),
           ]),
         ),
@@ -185,16 +199,29 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
           banner,
           Expanded(
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              SizedBox(width: 380, child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: form)),
+              SizedBox(
+                  width: 380,
+                  child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16), child: form)),
               const VerticalDivider(width: 1),
-              Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: result)),
+              Expanded(
+                  child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16), child: result)),
             ]),
           ),
         ]);
       }
       return SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [banner, const SizedBox(height: 12), form, const SizedBox(height: 16), result]),
+        child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              banner,
+              const SizedBox(height: 12),
+              form,
+              const SizedBox(height: 16),
+              result
+            ]),
       );
     });
   }
@@ -202,36 +229,53 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
   Widget _buildForm(BuildContext context, AppLocalizations l) {
     const gap = SizedBox(height: 12);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text(l.quantLabInstrument, style: Theme.of(context).textTheme.titleMedium),
+      Text(l.quantLabInstrument,
+          style: Theme.of(context).textTheme.titleMedium),
       gap,
       DropdownButtonFormField<String>(
         initialValue: _assetClass,
         isExpanded: true,
         decoration: InputDecoration(labelText: l.quantLabAssetClass),
-        items: [for (final c in kQuantLabAssetClasses) DropdownMenuItem(value: c, child: Text(c))],
+        items: [
+          for (final c in kQuantLabAssetClasses)
+            DropdownMenuItem(value: c, child: Text(c))
+        ],
         onChanged: (v) => setState(() => _assetClass = v ?? _assetClass),
       ),
       gap,
-      TextField(key: const Key('quantLabSymbol'), controller: _symbol, decoration: InputDecoration(labelText: l.quantLabSymbol)),
+      TextField(
+          key: const Key('quantLabSymbol'),
+          controller: _symbol,
+          decoration: InputDecoration(labelText: l.quantLabSymbol)),
       gap,
       DropdownButtonFormField<String?>(
         initialValue: _mic,
         isExpanded: true,
         decoration: InputDecoration(labelText: l.quantLabVenue),
         items: [
-          for (final m in kQuantLabMics) DropdownMenuItem(value: m, child: Text(m)),
-          DropdownMenuItem(value: null, child: Text(l.quantLabVenueOther, overflow: TextOverflow.ellipsis)),
+          for (final m in kQuantLabMics)
+            DropdownMenuItem(value: m, child: Text(m)),
+          DropdownMenuItem(
+              value: null,
+              child:
+                  Text(l.quantLabVenueOther, overflow: TextOverflow.ellipsis)),
         ],
         onChanged: (v) => setState(() => _mic = v),
       ),
       gap,
-      TextField(controller: _currency, decoration: InputDecoration(labelText: l.quantLabCurrency)),
+      TextField(
+          controller: _currency,
+          decoration: InputDecoration(labelText: l.quantLabCurrency)),
       gap,
       DropdownButtonFormField<String>(
         initialValue: _adjustment,
         isExpanded: true,
         decoration: InputDecoration(labelText: l.quantLabAdjustment),
-        items: [for (final a in kQuantLabAdjustments) DropdownMenuItem(value: a, child: Text(a, overflow: TextOverflow.ellipsis))],
+        items: [
+          for (final a in kQuantLabAdjustments)
+            DropdownMenuItem(
+                value: a, child: Text(a, overflow: TextOverflow.ellipsis))
+        ],
         onChanged: (v) => setState(() => _adjustment = v ?? _adjustment),
       ),
       const SizedBox(height: 20),
@@ -263,17 +307,24 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
         minLines: 4,
         maxLines: 8,
         style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-        decoration: InputDecoration(hintText: l.quantLabCsvHint, border: const OutlineInputBorder()),
+        decoration: InputDecoration(
+            hintText: l.quantLabCsvHint, border: const OutlineInputBorder()),
       ),
       gap,
-      TextField(controller: _periods, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: l.quantLabPeriodsPerYear)),
+      TextField(
+          controller: _periods,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: l.quantLabPeriodsPerYear)),
       gap,
-      TextField(controller: _sma, decoration: InputDecoration(labelText: l.quantLabSmaWindows)),
+      TextField(
+          controller: _sma,
+          decoration: InputDecoration(labelText: l.quantLabSmaWindows)),
       const SizedBox(height: 16),
       if (_localError != null)
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: Text(_localError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          child: Text(_localError!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error)),
         ),
       // The floating IVE avatar must never rest on the primary action (S25 finding).
       IveExclusionRegion(
@@ -282,7 +333,11 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
           child: FilledButton.icon(
             key: const Key('quantLabAnalyze'),
             onPressed: _busy ? null : () => _analyze(l),
-            icon: _busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.analytics_outlined),
+            icon: _busy
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.analytics_outlined),
             label: Text(_busy ? l.quantLabAnalyzing : l.quantLabAnalyze),
           ),
         ),
@@ -294,10 +349,14 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
     final o = _outcome;
     if (o == null) return const SizedBox.shrink();
     if (o.analysis == null) {
-      final msg = o.errorField != null ? l.quantLabErrorField(o.errorCode!, o.errorField!) : l.quantLabError(o.errorCode!);
+      final msg = o.errorField != null
+          ? l.quantLabErrorField(o.errorCode!, o.errorField!)
+          : l.quantLabError(o.errorCode!);
       return Card(
         child: ListTile(
-          leading: Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error, semanticLabel: 'error'),
+          leading: Icon(Icons.error_outline,
+              color: Theme.of(context).colorScheme.error,
+              semanticLabel: 'error'),
           title: Text(msg),
         ),
       );
@@ -307,7 +366,8 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
     Widget section(String title, List<Widget> children) => Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Semantics(header: true, child: Text(title, style: t.titleSmall)),
               const SizedBox(height: 8),
               ...children,
@@ -316,54 +376,84 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
         );
     Widget kv(String k, String v) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Text.rich(TextSpan(children: [TextSpan(text: '$k: ', style: const TextStyle(fontWeight: FontWeight.w600)), TextSpan(text: v)])),
+          child: Text.rich(TextSpan(children: [
+            TextSpan(
+                text: '$k: ',
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            TextSpan(text: v)
+          ])),
         );
 
-    return Column(key: const Key('quantLabResult'), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text(a.instrumentLabel, style: t.titleMedium),
-      const SizedBox(height: 8),
-      section(l.quantLabFreshness, [
-        // State is always spelled out in text; the icon is supplementary, never the only signal.
-        Row(children: [
-          Icon(_freshIcon(a.freshnessState), semanticLabel: a.freshnessState),
-          const SizedBox(width: 8),
-          Expanded(child: Text(a.freshnessState, style: const TextStyle(fontWeight: FontWeight.w700))),
-        ]),
-        if (a.freshnessAsOf != null) kv(l.quantLabAsOf, a.freshnessAsOf!),
-        kv(
-            l.quantLabCalendar,
-            '${a.calendarBasis}${a.calendarId != null ? ' · ${a.calendarId}' : ''}'
-            '${a.marketState != null ? ' · ${a.marketState}' : ''}${a.sessionsBehind != null ? ' · ${l.quantLabSessionsBehind(a.sessionsBehind!)}' : ''}'),
-      ]),
-      section(l.quantLabPeriod, [kv(l.quantLabPeriod, '${a.periodStart} → ${a.periodEnd} · ${a.bars} · ${a.frequency}')]),
-      section(l.quantLabProvenance, [
-        kv(l.quantLabProviderLabel, a.providerId),
-        kv(l.quantLabTrustLabel, a.trust),
-        kv(l.quantLabAdjustment, a.adjustment),
-        kv(l.quantLabRetrievedAt, a.retrievedAt),
-        kv(l.quantLabEvidence, a.evidenceStrength),
-        kv(l.quantLabContentHash, a.contentHash.substring(0, 16)), // parser guarantees ≥ 16 hex chars
-        kv(l.quantLabEngine, a.engineVersion),
-      ]),
-      section(l.quantLabMetrics, [
-        // Key metrics: the IVE avatar covered a metric value on the S25.
-        for (final m in a.metrics)
-          IveExclusionRegion(
-            child: ExpansionTile(
-              tilePadding: EdgeInsets.zero,
-              title: Text('${m.id}${m.window != null ? ' (${m.window})' : ''}'),
-              trailing: Text(m.display(a.currency), style: const TextStyle(fontWeight: FontWeight.w700)),
-              children: [kv(l.quantLabFormula, m.formulaId), kv(l.quantLabObservations, '${m.observations}')],
-            ),
-          ),
-      ]),
-      section(l.quantLabAssumptions, [for (final s in a.assumptions) Text('• $s')]),
-      if (a.warnings.isNotEmpty) section(l.quantLabWarnings, [for (final w in a.warnings) Text('• ${w.code} — ${w.message}')]),
-      if (a.riskNotImplemented.isNotEmpty) section(l.quantLabRiskNotImplemented, [Text(a.riskNotImplemented.join(', '))]),
-      section(l.quantLabSignals, [
-        if (a.signals.isEmpty) Text(l.quantLabNoSignals) else ...[for (final s in a.signals) Text('• $s')],
-      ]),
-    ]);
+    return Column(
+        key: const Key('quantLabResult'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(a.instrumentLabel, style: t.titleMedium),
+          const SizedBox(height: 8),
+          section(l.quantLabFreshness, [
+            // State is always spelled out in text; the icon is supplementary, never the only signal.
+            Row(children: [
+              Icon(_freshIcon(a.freshnessState),
+                  semanticLabel: a.freshnessState),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: Text(a.freshnessState,
+                      style: const TextStyle(fontWeight: FontWeight.w700))),
+            ]),
+            if (a.freshnessAsOf != null) kv(l.quantLabAsOf, a.freshnessAsOf!),
+            kv(
+                l.quantLabCalendar,
+                '${a.calendarBasis}${a.calendarId != null ? ' · ${a.calendarId}' : ''}'
+                '${a.marketState != null ? ' · ${a.marketState}' : ''}${a.sessionsBehind != null ? ' · ${l.quantLabSessionsBehind(a.sessionsBehind!)}' : ''}'),
+          ]),
+          section(l.quantLabPeriod, [
+            kv(l.quantLabPeriod,
+                '${a.periodStart} → ${a.periodEnd} · ${a.bars} · ${a.frequency}')
+          ]),
+          section(l.quantLabProvenance, [
+            kv(l.quantLabProviderLabel, a.providerId),
+            kv(l.quantLabTrustLabel, a.trust),
+            kv(l.quantLabAdjustment, a.adjustment),
+            kv(l.quantLabRetrievedAt, a.retrievedAt),
+            kv(l.quantLabEvidence, a.evidenceStrength),
+            kv(
+                l.quantLabContentHash,
+                a.contentHash
+                    .substring(0, 16)), // parser guarantees ≥ 16 hex chars
+            kv(l.quantLabEngine, a.engineVersion),
+          ]),
+          section(l.quantLabMetrics, [
+            // Key metrics: the IVE avatar covered a metric value on the S25.
+            for (final m in a.metrics)
+              IveExclusionRegion(
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: Text(
+                      '${m.id}${m.window != null ? ' (${m.window})' : ''}'),
+                  trailing: Text(m.display(a.currency),
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  children: [
+                    kv(l.quantLabFormula, m.formulaId),
+                    kv(l.quantLabObservations, '${m.observations}')
+                  ],
+                ),
+              ),
+          ]),
+          section(l.quantLabAssumptions,
+              [for (final s in a.assumptions) Text('• $s')]),
+          if (a.warnings.isNotEmpty)
+            section(l.quantLabWarnings, [
+              for (final w in a.warnings) Text('• ${w.code} — ${w.message}')
+            ]),
+          if (a.riskNotImplemented.isNotEmpty)
+            section(l.quantLabRiskNotImplemented,
+                [Text(a.riskNotImplemented.join(', '))]),
+          section(l.quantLabSignals, [
+            if (a.signals.isEmpty)
+              Text(l.quantLabNoSignals)
+            else ...[for (final s in a.signals) Text('• $s')],
+          ]),
+        ]);
   }
 
   IconData _freshIcon(String s) => switch (s) {
@@ -388,7 +478,9 @@ class _Banner extends StatelessWidget {
       child: Row(children: [
         Icon(Icons.science_outlined, color: cs.onSecondaryContainer),
         const SizedBox(width: 8),
-        Expanded(child: Text(text, style: TextStyle(color: cs.onSecondaryContainer))),
+        Expanded(
+            child:
+                Text(text, style: TextStyle(color: cs.onSecondaryContainer))),
       ]),
     );
   }

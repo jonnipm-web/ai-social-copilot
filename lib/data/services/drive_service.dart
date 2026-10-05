@@ -23,8 +23,7 @@ class DriveFile {
   final String mimeType;
   final String? modifiedTime;
 
-  bool get isGoogleDoc =>
-      mimeType == 'application/vnd.google-apps.document';
+  bool get isGoogleDoc => mimeType == 'application/vnd.google-apps.document';
   bool get isPdf => mimeType == 'application/pdf';
   bool get isDocx =>
       mimeType ==
@@ -83,7 +82,8 @@ class DriveService {
       // (nenhuma sessão em cache), mas agora deixa um rastro diagnosticável
       // (nunca o token) de que o bug conhecido do pacote realmente disparou
       // aqui, em vez de falhar silenciosamente sem nenhuma pista.
-      debugPrint('[drive:silent-signin] falha tratada como "sem sessão": ${redactForLog(e)}');
+      debugPrint(
+          '[drive:silent-signin] falha tratada como "sem sessão": ${redactForLog(e)}');
       return null;
     }
   }
@@ -97,7 +97,8 @@ class DriveService {
     try {
       return await _googleSignIn.isSignedIn();
     } catch (e) {
-      debugPrint('[drive:is-signed-in] falha tratada como "não conectado": ${redactForLog(e)}');
+      debugPrint(
+          '[drive:is-signed-in] falha tratada como "não conectado": ${redactForLog(e)}');
       return false;
     }
   }
@@ -177,17 +178,20 @@ class DriveService {
       final token = await _token();
       return token != null;
     } catch (e) {
-      debugPrint('[drive:usable-session] falha tratada como "sessão não utilizável": ${redactForLog(e)}');
+      debugPrint(
+          '[drive:usable-session] falha tratada como "sessão não utilizável": ${redactForLog(e)}');
       return false;
     }
   }
 
   Future<List<DriveFile>> listFiles({String search = ''}) async {
     final token = await _token();
-    if (token == null) throw const DriveStageException('token', 'Não autenticado com Google');
+    if (token == null)
+      throw const DriveStageException('token', 'Não autenticado com Google');
 
     var q = '($_supportedMimes) AND trashed=false';
-    if (search.isNotEmpty) q += " AND name contains '${search.replaceAll("'", "\\'")}'";
+    if (search.isNotEmpty)
+      q += " AND name contains '${search.replaceAll("'", "\\'")}'";
 
     final uri = Uri.parse('https://www.googleapis.com/drive/v3/files').replace(
       queryParameters: {
@@ -222,7 +226,8 @@ class DriveService {
           final id = f['id'];
           final name = f['name'];
           final mimeType = f['mimeType'];
-          if (id is! String || name is! String || mimeType is! String) return null;
+          if (id is! String || name is! String || mimeType is! String)
+            return null;
           return DriveFile(
             id: id,
             name: name,
@@ -236,7 +241,8 @@ class DriveService {
 
   Future<String> downloadContent(DriveFile file) async {
     final token = await _token();
-    if (token == null) throw const DriveStageException('token', 'Não autenticado com Google');
+    if (token == null)
+      throw const DriveStageException('token', 'Não autenticado com Google');
 
     // Google Docs → export directly as plain text
     if (file.isGoogleDoc) {
@@ -248,7 +254,8 @@ class DriveService {
         () => http.get(uri, headers: {'Authorization': 'Bearer $token'}),
       );
       if (res.statusCode != 200) {
-        throw DriveStageException('download', 'Erro ao baixar arquivo: ${res.statusCode}');
+        throw DriveStageException(
+            'download', 'Erro ao baixar arquivo: ${res.statusCode}');
       }
       _assertWithinImportLimit(res.bodyBytes.length);
       return _stripNulls(res.body);
@@ -264,7 +271,8 @@ class DriveService {
         () => http.get(uri, headers: {'Authorization': 'Bearer $token'}),
       );
       if (res.statusCode != 200) {
-        throw DriveStageException('download', 'Erro ao baixar arquivo: ${res.statusCode}');
+        throw DriveStageException(
+            'download', 'Erro ao baixar arquivo: ${res.statusCode}');
       }
       return runDriveStage(
         'extract',
@@ -283,7 +291,8 @@ class DriveService {
       () => http.get(uri, headers: {'Authorization': 'Bearer $token'}),
     );
     if (res.statusCode != 200) {
-      throw DriveStageException('download', 'Erro ao baixar arquivo: ${res.statusCode}');
+      throw DriveStageException(
+          'download', 'Erro ao baixar arquivo: ${res.statusCode}');
     }
     _assertWithinImportLimit(res.bodyBytes.length);
     return _stripNulls(res.body);
@@ -307,7 +316,7 @@ class DriveService {
       'process-file',
       body: {
         'file_base64': base64Encode(bytes),
-        'file_type':   extension,
+        'file_type': extension,
       },
     );
 

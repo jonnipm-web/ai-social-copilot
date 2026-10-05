@@ -27,7 +27,11 @@ IconData impactStatusIcon(String? status) => switch (status) {
     };
 
 class ImpactChip extends StatelessWidget {
-  const ImpactChip({super.key, required this.label, required this.icon, this.attention = false});
+  const ImpactChip(
+      {super.key,
+      required this.label,
+      required this.icon,
+      this.attention = false});
 
   final String label;
   final IconData icon;
@@ -39,8 +43,10 @@ class ImpactChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bg = attention ? scheme.secondaryContainer : scheme.surfaceContainerHighest;
-    final fg = attention ? scheme.onSecondaryContainer : scheme.onSurfaceVariant;
+    final bg =
+        attention ? scheme.secondaryContainer : scheme.surfaceContainerHighest;
+    final fg =
+        attention ? scheme.onSecondaryContainer : scheme.onSurfaceVariant;
     return Semantics(
       container: true,
       label: label,
@@ -57,7 +63,8 @@ class ImpactChip extends StatelessWidget {
           children: [
             Icon(icon, size: 16, color: fg),
             const SizedBox(width: 6),
-            Flexible(child: Text(label, style: TextStyle(color: fg, fontSize: 13))),
+            Flexible(
+                child: Text(label, style: TextStyle(color: fg, fontSize: 13))),
           ],
         ),
       ),
@@ -66,7 +73,12 @@ class ImpactChip extends StatelessWidget {
 }
 
 class ImpactSection extends StatelessWidget {
-  const ImpactSection({super.key, required this.title, required this.icon, required this.children, this.emphasis = false});
+  const ImpactSection(
+      {super.key,
+      required this.title,
+      required this.icon,
+      required this.children,
+      this.emphasis = false});
 
   final String title;
   final IconData icon;
@@ -84,7 +96,9 @@ class ImpactSection extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: emphasis ? theme.colorScheme.secondary : theme.colorScheme.outlineVariant,
+          color: emphasis
+              ? theme.colorScheme.secondary
+              : theme.colorScheme.outlineVariant,
           width: emphasis ? 1.5 : 1,
         ),
       ),
@@ -103,7 +117,8 @@ class ImpactSection extends StatelessWidget {
                 children: [
                   Icon(icon, size: 20, color: theme.colorScheme.secondary),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(title, style: theme.textTheme.titleMedium)),
+                  Expanded(
+                      child: Text(title, style: theme.textTheme.titleMedium)),
                 ],
               ),
             ),
@@ -128,7 +143,8 @@ class ImpactLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final style = muted
-        ? theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)
+        ? theme.textTheme.bodySmall
+            ?.copyWith(color: theme.colorScheme.onSurfaceVariant)
         : theme.textTheme.bodyMedium;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -136,7 +152,10 @@ class ImpactLine extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (icon != null) ...[
-            Padding(padding: const EdgeInsets.only(top: 2), child: Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant)),
+            Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(icon,
+                    size: 16, color: theme.colorScheme.onSurfaceVariant)),
             const SizedBox(width: 8),
           ],
           Expanded(child: Text(text, style: style)),
@@ -172,13 +191,15 @@ class ImpactQuote extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final fromUpload = attribution == 'QUOTED_FROM_USER_UPLOAD';
-    final caption = this.caption ?? (fromUpload ? t.impactQuotedFromUpload : t.impactQuotedFromSource);
+    final caption = this.caption ??
+        (fromUpload ? t.impactQuotedFromUpload : t.impactQuotedFromSource);
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: theme.colorScheme.outline, width: 3)),
+        border: Border(
+            left: BorderSide(color: theme.colorScheme.outline, width: 3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,11 +207,17 @@ class ImpactQuote extends StatelessWidget {
           if (withheld || text == null)
             ImpactLine(t.impactWithheld, icon: Icons.visibility_off_outlined)
           else
-            Text('«$text»', style: theme.textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic)),
+            Text('«$text»',
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(fontStyle: FontStyle.italic)),
           const SizedBox(height: 4),
-          Text(caption, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          Text(caption,
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           if (redacted)
-            Text(t.impactRedactedNote, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            Text(t.impactRedactedNote,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         ],
       ),
     );
@@ -203,10 +230,13 @@ String impactErrorText(AppLocalizations t, Object error) {
     ImpactErrorKind.auth => t.impactErrorAuth,
     ImpactErrorKind.notAvailable => t.impactErrorNotAvailable,
     ImpactErrorKind.tooLarge => t.impactErrorTooLarge,
-    ImpactErrorKind.rateLimited => t.impactErrorRateLimited(error.retryAfterSeconds ?? 60),
+    ImpactErrorKind.rateLimited =>
+      t.impactErrorRateLimited(error.retryAfterSeconds ?? 60),
     ImpactErrorKind.network => t.impactErrorNetwork,
     ImpactErrorKind.contract => t.impactErrorContract,
-    ImpactErrorKind.server || ImpactErrorKind.invalidRequest => t.impactErrorServer,
+    ImpactErrorKind.server ||
+    ImpactErrorKind.invalidRequest =>
+      t.impactErrorServer,
   };
 }
 
@@ -220,8 +250,11 @@ class ImpactErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final retryable = error is! ImpactApiException ||
-        const {ImpactErrorKind.network, ImpactErrorKind.server, ImpactErrorKind.rateLimited}
-            .contains((error as ImpactApiException).kind);
+        const {
+          ImpactErrorKind.network,
+          ImpactErrorKind.server,
+          ImpactErrorKind.rateLimited
+        }.contains((error as ImpactApiException).kind);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -235,7 +268,9 @@ class ImpactErrorView extends StatelessWidget {
               Text(impactErrorText(t, error), textAlign: TextAlign.center),
               if (retryable && onRetry != null) ...[
                 const SizedBox(height: 12),
-                IveExclusionRegion(child: OutlinedButton(onPressed: onRetry, child: Text(t.impactRetry))),
+                IveExclusionRegion(
+                    child: OutlinedButton(
+                        onPressed: onRetry, child: Text(t.impactRetry))),
               ],
             ],
           ),
@@ -264,12 +299,16 @@ class ImpactAdminGate extends ConsumerWidget {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-    final isAdmin = profileAsync.hasValue && !profileAsync.hasError && (profileAsync.value?.isAdmin ?? false);
+    final isAdmin = profileAsync.hasValue &&
+        !profileAsync.hasError &&
+        (profileAsync.value?.isAdmin ?? false);
     if (!isAdmin) {
       return Scaffold(
         appBar: AppBar(title: Text(title)),
         body: Center(
-          child: Padding(padding: const EdgeInsets.all(24), child: Text(t.impactAdminOnly, textAlign: TextAlign.center)),
+          child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(t.impactAdminOnly, textAlign: TextAlign.center)),
         ),
       );
     }
@@ -287,6 +326,7 @@ class ImpactPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Align(
         alignment: Alignment.topCenter,
-        child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: child),
+        child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth), child: child),
       );
 }

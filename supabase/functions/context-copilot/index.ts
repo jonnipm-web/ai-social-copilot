@@ -310,7 +310,7 @@ export async function handler(
       .map(h => ({ role: h.role, content: h.content }));
 
     // ── System prompt ───────────────────────────────────────────────────────
-    const systemPrompt = `Você é o AI Social Copilot, um assistente estratégico integrado à plataforma de gestão de portfólio de projetos digitais.
+    const systemPrompt = `Você é o InsightValues AI Copilot, um assistente estratégico integrado à plataforma de gestão de portfólio de projetos digitais.
 
 Seu papel é analisar os dados do contexto atual e responder às perguntas do usuário com precisão, clareza e ação.
 

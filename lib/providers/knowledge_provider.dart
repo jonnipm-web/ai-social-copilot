@@ -6,16 +6,16 @@ import '../data/models/knowledge_item.dart';
 import '../data/services/knowledge_service.dart';
 import '../data/services/content_localization_service.dart';
 
-final knowledgeServiceProvider =
-    Provider<KnowledgeService>((ref) => KnowledgeService(localizer: ref.watch(rowLocalizerProvider)));
+final knowledgeServiceProvider = Provider<KnowledgeService>(
+    (ref) => KnowledgeService(localizer: ref.watch(rowLocalizerProvider)));
 
 final knowledgeItemsProvider =
     FutureProvider.autoDispose<List<KnowledgeItem>>((ref) {
   return ref.watch(knowledgeServiceProvider).fetchAll();
 });
 
-final knowledgeItemsByProjectProvider =
-    FutureProvider.autoDispose.family<List<KnowledgeItem>, String>((ref, projectId) {
+final knowledgeItemsByProjectProvider = FutureProvider.autoDispose
+    .family<List<KnowledgeItem>, String>((ref, projectId) {
   return ref.watch(knowledgeServiceProvider).fetchAll(projectId: projectId);
 });
 
@@ -24,15 +24,13 @@ final knowledgeItemByIdProvider =
   return ref.watch(knowledgeServiceProvider).fetchById(id);
 });
 
-final knowledgeAnalysisProvider =
-    FutureProvider.autoDispose.family<KnowledgeAnalysis?, String>(
-        (ref, itemId) {
+final knowledgeAnalysisProvider = FutureProvider.autoDispose
+    .family<KnowledgeAnalysis?, String>((ref, itemId) {
   return ref.watch(knowledgeServiceProvider).fetchAnalysis(itemId);
 });
 
-final knowledgeAnalysisByProjectProvider =
-    FutureProvider.autoDispose.family<List<KnowledgeAnalysis>, String>(
-        (ref, projectId) {
+final knowledgeAnalysisByProjectProvider = FutureProvider.autoDispose
+    .family<List<KnowledgeAnalysis>, String>((ref, projectId) {
   return ref.watch(knowledgeServiceProvider).fetchAnalysisByProject(projectId);
 });
 
@@ -94,7 +92,8 @@ class KnowledgeAnalysisNotifier
   final KnowledgeService _service;
   final Ref _ref;
 
-  Future<KnowledgeAnalysis?> analyze(KnowledgeItem item, {String? idempotencyKey}) async {
+  Future<KnowledgeAnalysis?> analyze(KnowledgeItem item,
+      {String? idempotencyKey}) async {
     state = const AsyncValue.loading();
     try {
       // R16 — output language = presentation language, not item.language.

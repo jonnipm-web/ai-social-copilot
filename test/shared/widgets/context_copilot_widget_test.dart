@@ -27,7 +27,8 @@ import 'package:ai_social_copilot/shared/widgets/context_copilot_widget.dart';
 // definition eagerly reads Supabase.instance.client, which throws in a
 // plain test process. This suite never calls _send()/_ensureConfirmed(),
 // so quota/AiExecutionController's Supabase access is never reached.
-class MockDiagnosticLoggerService extends Mock implements DiagnosticLoggerService {}
+class MockDiagnosticLoggerService extends Mock
+    implements DiagnosticLoggerService {}
 
 class _FakeCopilotNotifier extends ContextCopilotNotifier {
   _FakeCopilotNotifier(Ref ref, CopilotState seed) : super(ref) {
@@ -63,7 +64,7 @@ void main() {
                   context,
                   screenName: 'Projetos',
                   request: IveInteractionRequest(
-                    sourceModule:  'test',
+                    sourceModule: 'test',
                     operationType: IveOperationType.ask,
                   ),
                   contextData: const CopilotContextData(),
@@ -73,18 +74,28 @@ void main() {
             ),
           ),
         ),
-        GoRoute(path: AppConstants.routeActionEngine, builder: (_, __) => const Scaffold(body: Text('Action Engine screen'))),
-        GoRoute(path: AppConstants.routeOpportunityLab, builder: (_, __) => const Scaffold(body: Text('Opportunity Lab screen'))),
-        GoRoute(path: AppConstants.routeProjects, builder: (_, __) => const Scaffold(body: Text('Projects screen'))),
+        GoRoute(
+            path: AppConstants.routeActionEngine,
+            builder: (_, __) =>
+                const Scaffold(body: Text('Action Engine screen'))),
+        GoRoute(
+            path: AppConstants.routeOpportunityLab,
+            builder: (_, __) =>
+                const Scaffold(body: Text('Opportunity Lab screen'))),
+        GoRoute(
+            path: AppConstants.routeProjects,
+            builder: (_, __) => const Scaffold(body: Text('Projects screen'))),
         ...extraRoutes,
       ],
     );
 
     return ProviderScope(
       overrides: [
-        diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+        diagnosticLoggerProvider
+            .overrideWithValue(MockDiagnosticLoggerService()),
         if (seedState != null && seedKey != null)
-          contextCopilotProvider(seedKey).overrideWith((ref) => _FakeCopilotNotifier(ref, seedState)),
+          contextCopilotProvider(seedKey)
+              .overrideWith((ref) => _FakeCopilotNotifier(ref, seedState)),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -112,7 +123,9 @@ void main() {
     expect(find.byType(Dialog), findsNothing);
   });
 
-  testWidgets('desktop width opens a centered dialog, materially larger than the mobile sheet', (tester) async {
+  testWidgets(
+      'desktop width opens a centered dialog, materially larger than the mobile sheet',
+      (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -133,7 +146,9 @@ void main() {
     expect(size.width, closeTo(220, 1));
   });
 
-  testWidgets('empty state shows the real IveAvatar and no duplicate chat-bubble emoji', (tester) async {
+  testWidgets(
+      'empty state shows the real IveAvatar and no duplicate chat-bubble emoji',
+      (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -152,7 +167,8 @@ void main() {
     expect(find.text('IVE'), findsOneWidget);
   });
 
-  testWidgets('screen name is localized (EN) in the empty state', (tester) async {
+  testWidgets('screen name is localized (EN) in the empty state',
+      (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -169,7 +185,9 @@ void main() {
                 onPressed: () => showCopilotChat(
                   context,
                   screenName: 'Projetos',
-                  request: IveInteractionRequest(sourceModule: 'test', operationType: IveOperationType.ask),
+                  request: IveInteractionRequest(
+                      sourceModule: 'test',
+                      operationType: IveOperationType.ask),
                 ),
                 child: const Text('open'),
               ),
@@ -180,7 +198,10 @@ void main() {
     );
 
     await tester.pumpWidget(ProviderScope(
-      overrides: [diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService())],
+      overrides: [
+        diagnosticLoggerProvider
+            .overrideWithValue(MockDiagnosticLoggerService())
+      ],
       child: MediaQuery(
         data: const MediaQueryData(size: Size(1440, 900)),
         child: MaterialApp.router(
@@ -200,7 +221,9 @@ void main() {
     expect(find.text('Projetos'), findsNothing);
   });
 
-  testWidgets('action suggestion chip is tappable and navigates to the mapped route', (tester) async {
+  testWidgets(
+      'action suggestion chip is tappable and navigates to the mapped route',
+      (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -209,12 +232,12 @@ void main() {
     const key = ('Projetos', null);
     final seed = CopilotState(turns: [
       CopilotTurn(
-        role:    'assistant',
+        role: 'assistant',
         content: 'Você deveria criar uma ação para isso.',
         actionSuggestion: const CopilotActionSuggestion(
-          type:  'create_action',
+          type: 'create_action',
           label: 'Criar ação: revisar contrato',
-          data:  {'title': 'revisar contrato'},
+          data: {'title': 'revisar contrato'},
         ),
         timestamp: DateTime(2026, 1, 1),
       ),
@@ -236,7 +259,9 @@ void main() {
     expect(find.byType(Dialog), findsNothing);
   });
 
-  testWidgets('action suggestion with no mapped destination shows an honest message instead of navigating', (tester) async {
+  testWidgets(
+      'action suggestion with no mapped destination shows an honest message instead of navigating',
+      (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -245,12 +270,12 @@ void main() {
     const key = ('Projetos', null);
     final seed = CopilotState(turns: [
       CopilotTurn(
-        role:    'assistant',
+        role: 'assistant',
         content: 'Aqui está um roadmap sugerido.',
         actionSuggestion: const CopilotActionSuggestion(
-          type:  'generate_roadmap',
+          type: 'generate_roadmap',
           label: 'Gerar roadmap',
-          data:  {},
+          data: {},
         ),
         timestamp: DateTime(2026, 1, 1),
       ),

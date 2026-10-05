@@ -22,12 +22,15 @@ import 'quota_provider.dart';
 /// client-built context. Compile-time switch
 /// (`--dart-define=IVE_INTELLIGENCE_CORE=true`): OFF by default, because the
 /// new Edge Function is not deployed; the commercial path stays unchanged.
-const bool kIveIntelligenceCoreEnabled = bool.fromEnvironment('IVE_INTELLIGENCE_CORE');
+const bool kIveIntelligenceCoreEnabled =
+    bool.fromEnvironment('IVE_INTELLIGENCE_CORE');
 
-final iveIntelligenceServiceProvider = Provider<IveIntelligenceService>((_) => IveIntelligenceService());
+final iveIntelligenceServiceProvider =
+    Provider<IveIntelligenceService>((_) => IveIntelligenceService());
 
 /// Overridable in tests; production value is the compile-time switch.
-final iveIntelligenceCoreEnabledProvider = Provider<bool>((_) => kIveIntelligenceCoreEnabled);
+final iveIntelligenceCoreEnabledProvider =
+    Provider<bool>((_) => kIveIntelligenceCoreEnabled);
 
 class CopilotState {
   final List<CopilotTurn> turns;
@@ -38,7 +41,7 @@ class CopilotState {
   final IveFailure? failure;
 
   const CopilotState({
-    this.turns   = const [],
+    this.turns = const [],
     this.loading = false,
     this.error,
     this.failure,
@@ -51,9 +54,9 @@ class CopilotState {
     IveFailure? failure,
   }) =>
       CopilotState(
-        turns:   turns   ?? this.turns,
+        turns: turns ?? this.turns,
         loading: loading ?? this.loading,
-        error:   error,
+        error: error,
         failure: failure,
       );
 }
@@ -99,8 +102,8 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     }
 
     final userTurn = CopilotTurn(
-      role:      'user',
-      content:   message,
+      role: 'user',
+      content: message,
       timestamp: DateTime.now(),
     );
 
@@ -108,7 +111,7 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     _ref.read(iveMemoryProvider.notifier).addQuestion(message);
 
     state = state.copyWith(
-      turns:   [...state.turns, userTurn],
+      turns: [...state.turns, userTurn],
       loading: true,
     );
 
@@ -139,12 +142,12 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     final correlationId = context.correlationId ?? newDiagnosticCorrelationId();
     final stopwatch = Stopwatch()..start();
     _ref.read(diagnosticSessionProvider.notifier).logEvent(
-      category: DiagnosticCategory.ive,
-      eventName: 'copilot_request_started',
-      operation: screenName,
-      correlationId: correlationId,
-      status: 'started',
-    );
+          category: DiagnosticCategory.ive,
+          eventName: 'copilot_request_started',
+          operation: screenName,
+          correlationId: correlationId,
+          status: 'started',
+        );
 
     try {
       final history = state.turns
@@ -158,12 +161,11 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
       final res = await _client.functions.invoke(
         AppConstants.edgeFunctionContextCopilot,
         body: {
-          'message':          message,
-          'screen_name':      screenName,
-          'context':          context.toMap(),
-          'history':          history,
-          if (recentQuestions.isNotEmpty)
-            'recent_questions': recentQuestions,
+          'message': message,
+          'screen_name': screenName,
+          'context': context.toMap(),
+          'history': history,
+          if (recentQuestions.isNotEmpty) 'recent_questions': recentQuestions,
           // IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 round-2
           // finding) — [idempotencyKey] was accepted as a parameter and
           // documented as wired, but never actually reached this body:
@@ -185,8 +187,10 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
 
       final data = res.data as Map<String, dynamic>? ?? {};
 
-      final sources  = (data['sources']  as List?)?.map((e) => e.toString()).toList() ?? [];
-      final entities = (data['entities'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      final sources =
+          (data['sources'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      final entities =
+          (data['entities'] as List?)?.map((e) => e.toString()).toList() ?? [];
 
       CopilotActionSuggestion? actionSuggestion;
       if (data['action_suggestion'] is Map) {
@@ -196,20 +200,22 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
       }
 
       final assistantTurn = CopilotTurn(
-        role:             'assistant',
-        content:          data['answer'] as String? ?? '—',
-        sources:          sources,
-        entities:         entities,
-        confidence:       (data['confidence'] as num?)?.toInt() ?? 70,
+        role: 'assistant',
+        content: data['answer'] as String? ?? '—',
+        sources: sources,
+        entities: entities,
+        confidence: (data['confidence'] as num?)?.toInt() ?? 70,
         actionSuggestion: actionSuggestion,
-        timestamp:        DateTime.now(),
+        timestamp: DateTime.now(),
       );
 
       state = state.copyWith(
-        turns:   [...state.turns, assistantTurn],
+        turns: [...state.turns, assistantTurn],
         loading: false,
       );
-      _ref.read(iveProvider.notifier).completeInteraction(interactionToken, success: true);
+      _ref
+          .read(iveProvider.notifier)
+          .completeInteraction(interactionToken, success: true);
       _ref.read(diagnosticSessionProvider.notifier).logEvent(
         category: DiagnosticCategory.ai,
         eventName: 'copilot_request_completed',
@@ -235,18 +241,20 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
       if (!mounted) return;
       state = state.copyWith(
         loading: false,
-        error:   e.toString(),
+        error: e.toString(),
       );
-      _ref.read(iveProvider.notifier).completeInteraction(interactionToken, success: false);
+      _ref
+          .read(iveProvider.notifier)
+          .completeInteraction(interactionToken, success: false);
       _ref.read(diagnosticSessionProvider.notifier).logEvent(
-        category: DiagnosticCategory.ai,
-        eventName: 'copilot_request_completed',
-        operation: screenName,
-        correlationId: correlationId,
-        status: 'failure',
-        durationMs: stopwatch.elapsedMilliseconds,
-        error: e,
-      );
+            category: DiagnosticCategory.ai,
+            eventName: 'copilot_request_completed',
+            operation: screenName,
+            correlationId: correlationId,
+            status: 'failure',
+            durationMs: stopwatch.elapsedMilliseconds,
+            error: e,
+          );
     }
   }
 
@@ -263,7 +271,8 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     String? idempotencyKey,
   }) async {
     final previousTurns = state.turns;
-    final userTurn = CopilotTurn(role: 'user', content: message, timestamp: DateTime.now());
+    final userTurn =
+        CopilotTurn(role: 'user', content: message, timestamp: DateTime.now());
     state = state.copyWith(turns: [...previousTurns, userTurn], loading: true);
     final interactionToken = _ref.read(iveProvider.notifier).beginThinking();
     final correlationId = context.correlationId ?? newDiagnosticCorrelationId();
@@ -281,7 +290,8 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     );
 
     try {
-      final result = await _ref.read(iveIntelligenceServiceProvider).ask(request);
+      final result =
+          await _ref.read(iveIntelligenceServiceProvider).ask(request);
       // IVE-INTELLIGENCE-CORE-01 — the conversation may have been disposed
       // while awaiting (sign-out / user change resets it): a late response
       // must neither touch a disposed notifier nor reach another session.
@@ -296,8 +306,11 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
         actionIntent: result.actionIntent,
         timestamp: DateTime.now(),
       );
-      state = state.copyWith(turns: [...state.turns, assistantTurn], loading: false);
-      _ref.read(iveProvider.notifier).completeInteraction(interactionToken, success: true);
+      state = state
+          .copyWith(turns: [...state.turns, assistantTurn], loading: false);
+      _ref
+          .read(iveProvider.notifier)
+          .completeInteraction(interactionToken, success: true);
       _ref.read(diagnosticSessionProvider.notifier).logEvent(
         category: DiagnosticCategory.ai,
         eventName: 'ive_core_request_completed',
@@ -305,14 +318,20 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
         correlationId: correlationId,
         status: result.requiresAef ? 'requires_aef' : 'success',
         durationMs: stopwatch.elapsedMilliseconds,
-        metadata: {'sources': result.sourceLabels.length, 'degraded': result.degraded.length},
+        metadata: {
+          'sources': result.sourceLabels.length,
+          'degraded': result.degraded.length
+        },
       );
       if (!result.requiresAef) _ref.invalidate(currentQuotaProvider);
     } catch (e) {
       if (!mounted) return;
-      final failure = e is IveIntelligenceException ? e.failure : IveFailure.unknown;
+      final failure =
+          e is IveIntelligenceException ? e.failure : IveFailure.unknown;
       state = state.copyWith(loading: false, failure: failure);
-      _ref.read(iveProvider.notifier).completeInteraction(interactionToken, success: false);
+      _ref
+          .read(iveProvider.notifier)
+          .completeInteraction(interactionToken, success: false);
       _ref.read(diagnosticSessionProvider.notifier).logEvent(
         category: DiagnosticCategory.ai,
         eventName: 'ive_core_request_completed',

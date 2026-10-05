@@ -7,7 +7,7 @@ class ProjectIntelligenceProfile {
   final Project project;
   final MarketAnalysis? analysis;
   final KnowledgeCoverage coverage;
-  final String maturityStage;        // 'ideia' | 'validando' | 'crescendo' | 'maduro'
+  final String maturityStage; // 'ideia' | 'validando' | 'crescendo' | 'maduro'
   final List<String> relatedProjectNames;
   final List<String> identifiedTopics;
   final List<String> missingKnowledge;
@@ -35,19 +35,27 @@ class ProjectIntelligenceProfile {
   // R16 — [maturityStage] stays a canonical code; this is display only.
   String maturityLabel(AppLocalizations l10n) {
     switch (maturityStage) {
-      case 'maduro':    return l10n.ctxMaturityMature;
-      case 'crescendo': return l10n.ctxMaturityGrowing;
-      case 'validando': return l10n.ctxMaturityValidating;
-      default:          return l10n.ctxMaturityIdea;
+      case 'maduro':
+        return l10n.ctxMaturityMature;
+      case 'crescendo':
+        return l10n.ctxMaturityGrowing;
+      case 'validando':
+        return l10n.ctxMaturityValidating;
+      default:
+        return l10n.ctxMaturityIdea;
     }
   }
 
   String get maturityEmoji {
     switch (maturityStage) {
-      case 'maduro':    return '🌳';
-      case 'crescendo': return '🌱';
-      case 'validando': return '🔬';
-      default:          return '💡';
+      case 'maduro':
+        return '🌳';
+      case 'crescendo':
+        return '🌱';
+      case 'validando':
+        return '🔬';
+      default:
+        return '💡';
     }
   }
 
@@ -61,8 +69,8 @@ class ProjectIntelligenceProfile {
 
   // R16 — niche/targetAudience/monetizationModel are EMPTY when unknown
   // (language-neutral; previously the PT sentinel 'Não definido').
-  bool get hasNiche             => niche.trim().isNotEmpty;
-  bool get hasTargetAudience    => targetAudience.trim().isNotEmpty;
+  bool get hasNiche => niche.trim().isNotEmpty;
+  bool get hasTargetAudience => targetAudience.trim().isNotEmpty;
   bool get hasMonetizationModel => monetizationModel.trim().isNotEmpty;
 
   /// Display value for an optional identity field: the value itself, or the

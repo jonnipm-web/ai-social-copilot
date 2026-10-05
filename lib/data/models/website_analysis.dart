@@ -37,12 +37,17 @@ class WebsiteAnalysis {
   List<String> get plan30Days => _list(analysisJson['plan_30_days']);
   List<String> get articleIdeas => _list(analysisJson['article_ideas']);
   List<String> get contentIdeas => _list(analysisJson['content_ideas']);
-  List<String> get commercialOpportunities => _list(analysisJson['commercial_opportunities']);
-  List<String> get monetizationOpportunities => _list(analysisJson['monetization_opportunities']);
+  List<String> get commercialOpportunities =>
+      _list(analysisJson['commercial_opportunities']);
+  List<String> get monetizationOpportunities =>
+      _list(analysisJson['monetization_opportunities']);
   Map<String, dynamic> get seoAnalysis => _map(analysisJson['seo_analysis']);
-  Map<String, dynamic> get adsenseAnalysis => _map(analysisJson['adsense_analysis']);
-  Map<String, dynamic> get monetizationPlan => _map(analysisJson['monetization_plan']);
-  Map<String, dynamic> get personaTraining => _map(analysisJson['persona_training']);
+  Map<String, dynamic> get adsenseAnalysis =>
+      _map(analysisJson['adsense_analysis']);
+  Map<String, dynamic> get monetizationPlan =>
+      _map(analysisJson['monetization_plan']);
+  Map<String, dynamic> get personaTraining =>
+      _map(analysisJson['persona_training']);
 
   static List<String> _list(dynamic v) {
     if (v == null) return [];
@@ -58,17 +63,17 @@ class WebsiteAnalysis {
 
   factory WebsiteAnalysis.fromMap(Map<String, dynamic> map) {
     return WebsiteAnalysis(
-      id:                map['id'] as String,
-      userId:            map['user_id'] as String,
-      knowledgeItemId:   map['knowledge_item_id'] as String?,
-      url:               map['url'] as String,
-      title:             map['title'] as String?,
-      description:       map['description'] as String?,
-      scoreWebsite:      map['score_website'] as int? ?? 0,
-      scoreAdsense:      map['score_adsense'] as int? ?? 0,
-      scoreSeo:          map['score_seo'] as int? ?? 0,
+      id: map['id'] as String,
+      userId: map['user_id'] as String,
+      knowledgeItemId: map['knowledge_item_id'] as String?,
+      url: map['url'] as String,
+      title: map['title'] as String?,
+      description: map['description'] as String?,
+      scoreWebsite: map['score_website'] as int? ?? 0,
+      scoreAdsense: map['score_adsense'] as int? ?? 0,
+      scoreSeo: map['score_seo'] as int? ?? 0,
       scoreMonetization: map['score_monetization'] as int? ?? 0,
-      analysisJson:      map['analysis_json'] is Map
+      analysisJson: map['analysis_json'] is Map
           ? Map<String, dynamic>.from(map['analysis_json'] as Map)
           : {},
       createdAt: DateTime.parse(map['created_at'] as String),
@@ -77,15 +82,15 @@ class WebsiteAnalysis {
   }
 
   Map<String, dynamic> toInsertMap() => {
-    'user_id':            userId,
-    'knowledge_item_id':  knowledgeItemId,
-    'url':                url,
-    'title':              title,
-    'description':        description,
-    'score_website':      scoreWebsite,
-    'score_adsense':      scoreAdsense,
-    'score_seo':          scoreSeo,
-    'score_monetization': scoreMonetization,
-    'analysis_json':      analysisJson,
-  };
+        'user_id': userId,
+        'knowledge_item_id': knowledgeItemId,
+        'url': url,
+        'title': title,
+        'description': description,
+        'score_website': scoreWebsite,
+        'score_adsense': scoreAdsense,
+        'score_seo': scoreSeo,
+        'score_monetization': scoreMonetization,
+        'analysis_json': analysisJson,
+      };
 }

@@ -18,10 +18,11 @@ import '../../providers/ive_intro_provider.dart';
 // EN/PT-BR, and the existing DiagnosticCategory.ive event vocabulary for
 // analytics — no new chat surface, no new avatar, no new persistence
 // subsystem (see ive_intro_provider.dart).
-Future<void> showIveIntroSheet(BuildContext context, {required String trigger}) async {
+Future<void> showIveIntroSheet(BuildContext context,
+    {required String trigger}) async {
   final ref = ProviderScope.containerOf(context);
   ref.read(diagnosticSessionProvider.notifier).logEvent(
-        category:  DiagnosticCategory.ive,
+        category: DiagnosticCategory.ive,
         eventName: 'ive_intro_started',
         operation: trigger,
       );
@@ -44,7 +45,7 @@ Future<void> showIveIntroSheet(BuildContext context, {required String trigger}) 
         actionTaken = true;
         ref.read(iveIntroProvider.notifier).complete();
         ref.read(diagnosticSessionProvider.notifier).logEvent(
-              category:  DiagnosticCategory.ive,
+              category: DiagnosticCategory.ive,
               eventName: 'ive_intro_completed',
               operation: trigger,
             );
@@ -54,7 +55,7 @@ Future<void> showIveIntroSheet(BuildContext context, {required String trigger}) 
         actionTaken = true;
         ref.read(iveIntroProvider.notifier).skip();
         ref.read(diagnosticSessionProvider.notifier).logEvent(
-              category:  DiagnosticCategory.ive,
+              category: DiagnosticCategory.ive,
               eventName: 'ive_intro_skipped',
               operation: trigger,
             );
@@ -68,7 +69,7 @@ Future<void> showIveIntroSheet(BuildContext context, {required String trigger}) 
     // a skip so the sheet does not reappear on every screen/app open.
     ref.read(iveIntroProvider.notifier).skip();
     ref.read(diagnosticSessionProvider.notifier).logEvent(
-          category:  DiagnosticCategory.ive,
+          category: DiagnosticCategory.ive,
           eventName: 'ive_intro_skipped',
           operation: trigger,
         );
@@ -90,8 +91,8 @@ class _IveIntroSheetContent extends StatelessWidget {
       container: true,
       child: DraggableScrollableSheet(
         initialChildSize: 0.62,
-        minChildSize:      0.45,
-        maxChildSize:       0.92,
+        minChildSize: 0.45,
+        maxChildSize: 0.92,
         expand: false,
         builder: (_, scrollCtrl) => Container(
           decoration: const BoxDecoration(
@@ -103,10 +104,10 @@ class _IveIntroSheetContent extends StatelessWidget {
               const SizedBox(height: 10),
               Center(
                 child: Container(
-                  width:  40,
+                  width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color:        Colors.white24,
+                    color: Colors.white24,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -119,17 +120,18 @@ class _IveIntroSheetContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const IveAvatar(
-                        size:           IveAvatarSize.large,
+                        size: IveAvatarSize.large,
                         showStatusRing: false,
-                        interactive:    false,
+                        interactive: false,
                       ),
                       const SizedBox(height: 16),
                       Text(
                         l10n.ivIntroTitle,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color:      Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
@@ -143,7 +145,10 @@ class _IveIntroSheetContent extends StatelessWidget {
               ),
               Padding(
                 padding: EdgeInsets.fromLTRB(
-                  24, 8, 24, MediaQuery.of(context).viewPadding.bottom + 16,
+                  24,
+                  8,
+                  24,
+                  MediaQuery.of(context).viewPadding.bottom + 16,
                 ),
                 child: Row(
                   children: [
@@ -167,7 +172,8 @@ class _IveIntroSheetContent extends StatelessWidget {
                         ),
                         child: Text(
                           l10n.ivIntroContinueButton,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -186,7 +192,8 @@ class _IveIntroSheetContent extends StatelessWidget {
         child: Text(
           text,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+          style:
+              const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
         ),
       );
 }

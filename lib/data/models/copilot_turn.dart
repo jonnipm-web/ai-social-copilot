@@ -43,17 +43,17 @@ class CopilotTurn {
   Map<String, dynamic> toHistoryMap() => {'role': role, 'content': content};
 
   CopilotTurn copyWith({String? content}) => CopilotTurn(
-        role:             role,
-        content:          content ?? this.content,
-        sources:          sources,
-        entities:         entities,
-        confidence:       confidence,
+        role: role,
+        content: content ?? this.content,
+        sources: sources,
+        entities: entities,
+        confidence: confidence,
         actionSuggestion: actionSuggestion,
-        timestamp:        timestamp,
-        requiresAef:      requiresAef,
+        timestamp: timestamp,
+        requiresAef: requiresAef,
         suggestedActions: suggestedActions,
-        degradedContext:  degradedContext,
-        actionIntent:     actionIntent,
+        degradedContext: degradedContext,
+        actionIntent: actionIntent,
       );
 }
 
@@ -70,8 +70,9 @@ class CopilotActionSuggestion {
 
   factory CopilotActionSuggestion.fromMap(Map<String, dynamic> m) =>
       CopilotActionSuggestion(
-        type:  m['type'] as String? ?? '',
+        type: m['type'] as String? ?? '',
         label: m['label'] as String? ?? '',
-        data:  m['data'] is Map ? Map<String, dynamic>.from(m['data'] as Map) : {},
+        data:
+            m['data'] is Map ? Map<String, dynamic>.from(m['data'] as Map) : {},
       );
 }

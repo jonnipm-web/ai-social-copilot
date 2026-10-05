@@ -55,8 +55,8 @@ class IveExplainButton extends ConsumerWidget {
             Text(
               label ?? AppLocalizations.of(context)!.ctxIveExplainCompact,
               style: const TextStyle(
-                color:      Color(0xFF9B8FFF),
-                fontSize:   11,
+                color: Color(0xFF9B8FFF),
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -77,7 +77,8 @@ class IveExplainButton extends ConsumerWidget {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       icon: const Text('💬', style: TextStyle(fontSize: 13)),
-      label: Text(label ?? AppLocalizations.of(context)!.ctxIveExplainFull, style: const TextStyle(fontSize: 12)),
+      label: Text(label ?? AppLocalizations.of(context)!.ctxIveExplainFull,
+          style: const TextStyle(fontSize: 12)),
       onPressed: () => _open(context, ref),
     );
   }
@@ -92,18 +93,20 @@ class IveExplainButton extends ConsumerWidget {
   // de entrada agora.
   void _open(BuildContext context, WidgetRef ref) {
     final ctx = ref.read(iveContextDataProvider(projectId)).valueOrNull;
-    final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+    final contextData = ctx != null
+        ? CopilotContextData.fromIveContext(ctx)
+        : const CopilotContextData();
     showCopilotChat(
       context,
-      screenName:     screenName,
+      screenName: screenName,
       initialMessage: question,
-      contextData:    contextData,
+      contextData: contextData,
       request: IveInteractionRequest(
-        projectId:        projectId,
-        sourceModule:     sourceModule ?? screenName,
+        projectId: projectId,
+        sourceModule: sourceModule ?? screenName,
         sourceEntityType: sourceEntityType,
-        sourceEntityId:   sourceEntityId,
-        operationType:    IveOperationType.explain,
+        sourceEntityId: sourceEntityId,
+        operationType: IveOperationType.explain,
       ),
     );
   }

@@ -43,7 +43,8 @@ Future<List<Map<String, dynamic>>> identityLocalizer(
     rows;
 
 class ContentLocalizationService {
-  ContentLocalizationService({SupabaseClient? client}) : _clientOverride = client;
+  ContentLocalizationService({SupabaseClient? client})
+      : _clientOverride = client;
 
   final SupabaseClient? _clientOverride;
   SupabaseClient get _client => _clientOverride ?? Supabase.instance.client;
@@ -87,8 +88,10 @@ class ContentLocalizationService {
 
       final keys = missing.keys.toList();
       for (var i = 0; i < keys.length; i += _maxIdsPerCall) {
-        final chunkKeys = keys.sublist(i, (i + _maxIdsPerCall).clamp(0, keys.length));
-        final call = _fetchChunk(table, language, {for (final k in chunkKeys) k: missing[k]!});
+        final chunkKeys =
+            keys.sublist(i, (i + _maxIdsPerCall).clamp(0, keys.length));
+        final call = _fetchChunk(
+            table, language, {for (final k in chunkKeys) k: missing[k]!});
         for (final k in chunkKeys) {
           _inflight[k] = call;
         }
@@ -101,7 +104,10 @@ class ContentLocalizationService {
       await Future.wait(waits);
 
       return rows
-          .map((r) => r['id'] == null ? r : mergeLocalized(table, r, _memo[_key(table, language, r)], language))
+          .map((r) => r['id'] == null
+              ? r
+              : mergeLocalized(
+                  table, r, _memo[_key(table, language, r)], language))
           .toList();
     } catch (e) {
       debugPrint('R16 localize-content failed for $table: $e');
@@ -109,7 +115,8 @@ class ContentLocalizationService {
     }
   }
 
-  Future<void> _fetchChunk(String table, String language, Map<String, Map<String, dynamic>> chunk) async {
+  Future<void> _fetchChunk(String table, String language,
+      Map<String, Map<String, dynamic>> chunk) async {
     final ids = chunk.values.map((r) => r['id'].toString()).toSet().toList();
     Map? items;
     try {
@@ -129,7 +136,8 @@ class ContentLocalizationService {
       _memo[k] = item is Map
           ? _Localized(
               sourceLanguage: item['source_language']?.toString(),
-              payload: Map<String, dynamic>.from(item['payload'] as Map? ?? const {}),
+              payload: Map<String, dynamic>.from(
+                  item['payload'] as Map? ?? const {}),
             )
           : const _Localized(sourceLanguage: null, payload: {});
     });
@@ -145,7 +153,6 @@ class ContentLocalizationService {
     final keys = row.keys.where((k) => !k.startsWith('r16_')).toList()..sort();
     return Object.hashAll(keys.map((k) => '$k=${row[k]}'));
   }
-
 }
 
 class _Localized {
@@ -165,7 +172,9 @@ Map<String, dynamic> mergeLocalized(
 ) {
   if (localized is! _Localized || localized.payload.isEmpty) return row;
   final src = localized.sourceLanguage ?? '';
-  final sameLanguage = src.length >= 2 && src.substring(0, 2).toLowerCase() == language.substring(0, 2).toLowerCase();
+  final sameLanguage = src.length >= 2 &&
+      src.substring(0, 2).toLowerCase() ==
+          language.substring(0, 2).toLowerCase();
   if (sameLanguage) return row;
   final out = Map<String, dynamic>.from(row);
   localized.payload.forEach((column, value) {
@@ -187,7 +196,8 @@ Map<String, dynamic> mergeLocalized(
 
 /// Test hook to build a localized entry without exposing the private type.
 @visibleForTesting
-Object debugLocalizedEntry(String? sourceLanguage, Map<String, dynamic> payload) =>
+Object debugLocalizedEntry(
+        String? sourceLanguage, Map<String, dynamic> payload) =>
     _Localized(sourceLanguage: sourceLanguage, payload: payload);
 
 final contentLocalizationServiceProvider =

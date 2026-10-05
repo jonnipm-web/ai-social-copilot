@@ -7,14 +7,15 @@ abstract final class IveAssetPaths {
   // 218146ef466176bc62ac2cd1f) exported as ive_executive_03b6_canary.riv.
   // Do NOT rename to ive_executive_v1.riv until a production gate approves
   // it; do NOT merge this pointer change to main as-is.
-  static const riveAsset      = 'assets/ive/rive/ive_executive_03b6_canary.riv';
+  static const riveAsset = 'assets/ive/rive/ive_executive_03b6_canary.riv';
 
   // IVE-VISUAL-CANONICAL-INTEGRATION-07 — superseded by [avatarPortrait]
   // below (IveVisualFallback no longer references this). Left defined
   // rather than deleted: removing it is a separate, Codex-gated cleanup
   // decision (not required for this integration), and it has zero
   // remaining references as of this change.
-  static const referenceImage = 'assets/ive/reference/ive_character_reference.png';
+  static const referenceImage =
+      'assets/ive/reference/ive_character_reference.png';
 
   // IVE-VISUAL-CANONICAL-INTEGRATION-07 — the approved canonical IVE
   // portrait (see docs/ive/IVE_AVATAR_03B2_ASSET_PROVENANCE.md), used by
@@ -45,36 +46,36 @@ abstract final class IveRiveFeatureGate {
 // ── Rive State Machine contract ───────────────────────────────────────────────
 
 abstract final class IveRiveInputs {
-  static const stateMachine       = 'IVE_EXECUTIVE_STATE_MACHINE';
+  static const stateMachine = 'IVE_EXECUTIVE_STATE_MACHINE';
 
   // Artboards
-  static const artboardCompact    = 'IVE_AVATAR_COMPACT';
-  static const artboardChat       = 'IVE_AVATAR_CHAT';
-  static const artboardHalfBody   = 'IVE_HALF_BODY';
-  static const artboardFull       = 'IVE_FULL_REFERENCE';
+  static const artboardCompact = 'IVE_AVATAR_COMPACT';
+  static const artboardChat = 'IVE_AVATAR_CHAT';
+  static const artboardHalfBody = 'IVE_HALF_BODY';
+  static const artboardFull = 'IVE_FULL_REFERENCE';
 
   // Boolean inputs
-  static const isListening        = 'isListening';
-  static const isThinking         = 'isThinking';
-  static const isSpeaking         = 'isSpeaking';
-  static const isVisible          = 'isVisible';
-  static const hasUnreadInsight   = 'hasUnreadInsight';
+  static const isListening = 'isListening';
+  static const isThinking = 'isThinking';
+  static const isSpeaking = 'isSpeaking';
+  static const isVisible = 'isVisible';
+  static const hasUnreadInsight = 'hasUnreadInsight';
 
   // Number inputs
-  static const stateIndex         = 'stateIndex';
-  static const attentionLevel     = 'attentionLevel';
+  static const stateIndex = 'stateIndex';
+  static const attentionLevel = 'attentionLevel';
   static const expressionIntensity = 'expressionIntensity';
-  static const speechActivity     = 'speechActivity';
+  static const speechActivity = 'speechActivity';
 
   // Trigger inputs
-  static const wave               = 'wave';
-  static const notify             = 'notify';
-  static const success            = 'success';
-  static const warning            = 'warning';
-  static const error              = 'error';
-  static const opportunity        = 'opportunity';
-  static const focus              = 'focus';
-  static const reset              = 'reset';
+  static const wave = 'wave';
+  static const notify = 'notify';
+  static const success = 'success';
+  static const warning = 'warning';
+  static const error = 'error';
+  static const opportunity = 'opportunity';
+  static const focus = 'focus';
+  static const reset = 'reset';
 }
 
 // ── Avatar size ───────────────────────────────────────────────────────────────

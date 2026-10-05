@@ -21,12 +21,18 @@ import 'action_detail_screen.dart';
 // intentionally reuses the same actionEngineStatusXxx keys.
 String actionEngineStatusLabel(AppLocalizations l10n, String status) {
   switch (status) {
-    case 'pending':   return l10n.actionEngineStatusPending;
-    case 'approved':  return l10n.actionEngineStatusApproved;
-    case 'executing': return l10n.actionEngineStatusExecuting;
-    case 'completed': return l10n.actionEngineStatusCompleted;
-    case 'cancelled': return l10n.actionEngineStatusCancelled;
-    default:          return status;
+    case 'pending':
+      return l10n.actionEngineStatusPending;
+    case 'approved':
+      return l10n.actionEngineStatusApproved;
+    case 'executing':
+      return l10n.actionEngineStatusExecuting;
+    case 'completed':
+      return l10n.actionEngineStatusCompleted;
+    case 'cancelled':
+      return l10n.actionEngineStatusCancelled;
+    default:
+      return status;
   }
 }
 
@@ -39,21 +45,24 @@ String actionEngineStatusLabel(AppLocalizations l10n, String status) {
 // same as every other xxxLabel() helper in this codebase.
 String actionEngineTypeLabel(AppLocalizations l10n, String type) {
   switch (type) {
-    case 'task':        return l10n.actionEngineTypeTask;
-    case 'opportunity': return l10n.actionEngineTypeOpportunity;
-    default:            return type;
+    case 'task':
+      return l10n.actionEngineTypeTask;
+    case 'opportunity':
+      return l10n.actionEngineTypeOpportunity;
+    default:
+      return type;
   }
 }
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGreen   = Color(0xFF4CAF50);
-const _kOrange  = Color(0xFFFF9800);
-const _kRed     = Color(0xFFF44336);
-const _kCyan    = Color(0xFF00BCD4);
-const _kGold    = Color(0xFFFFD700);
+const _kGreen = Color(0xFF4CAF50);
+const _kOrange = Color(0xFFFF9800);
+const _kRed = Color(0xFFF44336);
+const _kCyan = Color(0xFF00BCD4);
+const _kGold = Color(0xFFFFD700);
 
 // ════════════════════════════════════════════════════════════════════════════
 // Action Engine Screen (M5) — Feature-flagged
@@ -85,9 +94,11 @@ class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppConstants.routeDashboard),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppConstants.routeDashboard),
         ),
         title: Text(
           l10n.navActionEngine,
@@ -99,7 +110,8 @@ class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
       body: flagAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
-        error: (_, __) => _ActionBody(projectId: _projectId, onProjectChange: _setProject),
+        error: (_, __) =>
+            _ActionBody(projectId: _projectId, onProjectChange: _setProject),
         data: (enabled) => enabled
             ? _ActionBody(projectId: _projectId, onProjectChange: _setProject)
             : const _FeatureGated(),
@@ -130,7 +142,8 @@ class _FeatureGated extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               l10n.actionEngineComingSoonBody,
-              style: const TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+              style: const TextStyle(
+                  color: Colors.white54, fontSize: 13, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -162,7 +175,7 @@ class _FeatureGated extends StatelessWidget {
 
 class _ActionBody extends ConsumerWidget {
   const _ActionBody({required this.projectId, required this.onProjectChange});
-  final String?                projectId;
+  final String? projectId;
   final void Function(String?) onProjectChange;
 
   @override
@@ -187,8 +200,10 @@ class _ActionBody extends ConsumerWidget {
         // below and simply vanished from every section, invisible but
         // still real in the database (reproduced live, Action Engine
         // continuation session).
-        final pending   = items.where((i) => i.status == 'pending' || i.status == 'approved').toList();
-        final active    = items.where((i) => i.status == 'executing').toList();
+        final pending = items
+            .where((i) => i.status == 'pending' || i.status == 'approved')
+            .toList();
+        final active = items.where((i) => i.status == 'executing').toList();
         final completed = items.where((i) => i.status == 'completed').toList();
 
         return Column(
@@ -204,31 +219,31 @@ class _ActionBody extends ConsumerWidget {
                         children: [
                           _ActionSummaryRow(
                             pending: pending.length,
-                            active:  active.length,
-                            done:    completed.length,
+                            active: active.length,
+                            done: completed.length,
                           ),
                           const SizedBox(height: 20),
-
                           if (pending.isNotEmpty) ...[
-                            _SectionHeader(l10n.actionEngineSectionPending, pending.length, _kOrange),
+                            _SectionHeader(l10n.actionEngineSectionPending,
+                                pending.length, _kOrange),
                             ...pending.map((item) => Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
                                   child: _ActionCard(item: item),
                                 )),
                             const SizedBox(height: 8),
                           ],
-
                           if (active.isNotEmpty) ...[
-                            _SectionHeader(l10n.actionEngineSectionActive, active.length, _kCyan),
+                            _SectionHeader(l10n.actionEngineSectionActive,
+                                active.length, _kCyan),
                             ...active.map((item) => Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
                                   child: _ActionCard(item: item),
                                 )),
                             const SizedBox(height: 8),
                           ],
-
                           if (completed.isNotEmpty) ...[
-                            _SectionHeader(l10n.actionEngineSectionCompleted, completed.length, _kGreen),
+                            _SectionHeader(l10n.actionEngineSectionCompleted,
+                                completed.length, _kGreen),
                             ...completed.take(5).map((item) => Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
                                   child: _ActionCard(item: item),
@@ -260,11 +275,11 @@ class _ActionSummaryRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
-        _SummaryChip(l10n.actionEngineSummaryPending,   '$pending', _kOrange),
+        _SummaryChip(l10n.actionEngineSummaryPending, '$pending', _kOrange),
         const SizedBox(width: 10),
-        _SummaryChip(l10n.actionEngineSummaryActive,    '$active',  _kCyan),
+        _SummaryChip(l10n.actionEngineSummaryActive, '$active', _kCyan),
         const SizedBox(width: 10),
-        _SummaryChip(l10n.actionEngineSummaryCompleted, '$done',    _kGreen),
+        _SummaryChip(l10n.actionEngineSummaryCompleted, '$done', _kGreen),
       ],
     );
   }
@@ -356,8 +371,8 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
 
   static Color _statusColor(String s) {
     const m = {
-      'pending':   Color(0xFFFF9800),
-      'approved':  Color(0xFF6C63FF),
+      'pending': Color(0xFFFF9800),
+      'approved': Color(0xFF6C63FF),
       'executing': Color(0xFF00BCD4),
       'completed': Color(0xFF4CAF50),
       'cancelled': Color(0xFFF44336),
@@ -405,7 +420,8 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             child: Text(l10n.actionEngineDelete,
-                style: const TextStyle(color: _kRed, fontWeight: FontWeight.bold)),
+                style:
+                    const TextStyle(color: _kRed, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -419,9 +435,9 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n     = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context)!;
     final notifier = ref.read(actionQueueNotifierProvider.notifier);
-    final item     = widget.item;
+    final item = widget.item;
     // COMMERCIAL-V1-PHYSICAL-QA-RECOVERY (§11) -- Opportunity Lab cards
     // already show the linked project's name; Action Engine kept the same
     // traceability gap this mission's brief called out (PROJECT -> OPPORTUNITY
@@ -430,7 +446,9 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
     // item.projectId, never trust/display an unverified id.
     final projectName = item.projectId == null
         ? null
-        : ref.watch(projectsProvider).valueOrNull
+        : ref
+            .watch(projectsProvider)
+            .valueOrNull
             ?.where((p) => p.id == item.projectId)
             .map((p) => p.name)
             .firstOrNull;
@@ -442,131 +460,142 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
         ),
       ),
       child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  item.title,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600),
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (_loading)
-                const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 1.5,
-                    color: _kPrimary,
-                  ),
-                )
-              else
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: _statusColor(item.status).withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    actionEngineStatusLabel(l10n, item.status),
-                    style: TextStyle(
-                        color: _statusColor(item.status),
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right_rounded,
-                  color: Colors.white24, size: 16),
-            ],
-          ),
-          if (projectName != null) ...[
-            const SizedBox(height: 6),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withOpacity(0.07)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               children: [
-                const Icon(Icons.folder_outlined, size: 12, color: Colors.white38),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(projectName,
-                      style: const TextStyle(color: Colors.white38, fontSize: 11),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600),
+                  ),
                 ),
+                const SizedBox(width: 8),
+                if (_loading)
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.5,
+                      color: _kPrimary,
+                    ),
+                  )
+                else
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _statusColor(item.status).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      actionEngineStatusLabel(l10n, item.status),
+                      style: TextStyle(
+                          color: _statusColor(item.status),
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right_rounded,
+                    color: Colors.white24, size: 16),
               ],
             ),
-          ],
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            children: [
-              _ScoreBadge(l10n.actionEngineScoreRoi, item.roiScore),
-              _ScoreBadge(l10n.actionEngineScoreImpact, item.impactScore),
-              _ScoreBadge(l10n.actionEngineScoreEffort, item.effortScore),
-              _ScoreBadge(l10n.actionEngineScorePriority, item.priority, isSmaller: true),
+            if (projectName != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.folder_outlined,
+                      size: 12, color: Colors.white38),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(projectName,
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
             ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (item.status == 'pending' && !_loading) ...[
-                _ActionBtn(l10n.actionEngineApprove, _kGreen, () => _run(
-                    () => notifier.approve(item.id, title: item.title))),
-                const SizedBox(width: 8),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              children: [
+                _ScoreBadge(l10n.actionEngineScoreRoi, item.roiScore),
+                _ScoreBadge(l10n.actionEngineScoreImpact, item.impactScore),
+                _ScoreBadge(l10n.actionEngineScoreEffort, item.effortScore),
+                _ScoreBadge(l10n.actionEngineScorePriority, item.priority,
+                    isSmaller: true),
               ],
-              // INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — "execute"/"complete"
-              // now open the AEF Human Gate sheet instead of a direct
-              // status write; there is no separate "complete" action left
-              // (completion is proven by the receipt, not asserted by a tap).
-              if (item.status == 'approved' && !_loading) ...[
-                _ActionBtn(l10n.actionEngineExecute, _kCyan, () async {
-                  await ActionEngineExecuteSheet.show(context, item);
-                  ref.invalidate(actionQueueItemByIdProvider(item.id));
-                }),
-                const SizedBox(width: 8),
-              ],
-              if (item.status == 'executing' && !_loading) ...[
-                // GATE-17-FINAL-CLOSURE (IVE Adaptive Resting Placement) —
-                // physically reproduced collision: the floating IVE avatar's
-                // fixed resting corner sat on top of this button. Reports
-                // its geometry so the placement engine steers clear;
-                // renders unchanged otherwise (ive_exclusion_region.dart).
-                IveExclusionRegion(
-                  child: _ActionBtn(l10n.actionEngineVerify, _kGreen, () async {
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (item.status == 'pending' && !_loading) ...[
+                  _ActionBtn(
+                      l10n.actionEngineApprove,
+                      _kGreen,
+                      () => _run(
+                          () => notifier.approve(item.id, title: item.title))),
+                  const SizedBox(width: 8),
+                ],
+                // INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — "execute"/"complete"
+                // now open the AEF Human Gate sheet instead of a direct
+                // status write; there is no separate "complete" action left
+                // (completion is proven by the receipt, not asserted by a tap).
+                if (item.status == 'approved' && !_loading) ...[
+                  _ActionBtn(l10n.actionEngineExecute, _kCyan, () async {
                     await ActionEngineExecuteSheet.show(context, item);
                     ref.invalidate(actionQueueItemByIdProvider(item.id));
                   }),
-                ),
-                const SizedBox(width: 8),
-                _ActionBtn(l10n.actionEnginePause, _kOrange, () => _run(
-                    () => notifier.pause(item.id, title: item.title))),
-                const SizedBox(width: 8),
+                  const SizedBox(width: 8),
+                ],
+                if (item.status == 'executing' && !_loading) ...[
+                  // GATE-17-FINAL-CLOSURE (IVE Adaptive Resting Placement) —
+                  // physically reproduced collision: the floating IVE avatar's
+                  // fixed resting corner sat on top of this button. Reports
+                  // its geometry so the placement engine steers clear;
+                  // renders unchanged otherwise (ive_exclusion_region.dart).
+                  IveExclusionRegion(
+                    child:
+                        _ActionBtn(l10n.actionEngineVerify, _kGreen, () async {
+                      await ActionEngineExecuteSheet.show(context, item);
+                      ref.invalidate(actionQueueItemByIdProvider(item.id));
+                    }),
+                  ),
+                  const SizedBox(width: 8),
+                  _ActionBtn(
+                      l10n.actionEnginePause,
+                      _kOrange,
+                      () => _run(
+                          () => notifier.pause(item.id, title: item.title))),
+                  const SizedBox(width: 8),
+                ],
+                if (!_loading)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded,
+                        color: Colors.white24, size: 16),
+                    onPressed: _confirmDelete,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
               ],
-              if (!_loading)
-                IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      color: Colors.white24, size: 16),
-                  onPressed: _confirmDelete,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 }
@@ -587,9 +616,7 @@ class _ScoreBadge extends StatelessWidget {
       ),
       child: Text(
         '$label: $value',
-        style: TextStyle(
-            color: Colors.white54,
-            fontSize: isSmaller ? 9 : 10),
+        style: TextStyle(color: Colors.white54, fontSize: isSmaller ? 9 : 10),
       ),
     );
   }
@@ -624,7 +651,7 @@ class _ActionBtn extends StatelessWidget {
 
 class _ProjectFilter extends ConsumerWidget {
   const _ProjectFilter({required this.selected, required this.onSelect});
-  final String?                selected;
+  final String? selected;
   final void Function(String?) onSelect;
 
   @override
@@ -660,9 +687,10 @@ class _ProjectFilter extends ConsumerWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.selected, required this.onTap});
-  final String       label;
-  final bool         selected;
+  const _Chip(
+      {required this.label, required this.selected, required this.onTap});
+  final String label;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
@@ -717,7 +745,8 @@ class _EmptyQueue extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             l10n.actionEngineEmptyBody,
-            style: const TextStyle(color: Colors.white38, fontSize: 12, height: 1.5),
+            style: const TextStyle(
+                color: Colors.white38, fontSize: 12, height: 1.5),
             textAlign: TextAlign.center,
           ),
         ],

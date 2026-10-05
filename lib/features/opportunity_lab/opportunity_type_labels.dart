@@ -12,15 +12,24 @@ import '../../l10n/app_localizations.dart';
 // DISPLAY string only; nothing written to the database changes.
 String opportunityTypeLabel(String canonical, AppLocalizations l10n) {
   switch (canonical) {
-    case 'expansão':      return l10n.oppTypeExpansao;
-    case 'novo produto':  return l10n.oppTypeNovoProduto;
-    case 'novo nicho':    return l10n.oppTypeNovoNicho;
-    case 'afiliado':      return l10n.oppTypeAfiliado;
-    case 'SaaS':          return l10n.oppTypeSaas;
-    case 'ebook':         return l10n.oppTypeEbook;
-    case 'curso':         return l10n.oppTypeCurso;
-    case 'assinatura':    return l10n.oppTypeAssinatura;
-    default:              return canonical; // unmapped/legacy value -- show as-is, never crash
+    case 'expansão':
+      return l10n.oppTypeExpansao;
+    case 'novo produto':
+      return l10n.oppTypeNovoProduto;
+    case 'novo nicho':
+      return l10n.oppTypeNovoNicho;
+    case 'afiliado':
+      return l10n.oppTypeAfiliado;
+    case 'SaaS':
+      return l10n.oppTypeSaas;
+    case 'ebook':
+      return l10n.oppTypeEbook;
+    case 'curso':
+      return l10n.oppTypeCurso;
+    case 'assinatura':
+      return l10n.oppTypeAssinatura;
+    default:
+      return canonical; // unmapped/legacy value -- show as-is, never crash
   }
 }
 
@@ -34,13 +43,20 @@ const List<String> kOpportunityTypesCoveredByLabels = OpportunityLabItem.types;
 // this mission (explainable UI, no raw enum values facing the user).
 String opportunityStatusLabel(String canonical, AppLocalizations l10n) {
   switch (canonical) {
-    case 'pending':    return l10n.oppStatusPending;
-    case 'analyzing':  return l10n.oppStatusAnalyzing;
-    case 'approved':   return l10n.oppStatusApproved;
-    case 'rejected':   return l10n.oppStatusRejected;
-    case 'executing':  return l10n.oppStatusExecuting;
-    default:           return canonical; // unmapped/legacy value -- show as-is, never crash
+    case 'pending':
+      return l10n.oppStatusPending;
+    case 'analyzing':
+      return l10n.oppStatusAnalyzing;
+    case 'approved':
+      return l10n.oppStatusApproved;
+    case 'rejected':
+      return l10n.oppStatusRejected;
+    case 'executing':
+      return l10n.oppStatusExecuting;
+    default:
+      return canonical; // unmapped/legacy value -- show as-is, never crash
   }
 }
 
-const List<String> kOpportunityStatusesCoveredByLabels = OpportunityLabItem.statusValues;
+const List<String> kOpportunityStatusesCoveredByLabels =
+    OpportunityLabItem.statusValues;

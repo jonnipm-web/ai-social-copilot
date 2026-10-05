@@ -43,13 +43,17 @@ void main() {
     });
 
     test('events/snapshots are unmodifiable (Codex Tranche 2 audit, P3)', () {
-      final result = Strategy001Result(events: [_event(EventKind.trendDetected, 1)]);
-      expect(() => result.events.add(_event(EventKind.triggered, 2)), throwsUnsupportedError);
+      final result =
+          Strategy001Result(events: [_event(EventKind.trendDetected, 1)]);
+      expect(() => result.events.add(_event(EventKind.triggered, 2)),
+          throwsUnsupportedError);
     });
   });
 
   group('BarSnapshot', () {
-    test('nullable fields (trendDirection/targetPrice/breakoutBarIndex) default to null', () {
+    test(
+        'nullable fields (trendDirection/targetPrice/breakoutBarIndex) default to null',
+        () {
       final snapshot = BarSnapshot(
         barIndex: 0,
         timestamp: DateTime(2026, 1, 1),
@@ -70,7 +74,8 @@ void main() {
         events: [_event(EventKind.trendDetected, 1)],
         confirmationCount: 0,
       );
-      expect(() => snapshot.events.add(_event(EventKind.triggered, 2)), throwsUnsupportedError);
+      expect(() => snapshot.events.add(_event(EventKind.triggered, 2)),
+          throwsUnsupportedError);
     });
   });
 
@@ -80,7 +85,9 @@ void main() {
   // internal.mock_quant_signal_acknowledgment `event_kind` enum) -- every
   // EventKind value must produce a string that schema actually accepts.
   group('eventKindToAcknowledgmentValue (Quant -> Action Intent -> AEF)', () {
-    test('every EventKind maps to the exact snake_case value the server tool schema accepts', () {
+    test(
+        'every EventKind maps to the exact snake_case value the server tool schema accepts',
+        () {
       const expected = {
         EventKind.trendDetected: 'trend_detected',
         EventKind.pullbackDetected: 'pullback_detected',
@@ -98,16 +105,23 @@ void main() {
       // entry above fails HERE (compile error on the switch), not silently
       // at the server.
       for (final kind in EventKind.values) {
-        expect(eventKindToAcknowledgmentValue(kind), expected[kind], reason: kind.name);
+        expect(eventKindToAcknowledgmentValue(kind), expected[kind],
+            reason: kind.name);
       }
-      expect(expected.length, EventKind.values.length, reason: 'every EventKind must be covered');
+      expect(expected.length, EventKind.values.length,
+          reason: 'every EventKind must be covered');
     });
   });
 
-  group('strategyEventToAcknowledgmentParameters (Quant -> Action Intent -> AEF)', () {
-    test('produces exactly the three keys internal.mock_quant_signal_acknowledgment requires, nothing else', () {
+  group(
+      'strategyEventToAcknowledgmentParameters (Quant -> Action Intent -> AEF)',
+      () {
+    test(
+        'produces exactly the three keys internal.mock_quant_signal_acknowledgment requires, nothing else',
+        () {
       final event = _event(EventKind.triggered, 7);
-      final params = strategyEventToAcknowledgmentParameters(event, signalId: 'sig-1');
+      final params =
+          strategyEventToAcknowledgmentParameters(event, signalId: 'sig-1');
       expect(params.keys.toSet(), {'signal_id', 'event_kind', 'note'});
       expect(params['signal_id'], 'sig-1');
       expect(params['event_kind'], 'triggered');
@@ -115,11 +129,15 @@ void main() {
       expect(params['note'], contains('test')); // the event's own reason
     });
 
-    test('never fabricates a trading signal -- the note is a structural description, not an instruction', () {
+    test(
+        'never fabricates a trading signal -- the note is a structural description, not an instruction',
+        () {
       final event = _event(EventKind.targetReached, 3);
-      final params = strategyEventToAcknowledgmentParameters(event, signalId: 'sig-2');
+      final params =
+          strategyEventToAcknowledgmentParameters(event, signalId: 'sig-2');
       for (final word in ['buy', 'sell', 'long', 'short', 'order', 'trade']) {
-        expect(params['note']!.toLowerCase(), isNot(contains(word)), reason: word);
+        expect(params['note']!.toLowerCase(), isNot(contains(word)),
+            reason: word);
       }
     });
   });

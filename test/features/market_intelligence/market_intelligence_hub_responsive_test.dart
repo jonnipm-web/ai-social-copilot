@@ -45,7 +45,8 @@ List<NicheRanking> _niches() => [
         id: 'n-1',
         userId: 'user-1',
         marketAnalysisId: 'analysis-1',
-        name: 'Consultoria especializada em migração de infraestrutura legada para nuvem híbrida',
+        name:
+            'Consultoria especializada em migração de infraestrutura legada para nuvem híbrida',
         overallScore: 82,
         createdAt: DateTime(2026, 1, 1),
       ),
@@ -55,7 +56,8 @@ ContentCluster _contentCluster() => ContentCluster(
       id: 'cc-1',
       userId: 'user-1',
       marketAnalysisId: 'analysis-1',
-      mainKeyword: 'estratégias avançadas de otimização de conversão para e-commerce internacional',
+      mainKeyword:
+          'estratégias avançadas de otimização de conversão para e-commerce internacional',
       clusters: const [
         {'name': 'Cluster A'},
         {'name': 'Cluster B'},
@@ -74,7 +76,11 @@ RevenuePlan _revenuePlan() => RevenuePlan(
       monthlyModerate: 45000,
       planJson: const {
         'milestones': [
-          {'title': 'Atingir os primeiros mil clientes pagantes recorrentes na América Latina', 'target': 10000},
+          {
+            'title':
+                'Atingir os primeiros mil clientes pagantes recorrentes na América Latina',
+            'target': 10000
+          },
         ],
         'revenue_sources': [
           {'name': 'Assinatura'},
@@ -110,7 +116,8 @@ Future<void> _pumpHubAt(WidgetTester tester, Size size) async {
           .overrideWith((ref) async => _analysisWithLongInput()),
       competitorsByAnalysisProvider(analysisId)
           .overrideWith((ref) async => _competitors()),
-      gapAnalysisByAnalysisProvider(analysisId).overrideWith((ref) async => null),
+      gapAnalysisByAnalysisProvider(analysisId)
+          .overrideWith((ref) async => null),
       opportunitiesByAnalysisProvider(analysisId)
           .overrideWith((ref) async => <Opportunity>[]),
       revenuePlanByAnalysisProvider(analysisId)

@@ -13,18 +13,22 @@ class IveIntelligenceService {
   Future<IveIntelligenceResult> ask(IveIntelligenceRequest request) async {
     dynamic data;
     try {
-      final res = await _client.functions.invoke(AppConstants.edgeFunctionIveIntelligence, body: request.toJson());
+      final res = await _client.functions.invoke(
+          AppConstants.edgeFunctionIveIntelligence,
+          body: request.toJson());
       data = res.data;
     } on FunctionException catch (e) {
       final details = e.details;
-      throw IveIntelligenceException(IveFailure.fromCode(details is Map ? details['error'] : null));
+      throw IveIntelligenceException(
+          IveFailure.fromCode(details is Map ? details['error'] : null));
     } catch (_) {
       throw const IveIntelligenceException(IveFailure.unknown);
     }
     if (data is Map && data['error'] != null) {
       throw IveIntelligenceException(IveFailure.fromCode(data['error']));
     }
-    if (data is! Map<String, dynamic>) throw const IveIntelligenceException(IveFailure.unknown);
+    if (data is! Map<String, dynamic>)
+      throw const IveIntelligenceException(IveFailure.unknown);
     try {
       return IveIntelligenceResult.fromMap(data);
     } on FormatException {

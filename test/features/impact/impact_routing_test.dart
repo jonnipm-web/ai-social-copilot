@@ -20,22 +20,41 @@ import 'impact_test_support.dart';
 /// IV-IMPACT-I5 — entry points: route policy (admin-only) and deep links.
 void main() {
   group('UI-RT route policy', () {
-    for (final path in [AppConstants.routeImpact, AppConstants.routeImpactDossier]) {
+    for (final path in [
+      AppConstants.routeImpact,
+      AppConstants.routeImpactDossier
+    ]) {
       test('UI-RT-01 $path: non-admin (even PRO/premium/beta) is denied', () {
         expect(routeMayBeRestricted(path), isTrue);
         expect(
-          evaluateRouteAccess(path: path, isAdmin: false, isPro: true, isPremium: true, isBetaTester: true, profileResolved: true),
+          evaluateRouteAccess(
+              path: path,
+              isAdmin: false,
+              isPro: true,
+              isPremium: true,
+              isBetaTester: true,
+              profileResolved: true),
           RouteDecision.redirectDenied,
         );
-        expect(evaluateRouteAccess(path: path, isAdmin: false, isPro: false, profileResolved: false), RouteDecision.redirectDenied);
+        expect(
+            evaluateRouteAccess(
+                path: path,
+                isAdmin: false,
+                isPro: false,
+                profileResolved: false),
+            RouteDecision.redirectDenied);
       });
 
       test('UI-RT-02 $path: admin is allowed', () {
-        expect(evaluateRouteAccess(path: path, isAdmin: true, isPro: false, profileResolved: true), RouteDecision.allow);
+        expect(
+            evaluateRouteAccess(
+                path: path, isAdmin: true, isPro: false, profileResolved: true),
+            RouteDecision.allow);
       });
     }
 
-    test('UI-RT-03 module stays EXPERIMENTAL, not commercial, admin entry only', () {
+    test('UI-RT-03 module stays EXPERIMENTAL, not commercial, admin entry only',
+        () {
       final m = kModuleRegistry.firstWhere((m) => m.moduleId == 'impact');
       expect(m.lifecycle, ModuleLifecycle.experimental);
       expect(m.commercialEnabled, isFalse);
@@ -43,7 +62,8 @@ void main() {
       expect(m.adminClickable, isTrue);
     });
 
-    test('UI-RT-04 both routes are registered in app.dart with the policy map', () {
+    test('UI-RT-04 both routes are registered in app.dart with the policy map',
+        () {
       final app = File('lib/app.dart').readAsStringSync();
       expect(app, contains('path: AppConstants.routeImpact,'));
       expect(app, contains('path: AppConstants.routeImpactDossier,'));
@@ -52,14 +72,16 @@ void main() {
     });
   });
 
-  testWidgets('UI-RT-05 deep link /impact/<id> opens that dossier', (tester) async {
+  testWidgets('UI-RT-05 deep link /impact/<id> opens that dossier',
+      (tester) async {
     final tr = FakeImpactTransport(dossier: fixture('dossier_confirmed_en'));
     final router = GoRouter(
       initialLocation: '/impact/$kInvestigationId',
       routes: [
         GoRoute(
           path: AppConstants.routeImpactDossier,
-          builder: (_, s) => ImpactDossierScreen(investigationId: s.pathParameters['id']!),
+          builder: (_, s) =>
+              ImpactDossierScreen(investigationId: s.pathParameters['id']!),
         ),
       ],
     );
@@ -85,13 +107,22 @@ void main() {
     expect(tr.calls.single['investigation_id'], kInvestigationId);
   });
 
-  testWidgets('UI-RT-06 (PF-03) list → dossier keeps history: back arrow shown, Back returns to the list (never leaves the module)', (tester) async {
-    final tr = FakeImpactTransport(dossier: fixture('dossier_confirmed_en'), list: fixture('list_investigations'));
+  testWidgets(
+      'UI-RT-06 (PF-03) list → dossier keeps history: back arrow shown, Back returns to the list (never leaves the module)',
+      (tester) async {
+    final tr = FakeImpactTransport(
+        dossier: fixture('dossier_confirmed_en'),
+        list: fixture('list_investigations'));
     final router = GoRouter(
       initialLocation: AppConstants.routeImpact,
       routes: [
-        GoRoute(path: AppConstants.routeImpact, builder: (_, __) => const ImpactHomeScreen()),
-        GoRoute(path: AppConstants.routeImpactDossier, builder: (_, s) => ImpactDossierScreen(investigationId: s.pathParameters['id']!)),
+        GoRoute(
+            path: AppConstants.routeImpact,
+            builder: (_, __) => const ImpactHomeScreen()),
+        GoRoute(
+            path: AppConstants.routeImpactDossier,
+            builder: (_, s) =>
+                ImpactDossierScreen(investigationId: s.pathParameters['id']!)),
       ],
     );
     await tester.pumpWidget(ProviderScope(
@@ -115,7 +146,8 @@ void main() {
     await tester.tap(find.text('«org-hopebridge»'));
     await tester.pumpAndSettle();
     expect(find.byType(ImpactDossierScreen), findsOneWidget);
-    expect(find.byType(BackButton), findsOneWidget, reason: 'the dossier offers a way back');
+    expect(find.byType(BackButton), findsOneWidget,
+        reason: 'the dossier offers a way back');
     expect(router.canPop(), isTrue);
     await tester.pageBack();
     await tester.pumpAndSettle();

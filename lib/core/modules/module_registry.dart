@@ -27,12 +27,26 @@ const List<ModuleDefinition> kModuleRegistry = [
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
     route: null,
-    backendDependencies: ['projects', 'ecosystem intelligence', 'action queue', 'opportunity lab', 'knowledge graph'],
-    databaseDependencies: ['projects', 'action_queue', 'opportunity_lab', 'knowledge_items'],
-    readinessPt: 'ABSORVIDO em Business Dashboard (INSIGHTVALUES-COMMERCIAL-MACRO-01). A rota /home continua existindo (alvo interno de redirecionamento) e agora renderiza o dashboard canônico; sem item próprio no menu.',
-    readinessEn: 'ABSORBED into Business Dashboard (INSIGHTVALUES-COMMERCIAL-MACRO-01). The /home route still exists (internal redirect target) and now renders the canonical dashboard; no longer a separate nav entry.',
+    backendDependencies: [
+      'projects',
+      'ecosystem intelligence',
+      'action queue',
+      'opportunity lab',
+      'knowledge graph'
+    ],
+    databaseDependencies: [
+      'projects',
+      'action_queue',
+      'opportunity_lab',
+      'knowledge_items'
+    ],
+    readinessPt:
+        'ABSORVIDO em Business Dashboard (INSIGHTVALUES-COMMERCIAL-MACRO-01). A rota /home continua existindo (alvo interno de redirecionamento) e agora renderiza o dashboard canônico; sem item próprio no menu.',
+    readinessEn:
+        'ABSORBED into Business Dashboard (INSIGHTVALUES-COMMERCIAL-MACRO-01). The /home route still exists (internal redirect target) and now renders the canonical dashboard; no longer a separate nav entry.',
     releaseClassification: ModuleReleaseClass.commercialV1,
-    notes: 'Consolidação executada -- ver business-dashboard. Widget HomeScreen mantido no código (não referenciado por app.dart) para referência histórica; pode ser removido em uma limpeza futura.',
+    notes:
+        'Consolidação executada -- ver business-dashboard. Widget HomeScreen mantido no código (não referenciado por app.dart) para referência histórica; pode ser removido em uma limpeza futura.',
   ),
   ModuleDefinition(
     moduleId: 'business-dashboard',
@@ -44,10 +58,13 @@ const List<ModuleDefinition> kModuleRegistry = [
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
     route: AppConstants.routeDashboard,
-    readinessPt: 'Funcional. Ponto de entrada comercial único -- Command Center e Executive Dashboard consolidados aqui (INSIGHTVALUES-COMMERCIAL-MACRO-01).',
-    readinessEn: 'Functional. Single commercial entry point -- Command Center and Executive Dashboard consolidated here (INSIGHTVALUES-COMMERCIAL-MACRO-01).',
+    readinessPt:
+        'Funcional. Ponto de entrada comercial único -- Command Center e Executive Dashboard consolidados aqui (INSIGHTVALUES-COMMERCIAL-MACRO-01).',
+    readinessEn:
+        'Functional. Single commercial entry point -- Command Center and Executive Dashboard consolidated here (INSIGHTVALUES-COMMERCIAL-MACRO-01).',
     releaseClassification: ModuleReleaseClass.commercialV1,
-    notes: 'Canonical dashboard. /home and /executive-dashboard now render this same screen (see their own registry entries).',
+    notes:
+        'Canonical dashboard. /home and /executive-dashboard now render this same screen (see their own registry entries).',
   ),
   ModuleDefinition(
     moduleId: 'projects',
@@ -86,12 +103,20 @@ const List<ModuleDefinition> kModuleRegistry = [
     // drift test couldn't detect (it only checks the function name exists
     // somewhere server-side, not which module owns it). Left out of
     // edgeFunctions; named in readiness/notes instead, informationally.
-    databaseDependencies: ['projects', 'opportunity_lab', 'action_queue', 'revenue_plans'],
+    databaseDependencies: [
+      'projects',
+      'opportunity_lab',
+      'action_queue',
+      'revenue_plans'
+    ],
     aiDependency: true,
-    readinessPt: 'Totalmente funcional -- dispara generate-project-opportunities e generate-project-actions (funções já pertencentes a opportunity-lab/action-engine) e um plano de receita iniciais na criação de um projeto. Sem tela própria (sub-fluxo de Projetos, route: null por design).',
-    readinessEn: 'Fully functional -- triggers generate-project-opportunities and generate-project-actions (functions already owned by opportunity-lab/action-engine) plus an initial revenue plan on project creation. No own screen (Projects sub-flow, route: null by design).',
+    readinessPt:
+        'Totalmente funcional -- dispara generate-project-opportunities e generate-project-actions (funções já pertencentes a opportunity-lab/action-engine) e um plano de receita iniciais na criação de um projeto. Sem tela própria (sub-fluxo de Projetos, route: null por design).',
+    readinessEn:
+        'Fully functional -- triggers generate-project-opportunities and generate-project-actions (functions already owned by opportunity-lab/action-engine) plus an initial revenue plan on project creation. No own screen (Projects sub-flow, route: null by design).',
     releaseClassification: ModuleReleaseClass.commercialV1,
-    notes: 'Consome cota de IA por geração (mesma política de usage-quota). Não possui Edge Function própria -- ver comentário sobre ownership acima.',
+    notes:
+        'Consome cota de IA por geração (mesma política de usage-quota). Não possui Edge Function própria -- ver comentário sobre ownership acima.',
   ),
   ModuleDefinition(
     moduleId: 'knowledge-vault',
@@ -106,8 +131,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     edgeFunctions: ['extract-knowledge', 'process-file'],
     databaseDependencies: ['knowledge_items', 'knowledge_analysis'],
     aiDependency: true,
-    readinessPt: 'Totalmente funcional. Inclui import local (PDF/DOCX/TXT/CSV) e Google Drive. RLS e isolamento entre usuários verificados ao vivo em produção em missão anterior.',
-    readinessEn: 'Fully functional. Includes local import (PDF/DOCX/TXT/CSV) and Google Drive. RLS and cross-user isolation verified live in production in a prior mission.',
+    readinessPt:
+        'Totalmente funcional. Inclui import local (PDF/DOCX/TXT/CSV) e Google Drive. RLS e isolamento entre usuários verificados ao vivo em produção em missão anterior.',
+    readinessEn:
+        'Fully functional. Includes local import (PDF/DOCX/TXT/CSV) and Google Drive. RLS and cross-user isolation verified live in production in a prior mission.',
     releaseClassification: ModuleReleaseClass.commercialV1,
   ),
   ModuleDefinition(
@@ -137,8 +164,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     edgeFunctions: ['generate-strategy'],
     databaseDependencies: ['knowledge_strategies'],
     aiDependency: true,
-    readinessPt: 'Totalmente funcional -- sub-fluxo do Cofre de Conhecimento (por item, não um catálogo próprio). Não é mais um item de navegação de nível superior (ver nota acima) -- alcançado a partir da tela do item, não do drawer.',
-    readinessEn: 'Fully functional -- a sub-flow of Knowledge Vault (per-item, not a standalone catalog entry). No longer a top-level nav item (see note above) -- reached from the item screen, not the drawer.',
+    readinessPt:
+        'Totalmente funcional -- sub-fluxo do Cofre de Conhecimento (por item, não um catálogo próprio). Não é mais um item de navegação de nível superior (ver nota acima) -- alcançado a partir da tela do item, não do drawer.',
+    readinessEn:
+        'Fully functional -- a sub-flow of Knowledge Vault (per-item, not a standalone catalog entry). No longer a top-level nav item (see note above) -- reached from the item screen, not the drawer.',
     releaseClassification: ModuleReleaseClass.commercialV1,
   ),
   ModuleDefinition(
@@ -168,10 +197,20 @@ const List<ModuleDefinition> kModuleRegistry = [
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
     route: AppConstants.routeMarketIntelligence,
-    edgeFunctions: ['market-analysis', 'competitor-discovery', 'gap-analysis', 'niche-discovery', 'opportunity-discovery', 'content-cluster', 'revenue-planner'],
+    edgeFunctions: [
+      'market-analysis',
+      'competitor-discovery',
+      'gap-analysis',
+      'niche-discovery',
+      'opportunity-discovery',
+      'content-cluster',
+      'revenue-planner'
+    ],
     aiDependency: true,
-    readinessPt: 'Hub totalmente funcional, com 6 sub-módulos (abaixo) cada um com sua própria Edge Function auditada.',
-    readinessEn: 'Fully functional hub, with 6 sub-modules (below) each backed by its own audited Edge Function.',
+    readinessPt:
+        'Hub totalmente funcional, com 6 sub-módulos (abaixo) cada um com sua própria Edge Function auditada.',
+    readinessEn:
+        'Fully functional hub, with 6 sub-modules (below) each backed by its own audited Edge Function.',
     releaseClassification: ModuleReleaseClass.commercialV1,
   ),
   ModuleDefinition(
@@ -323,8 +362,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     edgeFunctions: ['generate-project-actions', 'action-engine-runtime'],
     databaseDependencies: ['action_queue'],
     aiDependency: true,
-    readinessPt: 'Totalmente funcional. A transição "executar" de uma ação passa pelo action-engine-runtime (INSIGHTVALUES-PRODUCTIZATION-MACRO-03): governada pelo AEF (Human Gate, recibo, auditoria), LAB-only, sem ferramenta real.',
-    readinessEn: 'Fully functional. An action\'s "execute" transition now goes through action-engine-runtime (INSIGHTVALUES-PRODUCTIZATION-MACRO-03): AEF-governed (Human Gate, receipt, audit), LAB-only, no real tool.',
+    readinessPt:
+        'Totalmente funcional. A transição "executar" de uma ação passa pelo action-engine-runtime (INSIGHTVALUES-PRODUCTIZATION-MACRO-03): governada pelo AEF (Human Gate, recibo, auditoria), LAB-only, sem ferramenta real.',
+    readinessEn:
+        'Fully functional. An action\'s "execute" transition now goes through action-engine-runtime (INSIGHTVALUES-PRODUCTIZATION-MACRO-03): AEF-governed (Human Gate, receipt, audit), LAB-only, no real tool.',
     releaseClassification: ModuleReleaseClass.commercialV1,
   ),
   ModuleDefinition(
@@ -339,8 +380,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     route: null,
     edgeFunctions: ['context-copilot', 'ive-intelligence', 'ive-memory'],
     aiDependency: true,
-    readinessPt: 'Totalmente funcional. Por design não é uma rota própria -- é um overlay global (assistente ambiente), renderizado sobre todas as telas.',
-    readinessEn: 'Fully functional. By design it is not its own route -- it is a global overlay (ambient assistant), rendered over every screen.',
+    readinessPt:
+        'Totalmente funcional. Por design não é uma rota própria -- é um overlay global (assistente ambiente), renderizado sobre todas as telas.',
+    readinessEn:
+        'Fully functional. By design it is not its own route -- it is a global overlay (ambient assistant), rendered over every screen.',
     releaseClassification: ModuleReleaseClass.commercialV1,
   ),
   ModuleDefinition(
@@ -354,8 +397,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     minimumPlan: ModulePlan.free,
     route: null,
     edgeFunctions: ['process-file'],
-    readinessPt: 'Totalmente funcional -- parte do fluxo do Cofre de Conhecimento. Auditado em missão dedicada (auth gate, allowlist de tipo, teto de tamanho, proteção contra zip bomb no DOCX).',
-    readinessEn: 'Fully functional -- part of the Knowledge Vault flow. Audited in a dedicated mission (auth gate, type allowlist, size ceiling, DOCX zip-bomb protection).',
+    readinessPt:
+        'Totalmente funcional -- parte do fluxo do Cofre de Conhecimento. Auditado em missão dedicada (auth gate, allowlist de tipo, teto de tamanho, proteção contra zip bomb no DOCX).',
+    readinessEn:
+        'Fully functional -- part of the Knowledge Vault flow. Audited in a dedicated mission (auth gate, type allowlist, size ceiling, DOCX zip-bomb protection).',
     releaseClassification: ModuleReleaseClass.commercialV1,
   ),
   ModuleDefinition(
@@ -369,10 +414,13 @@ const List<ModuleDefinition> kModuleRegistry = [
     minimumPlan: ModulePlan.free,
     route: null,
     edgeFunctions: ['process-file'],
-    readinessPt: 'Totalmente funcional -- parte do fluxo do Cofre de Conhecimento. Escopo OAuth (drive.readonly) mais amplo que o necessário -- ver nota. Google Docs nativos exportados com segurança antes do parsing.',
-    readinessEn: 'Fully functional -- part of the Knowledge Vault flow. OAuth scope (drive.readonly) is broader than needed -- see note. Native Google Docs are safely exported before parsing.',
+    readinessPt:
+        'Totalmente funcional -- parte do fluxo do Cofre de Conhecimento. Escopo OAuth (drive.readonly) mais amplo que o necessário -- ver nota. Google Docs nativos exportados com segurança antes do parsing.',
+    readinessEn:
+        'Fully functional -- part of the Knowledge Vault flow. OAuth scope (drive.readonly) is broader than needed -- see note. Native Google Docs are safely exported before parsing.',
     releaseClassification: ModuleReleaseClass.commercialV1,
-    notes: 'DRIVE SCOPE: OVERBROAD / POST-MVP HARDENING (não bloqueia lançamento comercial -- ver relatório de missão anterior).',
+    notes:
+        'DRIVE SCOPE: OVERBROAD / POST-MVP HARDENING (não bloqueia lançamento comercial -- ver relatório de missão anterior).',
   ),
   ModuleDefinition(
     moduleId: 'usage-quota',
@@ -385,8 +433,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     minimumPlan: ModulePlan.free,
     route: null,
     databaseDependencies: ['ai_usage', 'profiles'],
-    readinessPt: 'Totalmente funcional -- reserva/estorno de cota via RPC server-side (try_reserve_ai_quota/refund_ai_quota), auditado e testado.',
-    readinessEn: 'Fully functional -- server-side quota reserve/refund via RPC, audited and tested.',
+    readinessPt:
+        'Totalmente funcional -- reserva/estorno de cota via RPC server-side (try_reserve_ai_quota/refund_ai_quota), auditado e testado.',
+    readinessEn:
+        'Fully functional -- server-side quota reserve/refund via RPC, audited and tested.',
     releaseClassification: ModuleReleaseClass.commercialV1,
   ),
   ModuleDefinition(
@@ -401,8 +451,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     route: AppConstants.routeUpgrade,
     edgeFunctions: ['create-checkout-session', 'stripe-webhook'],
     databaseDependencies: ['subscriptions', 'processed_webhook_events'],
-    readinessPt: 'Checkout Stripe real (TEST MODE) implementado e implantado. Prova de ciclo de vida real ainda pendente das credenciais de teste do owner.',
-    readinessEn: 'Real Stripe checkout (TEST MODE) implemented and deployed. Real lifecycle proof still pending the owner\'s test credentials.',
+    readinessPt:
+        'Checkout Stripe real (TEST MODE) implementado e implantado. Prova de ciclo de vida real ainda pendente das credenciais de teste do owner.',
+    readinessEn:
+        'Real Stripe checkout (TEST MODE) implemented and deployed. Real lifecycle proof still pending the owner\'s test credentials.',
     releaseClassification: ModuleReleaseClass.commercialV1,
   ),
 
@@ -424,8 +476,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     route: AppConstants.routeGenerate,
     edgeFunctions: ['improve-post'],
     aiDependency: true,
-    readinessPt: 'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2).',
-    readinessEn: 'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2).',
+    readinessPt:
+        'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2).',
+    readinessEn:
+        'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2).',
     releaseClassification: ModuleReleaseClass.postV1,
   ),
   ModuleDefinition(
@@ -439,8 +493,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     minimumPlan: ModulePlan.pro,
     route: AppConstants.routePersonas,
     databaseDependencies: ['personas'],
-    readinessPt: 'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2) -- volta a aparecer para usuários Pro.',
-    readinessEn: 'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2) -- visible to Pro users again.',
+    readinessPt:
+        'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2) -- volta a aparecer para usuários Pro.',
+    readinessEn:
+        'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2) -- visible to Pro users again.',
     releaseClassification: ModuleReleaseClass.postV1,
   ),
   ModuleDefinition(
@@ -454,8 +510,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     minimumPlan: ModulePlan.pro,
     route: AppConstants.routeContent,
     databaseDependencies: ['content_items'],
-    readinessPt: 'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2) -- volta a aparecer para usuários Pro.',
-    readinessEn: 'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2) -- visible to Pro users again.',
+    readinessPt:
+        'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2) -- volta a aparecer para usuários Pro.',
+    readinessEn:
+        'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2) -- visible to Pro users again.',
     releaseClassification: ModuleReleaseClass.postV1,
   ),
   ModuleDefinition(
@@ -468,8 +526,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     commercialEnabled: true,
     minimumPlan: ModulePlan.pro,
     route: AppConstants.routeCalendar,
-    readinessPt: 'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2) -- volta a aparecer para usuários Pro.',
-    readinessEn: 'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2) -- visible to Pro users again.',
+    readinessPt:
+        'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2) -- volta a aparecer para usuários Pro.',
+    readinessEn:
+        'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2) -- visible to Pro users again.',
     releaseClassification: ModuleReleaseClass.postV1,
   ),
   ModuleDefinition(
@@ -485,8 +545,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     edgeFunctions: ['generate-campaign'],
     databaseDependencies: ['campaigns'],
     aiDependency: true,
-    readinessPt: 'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2).',
-    readinessEn: 'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2).',
+    readinessPt:
+        'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2).',
+    readinessEn:
+        'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2).',
     releaseClassification: ModuleReleaseClass.postV1,
   ),
   ModuleDefinition(
@@ -500,8 +562,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     minimumPlan: ModulePlan.pro,
     route: AppConstants.routePerformance,
     databaseDependencies: ['performance_metrics'],
-    readinessPt: 'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2).',
-    readinessEn: 'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2).',
+    readinessPt:
+        'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2).',
+    readinessEn:
+        'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2).',
     releaseClassification: ModuleReleaseClass.postV1,
   ),
   ModuleDefinition(
@@ -515,8 +579,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     minimumPlan: ModulePlan.pro,
     route: AppConstants.routeRoiTracker,
     databaseDependencies: ['roi_metrics'],
-    readinessPt: 'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2).',
-    readinessEn: 'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2).',
+    readinessPt:
+        'Totalmente funcional. Lançado comercialmente no tier Pro (Growth Intelligence, Tranche 2).',
+    readinessEn:
+        'Fully functional. Commercially launched at the Pro tier (Growth Intelligence, Tranche 2).',
     releaseClassification: ModuleReleaseClass.postV1,
   ),
   ModuleDefinition(
@@ -529,10 +595,13 @@ const List<ModuleDefinition> kModuleRegistry = [
     commercialEnabled: false,
     minimumPlan: ModulePlan.free,
     route: null,
-    readinessPt: 'ABSORVIDO em Business Dashboard (INSIGHTVALUES-COMMERCIAL-MACRO-01). A rota /executive-dashboard continua existindo para links antigos e agora renderiza o dashboard canônico; sem item próprio no menu.',
-    readinessEn: 'ABSORBED into Business Dashboard (INSIGHTVALUES-COMMERCIAL-MACRO-01). The /executive-dashboard route still exists for old links and now renders the canonical dashboard; no longer a separate nav entry.',
+    readinessPt:
+        'ABSORVIDO em Business Dashboard (INSIGHTVALUES-COMMERCIAL-MACRO-01). A rota /executive-dashboard continua existindo para links antigos e agora renderiza o dashboard canônico; sem item próprio no menu.',
+    readinessEn:
+        'ABSORBED into Business Dashboard (INSIGHTVALUES-COMMERCIAL-MACRO-01). The /executive-dashboard route still exists for old links and now renders the canonical dashboard; no longer a separate nav entry.',
     releaseClassification: ModuleReleaseClass.betaProgram,
-    notes: 'Widget ExecutiveDashboardScreen mantido no código (não referenciado por app.dart) para referência histórica; pode ser removido em uma limpeza futura.',
+    notes:
+        'Widget ExecutiveDashboardScreen mantido no código (não referenciado por app.dart) para referência histórica; pode ser removido em uma limpeza futura.',
   ),
   ModuleDefinition(
     moduleId: 'decision-center',
@@ -544,8 +613,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     commercialEnabled: false,
     minimumPlan: ModulePlan.free,
     route: AppConstants.routeEcosystem,
-    readinessPt: 'Mesmo padrão do Executive Dashboard -- agregação client-side, tratado como Beta.',
-    readinessEn: 'Same pattern as Executive Dashboard -- client-side aggregation, treated as Beta.',
+    readinessPt:
+        'Mesmo padrão do Executive Dashboard -- agregação client-side, tratado como Beta.',
+    readinessEn:
+        'Same pattern as Executive Dashboard -- client-side aggregation, treated as Beta.',
     releaseClassification: ModuleReleaseClass.betaProgram,
   ),
   ModuleDefinition(
@@ -586,8 +657,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     commercialEnabled: false,
     minimumPlan: ModulePlan.free,
     route: AppConstants.routeAdvisorOnboarding,
-    readinessPt: 'Órfã -- rota existe mas nenhum ponto de entrada de navegação foi encontrado em nenhuma tela. Só alcançável por URL direta.',
-    readinessEn: 'Orphaned -- the route exists but no navigation entry point was found in any screen. Reachable only via direct URL.',
+    readinessPt:
+        'Órfã -- rota existe mas nenhum ponto de entrada de navegação foi encontrado em nenhuma tela. Só alcançável por URL direta.',
+    readinessEn:
+        'Orphaned -- the route exists but no navigation entry point was found in any screen. Reachable only via direct URL.',
     releaseClassification: ModuleReleaseClass.internalTooling,
   ),
   ModuleDefinition(
@@ -598,12 +671,15 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminVisible: true,
     adminClickable: false,
     commercialEnabled: false,
-    minimumPlan: ModulePlan.free, // admin-only via lifecycle (não liberado), não via plano
+    minimumPlan: ModulePlan
+        .free, // admin-only via lifecycle (não liberado), não via plano
     route: null,
     edgeFunctions: ['decision-simulator'],
     aiDependency: true,
-    readinessPt: 'Backend completo (Edge Function auditada e testada), mas sem nenhuma tela consumidora -- nenhuma rota, nenhum ponto de entrada na UI.',
-    readinessEn: 'Backend complete (audited and tested Edge Function), but no consuming screen exists -- no route, no UI entry point.',
+    readinessPt:
+        'Backend completo (Edge Function auditada e testada), mas sem nenhuma tela consumidora -- nenhuma rota, nenhum ponto de entrada na UI.',
+    readinessEn:
+        'Backend complete (audited and tested Edge Function), but no consuming screen exists -- no route, no UI entry point.',
     releaseClassification: ModuleReleaseClass.internalTooling,
     notes: 'adminClickable=false: não há para onde navegar ainda.',
   ),
@@ -615,12 +691,16 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminVisible: true,
     adminClickable: true,
     commercialEnabled: false,
-    minimumPlan: ModulePlan.free, // admin-only via lifecycle (não liberado), não via plano
+    minimumPlan: ModulePlan
+        .free, // admin-only via lifecycle (não liberado), não via plano
     route: AppConstants.routeIntelligenceDebug,
-    readinessPt: 'Ferramenta interna de observabilidade/auditoria. Corrigido nesta missão: não tinha nenhum gate de admin (nem visual, nem de rota) apesar de expor dados de score de todos os projetos -- agora exige role admin.',
-    readinessEn: 'Internal observability/audit tool. Fixed in this mission: had no admin gate at all (neither visual nor route-level) despite exposing score data for every project -- now requires the admin role.',
+    readinessPt:
+        'Ferramenta interna de observabilidade/auditoria. Corrigido nesta missão: não tinha nenhum gate de admin (nem visual, nem de rota) apesar de expor dados de score de todos os projetos -- agora exige role admin.',
+    readinessEn:
+        'Internal observability/audit tool. Fixed in this mission: had no admin gate at all (neither visual nor route-level) despite exposing score data for every project -- now requires the admin role.',
     releaseClassification: ModuleReleaseClass.internalTooling,
-    notes: 'ACHADO DE SEGURANÇA CORRIGIDO: qualquer usuário autenticado conseguia acessar via /intelligence-debug antes desta missão.',
+    notes:
+        'ACHADO DE SEGURANÇA CORRIGIDO: qualquer usuário autenticado conseguia acessar via /intelligence-debug antes desta missão.',
   ),
   ModuleDefinition(
     moduleId: 'admin-panel',
@@ -630,11 +710,14 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminVisible: true,
     adminClickable: true,
     commercialEnabled: false,
-    minimumPlan: ModulePlan.free, // admin-only via lifecycle (não liberado), não via plano
+    minimumPlan: ModulePlan
+        .free, // admin-only via lifecycle (não liberado), não via plano
     route: AppConstants.routeAdmin,
     databaseDependencies: ['profiles'],
-    readinessPt: 'Totalmente funcional. Autorização real via RLS (admin_all_profiles) + gatilho de proteção contra auto-promoção -- verificado ao vivo, sem regressão.',
-    readinessEn: 'Fully functional. Real authorization via RLS (admin_all_profiles) + self-promotion protection trigger -- verified live, no regression.',
+    readinessPt:
+        'Totalmente funcional. Autorização real via RLS (admin_all_profiles) + gatilho de proteção contra auto-promoção -- verificado ao vivo, sem regressão.',
+    readinessEn:
+        'Fully functional. Real authorization via RLS (admin_all_profiles) + self-promotion protection trigger -- verified live, no regression.',
     releaseClassification: ModuleReleaseClass.internalTooling,
   ),
   ModuleDefinition(
@@ -647,10 +730,13 @@ const List<ModuleDefinition> kModuleRegistry = [
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
     route: null,
-    readinessPt: 'Overlay visual global. Rive foi CONGELADO por decisão de produto (IVE-AVATAR-COMMERCIAL-FALLBACK-04): IveVisualFallback é o caminho comercial determinístico; reabertura do Rive requer autorização explícita (ver docs/ive/IVE_RIVE_FREEZE_RECORD.md).',
-    readinessEn: 'Global visual overlay. Rive is FROZEN by product decision (IVE-AVATAR-COMMERCIAL-FALLBACK-04): IveVisualFallback is the deterministic commercial path; reopening Rive requires explicit authorization (see docs/ive/IVE_RIVE_FREEZE_RECORD.md).',
+    readinessPt:
+        'Overlay visual global. Rive foi CONGELADO por decisão de produto (IVE-AVATAR-COMMERCIAL-FALLBACK-04): IveVisualFallback é o caminho comercial determinístico; reabertura do Rive requer autorização explícita (ver docs/ive/IVE_RIVE_FREEZE_RECORD.md).',
+    readinessEn:
+        'Global visual overlay. Rive is FROZEN by product decision (IVE-AVATAR-COMMERCIAL-FALLBACK-04): IveVisualFallback is the deterministic commercial path; reopening Rive requires explicit authorization (see docs/ive/IVE_RIVE_FREEZE_RECORD.md).',
     releaseClassification: ModuleReleaseClass.betaProgram,
-    notes: 'IVE-EXPERIENCE-V1-06 — corrigido texto desatualizado que ainda descrevia o Rive como em desenvolvimento ativo; a decisão de congelamento já estava tomada (FALLBACK-04) mas não integrada a esta branch até este ponto.',
+    notes:
+        'IVE-EXPERIENCE-V1-06 — corrigido texto desatualizado que ainda descrevia o Rive como em desenvolvimento ativo; a decisão de congelamento já estava tomada (FALLBACK-04) mas não integrada a esta branch até este ponto.',
   ),
   ModuleDefinition(
     moduleId: 'ive-quant',
@@ -660,13 +746,17 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminVisible: true,
     adminClickable: false,
     commercialEnabled: false,
-    minimumPlan: ModulePlan.free, // admin-only via lifecycle (não liberado), não via plano
+    minimumPlan: ModulePlan
+        .free, // admin-only via lifecycle (não liberado), não via plano
     route: null,
     edgeFunctions: ['quant-runtime'],
-    readinessPt: 'FOUNDATION no Quant Lab (IV-QUANT-FOUNDATION-01): motor determinístico server-side em supabase/functions/_shared/quant/. Sem tela, sem dados de mercado reais, sem corretora. Ver docs/quant/. lib/core/quant/strategy001_contracts.dart espelha a forma da state machine Strategy001/"Paulo Trend Fibonacci" -- a proveniência foi CORROBORADA em INSIGHTVALUES-ROBOT-BUILDER-MACRO-05: um worktree local real (não o remoto GitHub que a MACRO-04 verificou) contém insightvalues_quant/strategy001/ e /fibonacci/ com testes reais passando e um README idêntico, palavra por palavra, à citação do doc de positioning; ver docs/commercial/STRATEGY001_SOURCE_FINDING.md. Nenhum algoritmo foi portado ou inventado. Adicionalmente (MACRO-04 §15-17): quant-runtime é a ponte Quant -> Action Intent -> AEF -- LAB-only, bloqueada de deploy, mock-only (internal.mock_quant_signal_acknowledgment) -- apenas o reconhecimento humano de um evento estrutural, nunca uma ordem ou sinal de negociação. Sem wiring em rota/tela/provider.',
-    readinessEn: 'FOUNDATION in the Quant Lab (IV-QUANT-FOUNDATION-01): server-side deterministic engine in supabase/functions/_shared/quant/. No screen, no real market data, no broker. See docs/quant/. lib/core/quant/strategy001_contracts.dart mirrors the shape of the Strategy001 / "Paulo Trend Fibonacci" state machine -- provenance was CORROBORATED in INSIGHTVALUES-ROBOT-BUILDER-MACRO-05: a real local worktree (not the GitHub remote MACRO-04 checked) contains insightvalues_quant/strategy001/ and /fibonacci/ with real passing tests and a README that is a word-for-word match for the positioning doc quote; see docs/commercial/STRATEGY001_SOURCE_FINDING.md. No algorithm was ported or invented. Additionally (MACRO-04 §15-17): quant-runtime is the Quant -> Action Intent -> AEF bridge -- LAB-only, deploy-blocked, mock-only (internal.mock_quant_signal_acknowledgment) -- only a human acknowledgment of a structural event, never a trade order or signal. No wiring into any route/screen/provider.',
+    readinessPt:
+        'FOUNDATION no Quant Lab (IV-QUANT-FOUNDATION-01): motor determinístico server-side em supabase/functions/_shared/quant/. Sem tela, sem dados de mercado reais, sem corretora. Ver docs/quant/. lib/core/quant/strategy001_contracts.dart espelha a forma da state machine Strategy001/"Paulo Trend Fibonacci" -- a proveniência foi CORROBORADA em INSIGHTVALUES-ROBOT-BUILDER-MACRO-05: um worktree local real (não o remoto GitHub que a MACRO-04 verificou) contém insightvalues_quant/strategy001/ e /fibonacci/ com testes reais passando e um README idêntico, palavra por palavra, à citação do doc de positioning; ver docs/commercial/STRATEGY001_SOURCE_FINDING.md. Nenhum algoritmo foi portado ou inventado. Adicionalmente (MACRO-04 §15-17): quant-runtime é a ponte Quant -> Action Intent -> AEF -- LAB-only, bloqueada de deploy, mock-only (internal.mock_quant_signal_acknowledgment) -- apenas o reconhecimento humano de um evento estrutural, nunca uma ordem ou sinal de negociação. Sem wiring em rota/tela/provider.',
+    readinessEn:
+        'FOUNDATION in the Quant Lab (IV-QUANT-FOUNDATION-01): server-side deterministic engine in supabase/functions/_shared/quant/. No screen, no real market data, no broker. See docs/quant/. lib/core/quant/strategy001_contracts.dart mirrors the shape of the Strategy001 / "Paulo Trend Fibonacci" state machine -- provenance was CORROBORATED in INSIGHTVALUES-ROBOT-BUILDER-MACRO-05: a real local worktree (not the GitHub remote MACRO-04 checked) contains insightvalues_quant/strategy001/ and /fibonacci/ with real passing tests and a README that is a word-for-word match for the positioning doc quote; see docs/commercial/STRATEGY001_SOURCE_FINDING.md. No algorithm was ported or invented. Additionally (MACRO-04 §15-17): quant-runtime is the Quant -> Action Intent -> AEF bridge -- LAB-only, deploy-blocked, mock-only (internal.mock_quant_signal_acknowledgment) -- only a human acknowledgment of a structural event, never a trade order or signal. No wiring into any route/screen/provider.',
     releaseClassification: ModuleReleaseClass.externalPlanned,
-    notes: 'QUANT_STATUS: FOUNDATION (library only) + CONTRACT_SCAFFOLD (Strategy001 mirror, provenance CORROBORATED em ROBOT-BUILDER-MACRO-05) + AEF_BRIDGE (quant-runtime, LAB-only). QUANT_COMMERCIAL_RECOMMENDATION: SEPARATE_PRODUCT. adminClickable=false: não há tela para abrir. Nenhuma execução financeira existe: nenhum adaptador de corretora, nenhuma ordem; AEF v0 nega tiers de dinheiro real. MP-09 (MACRO-04, evoluído): quant-runtime pode existir enquanto CONSEQUENTIAL porque é independentemente fail-closed (bloqueado em resolve_deploy_selection.sh), não porque nenhuma função exista. Ver também módulo separado strategy-builder (ROBOT-BUILDER-MACRO-05).',
+    notes:
+        'QUANT_STATUS: FOUNDATION (library only) + CONTRACT_SCAFFOLD (Strategy001 mirror, provenance CORROBORATED em ROBOT-BUILDER-MACRO-05) + AEF_BRIDGE (quant-runtime, LAB-only). QUANT_COMMERCIAL_RECOMMENDATION: SEPARATE_PRODUCT. adminClickable=false: não há tela para abrir. Nenhuma execução financeira existe: nenhum adaptador de corretora, nenhuma ordem; AEF v0 nega tiers de dinheiro real. MP-09 (MACRO-04, evoluído): quant-runtime pode existir enquanto CONSEQUENTIAL porque é independentemente fail-closed (bloqueado em resolve_deploy_selection.sh), não porque nenhuma função exista. Ver também módulo separado strategy-builder (ROBOT-BUILDER-MACRO-05).',
   ),
   ModuleDefinition(
     moduleId: 'quant-analytics',
@@ -676,13 +766,17 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminVisible: true,
     adminClickable: true,
     commercialEnabled: false,
-    minimumPlan: ModulePlan.free, // INTERNAL = admin-only via lifecycle; plano decidido no Promotion Gate
+    minimumPlan: ModulePlan
+        .free, // INTERNAL = admin-only via lifecycle; plano decidido no Promotion Gate
     route: AppConstants.routeQuantLab,
     edgeFunctions: ['quant-analyze'],
-    readinessPt: 'INTERNO (IV-QUANT-DATA-PLANE-AND-API-02): API somente leitura quant-analyze (CSV validado no servidor → motor determinístico → resultado estruturado com proveniência, atualidade e calendário de mercado) e watchlists com RLS. Laboratório admin-only. Sem dados de mercado pagos, sem corretora, sem ordens, sem LLM calculando números.',
-    readinessEn: 'INTERNAL (IV-QUANT-DATA-PLANE-AND-API-02): read-only quant-analyze API (server-validated CSV → deterministic engine → structured result with provenance, freshness and market calendar) and RLS-protected watchlists. Admin-only lab. No paid market data, no broker, no orders, no LLM computing numbers.',
+    readinessPt:
+        'INTERNO (IV-QUANT-DATA-PLANE-AND-API-02): API somente leitura quant-analyze (CSV validado no servidor → motor determinístico → resultado estruturado com proveniência, atualidade e calendário de mercado) e watchlists com RLS. Laboratório admin-only. Sem dados de mercado pagos, sem corretora, sem ordens, sem LLM calculando números.',
+    readinessEn:
+        'INTERNAL (IV-QUANT-DATA-PLANE-AND-API-02): read-only quant-analyze API (server-validated CSV → deterministic engine → structured result with provenance, freshness and market calendar) and RLS-protected watchlists. Admin-only lab. No paid market data, no broker, no orders, no LLM computing numbers.',
     releaseClassification: ModuleReleaseClass.internalTooling,
-    notes: 'READ_ONLY (servidor: module_policy.ts). Separado de ive-quant (CONSEQUENTIAL) pela decisão arquitetural Opção A; nenhuma capacidade de execução.',
+    notes:
+        'READ_ONLY (servidor: module_policy.ts). Separado de ive-quant (CONSEQUENTIAL) pela decisão arquitetural Opção A; nenhuma capacidade de execução.',
   ),
   ModuleDefinition(
     moduleId: 'quant-watchlists',
@@ -696,10 +790,13 @@ const List<ModuleDefinition> kModuleRegistry = [
     route: null,
     edgeFunctions: ['quant-watchlists'],
     databaseDependencies: ['quant_watchlists', 'quant_watchlist_items'],
-    readinessPt: 'INTERNO: watchlists persistentes com identidade canônica de instrumento, RLS por dono e predicado de entitlement no banco (admin-only enquanto INTERNAL). Separado de quant-analytics por gravar estado (REVERSIBLE).',
-    readinessEn: 'INTERNAL: persistent watchlists with canonical instrument identity, owner RLS and a database entitlement predicate (admin-only while INTERNAL). Split from quant-analytics because it writes state (REVERSIBLE).',
+    readinessPt:
+        'INTERNO: watchlists persistentes com identidade canônica de instrumento, RLS por dono e predicado de entitlement no banco (admin-only enquanto INTERNAL). Separado de quant-analytics por gravar estado (REVERSIBLE).',
+    readinessEn:
+        'INTERNAL: persistent watchlists with canonical instrument identity, owner RLS and a database entitlement predicate (admin-only while INTERNAL). Split from quant-analytics because it writes state (REVERSIBLE).',
     releaseClassification: ModuleReleaseClass.internalTooling,
-    notes: 'REVERSIBLE (servidor: module_policy.ts; Codex CXA-02). Promover além de INTERNAL exige nova migration do predicado SQL (teste QB-16).',
+    notes:
+        'REVERSIBLE (servidor: module_policy.ts; Codex CXA-02). Promover além de INTERNAL exige nova migration do predicado SQL (teste QB-16).',
   ),
   ModuleDefinition(
     moduleId: 'aef-runtime-lab',
@@ -709,14 +806,18 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminVisible: true,
     adminClickable: false,
     commercialEnabled: false,
-    minimumPlan: ModulePlan.free, // admin-only via lifecycle (EXPERIMENTAL), não via plano
+    minimumPlan: ModulePlan
+        .free, // admin-only via lifecycle (EXPERIMENTAL), não via plano
     route: null,
     edgeFunctions: ['aef-runtime'],
     aiDependency: false,
-    readinessPt: 'LAB apenas (IV-IVE-AEF-RUNTIME-INTEGRATION-01): caminho governado IVE → AEF com ferramentas MOCK, Human Gate e recibo persistido. Não implantável; só roda num stack Supabase local (AEF_RUNTIME_MODE=LAB, AEF_TOOLS=MOCK_ONLY). O cartão de aprovação no chat da IVE só aparece com --dart-define=AEF_RUNTIME_LAB=true.',
-    readinessEn: 'LAB only (IV-IVE-AEF-RUNTIME-INTEGRATION-01): governed IVE → AEF path with MOCK tools, Human Gate and a persisted receipt. Not deployable; runs only on a local Supabase stack (AEF_RUNTIME_MODE=LAB, AEF_TOOLS=MOCK_ONLY). The approval card in the IVE chat appears only with --dart-define=AEF_RUNTIME_LAB=true.',
+    readinessPt:
+        'LAB apenas (IV-IVE-AEF-RUNTIME-INTEGRATION-01): caminho governado IVE → AEF com ferramentas MOCK, Human Gate e recibo persistido. Não implantável; só roda num stack Supabase local (AEF_RUNTIME_MODE=LAB, AEF_TOOLS=MOCK_ONLY). O cartão de aprovação no chat da IVE só aparece com --dart-define=AEF_RUNTIME_LAB=true.',
+    readinessEn:
+        'LAB only (IV-IVE-AEF-RUNTIME-INTEGRATION-01): governed IVE → AEF path with MOCK tools, Human Gate and a persisted receipt. Not deployable; runs only on a local Supabase stack (AEF_RUNTIME_MODE=LAB, AEF_TOOLS=MOCK_ONLY). The approval card in the IVE chat appears only with --dart-define=AEF_RUNTIME_LAB=true.',
     releaseClassification: ModuleReleaseClass.internalTooling,
-    notes: 'adminClickable=false: não há tela própria; a superfície LAB é o cartão no chat da IVE. Nenhuma ferramenta real, nenhum deploy.',
+    notes:
+        'adminClickable=false: não há tela própria; a superfície LAB é o cartão no chat da IVE. Nenhuma ferramenta real, nenhum deploy.',
   ),
   ModuleDefinition(
     moduleId: 'impact',
@@ -726,13 +827,17 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminVisible: true,
     adminClickable: true,
     commercialEnabled: false,
-    minimumPlan: ModulePlan.free, // admin-only via lifecycle (EXPERIMENTAL), não via plano
+    minimumPlan: ModulePlan
+        .free, // admin-only via lifecycle (EXPERIMENTAL), não via plano
     route: AppConstants.routeImpact,
     edgeFunctions: ['impact-lab'],
-    readinessPt: 'IV-IMPACT-I1: núcleo de evidência/verificação + persistência Lab (migration não aplicada em produção, RLS testada em PostgreSQL descartável) + Edge Function impact-lab só para admin (não deployada). Sem rede, sem LLM. Não emite veredito, score ou ranking; ausência de evidência nunca vira acusação. I5: tela de dossiê só para admin (/impact), consumindo o contrato I4.',
-    readinessEn: 'IV-IMPACT-I1: evidence/verification core + Lab persistence (migration not applied to production, RLS tested on a disposable PostgreSQL) + admin-only impact-lab Edge Function (not deployed). No network, no LLM. Emits no verdict, score or ranking; absence of evidence never becomes an accusation. I5: admin-only dossier screen (/impact) consuming the I4 contract.',
+    readinessPt:
+        'IV-IMPACT-I1: núcleo de evidência/verificação + persistência Lab (migration não aplicada em produção, RLS testada em PostgreSQL descartável) + Edge Function impact-lab só para admin (não deployada). Sem rede, sem LLM. Não emite veredito, score ou ranking; ausência de evidência nunca vira acusação. I5: tela de dossiê só para admin (/impact), consumindo o contrato I4.',
+    readinessEn:
+        'IV-IMPACT-I1: evidence/verification core + Lab persistence (migration not applied to production, RLS tested on a disposable PostgreSQL) + admin-only impact-lab Edge Function (not deployed). No network, no LLM. Emits no verdict, score or ranking; absence of evidence never becomes an accusation. I5: admin-only dossier screen (/impact) consuming the I4 contract.',
     releaseClassification: ModuleReleaseClass.internalTooling,
-    notes: 'Impact Lab (branch claude/insightvalues-impact-foundation). Ações classe C (acusação pública, contato externo, doação) NÃO implementadas -- futuramente somente via AEF + Human Gate. I5: adminClickable=true (tela de dossiê admin-only; a autoridade real é o entitlement admin do impact-lab).',
+    notes:
+        'Impact Lab (branch claude/insightvalues-impact-foundation). Ações classe C (acusação pública, contato externo, doação) NÃO implementadas -- futuramente somente via AEF + Human Gate. I5: adminClickable=true (tela de dossiê admin-only; a autoridade real é o entitlement admin do impact-lab).',
   ),
   ModuleDefinition(
     moduleId: 'strategy-builder',
@@ -741,15 +846,20 @@ const List<ModuleDefinition> kModuleRegistry = [
     status: ModuleStatus.beta,
     adminVisible: true,
     adminClickable: true,
-    commercialEnabled: false, // INSIGHTVALUES-V1-LAUNCH-MACRO-13 continuation, V1 acceptance testing: this was true (Macro-08's SL-03 fix) on the premise "no real user can reach this today" (branch not deployed). Mission F then deployed THIS branch's Web build to production GitHub Pages, invalidating that premise: any free-tier user could reach /strategy-lab and its entitlement gate against a strategy-builder Edge Function that remains deliberately undeployed (Owner decision, Missions D/E/F: Strategy Builder = explicit HOLD/POST_V1, not authorized for production). Reverted to admin-only (adminVisible/adminClickable preserved) pending the separate Owner production-gate decision this module's own notes already required before any real exposure.
-    minimumPlan: ModulePlan.free, // básico livre a todo usuário autenticado; propose_variants/record_experiment/list_experiments/run_research_loop exigem pro; run_simulation exige premium (servidor: strategy-builder/index.ts)
+    commercialEnabled:
+        false, // INSIGHTVALUES-V1-LAUNCH-MACRO-13 continuation, V1 acceptance testing: this was true (Macro-08's SL-03 fix) on the premise "no real user can reach this today" (branch not deployed). Mission F then deployed THIS branch's Web build to production GitHub Pages, invalidating that premise: any free-tier user could reach /strategy-lab and its entitlement gate against a strategy-builder Edge Function that remains deliberately undeployed (Owner decision, Missions D/E/F: Strategy Builder = explicit HOLD/POST_V1, not authorized for production). Reverted to admin-only (adminVisible/adminClickable preserved) pending the separate Owner production-gate decision this module's own notes already required before any real exposure.
+    minimumPlan: ModulePlan
+        .free, // básico livre a todo usuário autenticado; propose_variants/record_experiment/list_experiments/run_research_loop exigem pro; run_simulation exige premium (servidor: strategy-builder/index.ts)
     route: AppConstants.routeStrategyLab,
     edgeFunctions: ['strategy-builder'],
     aiDependency: false,
-    readinessPt: 'COMERCIAL NA BRANCH DE DEV -- AINDA NÃO IMPLANTADO (INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08): a Edge Function strategy-builder e TODAS as suas migrations (20261002000000 a 20261008000000) permanecem NOT DEPLOYED/LAB -- ausentes de .github/deploy-allowlist.tsv (Codex adversarial review confirmou). "COMERCIAL" aqui descrevia a arquitetura de entitlement/produto pronta dentro da branch isolada (autorização explícita do Macro-08) sob a premissa de que nenhum usuário real alcançaria isto -- premissa invalidada pela Macro-13 (esta mesma branch foi implantada em produção Web). Por isso commercialEnabled voltou a false (admin-only) até uma decisão de Owner separada (Gate de produção), fora do escopo autônomo. Uma vez implantado: modelo genérico de Strategy Specification, formulário estruturado de criação/edição, backtest real (motor genérico in-process ou ponte V10/Python), estatísticas de mercado, ajuste estratégia-mercado, motor de robustez, holdout cronológico com rastreamento de contaminação, score multi-critério, propostas limitadas da IVE, loop de pesquisa automatizado (bounded), simulação interna determinística, criação atômica (RPC transacional, Codex adversarial review). Estratégia #001 (V10) permanece referência de PESQUISA: reproduzida contra o dataset real WIN1! (75 trades, líquido -R\$57 sem custo / -R\$270,75 com custo -- resultado histórico NEGATIVO, divulgado honestamente, não escondido). NÃO é estratégia lucrativa comprovada, NÃO é aprovada para paper/live trading -- lifecycle.ts nunca autoriza isso automaticamente.',
-    readinessEn: 'COMMERCIAL IN THE DEV BRANCH -- NOT YET DEPLOYED (INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08): the strategy-builder Edge Function and ALL of its migrations (20261002000000 through 20261008000000) remain NOT DEPLOYED/LAB -- absent from .github/deploy-allowlist.tsv (confirmed by Codex adversarial review). "COMMERCIAL" here described the entitlement/product architecture as built inside the isolated dev branch (Macro-08\'s explicit authorization), on the premise that no real user could reach it -- a premise Macro-13 invalidated (this same branch was deployed to production Web). commercialEnabled was reverted to false (admin-only) pending a separate Owner production-gate decision, outside autonomous scope. Once deployed: generic Strategy Specification model, structured create/edit form, real backtest (in-process generic engine or the V10/Python bridge), market statistics, strategy-market fit, robustness engine, chronological holdout with contamination tracking, multi-criteria score, IVE bounded proposals, bounded automated research loop, deterministic internal simulation, atomic creation (transactional RPC, Codex adversarial review). Strategy #001 (V10) remains a RESEARCH reference: reproduced against the real WIN1! dataset (75 trades, net -R\$57 zero-cost / -R\$270.75 cost-adjusted -- a NEGATIVE historical result, disclosed honestly, not hidden). NOT a proven profitable strategy, NOT paper/live-trading approved -- lifecycle.ts never auto-authorizes that.',
+    readinessPt:
+        'COMERCIAL NA BRANCH DE DEV -- AINDA NÃO IMPLANTADO (INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08): a Edge Function strategy-builder e TODAS as suas migrations (20261002000000 a 20261008000000) permanecem NOT DEPLOYED/LAB -- ausentes de .github/deploy-allowlist.tsv (Codex adversarial review confirmou). "COMERCIAL" aqui descrevia a arquitetura de entitlement/produto pronta dentro da branch isolada (autorização explícita do Macro-08) sob a premissa de que nenhum usuário real alcançaria isto -- premissa invalidada pela Macro-13 (esta mesma branch foi implantada em produção Web). Por isso commercialEnabled voltou a false (admin-only) até uma decisão de Owner separada (Gate de produção), fora do escopo autônomo. Uma vez implantado: modelo genérico de Strategy Specification, formulário estruturado de criação/edição, backtest real (motor genérico in-process ou ponte V10/Python), estatísticas de mercado, ajuste estratégia-mercado, motor de robustez, holdout cronológico com rastreamento de contaminação, score multi-critério, propostas limitadas da IVE, loop de pesquisa automatizado (bounded), simulação interna determinística, criação atômica (RPC transacional, Codex adversarial review). Estratégia #001 (V10) permanece referência de PESQUISA: reproduzida contra o dataset real WIN1! (75 trades, líquido -R\$57 sem custo / -R\$270,75 com custo -- resultado histórico NEGATIVO, divulgado honestamente, não escondido). NÃO é estratégia lucrativa comprovada, NÃO é aprovada para paper/live trading -- lifecycle.ts nunca autoriza isso automaticamente.',
+    readinessEn:
+        'COMMERCIAL IN THE DEV BRANCH -- NOT YET DEPLOYED (INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08): the strategy-builder Edge Function and ALL of its migrations (20261002000000 through 20261008000000) remain NOT DEPLOYED/LAB -- absent from .github/deploy-allowlist.tsv (confirmed by Codex adversarial review). "COMMERCIAL" here described the entitlement/product architecture as built inside the isolated dev branch (Macro-08\'s explicit authorization), on the premise that no real user could reach it -- a premise Macro-13 invalidated (this same branch was deployed to production Web). commercialEnabled was reverted to false (admin-only) pending a separate Owner production-gate decision, outside autonomous scope. Once deployed: generic Strategy Specification model, structured create/edit form, real backtest (in-process generic engine or the V10/Python bridge), market statistics, strategy-market fit, robustness engine, chronological holdout with contamination tracking, multi-criteria score, IVE bounded proposals, bounded automated research loop, deterministic internal simulation, atomic creation (transactional RPC, Codex adversarial review). Strategy #001 (V10) remains a RESEARCH reference: reproduced against the real WIN1! dataset (75 trades, net -R\$57 zero-cost / -R\$270.75 cost-adjusted -- a NEGATIVE historical result, disclosed honestly, not hidden). NOT a proven profitable strategy, NOT paper/live-trading approved -- lifecycle.ts never auto-authorizes that.',
     releaseClassification: ModuleReleaseClass.betaProgram,
-    notes: 'REVERSIBLE (servidor: module_policy.ts): configuração de estratégia nunca executa nada por si só (§14 do Macro-06 -- "configuration is not authorization"). Separado de ive-strategy-simulation (CONSEQUENTIAL, BETA/beta_tester) porque strategy-builder em si não toca AEF -- só a aprovação formal de um resultado de simulação toca. Estratégia #001 permanece RESEARCH (lifecycle.ts nunca autoriza SIMULATION_ELIGIBLE/PAPER_ELIGIBLE/LIVE_ELIGIBLE). Três rodadas de auditoria Codex Classe D sobre esta superfície (Macro-06 e Macro-07) fecharam com 0 P0/P1/P2 abertos antes desta promoção de lifecycle. ESCALAÇÃO ARQUITETURAL (Codex adversarial review, Macro-08 diff vs 15d4177): a função e suas migrations seguem NOT DEPLOYED -- decisão de implantar em produção pertence ao Owner (Paulo/Agente Martins), nunca autônoma.',
+    notes:
+        'REVERSIBLE (servidor: module_policy.ts): configuração de estratégia nunca executa nada por si só (§14 do Macro-06 -- "configuration is not authorization"). Separado de ive-strategy-simulation (CONSEQUENTIAL, BETA/beta_tester) porque strategy-builder em si não toca AEF -- só a aprovação formal de um resultado de simulação toca. Estratégia #001 permanece RESEARCH (lifecycle.ts nunca autoriza SIMULATION_ELIGIBLE/PAPER_ELIGIBLE/LIVE_ELIGIBLE). Três rodadas de auditoria Codex Classe D sobre esta superfície (Macro-06 e Macro-07) fecharam com 0 P0/P1/P2 abertos antes desta promoção de lifecycle. ESCALAÇÃO ARQUITETURAL (Codex adversarial review, Macro-08 diff vs 15d4177): a função e suas migrations seguem NOT DEPLOYED -- decisão de implantar em produção pertence ao Owner (Paulo/Agente Martins), nunca autônoma.',
   ),
   ModuleDefinition(
     moduleId: 'ive-strategy-simulation',
@@ -758,15 +868,19 @@ const List<ModuleDefinition> kModuleRegistry = [
     status: ModuleStatus.beta,
     adminVisible: true,
     adminClickable: false,
-    commercialEnabled: false, // BETA via lifecycleOverride -- nunca aparece na navegação comercial normal (drawer exige commercialEnabled=true); alcançável só por beta_tester dentro do fluxo do Strategy Lab.
+    commercialEnabled:
+        false, // BETA via lifecycleOverride -- nunca aparece na navegação comercial normal (drawer exige commercialEnabled=true); alcançável só por beta_tester dentro do fluxo do Strategy Lab.
     minimumPlan: ModulePlan.free,
     lifecycleOverride: ModuleLifecycle.beta,
     route: null,
     edgeFunctions: ['strategy-simulation-runtime'],
     aiDependency: false,
-    readinessPt: 'BETA CONTROLADO (INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08): a computação real da simulação (determinística, in-process, sem broker, sem dado externo) roda dentro de strategy-builder (`run_simulation`, Premium), reaproveitando o mesmo motor genérico do backtest, mas gravada com categoria SIMULATION (nunca BACKTEST, discriminador não-contornável desde a correção da auditoria Codex) em strategy_experiments. Este módulo separado é a ponte de governança AEF (`approve_simulation_result` -> internal.mock_strategy_simulation_approval, CONSEQUENTIAL, Human Gate obrigatório) que demonstra a cadeia Simulação -> Action Intent -> AEF -> receipt -> learning ponta a ponta. Promovido de EXPERIMENTAL/admin-only para BETA/beta_tester nesta missão -- NÃO promovido a COMMERCIAL porque isso violaria a proteção MP-03/MP-09 do próprio module_policy_test.ts (nenhum módulo CONSEQUENTIAL pode ser RC/COMMERCIAL enquanto AEF_PERSISTENCE_AVAILABLE=false) -- flipar essa flag é uma decisão arquitetural de infraestrutura AEF de produção, fora do escopo desta missão, e não foi tomada silenciosamente aqui. LAB-only, bloqueada de deploy (scripts/ci/resolve_deploy_selection.sh), mock-only. Sem tela dedicada -- fluxo embutido no Strategy Lab.',
-    readinessEn: 'CONTROLLED BETA (INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08): the actual simulation computation (deterministic, in-process, no broker, no external data) runs inside strategy-builder (`run_simulation`, Premium), reusing the same generic backtest engine but recorded with category SIMULATION (never BACKTEST, a non-bypassable discriminator since the Codex audit fix) in strategy_experiments. This separate module is the AEF governance bridge (`approve_simulation_result` -> internal.mock_strategy_simulation_approval, CONSEQUENTIAL, mandatory Human Gate) demonstrating the Simulation -> Action Intent -> AEF -> receipt -> learning chain end to end. Promoted from EXPERIMENTAL/admin-only to BETA/beta_tester this mission -- NOT promoted to COMMERCIAL because that would violate module_policy_test.ts\'s own MP-03/MP-09 guardrail (no CONSEQUENTIAL module may be RC/COMMERCIAL while AEF_PERSISTENCE_AVAILABLE=false) -- flipping that flag is a production AEF infrastructure architectural decision out of this mission\'s scope, not made silently here. LAB-only, deploy-blocked (scripts/ci/resolve_deploy_selection.sh), mock-only. No dedicated screen -- the flow is embedded in Strategy Lab.',
+    readinessPt:
+        'BETA CONTROLADO (INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08): a computação real da simulação (determinística, in-process, sem broker, sem dado externo) roda dentro de strategy-builder (`run_simulation`, Premium), reaproveitando o mesmo motor genérico do backtest, mas gravada com categoria SIMULATION (nunca BACKTEST, discriminador não-contornável desde a correção da auditoria Codex) em strategy_experiments. Este módulo separado é a ponte de governança AEF (`approve_simulation_result` -> internal.mock_strategy_simulation_approval, CONSEQUENTIAL, Human Gate obrigatório) que demonstra a cadeia Simulação -> Action Intent -> AEF -> receipt -> learning ponta a ponta. Promovido de EXPERIMENTAL/admin-only para BETA/beta_tester nesta missão -- NÃO promovido a COMMERCIAL porque isso violaria a proteção MP-03/MP-09 do próprio module_policy_test.ts (nenhum módulo CONSEQUENTIAL pode ser RC/COMMERCIAL enquanto AEF_PERSISTENCE_AVAILABLE=false) -- flipar essa flag é uma decisão arquitetural de infraestrutura AEF de produção, fora do escopo desta missão, e não foi tomada silenciosamente aqui. LAB-only, bloqueada de deploy (scripts/ci/resolve_deploy_selection.sh), mock-only. Sem tela dedicada -- fluxo embutido no Strategy Lab.',
+    readinessEn:
+        'CONTROLLED BETA (INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08): the actual simulation computation (deterministic, in-process, no broker, no external data) runs inside strategy-builder (`run_simulation`, Premium), reusing the same generic backtest engine but recorded with category SIMULATION (never BACKTEST, a non-bypassable discriminator since the Codex audit fix) in strategy_experiments. This separate module is the AEF governance bridge (`approve_simulation_result` -> internal.mock_strategy_simulation_approval, CONSEQUENTIAL, mandatory Human Gate) demonstrating the Simulation -> Action Intent -> AEF -> receipt -> learning chain end to end. Promoted from EXPERIMENTAL/admin-only to BETA/beta_tester this mission -- NOT promoted to COMMERCIAL because that would violate module_policy_test.ts\'s own MP-03/MP-09 guardrail (no CONSEQUENTIAL module may be RC/COMMERCIAL while AEF_PERSISTENCE_AVAILABLE=false) -- flipping that flag is a production AEF infrastructure architectural decision out of this mission\'s scope, not made silently here. LAB-only, deploy-blocked (scripts/ci/resolve_deploy_selection.sh), mock-only. No dedicated screen -- the flow is embedded in Strategy Lab.',
     releaseClassification: ModuleReleaseClass.betaProgram,
-    notes: 'CONSEQUENTIAL (servidor: module_policy.ts), mesma classe de ive-quant. Categoricamente sem caminho para um broker, uma ordem ou execução live/paper -- ver TRADING_BOUNDARY (§53) e RU-30 (runtime_unit_test.ts): a action table só reconhece approve_simulation_result. ESCALAÇÃO ARQUITETURAL registrada no relatório final do Macro-08: promoção a COMMERCIAL exige decisão do Owner/Agente Martins sobre AEF_PERSISTENCE_AVAILABLE.',
+    notes:
+        'CONSEQUENTIAL (servidor: module_policy.ts), mesma classe de ive-quant. Categoricamente sem caminho para um broker, uma ordem ou execução live/paper -- ver TRADING_BOUNDARY (§53) e RU-30 (runtime_unit_test.ts): a action table só reconhece approve_simulation_result. ESCALAÇÃO ARQUITETURAL registrada no relatório final do Macro-08: promoção a COMMERCIAL exige decisão do Owner/Agente Martins sobre AEF_PERSISTENCE_AVAILABLE.',
   ),
 ];

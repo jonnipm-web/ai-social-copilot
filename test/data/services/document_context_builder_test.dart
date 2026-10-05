@@ -9,23 +9,23 @@ import 'package:ai_social_copilot/data/services/document_context_builder.dart';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 KnowledgeItem _item({
-  String id       = 'id1',
-  String title    = 'Doc',
-  String content  = '',
-  String status   = 'analyzed',
+  String id = 'id1',
+  String title = 'Doc',
+  String content = '',
+  String status = 'analyzed',
   String? projectId,
-  int score       = 0,
+  int score = 0,
 }) =>
     KnowledgeItem(
-      id:              id,
-      userId:          'uid',
-      projectId:       projectId,
-      title:           title,
-      content:         content,
-      status:          status,
+      id: id,
+      userId: 'uid',
+      projectId: projectId,
+      title: title,
+      content: content,
+      status: status,
       opportunityScore: score,
-      createdAt:       DateTime(2026),
-      updatedAt:       DateTime(2026),
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
     );
 
 void main() {
@@ -48,19 +48,22 @@ void main() {
   // T03
   test('T03: chunk() — string maior que maxSize retorna múltiplos chunks', () {
     final text = 'a' * 250;
-    final chunks = DocumentContextBuilder.chunk(text, maxSize: 100, overlap: 10);
+    final chunks =
+        DocumentContextBuilder.chunk(text, maxSize: 100, overlap: 10);
     expect(chunks.length, greaterThan(1));
   });
 
   // T04
-  test('T04: chunk() — overlap produz sobreposição no início do próximo chunk', () {
+  test('T04: chunk() — overlap produz sobreposição no início do próximo chunk',
+      () {
     final text = 'A' * 100 + 'B' * 100;
     const maxSize = 120;
     const overlap = 20;
-    final chunks = DocumentContextBuilder.chunk(text, maxSize: maxSize, overlap: overlap);
+    final chunks =
+        DocumentContextBuilder.chunk(text, maxSize: maxSize, overlap: overlap);
     expect(chunks.length, greaterThanOrEqualTo(2));
     // O segundo chunk deve começar com os últimos `overlap` chars do primeiro chunk
-    final endOfFirst   = chunks[0].substring(chunks[0].length - overlap);
+    final endOfFirst = chunks[0].substring(chunks[0].length - overlap);
     final startOfSecond = chunks[1].substring(0, overlap);
     expect(startOfSecond, endOfFirst);
   });
@@ -69,7 +72,8 @@ void main() {
 
   // T05
   test('T05: relevanceScore() — contexto vazio retorna 0.0', () {
-    expect(DocumentContextBuilder.relevanceScore('flutter dart mobile', ''), 0.0);
+    expect(
+        DocumentContextBuilder.relevanceScore('flutter dart mobile', ''), 0.0);
   });
 
   // T06
@@ -78,9 +82,12 @@ void main() {
   });
 
   // T07
-  test('T07: relevanceScore() — palavras curtas (<=3 chars) ignoradas no contexto', () {
+  test(
+      'T07: relevanceScore() — palavras curtas (<=3 chars) ignoradas no contexto',
+      () {
     // Contexto com apenas palavras curtas → contextWords vazio → 0.0
-    final score = DocumentContextBuilder.relevanceScore('the at in', 'the at in');
+    final score =
+        DocumentContextBuilder.relevanceScore('the at in', 'the at in');
     expect(score, 0.0);
   });
 
@@ -97,7 +104,8 @@ void main() {
   // ── buildGrounding() ──────────────────────────────────────────────────────
 
   // T09
-  test('T09: buildGrounding() — lista vazia retorna DocumentGrounding.empty', () {
+  test('T09: buildGrounding() — lista vazia retorna DocumentGrounding.empty',
+      () {
     final g = DocumentContextBuilder.buildGrounding([]);
     expect(g.excerpts, isEmpty);
     expect(g.warnings, isEmpty);
@@ -106,7 +114,9 @@ void main() {
   });
 
   // T10
-  test('T10: buildGrounding() — item com content vazio gera aviso EMPTY_CONTENT', () {
+  test(
+      'T10: buildGrounding() — item com content vazio gera aviso EMPTY_CONTENT',
+      () {
     final g = DocumentContextBuilder.buildGrounding([
       _item(id: 'a', title: 'Vazio', content: ''),
     ]);
@@ -118,7 +128,9 @@ void main() {
   // T11
   test('T11: buildGrounding() — item com content produz excerpt', () {
     final g = DocumentContextBuilder.buildGrounding([
-      _item(id: 'b', content: 'Conteúdo real do documento para análise pelo copilot'),
+      _item(
+          id: 'b',
+          content: 'Conteúdo real do documento para análise pelo copilot'),
     ]);
     expect(g.excerpts.length, 1);
     expect(g.excerpts.first.text, isNotEmpty);
@@ -126,25 +138,29 @@ void main() {
   });
 
   // T12 — budget adaptativo: cada excerpt usa até maxChunkSize chars (sem cota fixa por documento)
-  test('T12: buildGrounding() — excerpt usa até maxChunkSize chars (budget adaptativo)', () {
+  test(
+      'T12: buildGrounding() — excerpt usa até maxChunkSize chars (budget adaptativo)',
+      () {
     final longContent = 'palavra ' * 200; // ~1400 chars → múltiplos chunks
     final g = DocumentContextBuilder.buildGrounding([
       _item(id: 'c', content: longContent),
     ]);
     // Cada excerpt individual é no máximo um chunk (maxChunkSize)
     for (final e in g.excerpts) {
-      expect(e.charCount, lessThanOrEqualTo(DocumentContextBuilder.maxChunkSize));
+      expect(
+          e.charCount, lessThanOrEqualTo(DocumentContextBuilder.maxChunkSize));
     }
     expect(g.hasContent, isTrue);
   });
 
   // T13
-  test('T13: buildGrounding() — budget esgotado gera aviso BUDGET_EXCEEDED', () {
+  test('T13: buildGrounding() — budget esgotado gera aviso BUDGET_EXCEEDED',
+      () {
     final items = List.generate(
       20,
       (i) => _item(
-        id:      'id$i',
-        title:   'Doc $i',
+        id: 'id$i',
+        title: 'Doc $i',
         content: 'a' * 500,
       ),
     );
@@ -170,15 +186,16 @@ void main() {
   });
 
   // T15
-  test('T15: buildGrounding() — documentUsageCoverage é 0.0 para lista vazia', () {
+  test('T15: buildGrounding() — documentUsageCoverage é 0.0 para lista vazia',
+      () {
     final g = DocumentContextBuilder.buildGrounding([]);
     expect(g.coverage.documentUsageCoverage, 0.0);
   });
 
   // T16
-  test('T16: buildGrounding() — com projectContext seleciona chunk relevante', () {
-    final content =
-        'bloco irrelevante nada a ver com o projeto ' * 3 +
+  test('T16: buildGrounding() — com projectContext seleciona chunk relevante',
+      () {
+    final content = 'bloco irrelevante nada a ver com o projeto ' * 3 +
         ' flutter mobile desenvolvimento android ';
     final g = DocumentContextBuilder.buildGrounding(
       [_item(id: 'y1', content: content)],
@@ -188,11 +205,17 @@ void main() {
   });
 
   // T17
-  test('T17: buildGrounding() — múltiplos itens produzem múltiplos excerpts', () {
+  test('T17: buildGrounding() — múltiplos itens produzem múltiplos excerpts',
+      () {
     final items = [
-      _item(id: 'm1', content: 'Conteúdo do documento um sobre marketing digital'),
-      _item(id: 'm2', content: 'Conteúdo do documento dois sobre produto e vendas'),
-      _item(id: 'm3', content: 'Conteúdo do documento três sobre growth hacking'),
+      _item(
+          id: 'm1',
+          content: 'Conteúdo do documento um sobre marketing digital'),
+      _item(
+          id: 'm2',
+          content: 'Conteúdo do documento dois sobre produto e vendas'),
+      _item(
+          id: 'm3', content: 'Conteúdo do documento três sobre growth hacking'),
     ];
     final g = DocumentContextBuilder.buildGrounding(items);
     expect(g.excerpts.length, 3);
@@ -202,14 +225,18 @@ void main() {
   // T18
   test('T18: buildGrounding() — charCount no excerpt bate com text.length', () {
     final g = DocumentContextBuilder.buildGrounding([
-      _item(id: 'z1', content: 'Texto para verificar charCount do excerpt grounded'),
+      _item(
+          id: 'z1',
+          content: 'Texto para verificar charCount do excerpt grounded'),
     ]);
     final e = g.excerpts.first;
     expect(e.charCount, e.text.length);
   });
 
   // T19
-  test('T19: buildGrounding() — item status pending com content vazio gera aviso', () {
+  test(
+      'T19: buildGrounding() — item status pending com content vazio gera aviso',
+      () {
     final g = DocumentContextBuilder.buildGrounding([
       _item(id: 'p1', status: 'pending', content: ''),
     ]);
@@ -218,7 +245,9 @@ void main() {
   });
 
   // T20
-  test('T20: DocumentGrounding.hasContent — false sem excerpts, true com excerpts', () {
+  test(
+      'T20: DocumentGrounding.hasContent — false sem excerpts, true com excerpts',
+      () {
     final empty = DocumentContextBuilder.buildGrounding([
       _item(id: 'e1', content: ''),
     ]);
@@ -233,7 +262,8 @@ void main() {
   // ── Budget Adaptativo (SHOW-01A.2) ───────────────────────────────────────────
 
   // T22
-  test('T22: adaptive budget — sem cota fixa, excerpt pode exceder 500 chars', () {
+  test('T22: adaptive budget — sem cota fixa, excerpt pode exceder 500 chars',
+      () {
     // Conteúdo de ~960 chars → primeiro chunk = 800 chars (maxChunkSize)
     final content = 'palavra ' * 120; // 8 chars × 120 = 960 chars
     final g = DocumentContextBuilder.buildGrounding([
@@ -250,9 +280,13 @@ void main() {
   // T23
   test('T23: Pass 1 cobre todos os docs usáveis antes do Pass 2', () {
     final items = [
-      _item(id: 'd1', content: 'flutter mobile desenvolvimento android ios apps'),
-      _item(id: 'd2', content: 'receita bolo chocolate delicioso sobremesa doce'),
-      _item(id: 'd3', content: 'investimento renda variável bolsa valores fundos'),
+      _item(
+          id: 'd1', content: 'flutter mobile desenvolvimento android ios apps'),
+      _item(
+          id: 'd2', content: 'receita bolo chocolate delicioso sobremesa doce'),
+      _item(
+          id: 'd3',
+          content: 'investimento renda variável bolsa valores fundos'),
     ];
     final g = DocumentContextBuilder.buildGrounding(
       items,
@@ -265,9 +299,11 @@ void main() {
   });
 
   // T24
-  test('T24: Pass 2 adiciona chunks extras quando budget sobra após Pass 1', () {
+  test('T24: Pass 2 adiciona chunks extras quando budget sobra após Pass 1',
+      () {
     // Conteúdo longo → gera múltiplos chunks; budget amplo → Pass 2 adiciona chunk extra
-    final content = 'flutter mobile android desenvolvimento ' * 35; // ~1330 chars → 2 chunks
+    final content = 'flutter mobile android desenvolvimento ' *
+        35; // ~1330 chars → 2 chunks
     final g = DocumentContextBuilder.buildGrounding(
       [_item(id: 'p2a', content: content)],
       projectContext: 'flutter mobile',
@@ -278,9 +314,13 @@ void main() {
   });
 
   // T25
-  test('T25: Pass 2 — doc altamente relevante acumula mais chars que doc irrelevante', () {
-    final highRelevance = 'flutter mobile android desenvolvimento ios ' * 32; // ~1344 chars
-    final lowRelevance  = 'receita bolo chocolate sobremesa doce culinária ' * 32;
+  test(
+      'T25: Pass 2 — doc altamente relevante acumula mais chars que doc irrelevante',
+      () {
+    final highRelevance =
+        'flutter mobile android desenvolvimento ios ' * 32; // ~1344 chars
+    final lowRelevance =
+        'receita bolo chocolate sobremesa doce culinária ' * 32;
     final g = DocumentContextBuilder.buildGrounding(
       [
         _item(id: 'hr1', content: highRelevance),
@@ -302,13 +342,17 @@ void main() {
   // T26 — Source Manifest Invariant com multi-excerpt
   test('T26: Source Manifest Invariant com multi-excerpt', () {
     final items = [
-      _item(id: 'sm1', content: 'conteúdo real do documento um para análise grounded'),
+      _item(
+          id: 'sm1',
+          content: 'conteúdo real do documento um para análise grounded'),
       _item(id: 'sm2', content: ''), // vazio — não deve aparecer no manifest
-      _item(id: 'sm3', content: 'conteúdo real do documento três para análise grounded'),
+      _item(
+          id: 'sm3',
+          content: 'conteúdo real do documento três para análise grounded'),
     ];
     final g = DocumentContextBuilder.buildGrounding(items);
-    final excerptIds  = g.excerpts.map((e) => e.documentId).toSet();
-    final usableIds   = items
+    final excerptIds = g.excerpts.map((e) => e.documentId).toSet();
+    final usableIds = items
         .where((i) => i.content.trim().isNotEmpty)
         .map((i) => i.id)
         .toSet();
@@ -323,9 +367,11 @@ void main() {
   });
 
   // T27
-  test('T27: coverage.used conta documentos únicos, não número de excerpts', () {
+  test('T27: coverage.used conta documentos únicos, não número de excerpts',
+      () {
     // Documento com múltiplos chunks → gera múltiplos excerpts, mas used = 1
-    final content = 'flutter mobile android desenvolvimento ' * 35; // ~1330 chars → 2 chunks
+    final content = 'flutter mobile android desenvolvimento ' *
+        35; // ~1330 chars → 2 chunks
     final g = DocumentContextBuilder.buildGrounding(
       [_item(id: 'cu1', content: content)],
       projectContext: 'flutter mobile',
@@ -337,19 +383,31 @@ void main() {
   // T28
   test('T28: selectedCharacterCount == soma dos charCounts dos excerpts', () {
     final g = DocumentContextBuilder.buildGrounding([
-      _item(id: 'sc1', content: 'Conteúdo real para verificar selectedCharacterCount no coverage'),
-      _item(id: 'sc2', content: 'Outro conteúdo real também para verificar o campo selectedCharCount'),
+      _item(
+          id: 'sc1',
+          content:
+              'Conteúdo real para verificar selectedCharacterCount no coverage'),
+      _item(
+          id: 'sc2',
+          content:
+              'Outro conteúdo real também para verificar o campo selectedCharCount'),
     ]);
     final totalExcerptChars = g.excerpts.fold(0, (s, e) => s + e.charCount);
     expect(g.coverage.selectedCharacterCount, totalExcerptChars);
   });
 
   // T29
-  test('T29: availableContentCharCount == soma do content.trim().length dos itens usáveis', () {
+  test(
+      'T29: availableContentCharCount == soma do content.trim().length dos itens usáveis',
+      () {
     final items = [
-      _item(id: 'ac1', content: 'Conteúdo um com texto real e mensurável para teste'),
+      _item(
+          id: 'ac1',
+          content: 'Conteúdo um com texto real e mensurável para teste'),
       _item(id: 'ac2', content: ''), // vazio — não conta
-      _item(id: 'ac3', content: 'Conteúdo três com texto real e mensurável para teste'),
+      _item(
+          id: 'ac3',
+          content: 'Conteúdo três com texto real e mensurável para teste'),
     ];
     final g = DocumentContextBuilder.buildGrounding(items);
     final expectedAvailable = items
@@ -359,7 +417,9 @@ void main() {
   });
 
   // T30
-  test('T30: BUDGET_EXCEEDED gerado quando budget é insuficiente para todos os docs', () {
+  test(
+      'T30: BUDGET_EXCEEDED gerado quando budget é insuficiente para todos os docs',
+      () {
     final items = List.generate(
       10,
       (i) => _item(id: 'be$i', title: 'Doc $i', content: 'a' * 300),
@@ -373,11 +433,17 @@ void main() {
   // T21 — Source Manifest Invariant
   // SET(excerpts in manifest) == SET(docs with content that entered LLM prompt)
   // Garante: nenhuma fonte aparece como "usada" se seu trecho não entrou no contexto.
-  test('T21: Source Manifest Invariant — excerpts correspond exactly to items passed in', () {
+  test(
+      'T21: Source Manifest Invariant — excerpts correspond exactly to items passed in',
+      () {
     final items = [
-      _item(id: 'si1', title: 'Doc 1', content: 'Conteúdo real do documento um'),
-      _item(id: 'si2', title: 'Doc 2', content: ''),              // sem content
-      _item(id: 'si3', title: 'Doc 3', content: 'Conteúdo real do documento três'),
+      _item(
+          id: 'si1', title: 'Doc 1', content: 'Conteúdo real do documento um'),
+      _item(id: 'si2', title: 'Doc 2', content: ''), // sem content
+      _item(
+          id: 'si3',
+          title: 'Doc 3',
+          content: 'Conteúdo real do documento três'),
     ];
 
     final g = DocumentContextBuilder.buildGrounding(items);
@@ -405,23 +471,33 @@ void main() {
     // coverage.used == número de documentos únicos representados pelos excerpts
     // NÃO é igual ao número total de excerpts (que pode ser maior com multi-chunk).
     expect(g.coverage.used, excerptIds.length,
-        reason: 'coverage.used deve contar documentos únicos, não total de excerpts');
+        reason:
+            'coverage.used deve contar documentos únicos, não total de excerpts');
   });
 
   // ── Delivery Budget (SHOW-01A.4) ─────────────────────────────────────────────
   // Verifica o contrato AVAILABLE → SELECTED → DELIVERED e as métricas de coverage.
 
   // T31
-  test('T31: deliveredCharacterCount == selectedCharacterCount dentro do budget', () {
+  test(
+      'T31: deliveredCharacterCount == selectedCharacterCount dentro do budget',
+      () {
     final g = DocumentContextBuilder.buildGrounding([
-      _item(id: 'dl1', content: 'Conteúdo real do documento para verificar delivery budget'),
-      _item(id: 'dl2', content: 'Outro conteúdo real para confirmar que delivered equals selected'),
+      _item(
+          id: 'dl1',
+          content: 'Conteúdo real do documento para verificar delivery budget'),
+      _item(
+          id: 'dl2',
+          content:
+              'Outro conteúdo real para confirmar que delivered equals selected'),
     ]);
-    expect(g.coverage.deliveredCharacterCount, g.coverage.selectedCharacterCount);
+    expect(
+        g.coverage.deliveredCharacterCount, g.coverage.selectedCharacterCount);
   });
 
   // T32
-  test('T32: deliveredCharacterCount <= selectedCharacterCount (invariante)', () {
+  test('T32: deliveredCharacterCount <= selectedCharacterCount (invariante)',
+      () {
     final content = 'flutter mobile android desenvolvimento ' * 35; // 2 chunks
     final g = DocumentContextBuilder.buildGrounding(
       [_item(id: 'dc1', content: content)],
@@ -434,22 +510,35 @@ void main() {
   });
 
   // T33
-  test('T33: delivered == selected quando todo conteúdo está dentro do budget', () {
+  test('T33: delivered == selected quando todo conteúdo está dentro do budget',
+      () {
     // 3 docs breves → << 8000 chars → tudo cabe no budget → delivered == selected
     final g = DocumentContextBuilder.buildGrounding([
-      _item(id: 'w1', content: 'Documento um com conteúdo breve para verificar o budget'),
-      _item(id: 'w2', content: 'Documento dois com conteúdo breve para verificar o budget'),
-      _item(id: 'w3', content: 'Documento três com conteúdo breve para verificar o budget'),
+      _item(
+          id: 'w1',
+          content: 'Documento um com conteúdo breve para verificar o budget'),
+      _item(
+          id: 'w2',
+          content: 'Documento dois com conteúdo breve para verificar o budget'),
+      _item(
+          id: 'w3',
+          content: 'Documento três com conteúdo breve para verificar o budget'),
     ]);
-    expect(g.coverage.deliveredCharacterCount, g.coverage.selectedCharacterCount);
+    expect(
+        g.coverage.deliveredCharacterCount, g.coverage.selectedCharacterCount);
   });
 
   // T34
-  test('T34: selectedCharacterCount e deliveredCharacterCount nunca excedem maxChars', () {
+  test(
+      'T34: selectedCharacterCount e deliveredCharacterCount nunca excedem maxChars',
+      () {
     const maxChars = 3000;
     final items = List.generate(
       20,
-      (i) => _item(id: 'tb$i', content: 'conteúdo do documento $i com texto suficiente para o teste'),
+      (i) => _item(
+          id: 'tb$i',
+          content:
+              'conteúdo do documento $i com texto suficiente para o teste'),
     );
     final g = DocumentContextBuilder.buildGrounding(items, maxChars: maxChars);
     expect(g.coverage.selectedCharacterCount, lessThanOrEqualTo(maxChars));
@@ -457,12 +546,16 @@ void main() {
   });
 
   // T35
-  test('T35: Pass 2 — conteúdo do segundo excerpt está presente nos excerpts entregues', () {
+  test(
+      'T35: Pass 2 — conteúdo do segundo excerpt está presente nos excerpts entregues',
+      () {
     // Chunk 1: flutter-heavy → alta relevância → selecionado no Pass 1
     // Chunk 2: conteúdo diferente → selecionado no Pass 2 (budget amplo)
     // Verifica que o texto do 2.º chunk aparece nos excerpts (entregue ao LLM)
-    final chunk1 = 'flutter mobile android desenvolvimento ' * 30; // 30*38 ≈ 1140 chars
-    final chunk2 = 'receita culinaria chocolate bolo ingrediente ' * 20; // 20*44 ≈ 880 chars
+    final chunk1 =
+        'flutter mobile android desenvolvimento ' * 30; // 30*38 ≈ 1140 chars
+    final chunk2 = 'receita culinaria chocolate bolo ingrediente ' *
+        20; // 20*44 ≈ 880 chars
     final content = chunk1 + chunk2; // ~2020 chars → 3 chunks
 
     final g = DocumentContextBuilder.buildGrounding(
@@ -477,11 +570,20 @@ void main() {
   });
 
   // T36
-  test('T36: diversidade documental preservada — todos os docs com content têm excerpt', () {
+  test(
+      'T36: diversidade documental preservada — todos os docs com content têm excerpt',
+      () {
     final items = [
-      _item(id: 'dv1', content: 'conteúdo do documento um sobre marketing digital e vendas'),
-      _item(id: 'dv2', content: 'conteúdo do documento dois sobre produto digital e growth'),
-      _item(id: 'dv3', content: 'conteúdo do documento três sobre growth hacking e otimização'),
+      _item(
+          id: 'dv1',
+          content: 'conteúdo do documento um sobre marketing digital e vendas'),
+      _item(
+          id: 'dv2',
+          content: 'conteúdo do documento dois sobre produto digital e growth'),
+      _item(
+          id: 'dv3',
+          content:
+              'conteúdo do documento três sobre growth hacking e otimização'),
       _item(id: 'dv4', content: ''), // vazio — não deve ter excerpt
     ];
     final g = DocumentContextBuilder.buildGrounding(items);
@@ -493,22 +595,30 @@ void main() {
   // T37
   test('T37: documento sem content não conta como delivered', () {
     final g = DocumentContextBuilder.buildGrounding([
-      _item(id: 'nd1', content: 'conteúdo real presente e processável para grounding'),
+      _item(
+          id: 'nd1',
+          content: 'conteúdo real presente e processável para grounding'),
       _item(id: 'nd2', content: ''),
       _item(id: 'nd3', content: '   '),
     ]);
     expect(g.coverage.used, 1); // somente nd1
     expect(g.coverage.deliveredCharacterCount, greaterThan(0));
-    expect(g.coverage.deliveredCharacterCount, g.coverage.selectedCharacterCount);
+    expect(
+        g.coverage.deliveredCharacterCount, g.coverage.selectedCharacterCount);
   });
 
   // T38
-  test('T38: coverage.used == documentos únicos com excerpt (independente de multi-excerpt)', () {
+  test(
+      'T38: coverage.used == documentos únicos com excerpt (independente de multi-excerpt)',
+      () {
     final content = 'flutter mobile android desenvolvimento ' * 35; // 2 chunks
     final g = DocumentContextBuilder.buildGrounding(
       [
         _item(id: 'ud1', content: content),
-        _item(id: 'ud2', content: 'outro conteúdo real para segundo documento do teste de cobertura'),
+        _item(
+            id: 'ud2',
+            content:
+                'outro conteúdo real para segundo documento do teste de cobertura'),
       ],
       projectContext: 'flutter mobile',
     );
@@ -518,23 +628,33 @@ void main() {
   });
 
   // T39
-  test('T39: entrega é determinística — mesmo input produz exatamente mesmo output', () {
+  test(
+      'T39: entrega é determinística — mesmo input produz exatamente mesmo output',
+      () {
     final items = [
-      _item(id: 'det1', content: 'flutter mobile android desenvolvimento ios aplicativo'),
-      _item(id: 'det2', content: 'conteúdo do segundo documento para verificar determinismo'),
+      _item(
+          id: 'det1',
+          content: 'flutter mobile android desenvolvimento ios aplicativo'),
+      _item(
+          id: 'det2',
+          content: 'conteúdo do segundo documento para verificar determinismo'),
     ];
     const ctx = 'flutter mobile';
-    final g1 = DocumentContextBuilder.buildGrounding(items, projectContext: ctx);
-    final g2 = DocumentContextBuilder.buildGrounding(items, projectContext: ctx);
+    final g1 =
+        DocumentContextBuilder.buildGrounding(items, projectContext: ctx);
+    final g2 =
+        DocumentContextBuilder.buildGrounding(items, projectContext: ctx);
 
     expect(g1.excerpts.length, g2.excerpts.length);
     for (var i = 0; i < g1.excerpts.length; i++) {
       expect(g1.excerpts[i].documentId, g2.excerpts[i].documentId);
-      expect(g1.excerpts[i].text,       g2.excerpts[i].text);
-      expect(g1.excerpts[i].charCount,  g2.excerpts[i].charCount);
+      expect(g1.excerpts[i].text, g2.excerpts[i].text);
+      expect(g1.excerpts[i].charCount, g2.excerpts[i].charCount);
     }
-    expect(g1.coverage.selectedCharacterCount,  g2.coverage.selectedCharacterCount);
-    expect(g1.coverage.deliveredCharacterCount, g2.coverage.deliveredCharacterCount);
+    expect(
+        g1.coverage.selectedCharacterCount, g2.coverage.selectedCharacterCount);
+    expect(g1.coverage.deliveredCharacterCount,
+        g2.coverage.deliveredCharacterCount);
   });
 
   // T40
@@ -551,7 +671,8 @@ void main() {
     expect(g.coverage.deliveredCharacterCount, lessThanOrEqualTo(2000));
 
     // A diferença entre available e delivered é mensurável
-    final gap = g.coverage.availableContentCharCount - g.coverage.deliveredCharacterCount;
+    final gap = g.coverage.availableContentCharCount -
+        g.coverage.deliveredCharacterCount;
     expect(gap, greaterThan(0)); // há conteúdo disponível não entregue
   });
 }

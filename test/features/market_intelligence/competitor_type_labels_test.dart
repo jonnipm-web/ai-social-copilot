@@ -12,14 +12,14 @@ import 'package:ai_social_copilot/l10n/app_localizations.dart';
 // test/features/opportunity_lab/opportunity_type_labels_test.dart.
 void main() {
   const expectedPt = {
-    'direct':       'Direto',
-    'indirect':     'Indireto',
+    'direct': 'Direto',
+    'indirect': 'Indireto',
     'aspirational': 'Aspiracional',
   };
 
   const expectedEn = {
-    'direct':       'Direct',
-    'indirect':     'Indirect',
+    'direct': 'Direct',
+    'indirect': 'Indirect',
     'aspirational': 'Aspirational',
   };
 
@@ -28,11 +28,14 @@ void main() {
     expect(kCompetitorTypes.toSet(), expectedEn.keys.toSet());
   });
 
-  test('every canonical type maps to the exact expected PT-BR label (never the raw English value)', () async {
+  test(
+      'every canonical type maps to the exact expected PT-BR label (never the raw English value)',
+      () async {
     final pt = await AppLocalizations.delegate.load(const Locale('pt'));
     for (final canonical in kCompetitorTypes) {
       expect(competitorTypeLabel(canonical, pt), expectedPt[canonical],
-          reason: 'unexpected PT label for "$canonical" -- if this shows the raw '
+          reason:
+              'unexpected PT label for "$canonical" -- if this shows the raw '
               'English value ("direct"/"indirect"/"aspirational"), PQ-05 regressed');
     }
   });
@@ -45,8 +48,10 @@ void main() {
     }
   });
 
-  test('unmapped/legacy value falls back to itself rather than throwing', () async {
+  test('unmapped/legacy value falls back to itself rather than throwing',
+      () async {
     final pt = await AppLocalizations.delegate.load(const Locale('pt'));
-    expect(competitorTypeLabel('valor-legado-desconhecido', pt), 'valor-legado-desconhecido');
+    expect(competitorTypeLabel('valor-legado-desconhecido', pt),
+        'valor-legado-desconhecido');
   });
 }
