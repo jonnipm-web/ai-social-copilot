@@ -67,9 +67,9 @@ function ndjsonBar(overrides: Record<string, unknown> = {}): string {
 }
 
 function mockFetch(statusCode: number, body: string, extraHeaders?: Record<string, string>) {
-  return async (_url: string, _opts: unknown) => {
+  return (_url: string, _opts: unknown): Promise<Response> => {
     const headers = new Headers({ 'Content-Type': 'application/json', ...extraHeaders });
-    return new Response(body, { status: statusCode, headers });
+    return Promise.resolve(new Response(body, { status: statusCode, headers }));
   };
 }
 
