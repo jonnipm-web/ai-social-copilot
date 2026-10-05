@@ -485,16 +485,16 @@ Deno.test('QM-06 watchlist.v1: store failure → 500 structured, no partial resu
   assertEquals(r.json.multi_analysis, undefined);
 });
 
-// MACRO-05 FASE 3 regression pin: makeLiveProvider() graceful degradation.
-// When DATABENTO_API_KEY is absent from env, makeLiveProvider returns the
-// SyntheticInProcessProvider. A 200 here proves no real network call was
-// attempted — the "network is forbidden" guard at the top of this file would
-// catch any outbound attempt regardless of provider selection.
+// MACRO-05 FASE 3 regression pin: watchlist-always-synthetic with no marketProvider injected.
+// When DATABENTO_API_KEY is absent from env, _LIVE_CONFIG_ERROR is null (auto_lab mode)
+// so no early-return 500. The handler then uses SyntheticInProcessProvider directly.
+// A 200 here proves no real network call was attempted — the "network is forbidden"
+// guard at the top of this file would catch any outbound attempt.
 Deno.test('QM-07 FASE3 makeLiveProvider: synthetic fallback when DATABENTO_API_KEY absent', async () => {
   const rows = [wlRow(WL_A, [['AAPL', 'XNAS', 'USD']])];
   const seen = { tokens: [] as string[], users: [] as string[] };
-  // No marketProvider injected → handler calls makeLiveProvider(clock).
-  // DATABENTO_API_KEY not set in CI → synthetic branch → no network.
+  // No marketProvider injected; DATABENTO_API_KEY not set in CI → _LIVE_CONFIG_ERROR=null
+  // → no fail-closed early return → watchlist uses SyntheticInProcessProvider → 200.
   const r = await call(post(wlBody()), deps({ clock: () => WNOW, storeFor: storeFor(rows, seen) }));
   assertEquals(r.status, 200);
   assertEquals(r.json.multi_analysis.series.length, 1);

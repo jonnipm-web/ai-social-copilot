@@ -10,12 +10,12 @@
 // project ownership (if project_id) → data plane (CSV → canonical series →
 // deterministic engine) → structured QuantAnalysisResult.
 //
-// PROVIDER SELECTION (MACRO-05 FASE 3): makeLiveProvider() selects the real
-// Databento EQUS.SUMMARY provider when DATABENTO_API_KEY is configured in the
-// Edge Function environment. Falls back to SyntheticInProcessProvider when the
-// key is absent. This is the ONLY path that may perform outbound market-data
-// calls; the runtime enforces SSRF validation, host allowlisting, credential
-// isolation, and byte/time limits via safeFetch.
+// PROVIDER SELECTION (MACRO-05 FASE 3): _LIVE_HTTP_PROVIDER is a Databento
+// EQUS.SUMMARY adapter when DATABENTO_API_KEY is configured. Watchlist analysis
+// is always-synthetic at the current gate (BLOCKED_OWNER: rights + adjustment
+// policy not confirmed). This is the ONLY path that may perform outbound
+// market-data calls; the runtime enforces SSRF validation, host allowlisting,
+// credential isolation, and byte/time limits via safeFetch.
 //
 // Deliberately NOT here: any LLM call (numbers come only from the engine), any
 // write, any broker/order path, any quota reservation (no paid dependency; the
@@ -73,10 +73,9 @@ export interface AnalyzeDeps {
   /** quant.analyze.watchlist.v1: watchlist storage as the caller (tests inject a fake). */
   storeFor?: (accessToken: string) => WatchlistStore;
   /**
-   * quant.analyze.watchlist.v1: server-side market data.
-   * undefined = use makeLiveProvider() (default runtime path)
-   * null      = provider explicitly unavailable (fail-closed test path, mirrors QUANT_REQUIRE_LIVE_DATA)
-   * provider  = injected fake/real provider (test injection)
+   * quant.analyze.watchlist.v1: server-side market data (test injection only).
+   * undefined/null = always SyntheticInProcessProvider (watchlist is always-synthetic at the current gate)
+   * provider       = injected fake provider (test injection; e.g. deterministic fake for QM-09/QM-11)
    */
   marketProvider?: MarketDataProvider | null;
 }
@@ -105,33 +104,6 @@ const _LIVE_CONFIG_ERROR: string | null = PROVIDER_MODE === 'real' && !_LIVE_HTT
   ? `QUANT_PROVIDER_MODE=real but DATABENTO_API_KEY is not configured`
   : null;
 
-/**
- * Selects the market-data provider for quant.analyze.v1 (single-instrument) requests.
- *
- * NOT used for quant.analyze.watchlist.v1 — watchlist analysis is always
- * SyntheticInProcessProvider (the request contract enforces data_source=SYNTHETIC_PROVIDER;
- * a real-data watchlist path requires Databento UNADJUSTED alignment + rights + contract
- * update, all separately gated).
- *
- * PROVIDER_MODE=synthetic  → always SyntheticInProcessProvider (TEST/DEV).
- * PROVIDER_MODE=real       → requires DATABENTO_API_KEY; returns null (fail
- *                            closed) if absent so the caller returns 500.
- * PROVIDER_MODE=auto_lab   → real if DATABENTO_API_KEY is set, else synthetic
- *                            (default for lab/CI without credentials).
- *
- * On real-provider failure the error propagates as a Quant error code;
- * there is NO silent automatic fallback to synthetic once a real key is set.
- * RIGHTS: YELLOW/NOT_VERIFIED — see docs/quant/BOOTSTRAP_PROVIDER_DECISION.md §2.2.
- */
-function makeLiveProvider(clock: () => number): MarketDataProvider | null {
-  if (PROVIDER_MODE === 'synthetic') {
-    // Explicit synthetic mode: ignore any configured API key.
-    return new CachingProvider(new SyntheticInProcessProvider(clock), DEFAULT_MARKET_CACHE, clock);
-  }
-  if (_LIVE_CONFIG_ERROR) return null; // real mode, key absent → caller must fail closed
-  const inner: MarketDataProvider = _LIVE_HTTP_PROVIDER ?? new SyntheticInProcessProvider(clock);
-  return new CachingProvider(inner, DEFAULT_MARKET_CACHE, clock);
-}
 
 export async function handler(
   req: Request,
@@ -186,6 +158,9 @@ export async function handler(
     done(quantError(code, cid, details), { errorCode: (code in HTTP_ONLY ? null : code) as QuantErrorCode | null });
 
   if (req.method !== 'POST') return failWith('METHOD_NOT_ALLOWED');
+  // Fail-closed: QUANT_PROVIDER_MODE=real is configured but DATABENTO_API_KEY is absent.
+  // Never silently serve synthetic data when real data was explicitly requested.
+  if (_LIVE_CONFIG_ERROR) return failWith('INTERNAL_ERROR');
   // Rate limit BEFORE reading the (up to 6 MiB) body — server identity only.
   const limited = await enforceRateLimit(deps.rateLimiter ?? new SupabaseRateLimiter(), authUser.id, 'quant-analyze', bearerToken(req) ?? '', cid);
   if (limited) return done(limited, { errorCode: null });
