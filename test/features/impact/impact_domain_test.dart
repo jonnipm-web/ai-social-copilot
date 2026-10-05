@@ -348,7 +348,7 @@ void main() {
           .where((f) => f.path.endsWith('.dart'))
           .map((f) => f.readAsStringSync())
           .join(' ');
-      final actions = RegExp(r"_call\('([a-z_]+)'").allMatches(sources).map((m) => m.group(1)).toSet();
+      final actions = RegExp(r"_call\(\s*'([a-z_]+)'").allMatches(sources).map((m) => m.group(1)).toSet();
       expect(actions, {
         'list_investigations',
         'create_investigation',
