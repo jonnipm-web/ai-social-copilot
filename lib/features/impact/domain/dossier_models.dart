@@ -154,7 +154,8 @@ class InvestigationSummary {
 
 List<InvestigationSummary> parseInvestigations(Map<String, dynamic> data) => [
       for (final m in _maps(data['investigations']))
-        if (_str(m['id']) != null)
+        // Codex P2: require non-empty id so a server "" never creates a corrupt entry.
+        if ((_str(m['id']) ?? '').isNotEmpty)
           InvestigationSummary(
             id: m['id'] as String,
             subjectOrgRef: _str(m['subjectOrgRef']) ?? '—',

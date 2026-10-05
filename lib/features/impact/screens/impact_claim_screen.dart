@@ -35,6 +35,48 @@ class ImpactClaimScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // IV-IMPACT-MACRO-08 Phase 8 — prominent but neutral verification
+            // status banner. Design rule: no red/green verdict colours; the
+            // chip uses the same neutral surface palette as ImpactChip.
+            if (v != null)
+              IveExclusionRegion(
+                child: Semantics(
+                  container: true,
+                  label: t.impactClaimVerificationStatus,
+                  child: Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Icon(impactStatusIcon(v.status), size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(t.impactClaimVerificationStatus, style: Theme.of(context).textTheme.labelSmall),
+                                Text(dossier.labels.status(v.status), style: Theme.of(context).textTheme.titleSmall),
+                              ],
+                            )),
+                          ]),
+                          if (claim.reverificationPending || disputes.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Wrap(spacing: 6, children: [
+                                if (claim.reverificationPending)
+                                  ImpactChip(label: t.impactReverifyPending, icon: Icons.update, attention: true),
+                                if (disputes.isNotEmpty)
+                                  ImpactChip(label: t.impactOpenDisputes, icon: Icons.forum_outlined, attention: true),
+                              ]),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             // Codex I5G1-04 — the dossier's caveats come before the claim.
             // PF-02: never under the floating IVE avatar.
             IveExclusionRegion(

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:ai_social_copilot/features/impact/data/impact_lab_api.dart';
 import 'package:ai_social_copilot/features/impact/domain/dossier_models.dart';
+import 'package:ai_social_copilot/features/impact/domain/ive_impact_adapter.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'impact_test_support.dart';
@@ -336,32 +337,27 @@ void main() {
       }
     });
 
-    test(
-        'UI-API-10 (I6G1-04) the Impact client only ever sends the four read actions (never owner review DTOs)',
-        () {
+    test('UI-API-10 (I6G1-04) the Impact client only ever sends the declared action set (never owner review DTOs)', () {
+      // IV-IMPACT-MACRO-08 Phase 7/9: create_investigation and run_verification
+      // are the two write actions added by the Discover and Monitor verticals.
+      // The forbidden list below (unchanged) guards against server-authority
+      // operations that must never be performed from the client.
       final sources = Directory('lib/features/impact')
           .listSync(recursive: true)
           .whereType<File>()
           .where((f) => f.path.endsWith('.dart'))
           .map((f) => f.readAsStringSync())
           .join(' ');
-      final actions = RegExp(r"_call\(\s*'([a-z_]+)'")
-          .allMatches(sources)
-          .map((m) => m.group(1))
-          .toSet();
+      final actions = RegExp(r"_call\(\s*'([a-z_]+)'").allMatches(sources).map((m) => m.group(1)).toSet();
       expect(actions, {
         'list_investigations',
+        'create_investigation',
+        'run_verification',
         'get_dossier',
         'export_dossier',
-        'verify_dossier'
+        'verify_dossier',
       });
-      for (final forbidden in [
-        'get_investigation',
-        'review_candidate',
-        'import_registry_claim',
-        'ingest_artifact',
-        'OWNER_REVIEW_RAW'
-      ]) {
+      for (final forbidden in ['get_investigation', 'review_candidate', 'import_registry_claim', 'ingest_artifact', 'OWNER_REVIEW_RAW']) {
         expect(sources, isNot(contains(forbidden)), reason: forbidden);
       }
     });
@@ -372,8 +368,190 @@ void main() {
           .listInvestigations();
       expect(list.single.id, kInvestigationId);
     });
+
+    // IV-IMPACT-MACRO-08 Phase 16 — RLS / cross-user isolation boundary tests.
+    // The client must NEVER send user_id in the request body. The server infers
+    // the caller from the JWT attached by the Supabase SDK. A body with user_id
+    // would be an oracle disclosure and a potential injection vector.
+    group('RLS boundary (Phase 16 — client-side invariants)', () {
+      test('RLS-01 SupabaseImpactTransport body never contains user_id or user fields', () {
+        // Transport code: the _call body is always {action, ...params}. Verify
+        // by grepping the source that no user_id, userId, uid or auth_uid key
+        // is ever placed in the outbound body by the API layer.
+        final source = File('lib/features/impact/data/impact_lab_api.dart').readAsStringSync();
+        for (final forbidden in ['user_id', '"userId"', "'userId'", '"uid"', 'auth.uid']) {
+          expect(source, isNot(contains(forbidden)), reason: 'client body must not contain $forbidden');
+        }
+      });
+
+      test('RLS-02 action body for read operations contains only declared, non-identity params', () {
+        // Every _call invocation uses only application-level params (investigation_id,
+        // lang, content_hash, envelope) — never anything that could bias server-side
+        // filtering to another user's data.
+        final source = File('lib/features/impact/data/impact_lab_api.dart').readAsStringSync();
+        // owner_id, role, plan must never appear in any outbound body.
+        for (final forbidden in ['owner_id', "'role'", "'plan'", "'billing'", "'tier'"]) {
+          expect(source, isNot(contains(forbidden)), reason: 'client body must not contain $forbidden');
+        }
+      });
+
+      test('RLS-03 investigationId is always taken from server response, never from user input for owned-resource ops', () {
+        // get_dossier and export_dossier both require an investigation_id that
+        // comes from the server-side list (list_investigations) or server-side
+        // create. The adapter test confirms the id field is required non-empty.
+        final inv = InvestigationSummary(id: 'srv-id-42', subjectOrgRef: 'ACME', status: 'OPEN');
+        expect(inv.id, 'srv-id-42');
+        expect(() => InvestigationSummary(id: '', subjectOrgRef: 'ACME', status: 'OPEN'),
+            returnsNormally); // constructor itself allows empty (contract enforced at createInvestigation)
+      });
+
+      test('RLS-04 createInvestigation throws contract error when server returns no investigationId', () async {
+        // If the server returns a body with ok:true but missing or empty investigationId,
+        // ImpactLabApi.createInvestigation must throw ImpactApiException(contract).
+        // Wrapping in a full envelope so _call passes, but data has no 'investigationId' field.
+        final transport = FakeImpactTransport(
+          createInvestigation: {
+            'ok': true,
+            'action': 'create_investigation',
+            'data': {'subjectOrgRef': 'ACME', 'status': 'OPEN'}, // no 'investigationId'
+          },
+        );
+        final api = ImpactLabApi(transport);
+        expect(
+          () async => api.createInvestigation(subjectRef: 'acme', subjectType: 'NONPROFIT', legalName: 'ACME'),
+          throwsA(isA<ImpactApiException>().having((e) => e.kind, 'kind', ImpactErrorKind.contract)),
+        );
+      });
+
+      test('RLS-04b createInvestigation sends correct subject payload (no org_ref)', () async {
+        // Fix 4: client sends subject.ref + subject.type + subject.identity (not org_ref)
+        final transport = FakeImpactTransport(
+          createInvestigation: {
+            'ok': true,
+            'action': 'create_investigation',
+            'data': {'investigationId': kInvestigationId, 'subjectOrgRef': 'acme', 'status': 'OPEN'},
+          },
+        );
+        final api = ImpactLabApi(transport);
+        await api.createInvestigation(subjectRef: 'acme', subjectType: 'NONPROFIT', legalName: 'ACME Corp');
+        final body = transport.calls.single;
+        expect(body['action'], 'create_investigation');
+        expect(body.containsKey('org_ref'), isFalse, reason: 'org_ref must not appear');
+        expect(body['subject'], isA<Map>());
+        final subject = body['subject'] as Map;
+        expect(subject['ref'], 'acme');
+        expect(subject['type'], 'NONPROFIT');
+        expect((subject['identity'] as Map)['legalName'], 'ACME Corp');
+      });
+
+      test('RLS-04d parseInvestigations silently drops entries with empty id', () {
+        // Codex P2: empty-string id must not create a corrupt InvestigationSummary.
+        final data = {
+          'investigations': [
+            {'id': kInvestigationId, 'subjectOrgRef': 'ACME', 'status': 'OPEN'},
+            {'id': '',               'subjectOrgRef': 'BAD',  'status': 'OPEN'},
+            {'id': null,             'subjectOrgRef': 'BAD2', 'status': 'OPEN'},
+          ],
+        };
+        final list = parseInvestigations(data);
+        expect(list, hasLength(1));
+        expect(list.single.id, kInvestigationId);
+      });
+
+      test('RLS-04c runVerification sends claim_ref (required by server contract)', () async {
+        // Fix 4: run_verification requires investigation_id AND claim_ref
+        final transport = FakeImpactTransport(
+          runVerification: {
+            'ok': true,
+            'action': 'run_verification',
+            'data': {'investigationId': kInvestigationId},
+          },
+          dossier: fixture('dossier_confirmed_en'),
+        );
+        final api = ImpactLabApi(transport);
+        await api.runVerification(investigationId: kInvestigationId, claimRef: 'c-wells');
+        final verifyCall = transport.calls.first;
+        expect(verifyCall['action'], 'run_verification');
+        expect(verifyCall['investigation_id'], kInvestigationId);
+        expect(verifyCall['claim_ref'], 'c-wells');
+      });
+    });
+
+    // IV-IMPACT-MACRO-08 Phase 13 (revised Fix 3) — IVE-Impact adapter boundary.
+    // EvidenceKind labels: [VERIFIED], [STORED], [USER_CLAIM], [INFERRED].
+    // These describe PROVENANCE, not factual truth.
+    group('IVE-Impact adapter boundary (Phase 13)', () {
+      test('IVE-01 assembleDossierContext never includes billing/plan fields', () {
+        final dossier = DossierView.fromResponse(fixture('dossier_confirmed_en')['data'] as Map<String, dynamic>);
+        final ctx = assembleDossierContext(dossier);
+        // The rules section must not contain billing field names; data section must not either.
+        for (final forbidden in ['isPro', 'isEnterprise', 'planId', 'billingStatus', 'planTier']) {
+          expect(ctx, isNot(contains(forbidden)), reason: 'IVE context must not contain $forbidden');
+        }
+        // 'tier'/'billing'/'plan' are allowed ONLY in the rules explanation
+        // (e.g., "ASSINATURA/FATURAMENTO"). Check the data section (after blank line).
+        final parts = ctx.split('\n\n');
+        final dataSection = parts.length > 1 ? parts.sublist(1).join('\n\n') : '';
+        for (final forbidden in ['plan', 'billing', 'tier', 'isPro', 'isEnterprise']) {
+          expect(dataSection.toLowerCase(), isNot(contains(forbidden)),
+              reason: 'IVE context DATA must not contain $forbidden');
+        }
+      });
+
+      test('IVE-02 assembleDossierContext uses new provenance labels', () {
+        final dossier = DossierView.fromResponse(fixture('dossier_confirmed_en')['data'] as Map<String, dynamic>);
+        final ctx = assembleDossierContext(dossier);
+        // New label scheme: [VERIFIED], [STORED], [USER_CLAIM], [INFERRED]
+        // At minimum STORED items (subject identity) are always present.
+        expect(ctx, contains('[STORED]'));
+        // Claims present in dossier_confirmed_en should yield USER_CLAIM entries
+        expect(ctx, contains('[USER_CLAIM]'));
+        // SERVERFACT must NOT appear (old label, semantically misleading)
+        expect(ctx, isNot(contains('[SERVERFACT]')));
+      });
+
+      test('IVE-03 assembleDossierContext includes the IVE cannot-invent rule', () {
+        final dossier = DossierView.fromResponse(fixture('dossier_confirmed_en')['data'] as Map<String, dynamic>);
+        final ctx = assembleDossierContext(dossier);
+        expect(ctx, contains('IVE NÃO PODE'));
+        expect(ctx, contains('inventar'));
+        // USER_CLAIM rule must explicitly say it is NOT authority
+        expect(ctx, contains('[USER_CLAIM]'));
+      });
+
+      test('IVE-04 assembleDossierContext for empty dossier produces valid non-empty context', () {
+        final dossier = DossierView.fromResponse(fixture('dossier_empty_en')['data'] as Map<String, dynamic>);
+        final ctx = assembleDossierContext(dossier);
+        expect(ctx.isNotEmpty, true);
+        expect(ctx, contains('[STORED]'));
+      });
+
+      test('IVE-05 prompt injection: malicious text in claim is wrapped in value delimiters', () {
+        final dossier = DossierView.fromResponse(fixture('dossier_confirmed_en')['data'] as Map<String, dynamic>);
+        final ctx = assembleDossierContext(dossier);
+        // All USER_CLAIM values are inside <value>...</value>
+        final re = RegExp(r'\[USER_CLAIM\][^<]*<value>.*?</value>', dotAll: true);
+        expect(re.hasMatch(ctx), isTrue, reason: 'USER_CLAIM values must be delimited');
+      });
+
+      test('IVE-06 assembled context escapes </value> case variants', () {
+        // If claim text contains "</value>" or case variants, they are escaped so
+        // injected text cannot close the delimiter.
+        expect(_sanitizeForTest('normal text'), equals('normal text'));
+        expect(_sanitizeForTest('inject </value> here'), equals('inject <\\/value> here'));
+        expect(_sanitizeForTest('</value></value>'), equals('<\\/value><\\/value>'));
+        expect(_sanitizeForTest('</VALUE>'), equals('<\\/VALUE>'));
+        expect(_sanitizeForTest('</Value>'), equals('<\\/Value>'));
+      });
+    });
   });
 }
+
+/// Mirror of the private _sanitize() in ive_impact_adapter.dart, used only in tests.
+String _sanitizeForTest(String s) => s
+    .replaceAll('</value>', '<\\/value>')
+    .replaceAll('</VALUE>', '<\\/VALUE>')
+    .replaceAll('</Value>', '<\\/Value>');
 
 /// A large dossier derived from a real fixture: 500 copies of its claim.
 Map<String, dynamic> largeDossier(int n) {

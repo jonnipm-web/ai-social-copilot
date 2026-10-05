@@ -316,6 +316,89 @@ class ImpactAdminGate extends ConsumerWidget {
   }
 }
 
+/// IV-IMPACT-MACRO-08 Phase 6 — entitlement gate for future FREE/PRO expansion.
+///
+/// For now the Impact module is EXPERIMENTAL (admin-only via lifecycle):
+/// the real entitlement boundary is the admin check inside [ImpactAdminGate]
+/// and the server-side impact-lab entitlement. This widget is the intended
+/// FUTURE replacement once the module reaches `commercialEnabled: true` —
+/// FREE users will see the partial/basic tier; PRO users see everything.
+///
+/// Authority: client is NEVER the authority. Any capability shown here must
+/// also be enforced server-side via `check_impact_access` RPC.
+// Ordered lowest→highest privilege. tier.index >= minimumTier.index is the
+// entitlement check; adding tiers here must preserve this invariant.
+enum ImpactTier { denied, loading, free, pro, admin }
+
+class ImpactEntitlementGate extends ConsumerWidget {
+  const ImpactEntitlementGate({
+    super.key,
+    required this.title,
+    required this.child,
+    this.minimumTier = ImpactTier.pro,
+    this.freeChild,
+  });
+
+  final String title;
+  final Widget child;
+
+  /// Minimum tier to see [child]. Defaults to [ImpactTier.pro].
+  final ImpactTier minimumTier;
+
+  /// Optional partial content for FREE users (shown instead of an upgrade wall
+  /// when [minimumTier] is [ImpactTier.pro] and the user is FREE). When null,
+  /// a standard upgrade prompt is shown.
+  final Widget? freeChild;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t     = AppLocalizations.of(context)!;
+    final async = ref.watch(currentProfileProvider);
+
+    if (async.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: Text(title)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    final profile = async.valueOrNull;
+    final tier = profile == null
+        ? ImpactTier.denied
+        : profile.isAdmin
+            ? ImpactTier.admin
+            : profile.isPro
+                ? ImpactTier.pro
+                : ImpactTier.free;
+
+    if (tier == ImpactTier.admin || tier.index >= minimumTier.index) {
+      return child;
+    }
+    if (tier == ImpactTier.free && freeChild != null) {
+      return freeChild!;
+    }
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.lock_outline, size: 48),
+            const SizedBox(height: 12),
+            Text(t.impactEntitlementProRequired, style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            Text(t.impactEntitlementProDescription, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
+              child: Text(t.impactEntitlementUpgradeCta),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 /// Centered content with a readable max width on large screens.
 class ImpactPage extends StatelessWidget {
   const ImpactPage({super.key, required this.child, this.maxWidth = 1280});

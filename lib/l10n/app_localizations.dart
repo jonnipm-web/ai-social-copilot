@@ -12354,6 +12354,300 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Tentar novamente'**
   String get insightRetry;
+
+  /// No description provided for @impactDiscover.
+  ///
+  /// In pt, this message translates to:
+  /// **'Descobrir'**
+  String get impactDiscover;
+
+  /// No description provided for @impactDiscoverTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Descobrir Entidade'**
+  String get impactDiscoverTitle;
+
+  /// No description provided for @impactDiscoverHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nome da organização, empresa ou entidade'**
+  String get impactDiscoverHint;
+
+  /// No description provided for @impactDiscoverSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pesquise e comece uma investigação de evidência'**
+  String get impactDiscoverSubtitle;
+
+  /// No description provided for @impactDiscoverSearch.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pesquisar'**
+  String get impactDiscoverSearch;
+
+  /// No description provided for @impactDiscoverEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum resultado ainda. Digite o nome de uma organização para começar.'**
+  String get impactDiscoverEmpty;
+
+  /// No description provided for @impactDiscoverProGate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Investigação completa disponível no plano PRO. Faça upgrade para criar investigações, coletar evidências e gerar dossiês.'**
+  String get impactDiscoverProGate;
+
+  /// No description provided for @impactDiscoverEntityLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Entidade'**
+  String get impactDiscoverEntityLabel;
+
+  /// No description provided for @impactDiscoverJurisdiction.
+  ///
+  /// In pt, this message translates to:
+  /// **'Jurisdição'**
+  String get impactDiscoverJurisdiction;
+
+  /// No description provided for @impactDiscoverConfidence.
+  ///
+  /// In pt, this message translates to:
+  /// **'Confiança da identidade'**
+  String get impactDiscoverConfidence;
+
+  /// No description provided for @impactDiscoverSources.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fontes encontradas'**
+  String get impactDiscoverSources;
+
+  /// No description provided for @impactDiscoverNoSources.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma fonte encontrada para esta entidade.'**
+  String get impactDiscoverNoSources;
+
+  /// No description provided for @impactDiscoverGaps.
+  ///
+  /// In pt, this message translates to:
+  /// **'Lacunas de evidência'**
+  String get impactDiscoverGaps;
+
+  /// No description provided for @impactDiscoverWarnings.
+  ///
+  /// In pt, this message translates to:
+  /// **'Avisos'**
+  String get impactDiscoverWarnings;
+
+  /// No description provided for @impactDiscoverStartInvestigation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Iniciar investigação'**
+  String get impactDiscoverStartInvestigation;
+
+  /// No description provided for @impactDiscoverPending.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pesquisando a entidade…'**
+  String get impactDiscoverPending;
+
+  /// No description provided for @impactDiscoverError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível pesquisar. Verifique a conexão e tente novamente.'**
+  String get impactDiscoverError;
+
+  /// No description provided for @impactDiscoverResultTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resultado da descoberta'**
+  String get impactDiscoverResultTitle;
+
+  /// No description provided for @impactDiscoverUnresolved.
+  ///
+  /// In pt, this message translates to:
+  /// **'Identidade não resolvida — pode ser necessária informação adicional.'**
+  String get impactDiscoverUnresolved;
+
+  /// No description provided for @impactDiscoverAbsenceNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ausência de registros NÃO implica irregularidade.'**
+  String get impactDiscoverAbsenceNote;
+
+  /// No description provided for @impactMonitor.
+  ///
+  /// In pt, this message translates to:
+  /// **'Monitorar'**
+  String get impactMonitor;
+
+  /// No description provided for @impactMonitorTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Monitor de Investigação'**
+  String get impactMonitorTitle;
+
+  /// No description provided for @impactMonitorSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Acompanhe mudanças de evidência ao longo do tempo'**
+  String get impactMonitorSubtitle;
+
+  /// No description provided for @impactMonitorPartialNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Verificações periódicas automáticas não estão disponíveis nesta versão. O estado de verificação pode ser atualizado manualmente.'**
+  String get impactMonitorPartialNote;
+
+  /// No description provided for @impactMonitorLastChecked.
+  ///
+  /// In pt, this message translates to:
+  /// **'Última verificação'**
+  String get impactMonitorLastChecked;
+
+  /// No description provided for @impactMonitorNever.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ainda não verificado'**
+  String get impactMonitorNever;
+
+  /// No description provided for @impactMonitorRecheck.
+  ///
+  /// In pt, this message translates to:
+  /// **'Re-verificar agora'**
+  String get impactMonitorRecheck;
+
+  /// No description provided for @impactMonitorHistory.
+  ///
+  /// In pt, this message translates to:
+  /// **'Histórico de verificações'**
+  String get impactMonitorHistory;
+
+  /// No description provided for @impactMonitorNoHistory.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma verificação anterior registrada.'**
+  String get impactMonitorNoHistory;
+
+  /// No description provided for @impactMonitorStatus.
+  ///
+  /// In pt, this message translates to:
+  /// **'Status do monitor'**
+  String get impactMonitorStatus;
+
+  /// No description provided for @impactMonitorActive.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ativo (manual)'**
+  String get impactMonitorActive;
+
+  /// No description provided for @impactMonitorPro.
+  ///
+  /// In pt, this message translates to:
+  /// **'Monitoramento automático disponível no plano PRO.'**
+  String get impactMonitorPro;
+
+  /// No description provided for @impactNavigateHome.
+  ///
+  /// In pt, this message translates to:
+  /// **'Investigações'**
+  String get impactNavigateHome;
+
+  /// No description provided for @impactNavigateDiscover.
+  ///
+  /// In pt, this message translates to:
+  /// **'Descobrir'**
+  String get impactNavigateDiscover;
+
+  /// No description provided for @impactNavigateMonitor.
+  ///
+  /// In pt, this message translates to:
+  /// **'Monitorar'**
+  String get impactNavigateMonitor;
+
+  /// No description provided for @impactNavigateDossiers.
+  ///
+  /// In pt, this message translates to:
+  /// **'Dossiês'**
+  String get impactNavigateDossiers;
+
+  /// No description provided for @impactEntitlementFreeLimit.
+  ///
+  /// In pt, this message translates to:
+  /// **'Você atingiu o limite do plano gratuito para este recurso.'**
+  String get impactEntitlementFreeLimit;
+
+  /// No description provided for @impactEntitlementUpgradeCta.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver planos'**
+  String get impactEntitlementUpgradeCta;
+
+  /// No description provided for @impactEntitlementProRequired.
+  ///
+  /// In pt, this message translates to:
+  /// **'Recurso PRO'**
+  String get impactEntitlementProRequired;
+
+  /// No description provided for @impactEntitlementProDescription.
+  ///
+  /// In pt, this message translates to:
+  /// **'Disponível no plano PRO ou superior.'**
+  String get impactEntitlementProDescription;
+
+  /// No description provided for @impactClaimVerificationStatus.
+  ///
+  /// In pt, this message translates to:
+  /// **'Estado da verificação'**
+  String get impactClaimVerificationStatus;
+
+  /// No description provided for @impactClaimStatusNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este estado reflete a evidência coletada até esta data. Não é um veredito final sobre a organização.'**
+  String get impactClaimStatusNote;
+
+  /// No description provided for @impactLegalSourcesNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fontes: registros públicos, informações voluntárias e dados de terceiros verificados. A ausência de registros não implica irregularidade.'**
+  String get impactLegalSourcesNote;
+
+  /// No description provided for @impactLegalAiNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Organizado com assistência de IA. Toda conclusão deve ser verificada de forma independente antes de ser utilizada.'**
+  String get impactLegalAiNote;
+
+  /// No description provided for @impactLegalFalsePositiveNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resultados automatizados podem conter imprecisões. Erros podem ser sinalizados pelo suporte.'**
+  String get impactLegalFalsePositiveNote;
+
+  /// No description provided for @impactIveBoundaryFact.
+  ///
+  /// In pt, this message translates to:
+  /// **'FATO (verificado pelo servidor)'**
+  String get impactIveBoundaryFact;
+
+  /// No description provided for @impactIveInference.
+  ///
+  /// In pt, this message translates to:
+  /// **'INFERÊNCIA (derivada dos fatos — não verificada independentemente)'**
+  String get impactIveInference;
+
+  /// No description provided for @impactIveHypothesis.
+  ///
+  /// In pt, this message translates to:
+  /// **'HIPÓTESE (não verificada)'**
+  String get impactIveHypothesis;
+
+  /// No description provided for @impactIveCannotInvent.
+  ///
+  /// In pt, this message translates to:
+  /// **'A IVE pode resumir evidências existentes, mas não pode inventar, pressupor ou verificar evidências por conta própria.'**
+  String get impactIveCannotInvent;
 }
 
 class _AppLocalizationsDelegate

@@ -5,13 +5,17 @@
  *  - READS use a client carrying the CALLER's JWT (anon key + Authorization),
  *    so PostgreSQL RLS decides what is visible — a foreign investigation reads
  *    as "not found" even if the service layer had a bug.
- *  - WRITES use the service-role client (authenticated/anon have no write
- *    privilege on impact_* tables at all). They are only issued by the Lab
- *    service AFTER authentication, server-side entitlement and an RLS-bound
- *    ownership read, always with the server-verified investigation id and the
- *    caller's user id as created_by/updated_by. The database re-checks
- *    ownership links, subject binding, append-only history and temporal rules
- *    for this role too (migration 20260924010000).
+ *  - WRITES use two paths:
+ *    * create_investigation + run_verification (MACRO-08 TOCTOU fix, migration
+ *      20261004000004): use the caller JWT to call SECURITY DEFINER RPCs that
+ *      atomically re-check entitlement AND insert in one transaction.  This
+ *      eliminates the TOCTOU gap between check_impact_access and the write.
+ *    * All other writes: continue to use the service-role client (authenticated/
+ *      anon have no write privilege on impact_* tables at all), issued AFTER
+ *      authentication, server-side entitlement and an RLS-bound ownership read,
+ *      with the server-verified investigation id and caller's user id as
+ *      created_by/updated_by.  The database re-checks ownership links, subject
+ *      binding, append-only history and temporal rules (migration 20260924010000).
  *  - No DELETE is ever issued.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.116.0';
@@ -378,12 +382,31 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
   }
 
   async createInvestigation(n: NewInvestigation): Promise<ImpactResult<InvestigationRecord>> {
-    const { data, error } = await this.service.from('impact_investigations').insert({
-      owner_id: n.ownerId, project_id: n.projectId, subject_org_ref: n.subjectOrgRef,
-      subject_org_type: n.subjectOrgType, subject_identity: n.subjectIdentity,
-    }).select('*').single();
+    // MACRO-08 TOCTOU fix: entitlement re-check + insert are atomic in one
+    // SECURITY DEFINER transaction (migration 20261004000004). Called via
+    // the caller JWT so auth.uid() resolves to the real caller.
+    const { data: rows, error } = await this.user.rpc('impact_atomic_create_investigation', {
+      p_subject_ref: n.subjectOrgRef,
+      p_subject_type: n.subjectOrgType,
+      p_subject_identity: n.subjectIdentity,
+      p_project_id: n.projectId ?? null,
+    });
     if (error) return dbFail(error);
-    return ok(rowToInvestigation(data as Row));
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    if (!row) return fail('INTERNAL_ERROR', 'atomic create returned no row');
+    if (row.denied) {
+      const reason = row.denied_reason as string;
+      if (reason === 'no_session') return fail('INTERNAL_ERROR', 'no_session');
+      if (reason === 'no_profile') return fail('INTERNAL_ERROR', 'no_profile');
+      if (reason === 'pro_required') return fail('INVALID_REQUEST', 'entitlement_denied_pro_required');
+      if (reason === 'limit_exceeded') return fail('LIMIT_EXCEEDED', 'too many investigations');
+      return fail('INTERNAL_ERROR', `atomic_create_denied: ${reason}`);
+    }
+    // Fetch full row via service client to avoid an RLS denial between the
+    // committed write and this read-back (Codex CLASS D P2-Q11).
+    const { data: inv, error: readErr } = await this.service.from('impact_investigations').select('*').eq('id', row.investigation_id as string).single();
+    if (readErr) return dbFail(readErr);
+    return ok(rowToInvestigation(inv as Row));
   }
   async archiveInvestigation(id: string, actorId: string): Promise<ImpactResult<true>> {
     const { data, error } = await this.service.from('impact_investigations').update({ status: 'ARCHIVED', updated_by: actorId, updated_at: new Date().toISOString() })
@@ -415,28 +438,57 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
     if (error) return dbFail(error);
     return ok(data ? rowToVerification(data as Row) : null);
   }
-  async insertVerification(investigationId: string, r: VerificationResult, idempotencyKey: string | null, actorId: string): Promise<ImpactResult<StoredVerification>> {
-    if (idempotencyKey) {
-      const prior = await this.findVerification(investigationId, 'idempotency_key', idempotencyKey);
-      if (!prior.ok || prior.value) return prior as ImpactResult<StoredVerification>;
+  async insertVerification(investigationId: string, r: VerificationResult, idempotencyKey: string | null, _actorId: string): Promise<ImpactResult<StoredVerification>> {
+    // MACRO-08 TOCTOU fix: entitlement re-check + ownership check + insert
+    // are atomic in one SECURITY DEFINER transaction (migration 20261004000004).
+    // Called via the caller JWT so auth.uid() resolves to the real caller.
+    // Idempotency is handled inside the RPC (returns the existing version if
+    // the key was already used, without raising an error).
+    const { data: rows, error } = await this.user.rpc('impact_atomic_insert_verification', {
+      p_investigation_id: investigationId,
+      p_claim_ref: r.claimId,
+      p_result_id: r.resultId,
+      p_status: r.status,
+      p_underlying_status: r.underlyingStatus,
+      p_sufficiency: r.sufficiency,
+      p_display_class: r.displayClass,
+      p_review_state: r.reviewState,
+      p_policy_version: r.policyVersion,
+      p_evidence_set_hash: r.evidenceSetHash,
+      p_review_binding_hash: r.reviewBindingHash,
+      p_evaluated_at: r.evaluatedAt,
+      p_rules_applied: r.rulesApplied,
+      p_gaps: r.gaps,
+      p_conflict_count: r.conflicts.length,
+      p_result: r,
+      p_idempotency_key: idempotencyKey,
+    });
+    if (error) {
+      // 23505 = unique violation from a concurrent insert racing past idempotency check.
+      if (error.code === '23505') {
+        const byKey = idempotencyKey ? await this.findVerification(investigationId, 'idempotency_key', idempotencyKey) : ok(null);
+        if (byKey.ok && byKey.value) return ok(byKey.value);
+        const byResult = await this.findVerification(investigationId, 'result_id', r.resultId);
+        if (byResult.ok && byResult.value) return ok(byResult.value);
+      }
+      return dbFail(error);
     }
-    const row = {
-      investigation_id: investigationId, claim_ref: r.claimId, result_id: r.resultId, status: r.status,
-      underlying_status: r.underlyingStatus, sufficiency: r.sufficiency, display_class: r.displayClass, review_state: r.reviewState,
-      policy_version: r.policyVersion, evidence_set_hash: r.evidenceSetHash, review_binding_hash: r.reviewBindingHash,
-      evaluated_at: r.evaluatedAt, rules_applied: r.rulesApplied, gaps: r.gaps, conflict_count: r.conflicts.length,
-      result: r, idempotency_key: idempotencyKey, created_by: actorId,
-    };
-    const { data, error } = await this.service.from('impact_verifications').insert(row).select('*').single();
-    if (!error) return ok(rowToVerification(data as Row));
-    if (error.code === '23505') {
-      // Retry race: return the row that won (same key or same resultId) — never a duplicate.
-      const byKey = idempotencyKey ? await this.findVerification(investigationId, 'idempotency_key', idempotencyKey) : ok(null);
-      if (byKey.ok && byKey.value) return ok(byKey.value);
-      const byResult = await this.findVerification(investigationId, 'result_id', r.resultId);
-      if (byResult.ok && byResult.value) return ok(byResult.value);
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    if (!row) return fail('INTERNAL_ERROR', 'atomic insert returned no row');
+    if (row.denied) {
+      const reason = row.denied_reason as string;
+      if (reason === 'no_session') return fail('INTERNAL_ERROR', 'no_session');
+      if (reason === 'no_profile') return fail('INTERNAL_ERROR', 'no_profile');
+      if (reason === 'pro_required') return fail('INVALID_REQUEST', 'entitlement_denied_pro_required');
+      if (reason === 'not_owner') return fail('INVESTIGATION_NOT_FOUND', 'investigation not found');
+      return fail('INTERNAL_ERROR', `atomic_insert_denied: ${reason}`);
     }
-    return dbFail(error);
+    // Fetch the full verification row to return StoredVerification.
+    const version = row.stored_version as number;
+    const { data: vRow, error: readErr } = await this.service.from('impact_verifications').select('*')
+      .eq('investigation_id', investigationId).eq('version', version).eq('claim_ref', r.claimId).single();
+    if (readErr) return dbFail(readErr);
+    return ok(rowToVerification(vRow as Row));
   }
   async insertDispute(investigationId: string, d: StoredDispute, actorId: string): Promise<ImpactResult<true>> {
     const { error } = await this.service.from('impact_disputes').insert({
@@ -514,6 +566,43 @@ export function rowToDossierSnapshot(r: Row): StoredDossierSnapshot {
   };
 }
 
+// ── action-level entitlement check ──────────────────────────────────────────
+
+/** Result of the check_impact_access RPC. */
+export interface ActionAccessResult {
+  allowed: boolean;
+  tier: string;
+  reason: string;
+}
+
+/**
+ * IV-IMPACT-MACRO-08 Fix 2 — calls the server-side `check_impact_access` RPC
+ * using the caller's JWT so auth.uid() is the authenticated user, not service.
+ * Returns null on any error (fail closed).
+ */
+export async function checkImpactActionAccess(req: Request, action: string): Promise<ActionAccessResult | null> {
+  const url = Deno.env.get('SUPABASE_URL');
+  const anon = Deno.env.get('SUPABASE_ANON_KEY');
+  const token = req.headers.get('Authorization')?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+  if (!url || !anon || !token) return null; // fail closed: missing config
+  const opts = { auth: { autoRefreshToken: false, persistSession: false } };
+  const client = createClient(url, anon, { ...opts, global: { headers: { Authorization: `Bearer ${token}` } } });
+  try {
+    const { data, error } = await (client as unknown as DbClient).rpc('check_impact_access', { p_action: action });
+    if (error || !data) return null;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || typeof row !== 'object') return null;
+    const r = row as Record<string, unknown>;
+    return {
+      allowed: r['allowed'] === true,
+      tier: typeof r['tier'] === 'string' ? r['tier'] : 'unknown',
+      reason: typeof r['reason'] === 'string' ? r['reason'] : 'unknown',
+    };
+  } catch {
+    return null; // fail closed on any unexpected error
+  }
+}
+
 export function createSupabaseImpactLabStore(req: Request): SupabaseImpactLabStore {
   const url = Deno.env.get('SUPABASE_URL');
   const anon = Deno.env.get('SUPABASE_ANON_KEY');
@@ -524,6 +613,227 @@ export function createSupabaseImpactLabStore(req: Request): SupabaseImpactLabSto
   const user = createClient(url, anon, { ...opts, global: { headers: { Authorization: `Bearer ${token}` } } });
   const service = createClient(url, serviceKey, opts);
   return new SupabaseImpactLabStore(user as unknown as DbClient, service as unknown as DbClient);
+}
+
+// ── AEF store ────────────────────────────────────────────────────────────────
+
+import type { AefStore, AefStoreResult } from '../_shared/aef/store.ts';
+import type {
+  ActionClassification,
+  AefExecutionRequest,
+  ExecutionReceipt,
+  HumanGateState,
+  HumanGateStatus,
+  ImpactActionIntentKind,
+  PolicyDecision,
+  PolicyOutcome,
+} from '../_shared/aef/types.ts';
+
+type AefFailCode =
+  | 'AEF_PERSISTENCE_UNAVAILABLE'
+  | 'ALREADY_EXISTS'
+  | 'NOT_FOUND'
+  | 'GATE_NOT_FOUND'
+  | 'GATE_ALREADY_RESOLVED'
+  | 'GATE_EXPIRED'
+  | 'RECEIPT_ALREADY_EXISTS';
+
+function aefFail(code: AefFailCode): { ok: false; code: AefFailCode } {
+  return { ok: false, code };
+}
+const aefOk = <T>(value: T): AefStoreResult<T> => ({ ok: true, value });
+
+function rowToAefRequest(r: Row): AefExecutionRequest {
+  return {
+    requestId: r.request_id as string,
+    correlationId: r.correlation_id as string,
+    caller: {
+      authenticatedUserId: r.caller_user_id as string,
+      moduleId: 'impact',
+      correlationId: r.correlation_id as string,
+      projectId: (r.project_id as string | null),
+      serviceId: r.service_id as string,
+    },
+    intent: {
+      kind: r.intent_kind as ImpactActionIntentKind,
+      investigationId: r.investigation_id as string,
+      idempotencyKey: r.idempotency_key as string,
+      classification: r.classification as ActionClassification,
+    },
+    requestedAt: r.requested_at as string,
+  };
+}
+
+function rowToGate(r: Row): HumanGateState {
+  return {
+    gateId: r.gate_id as string,
+    requestId: r.request_id as string,
+    approverRef: (r.approver_ref as string | null),
+    status: r.status as HumanGateStatus,
+    expiresAt: r.expires_at as string,
+    resolvedAt: (r.resolved_at as string | null),
+    bindingHash: (r.binding_hash as string | null),
+  };
+}
+
+function rowToReceipt(r: Row): ExecutionReceipt {
+  return {
+    receiptId: r.receipt_id as string,
+    requestId: r.request_id as string,
+    correlationId: r.correlation_id as string,
+    callerUserId: r.caller_user_id as string,
+    projectId: (r.project_id as string | null),
+    serviceId: r.service_id as string,
+    intentKind: r.intent_kind as ImpactActionIntentKind,
+    investigationId: r.investigation_id as string,
+    idempotencyKey: r.idempotency_key as string,
+    classification: r.classification as ActionClassification,
+    policyVersion: r.policy_version as string,
+    policyOutcome: r.policy_outcome as PolicyOutcome,
+    executionOutcome: r.execution_outcome as ExecutionReceipt['executionOutcome'],
+    humanGateId: (r.human_gate_id as string | null),
+    errorCode: (r.error_code as string | null),
+    issuedAt: r.issued_at as string,
+    receiptHash: r.receipt_hash as string,
+  };
+}
+
+/**
+ * Supabase-backed AEF store — IV-IMPACT-I7 production default.
+ *
+ * All writes use the service_role client (RLS bypassed; auth enforced before
+ * the kernel is called). Reads also use service_role since these are internal
+ * kernel reads, not user-facing queries.
+ *
+ * The submit path calls the aef_submit_action() PL/pgSQL SECURITY DEFINER
+ * function, which atomically persists request + decision + gate + receipt in
+ * a single Postgres transaction. Any failure performs a complete rollback —
+ * no orphaned requests, no stranded idempotency keys, no partial state.
+ *
+ * Attempt-level records are NOT persisted. The receipt captures the same
+ * execution_outcome and is the canonical audit record. A dedicated attempts
+ * table is a future migration task.
+ */
+export class SupabaseAefStore implements AefStore {
+  constructor(private readonly service: DbClient) {}
+
+  async findByIdempotencyKey(
+    idempotencyKey: string,
+    callerUserId: string,
+    intentKind: string,
+  ): Promise<AefStoreResult<AefExecutionRequest | null>> {
+    const { data, error } = await this.service.from('impact_aef_requests')
+      .select('*')
+      .eq('caller_user_id', callerUserId)
+      .eq('intent_kind', intentKind)
+      .eq('idempotency_key', idempotencyKey)
+      .maybeSingle();
+    if (error) return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    return aefOk(data ? rowToAefRequest(data as Row) : null);
+  }
+
+  async submitAtomic(
+    request: AefExecutionRequest,
+    decision: PolicyDecision,
+    gate: HumanGateState | null,
+    receipt: ExecutionReceipt,
+  ): Promise<AefStoreResult<void>> {
+    const { data, error } = await this.service.rpc('aef_submit_action', {
+      p_request_id:        request.requestId,
+      p_correlation_id:    request.correlationId,
+      p_caller_user_id:    request.caller.authenticatedUserId,
+      p_project_id:        request.caller.projectId ?? null,
+      p_service_id:        request.caller.serviceId,
+      p_intent_kind:       request.intent.kind,
+      p_investigation_id:  request.intent.investigationId,
+      p_idempotency_key:   request.intent.idempotencyKey,
+      p_classification:    request.intent.classification,
+      p_requested_at:      request.requestedAt,
+      p_policy_outcome:    decision.outcome,
+      p_policy_version:    decision.policyVersion,
+      p_policy_reason:     decision.reason,
+      p_gate_id:           gate?.gateId ?? null,
+      p_gate_expires_at:   gate?.expiresAt ?? null,
+      p_receipt_id:        receipt.receiptId,
+      p_receipt_hash:      receipt.receiptHash,
+      p_execution_outcome: receipt.executionOutcome,
+      p_issued_at:         receipt.issuedAt,
+    });
+    if (error) return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    const result = data as { ok: boolean; code?: string } | null;
+    if (!result?.ok) {
+      if (result?.code === 'ALREADY_EXISTS') return aefFail('ALREADY_EXISTS');
+      return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    }
+    return aefOk(undefined);
+  }
+
+  async resolveGateAtomic(
+    requestId: string,
+    resolution: 'APPROVED' | 'REJECTED',
+    approverRef: string,
+    bindingHash: string,
+    receipt: ExecutionReceipt,
+  ): Promise<AefStoreResult<void>> {
+    const { data, error } = await this.service.rpc('aef_resolve_gate', {
+      p_request_id:    requestId,
+      p_resolution:    resolution,
+      p_approver_ref:  approverRef,
+      p_binding_hash:  bindingHash,
+      p_receipt_id:    receipt.receiptId,
+      p_receipt_hash:  receipt.receiptHash,
+      p_policy_version: receipt.policyVersion,
+      p_issued_at:     receipt.issuedAt,
+    });
+    if (error) return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    const result = data as { ok: boolean; code?: string } | null;
+    if (!result?.ok) {
+      const code = result?.code;
+      if (code === 'GATE_NOT_FOUND')       return aefFail('GATE_NOT_FOUND');
+      if (code === 'GATE_ALREADY_RESOLVED') return aefFail('GATE_ALREADY_RESOLVED');
+      if (code === 'GATE_EXPIRED')          return aefFail('GATE_EXPIRED');
+      if (code === 'RECEIPT_ALREADY_EXISTS') return aefFail('RECEIPT_ALREADY_EXISTS');
+      return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    }
+    return aefOk(undefined);
+  }
+
+  async getHumanGate(requestId: string): Promise<AefStoreResult<HumanGateState | null>> {
+    const { data, error } = await this.service.from('impact_aef_gates')
+      .select('*')
+      .eq('request_id', requestId)
+      .maybeSingle();
+    if (error) return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    return aefOk(data ? rowToGate(data as Row) : null);
+  }
+
+  async getReceipt(requestId: string): Promise<AefStoreResult<ExecutionReceipt | null>> {
+    const { data, error } = await this.service.from('impact_aef_receipts')
+      .select('*')
+      .eq('request_id', requestId)
+      .order('issued_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    return aefOk(data ? rowToReceipt(data as Row) : null);
+  }
+
+  async getRequest(requestId: string): Promise<AefStoreResult<AefExecutionRequest | null>> {
+    const { data, error } = await this.service.from('impact_aef_requests')
+      .select('*')
+      .eq('request_id', requestId)
+      .maybeSingle();
+    if (error) return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    return aefOk(data ? rowToAefRequest(data as Row) : null);
+  }
+}
+
+export function createSupabaseAefStore(): SupabaseAefStore {
+  const url = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !serviceKey) throw new Error('impact-lab: missing Supabase configuration for AEF store');
+  const service = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  return new SupabaseAefStore(service as unknown as DbClient);
 }
 
 /**
