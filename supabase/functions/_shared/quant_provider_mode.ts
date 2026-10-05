@@ -23,7 +23,7 @@
  *   2. QUANT_REQUIRE_LIVE_DATA=true   — maps to 'real' (backward compat).
  *   3. Default → 'auto_lab'.
  *
- * Unrecognised QUANT_PROVIDER_MODE values fall back to 'auto_lab' (fail safe).
+ * Unrecognised non-empty QUANT_PROVIDER_MODE values throw an error (fail closed).
  */
 
 export type ProviderMode = 'synthetic' | 'real' | 'auto_lab';
@@ -49,6 +49,15 @@ export function resolveProviderMode(env?: (k: string) => string | undefined): Pr
     return 'real';
   }
 
-  // Unknown QUANT_PROVIDER_MODE value → fall back to auto_lab (safe default).
+  // Non-empty, unrecognised QUANT_PROVIDER_MODE → fail closed.
+  // A typo like 'prod' or 'production' must never silently fall back to
+  // synthetic data, which would make a production misconfiguration invisible.
+  if (explicit !== '') {
+    throw new Error(
+      `Invalid QUANT_PROVIDER_MODE value: "${explicit}". ` +
+        `Must be 'synthetic', 'real', or 'auto_lab'.`,
+    );
+  }
+
   return 'auto_lab';
 }

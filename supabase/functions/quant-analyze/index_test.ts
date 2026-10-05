@@ -5,7 +5,7 @@
  * Execução:
  *   DENO_TESTING=1 deno test --allow-env --allow-read --allow-net=deno.land,esm.sh supabase/functions/quant-analyze/index_test.ts
  */
-import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
+import { assert, assertEquals, assertThrows } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import type { AuthClient } from '../_shared/auth.ts';
 import { fakeSubjectSource } from '../_shared/entitlement_test_support.ts';
 import { type AnalyzeDeps, handler } from './index.ts';
@@ -624,9 +624,16 @@ Deno.test('QM-12 FASE3 QUANT_PROVIDER_MODE: resolveProviderMode covers all branc
     'synthetic', 'explicit mode wins over legacy alias',
   );
 
-  // Unknown QUANT_PROVIDER_MODE value → fall back to auto_lab (safe default)
-  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'invalid' })), 'auto_lab', 'unknown → auto_lab');
-  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'PRODUCTION' })), 'auto_lab', 'unknown value → auto_lab');
+  // Non-empty, unrecognised QUANT_PROVIDER_MODE → fail closed (never silently
+  // serve synthetic data for a production misconfiguration such as 'prod').
+  assertThrows(
+    () => resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'invalid' })),
+    Error, 'Invalid QUANT_PROVIDER_MODE value', 'unknown value throws',
+  );
+  assertThrows(
+    () => resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'PRODUCTION' })),
+    Error, 'Invalid QUANT_PROVIDER_MODE value', 'unrecognised production-like value throws',
+  );
 });
 
 // MACRO-05 FASE 3: provider_mode appears in the observability log.
