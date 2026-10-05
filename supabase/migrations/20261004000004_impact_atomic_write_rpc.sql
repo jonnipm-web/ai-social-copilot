@@ -99,9 +99,13 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Count ACTIVE investigations owned by this caller (project-hidden rows
-  -- still count toward the limit, matching the service-role count in
-  -- supabase_store.ts countOwnedInvestigations).
+  -- Serialize per-owner quota enforcement across concurrent transactions.
+  -- Without this lock, two concurrent calls both reading v_count < 100 can
+  -- both proceed to INSERT, exceeding the limit (Codex CLASS D P1-Q5/Q17).
+  PERFORM pg_advisory_xact_lock(hashtext(v_user_id::text || ':impact_inv_quota'));
+
+  -- Count investigations owned by this caller (project-hidden rows count too,
+  -- matching the service-role count in supabase_store.ts countOwnedInvestigations).
   SELECT COUNT(*) INTO v_count
   FROM public.impact_investigations
   WHERE owner_id = v_user_id;
