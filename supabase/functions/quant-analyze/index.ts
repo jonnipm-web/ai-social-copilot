@@ -10,12 +10,11 @@
 // project ownership (if project_id) → data plane (CSV → canonical series →
 // deterministic engine) → structured QuantAnalysisResult.
 //
-// PROVIDER SELECTION (MACRO-05 FASE 3): _LIVE_HTTP_PROVIDER is a Databento
-// EQUS.SUMMARY adapter when DATABENTO_API_KEY is configured. Watchlist analysis
-// is always-synthetic at the current gate (BLOCKED_OWNER: rights + adjustment
-// policy not confirmed). This is the ONLY path that may perform outbound
-// market-data calls; the runtime enforces SSRF validation, host allowlisting,
-// credential isolation, and byte/time limits via safeFetch.
+// PROVIDER SELECTION (MACRO-05 FASE 3): QUANT_PROVIDER_MODE controls provider
+// semantics. Watchlist analysis is always-synthetic at the current gate
+// (BLOCKED_OWNER: rights + adjustment policy not confirmed); PROVIDER_MODE=real
+// fails closed for watchlist rather than silently returning synthetic data.
+// CSV paths (v1, multi.v1) use caller-supplied data and ignore PROVIDER_MODE.
 //
 // Deliberately NOT here: any LLM call (numbers come only from the engine), any
 // write, any broker/order path, any quota reservation (no paid dependency; the
@@ -41,8 +40,6 @@ import {
 import { MAX_SERIES_PER_ANALYSIS, type MultiSeriesResult } from '../_shared/quant/multi_series.ts';
 import type { MarketDataProvider } from '../_shared/quant/provider.ts';
 import { SyntheticInProcessProvider } from '../_shared/quant/synthetic_market.ts';
-import { databentoAdapter } from '../_shared/quant/databento_adapter.ts';
-import { HttpAdapterProvider } from '../_shared/quant_provider_runtime.ts';
 import type { WatchlistRow, WatchlistStore } from '../_shared/quant/watchlist_contract.ts';
 import type { QuantErrorCode } from '../_shared/quant/errors.ts';
 import { quantLogEvent } from '../_shared/quant/observability.ts';
@@ -83,26 +80,13 @@ export interface AnalyzeDeps {
 /** Per-instance LRU (Edge isolates are short-lived; provenance is preserved on every hit). */
 const DEFAULT_MARKET_CACHE = new InMemoryMarketCache(256);
 
-const DATABENTO_BASE_URL = 'https://hist.databento.com';
-
-// Read once at module load — the Edge Function env is fixed per isolate (set at
-// deploy time and never changes within an isolate lifetime). Creating
-// HttpAdapterProvider here avoids repeated instantiation on hot paths and makes
-// the credential check eager (fail-fast on cold start rather than first request).
-// RIGHTS: YELLOW/NOT_VERIFIED — see docs/quant/BOOTSTRAP_PROVIDER_DECISION.md §2.2.
-const _LIVE_HTTP_PROVIDER: MarketDataProvider | null = Deno.env.get('DATABENTO_API_KEY')
-  ? new HttpAdapterProvider(databentoAdapter, DATABENTO_BASE_URL)
-  : null;
-
 // QUANT_PROVIDER_MODE: explicit provider selection (synthetic / real / auto_lab).
 // Replaces the binary QUANT_REQUIRE_LIVE_DATA (still supported as legacy alias).
 // See _shared/quant_provider_mode.ts for full semantics.
 // MACRO-05 FASE 3: Codex P2 fix (case/whitespace normalisation) is inherited via
 // resolveProviderMode() which uses .trim().toLowerCase() internally.
+// RIGHTS: YELLOW/NOT_VERIFIED — see docs/quant/BOOTSTRAP_PROVIDER_DECISION.md §2.2.
 const PROVIDER_MODE: ProviderMode = resolveProviderMode();
-const _LIVE_CONFIG_ERROR: string | null = PROVIDER_MODE === 'real' && !_LIVE_HTTP_PROVIDER
-  ? `QUANT_PROVIDER_MODE=real but DATABENTO_API_KEY is not configured`
-  : null;
 
 
 export async function handler(
@@ -158,9 +142,6 @@ export async function handler(
     done(quantError(code, cid, details), { errorCode: (code in HTTP_ONLY ? null : code) as QuantErrorCode | null });
 
   if (req.method !== 'POST') return failWith('METHOD_NOT_ALLOWED');
-  // Fail-closed: QUANT_PROVIDER_MODE=real is configured but DATABENTO_API_KEY is absent.
-  // Never silently serve synthetic data when real data was explicitly requested.
-  if (_LIVE_CONFIG_ERROR) return failWith('INTERNAL_ERROR');
   // Rate limit BEFORE reading the (up to 6 MiB) body — server identity only.
   const limited = await enforceRateLimit(deps.rateLimiter ?? new SupabaseRateLimiter(), authUser.id, 'quant-analyze', bearerToken(req) ?? '', cid);
   if (limited) return done(limited, { errorCode: null });
@@ -250,12 +231,17 @@ export async function handler(
       if (!inst.ok) return failWith('INVALID_INSTRUMENT');
       instruments.push(inst.value);
     }
-    // Watchlist analysis is ALWAYS synthetic at the current gate. The request contract
-    // enforces data_source=SYNTHETIC_PROVIDER (multi_contract.ts:184), the Databento
-    // adapter only supports UNADJUSTED bars, and a real-data watchlist provider requires
-    // rights, an aligned adjustment policy, and a contract update — all future, separately
-    // gated features (BLOCKED_OWNER). Real-provider injection via deps.marketProvider is
-    // still supported for testing (e.g. a fake returning deterministic bars).
+    // Fail-closed: QUANT_PROVIDER_MODE=real is not yet implemented for watchlist.v1.
+    // A real-data watchlist path requires Databento rights confirmation, an aligned
+    // adjustment policy (UNADJUSTED vs SPLIT_AND_DIVIDEND_ADJUSTED), and a contract
+    // update — all separately gated (BLOCKED_OWNER). Returning synthetic data when real
+    // mode was explicitly configured would violate the mode contract, so we fail closed.
+    if (PROVIDER_MODE === 'real' && deps.marketProvider === undefined) {
+      return failWith('INTERNAL_ERROR');
+    }
+    // Watchlist is always-synthetic at the current gate (contract enforces
+    // data_source=SYNTHETIC_PROVIDER at multi_contract.ts:184). Real-provider injection
+    // via deps.marketProvider is supported for testing.
     const watchlistProvider: MarketDataProvider = deps.marketProvider !== undefined && deps.marketProvider !== null
       ? deps.marketProvider
       : new CachingProvider(new SyntheticInProcessProvider(clock), DEFAULT_MARKET_CACHE, clock);
