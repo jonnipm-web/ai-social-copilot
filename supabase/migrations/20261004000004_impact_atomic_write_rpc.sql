@@ -89,20 +89,27 @@ BEGIN
 
   -- Lock the caller's profile row for the transaction duration to prevent a
   -- concurrent role downgrade from committing between the entitlement read and
-  -- the INSERT (Codex CLASS D P1-Q16).
+  -- the INSERT (Codex CLASS D P1-Q16).  NOT FOUND = no profiles row = deny
+  -- (fail-closed; Codex CLASS D Round 3 P1 fix).
   PERFORM id FROM public.profiles WHERE id = v_user_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT NULL::uuid, p_subject_ref, TRUE, 'no_profile'::text;
+    RETURN;
+  END IF;
 
   v_tier := public._impact_caller_tier();
 
-  IF v_tier NOT IN ('admin', 'pro') THEN
+  -- NULL-safe check: _impact_caller_tier() returns NULL when profiles row is
+  -- absent (covered by NOT FOUND above, but belt-and-suspenders).
+  IF v_tier IS NULL OR v_tier NOT IN ('admin', 'pro') THEN
     RETURN QUERY SELECT NULL::uuid, p_subject_ref, TRUE, 'pro_required'::text;
     RETURN;
   END IF;
 
   -- Serialize per-owner quota enforcement across concurrent transactions.
-  -- Without this lock, two concurrent calls both reading v_count < 100 can
-  -- both proceed to INSERT, exceeding the limit (Codex CLASS D P1-Q5/Q17).
-  PERFORM pg_advisory_xact_lock(hashtext(v_user_id::text || ':impact_inv_quota'));
+  -- Use 64-bit hashtextextended to avoid the 32-bit collision risk of hashtext
+  -- (Codex CLASS D P2; low-probability but correctness concern).
+  PERFORM pg_advisory_xact_lock(hashtextextended('impact_inv_quota:' || v_user_id::text, 0));
 
   -- Count investigations owned by this caller (project-hidden rows count too,
   -- matching the service-role count in supabase_store.ts countOwnedInvestigations).
@@ -188,12 +195,18 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Lock the caller's profile row for the transaction duration (Codex CLASS D P1-Q16).
+  -- Lock the caller's profile row for the transaction duration (P1-Q16).
+  -- NOT FOUND = no profiles row = deny fail-closed (P1 Round 3 fix).
   PERFORM id FROM public.profiles WHERE id = v_user_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT NULL::integer, TRUE, 'no_profile'::text;
+    RETURN;
+  END IF;
 
   v_tier := public._impact_caller_tier();
 
-  IF v_tier NOT IN ('admin', 'pro') THEN
+  -- NULL-safe: belt-and-suspenders in case profiles row disappears mid-txn.
+  IF v_tier IS NULL OR v_tier NOT IN ('admin', 'pro') THEN
     RETURN QUERY SELECT NULL::integer, TRUE, 'pro_required'::text;
     RETURN;
   END IF;

@@ -302,3 +302,39 @@ Deno.test('SS-TOCTOU-05 insertVerification: atomic RPC denied=pro_required → I
   assert(!result.ok);
   assertEquals(result.error.code, 'INVALID_REQUEST');
 });
+
+Deno.test('SS-TOCTOU-06 createInvestigation: atomic RPC denied=no_profile → INTERNAL_ERROR', async () => {
+  // Caller has a valid JWT but no profiles row — entitlement gate must fail closed.
+  // Codex CLASS D Round 3 P1 fix: NOT FOUND after FOR UPDATE returns no_profile.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_create_investigation') {
+      return { data: [{ investigation_id: null, subject_org_ref: 'org-x', denied: true, denied_reason: 'no_profile' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const result = await store.createInvestigation({ ownerId: ACTOR, projectId: null, subjectOrgRef: 'org-x', subjectOrgType: 'NGO', subjectIdentity: {} });
+  assert(!result.ok, 'must fail when profiles row is absent');
+  assertEquals(result.error.code, 'INTERNAL_ERROR', 'no_profile is a server-side invariant violation → INTERNAL_ERROR');
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after no_profile denial');
+});
+
+Deno.test('SS-TOCTOU-07 insertVerification: atomic RPC denied=no_profile → INTERNAL_ERROR', async () => {
+  // Codex CLASS D Round 3 P1 fix coverage for insertVerification path.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_insert_verification') {
+      return { data: [{ stored_version: null, denied: true, denied_reason: 'no_profile' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const a = (await goldenCases()).find((c) => c.id === 'A')!;
+  const r = await verifyClaim({ claim: a.claim, evidence: a.evidence, sources: a.sources }, a.ctx);
+  assert(r.ok);
+  const result = await store.insertVerification(INV, r.value, null, ACTOR);
+  assert(!result.ok, 'must fail when profiles row is absent');
+  assertEquals(result.error.code, 'INTERNAL_ERROR');
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after no_profile denial');
+});
