@@ -106,7 +106,12 @@ const _LIVE_CONFIG_ERROR: string | null = PROVIDER_MODE === 'real' && !_LIVE_HTT
   : null;
 
 /**
- * Selects the market-data provider for watchlist.v1 requests.
+ * Selects the market-data provider for quant.analyze.v1 (single-instrument) requests.
+ *
+ * NOT used for quant.analyze.watchlist.v1 — watchlist analysis is always
+ * SyntheticInProcessProvider (the request contract enforces data_source=SYNTHETIC_PROVIDER;
+ * a real-data watchlist path requires Databento UNADJUSTED alignment + rights + contract
+ * update, all separately gated).
  *
  * PROVIDER_MODE=synthetic  → always SyntheticInProcessProvider (TEST/DEV).
  * PROVIDER_MODE=real       → requires DATABENTO_API_KEY; returns null (fail
