@@ -103,7 +103,7 @@ CREATE OR REPLACE FUNCTION public.aef_submit_action(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_catalog
+SET search_path = pg_catalog, pg_temp
 AS $$
 BEGIN
   -- ── parameter validation ──────────────────────────────────────────────────
