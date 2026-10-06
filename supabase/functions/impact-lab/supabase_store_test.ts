@@ -13,6 +13,7 @@ import {
   rowToEvidence,
   rowToSource,
   sourceToRow,
+  SupabaseAefStore,
   SupabaseImpactLabStore,
 } from './supabase_store.ts';
 
@@ -415,4 +416,67 @@ Deno.test('SS-TOCTOU-11 insertVerification: atomic RPC denied=not_found → INVE
   assert(!result.ok, 'must fail when investigation does not exist');
   assertEquals(result.error.code, 'INVESTIGATION_NOT_FOUND');
   assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after not_found denial');
+});
+
+Deno.test('SS-OWNERSHIP-01 (migration 009 P1-2) DB trigger raises IMPACT_ACTOR_NOT_OWNER → INVESTIGATION_NOT_FOUND for service writes', async () => {
+  // The impact_child_ownership_gate trigger fires BEFORE INSERT on child tables.
+  // When created_by ≠ investigation.owner_id the trigger raises IMPACT_ACTOR_NOT_OWNER
+  // (ERRCODE 42501). mapDbError maps that message to INVESTIGATION_NOT_FOUND so
+  // the caller cannot distinguish a missing investigation from an ownership violation
+  // (information hiding — no oracle for valid investigation IDs).
+  const ownershipError = { code: '42501', message: 'IMPACT_ACTOR_NOT_OWNER' };
+  // 1. Error code mapping is stable.
+  assertEquals(mapDbError(ownershipError), 'INVESTIGATION_NOT_FOUND');
+
+  // 2. Service-role insertSource propagates DB errors through dbFail → mapDbError.
+  const calls: Call[] = [];
+  const respond = (_c: Call) => ({ data: null, error: ownershipError });
+  const store = new SupabaseImpactLabStore(
+    fakeClient('user', calls, respond),
+    fakeClient('service', calls, respond),
+  );
+  // Ownership gate failure happens inside the DB; we only need the error to propagate.
+  // Use a minimal stub that satisfies StoredSource structurally.
+  // deno-lint-ignore no-explicit-any
+  const stubSource = { source: { id: 'x', type: 'OFFICIAL_REGISTRY', acquisition: { method: 'DIRECT' } } as any, snapshot: null };
+  const result = await store.insertSource(INV, stubSource, ACTOR);
+  assert(!result.ok, 'must fail on ownership gate violation');
+  assertEquals(result.error.code, 'INVESTIGATION_NOT_FOUND');
+});
+
+Deno.test('SS-TOCTOU-12 (migration 009 P1-3) AEF submitAtomic: AEF_CALLER_NOT_OWNER → AEF_PERSISTENCE_UNAVAILABLE', async () => {
+  // aef_submit_action() returns {ok:false, code:'AEF_CALLER_NOT_OWNER'} when
+  // p_caller_user_id does not match investigation.owner_id (P1-3 caller binding).
+  // The store treats this as a persistence failure (AEF_PERSISTENCE_UNAVAILABLE)
+  // so the caller cannot use it as an oracle for investigation ownership.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'aef_submit_action') {
+      return { data: { ok: false, code: 'AEF_CALLER_NOT_OWNER' }, error: null };
+    }
+    return { data: null, error: null };
+  };
+  const aefStore = new SupabaseAefStore(fakeClient('service', calls, respond));
+  const now = new Date().toISOString();
+  const result = await aefStore.submitAtomic(
+    {
+      requestId: 'req-0000-0000-0000-000000000001',
+      correlationId: 'corr-1',
+      caller: { authenticatedUserId: ACTOR, moduleId: 'impact', correlationId: 'corr-1', projectId: null, serviceId: 'impact-lab' },
+      intent: { kind: 'ACKNOWLEDGE_CONFLICT', investigationId: INV, idempotencyKey: 'idem-1', classification: 'REVERSIBLE' },
+      requestedAt: now,
+    },
+    { requestId: 'req-0000-0000-0000-000000000001', outcome: 'AUTHORIZED', policyVersion: 'v1', decidedAt: now, reason: 'admin_unrestricted' },
+    null,
+    {
+      receiptId: 'rec-0000-0000-0000-000000000001', requestId: 'req-0000-0000-0000-000000000001',
+      correlationId: 'corr-1', callerUserId: ACTOR, projectId: null, serviceId: 'impact-lab',
+      intentKind: 'ACKNOWLEDGE_CONFLICT', investigationId: INV, idempotencyKey: 'idem-1',
+      classification: 'REVERSIBLE', policyVersion: 'v1', policyOutcome: 'AUTHORIZED',
+      executionOutcome: 'EXECUTED', humanGateId: null, errorCode: null,
+      issuedAt: now, receiptHash: 'a'.repeat(64),
+    },
+  );
+  assert(!result.ok, 'AEF_CALLER_NOT_OWNER must be a failure');
+  assertEquals(result.code, 'AEF_PERSISTENCE_UNAVAILABLE');
 });
