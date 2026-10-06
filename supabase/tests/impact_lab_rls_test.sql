@@ -93,7 +93,7 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.profiles (id, role) VALUES
   ('aaaaaaaa-0000-0000-0000-00000000000a', 'admin'),
   ('bbbbbbbb-0000-0000-0000-00000000000b', 'admin')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
 INSERT INTO public.projects (id, user_id, name) VALUES
   ('a1111111-0000-0000-0000-00000000000a', 'aaaaaaaa-0000-0000-0000-00000000000a', 'Project A'),
   ('b1111111-0000-0000-0000-00000000000b', 'bbbbbbbb-0000-0000-0000-00000000000b', 'Project B')
