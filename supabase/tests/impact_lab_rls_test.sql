@@ -87,6 +87,13 @@ INSERT INTO auth.users (id, email) VALUES
   ('aaaaaaaa-0000-0000-0000-00000000000a', 'user-a@test.invalid'),
   ('bbbbbbbb-0000-0000-0000-00000000000b', 'user-b@test.invalid')
 ON CONFLICT (id) DO NOTHING;
+-- 20261004000003 added impact_has_module_access() gating all Impact RLS policies.
+-- EXPERIMENTAL phase: admin-only. Grant both fixture users admin so the A/P-series
+-- tests focus on ownership isolation, not entitlement.
+INSERT INTO public.profiles (id, role) VALUES
+  ('aaaaaaaa-0000-0000-0000-00000000000a', 'admin'),
+  ('bbbbbbbb-0000-0000-0000-00000000000b', 'admin')
+ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.projects (id, user_id, name) VALUES
   ('a1111111-0000-0000-0000-00000000000a', 'aaaaaaaa-0000-0000-0000-00000000000a', 'Project A'),
   ('b1111111-0000-0000-0000-00000000000b', 'bbbbbbbb-0000-0000-0000-00000000000b', 'Project B')
