@@ -81,7 +81,7 @@ DO $$ BEGIN
                  WHERE n.nspname = 'public' AND p.proname IN ('aef_reconcile', 'aef_purge', 'aef_erase_subject',
                    'aef__maintenance', 'aef__chain_append', 'aef__flush_window', 'aef__coalesced_ref'))
      OR (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_') <> 36 THEN
+          WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_') <> 38 THEN
     RAISE EXCEPTION 'L10 hardening objects left after rollback';
   END IF;
 END $$;
