@@ -398,7 +398,9 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
       const reason = row.denied_reason as string;
       if (reason === 'no_session') return fail('INTERNAL_ERROR', 'no_session');
       if (reason === 'no_profile') return fail('INTERNAL_ERROR', 'no_profile');
+      if (reason === 'experimental_gate') return fail('INVALID_REQUEST', 'entitlement_denied_experimental');
       if (reason === 'pro_required') return fail('INVALID_REQUEST', 'entitlement_denied_pro_required');
+      if (reason === 'not_owner') return fail('INVALID_REQUEST', 'project_not_found_or_not_owned');
       if (reason === 'limit_exceeded') return fail('LIMIT_EXCEEDED', 'too many investigations');
       return fail('INTERNAL_ERROR', `atomic_create_denied: ${reason}`);
     }
@@ -479,6 +481,7 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
       const reason = row.denied_reason as string;
       if (reason === 'no_session') return fail('INTERNAL_ERROR', 'no_session');
       if (reason === 'no_profile') return fail('INTERNAL_ERROR', 'no_profile');
+      if (reason === 'experimental_gate') return fail('INVALID_REQUEST', 'entitlement_denied_experimental');
       if (reason === 'pro_required') return fail('INVALID_REQUEST', 'entitlement_denied_pro_required');
       if (reason === 'not_owner') return fail('INVESTIGATION_NOT_FOUND', 'investigation not found');
       return fail('INTERNAL_ERROR', `atomic_insert_denied: ${reason}`);

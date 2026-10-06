@@ -336,5 +336,62 @@ Deno.test('SS-TOCTOU-07 insertVerification: atomic RPC denied=no_profile → INT
   const result = await store.insertVerification(INV, r.value, null, ACTOR);
   assert(!result.ok, 'must fail when profiles row is absent');
   assertEquals(result.error.code, 'INTERNAL_ERROR');
-  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after no_profile denial');
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after no_profile denial (verification path)');
+});
+
+// IV-IMPACT-MACRO-08 POST-MERGE HARDENING tests (migrations 005/006)
+
+Deno.test('SS-TOCTOU-08 createInvestigation: atomic RPC denied=experimental_gate → INVALID_REQUEST', async () => {
+  // Simulates a free/pro caller who bypassed the Edge Function module gate
+  // and called the RPC directly; the EXPERIMENTAL gate inside the RPC
+  // returns experimental_gate → INVALID_REQUEST.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_create_investigation') {
+      return { data: [{ investigation_id: null, subject_org_ref: 'org-x', denied: true, denied_reason: 'experimental_gate' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const result = await store.createInvestigation({ ownerId: ACTOR, projectId: null, subjectOrgRef: 'org-x', subjectOrgType: 'NGO', subjectIdentity: {} });
+  assert(!result.ok, 'must fail when experimental gate blocks access');
+  assertEquals(result.error.code, 'INVALID_REQUEST', 'experimental_gate → INVALID_REQUEST');
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after experimental_gate denial');
+});
+
+Deno.test('SS-TOCTOU-09 createInvestigation: atomic RPC denied=not_owner (project) → INVALID_REQUEST', async () => {
+  // Simulates an admin caller specifying a p_project_id they do not own;
+  // the ownership check inside the RPC returns not_owner → INVALID_REQUEST.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_create_investigation') {
+      return { data: [{ investigation_id: null, subject_org_ref: 'org-x', denied: true, denied_reason: 'not_owner' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const result = await store.createInvestigation({ ownerId: ACTOR, projectId: 'bbbbbbbb-0000-4000-8000-000000000001', subjectOrgRef: 'org-x', subjectOrgType: 'NGO', subjectIdentity: {} });
+  assert(!result.ok, 'must fail when project is not owned by caller');
+  assertEquals(result.error.code, 'INVALID_REQUEST', 'not_owner (project) → INVALID_REQUEST');
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after project not_owner denial');
+});
+
+Deno.test('SS-TOCTOU-10 insertVerification: atomic RPC denied=experimental_gate → INVALID_REQUEST', async () => {
+  // Simulates a free/pro caller bypassing the module gate; experimental_gate
+  // returned by the atomic RPC must map to INVALID_REQUEST.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_insert_verification') {
+      return { data: [{ stored_version: null, denied: true, denied_reason: 'experimental_gate' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const a = (await goldenCases()).find((c) => c.id === 'A')!;
+  const r = await verifyClaim({ claim: a.claim, evidence: a.evidence, sources: a.sources }, a.ctx);
+  assert(r.ok);
+  const result = await store.insertVerification(INV, r.value, null, ACTOR);
+  assert(!result.ok, 'must fail when experimental gate blocks verification');
+  assertEquals(result.error.code, 'INVALID_REQUEST', 'experimental_gate → INVALID_REQUEST');
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after experimental_gate denial');
 });
