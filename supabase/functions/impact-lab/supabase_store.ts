@@ -767,6 +767,8 @@ export class SupabaseAefStore implements AefStore {
     const result = data as { ok: boolean; code?: string } | null;
     if (!result?.ok) {
       if (result?.code === 'ALREADY_EXISTS') return aefFail('ALREADY_EXISTS');
+      // P1-3: caller_user_id did not match investigation.owner_id in DB.
+      if (result?.code === 'AEF_CALLER_NOT_OWNER') return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
       return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
     }
     return aefOk(undefined);
