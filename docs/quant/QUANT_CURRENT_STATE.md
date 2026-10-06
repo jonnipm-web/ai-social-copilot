@@ -111,6 +111,51 @@ be re-measured on the platform before any promotion.
 Superseded for READINESS-03 by QUANT_RESOURCE_BUDGET.md (calendar memo fix,
 multi-series bound, PLATFORM_RUNTIME_NOT_MEASURED).
 
+## 11. MACRO-05 Ecosystem Promotion (IV-QUANT-MACRO-05, 2026-10-04)
+
+Branch: `claude/iv-quant-macro-05` (base: `7971f7c` = PILOT-04 final).  
+Mission: Ecosystem Promotion + Real-Data Integration + Standalone Productization.
+
+| Phase | Status |
+|---|---|
+| FASE 0 — Baseline | COMPLETE |
+| FASE 1 — Capability inventory | COMPLETE |
+| FASE 2 — Rights closure | BLOCKED_OWNER |
+| FASE 3 — Real provider runtime wiring | COMPLETE (2b6fbdf) |
+| FASE 4 — Security validation (self-review) | COMPLETE — CLASS D Codex pending |
+| FASE 5 — Real data E2E | BLOCKED_OWNER (no API key) |
+| FASE 6 — Data model review | COMPLETE (no changes needed) |
+| FASE 7 — Persistent market data policy | DOCUMENTED — in-memory for pilot (decision pending) |
+| FASE 8 — DB/RLS validation | COMPLETE (no issues) |
+| FASE 9 — IVE integration gap | DOCUMENTED — narrator not implemented; architecture pending |
+| FASE 10 — AEF integration | BLOCKED BY DESIGN |
+| FASE 11–35 | PENDING — architectural decisions and gates |
+
+Key change: `quant-analyze` now calls `makeLiveProvider()` which selects
+`HttpAdapterProvider(databentoAdapter)` when `DATABENTO_API_KEY` is configured,
+and falls back to `SyntheticInProcessProvider` otherwise. 598/598 tests PASS.
+
+Full analysis: `docs/quant/IV-QUANT-MACRO-05.md`
+
+## 10. Licensed Provider Pilot (IV-QUANT-LICENSED-PROVIDER-PILOT-04, 2026-10-03)
+
+| Area | Doc |
+|---|---|
+| Provider decision record (YELLOW/NOT_VERIFIED: Databento EQUS.SUMMARY) | BOOTSTRAP_PROVIDER_DECISION.md |
+| Current provider market snapshot (7 providers) | CURRENT_PROVIDER_MARKET_2026-10.md |
+| Evidence register (15 EV-IDs) | PROVIDER_EVIDENCE_REGISTER.md |
+| Lifecycle/freshness policy (90-day revalidation) | PROVIDER_LIFECYCLE_POLICY.md |
+| Cost model (EQUS.SUMMARY PAYG) | REAL_DATA_COST_MODEL.md |
+| Mission report | IV-QUANT-LICENSED-PROVIDER-PILOT-04.md |
+
+Adapter: `supabase/functions/_shared/quant/databento_adapter.ts` (63/63 adapter tests; 215/215 suite total).  
+Adapter ID: `databento-equs-summary-v1` (migrated from deprecated `databento-dbeq-basic-v1`).  
+Dataset: `EQUS.SUMMARY` — current replacement for deprecated DBEQ.BASIC (EV-DB-01).  
+OHLCV_1D_RTYPE: `35` (0x23 per DBN spec — corrected from 32 which is ohlcv-1h).  
+Secret name: `DATABENTO_API_KEY` (raw API key; adapter constructs `Authorization: Basic base64(key:)` via `secretTransform`).  
+Rights: YELLOW/NOT_VERIFIED — written Databento confirmation required before commercial production (Codex VND-01).  
+Status: **CONDITIONAL_PASS — BLOCKED_OWNER** (account + API key required from Owner).
+
 ## 9. Real-data readiness (IV-QUANT-REAL-DATA-READINESS-03, 2026-09-25)
 
 | Area | Doc |

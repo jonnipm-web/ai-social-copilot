@@ -1,5 +1,5 @@
 /**
- * Server adapters for the Quant Edge Functions — IV-QUANT-DATA-PLANE-AND-API-02.
+ * Server adapters for the Quant Edge Functions — IV-QUANT-DATA-PLANE-AND-API-02 / MACRO-05.
  *
  * Everything with I/O lives here, NOT in _shared/quant/ (which must stay
  * pure: tripwires QB-02/QB-03). Contents:
@@ -9,9 +9,13 @@
  *     caller's own JWT (public.projects RLS: auth.uid() = user_id)
  *   - SupabaseWatchlistStore: watchlist persistence via the caller's JWT, so
  *     Postgres RLS is the data-isolation authority
+ *   - checkQuantCapability: per-capability plan gate (real server-side tier
+ *     enforcement, MACRO-05 FASE 20). Enforced after module access; inactive
+ *     while lifecycle is INTERNAL (admin-only), active on ALPHA+ promotion.
  * No service-role client is used anywhere in Quant.
  */
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.116.0';
+import type { Plan } from './module_policy.ts';
 import type { QuantErrorCode, QuantErrorDetails } from './quant/errors.ts';
 import { httpStatusFor, type TransportErrorCode } from './quant/api_contract.ts';
 import type { InstrumentIdentity } from './quant/instrument.ts';
@@ -242,4 +246,51 @@ export async function enforceRateLimit(
   const res = quantError('RATE_LIMITED', correlationId, { retry_after_seconds: decision.retryAfterSeconds, limit: decision.limit });
   res.headers.set('Retry-After', String(decision.retryAfterSeconds));
   return res;
+}
+
+/**
+ * Per-capability plan gate (MACRO-05 FASE 20 — server-side quant tier enforcement).
+ *
+ * Called after requireModuleAccess() grants access. Enforces capability-level
+ * plan boundaries that are coarser than the per-module lifecycle:
+ *
+ *   CSV analysis (v1 / multi.v1):  any plan, including FREE
+ *   Watchlist + server-side data:  minimum PRO
+ *
+ * This gate is inactive while quant-analytics lifecycle is INTERNAL (admin-only)
+ * because requireModuleAccess already filtered to admins, who are always allowed.
+ * It becomes the primary plan enforcement layer when the lifecycle is promoted
+ * to ALPHA or above and non-admin users start reaching this function.
+ *
+ * Returns null when allowed, or a 403 Response when the plan is insufficient.
+ *
+ * @param plan          The resolved plan from EntitlementSubject.plan (null = unknown → deny)
+ * @param isAdmin       True when the subject holds the 'admin' role
+ * @param contractVersion The quant contract version being requested
+ * @param correlationId For structured error responses
+ */
+export function checkQuantCapability(
+  plan: Plan | null,
+  isAdmin: boolean,
+  contractVersion: string | null,
+  correlationId: string,
+): Response | null {
+  if (isAdmin) return null; // admin bypasses capability gate during INTERNAL phase
+
+  // Tier map (plan → allowed contract versions):
+  //   free    → CSV analyze only (v1, multi.v1)
+  //   pro     → CSV + watchlist analyze (watchlist.v1)
+  //   premium → all (same as pro for now; extended limits via rate limits)
+  const WATCHLIST_CONTRACT = 'quant.analyze.watchlist.v1';
+  if (contractVersion === WATCHLIST_CONTRACT && plan !== 'pro' && plan !== 'premium') {
+    return quantError('ENTITLEMENT_DENIED', correlationId, {
+      reason: 'QUANT_TIER_INSUFFICIENT',
+      required_plan: 'pro',
+      current_plan: plan ?? 'unknown',
+    });
+  }
+  if (plan === null) {
+    return quantError('ENTITLEMENT_DENIED', correlationId, { reason: 'PLAN_UNKNOWN' });
+  }
+  return null;
 }

@@ -1,19 +1,25 @@
-// quant-analyze — IV-QUANT-DATA-PLANE-AND-API-02.
+// quant-analyze — IV-QUANT-DATA-PLANE-AND-API-02 / IV-QUANT-MACRO-05 FASE 3.
 //
 // First read-only Quant API (module 'quant-analytics', READ_ONLY, INTERNAL).
 // READINESS-03 adds two explicit contracts on the same endpoint, dispatched
 // by contract_version (v1 unchanged): quant.analyze.multi.v1 (≤ 10 CSV
 // series) and quant.analyze.watchlist.v1 (the caller's own watchlist, data
-// from the server-side SYNTHETIC provider through the provenance cache; also
-// requires the 'quant-watchlists' entitlement). No client-supplied URL.
+// from the server-side provider through the provenance cache; also requires
+// the 'quant-watchlists' entitlement). No client-supplied URL.
 // Order: authenticate → entitlement → method/body limits → strict schema →
 // project ownership (if project_id) → data plane (CSV → canonical series →
 // deterministic engine) → structured QuantAnalysisResult.
 //
-// Deliberately NOT here: any URL/remote fetch of market data (no SSRF
-// surface), any LLM call (numbers come only from the engine), any write,
-// any broker/order path, any quota reservation (no paid dependency; the
+// PROVIDER SELECTION (MACRO-05 FASE 3): QUANT_PROVIDER_MODE controls provider
+// semantics. Watchlist analysis is always-synthetic at the current gate
+// (BLOCKED_OWNER: rights + adjustment policy not confirmed); PROVIDER_MODE=real
+// fails closed for watchlist rather than silently returning synthetic data.
+// CSV paths (v1, multi.v1) use caller-supplied data and ignore PROVIDER_MODE.
+//
+// Deliberately NOT here: any LLM call (numbers come only from the engine), any
+// write, any broker/order path, any quota reservation (no paid dependency; the
 // resource bounds below are the protection — see QUANT_API_CONTRACT.md §6).
+// Client-supplied URLs are rejected; credentials never reach the client.
 //
 // NOT DEPLOYED (Quant Lab). Not on .github/deploy-allowlist.tsv.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -37,8 +43,11 @@ import { SyntheticInProcessProvider } from '../_shared/quant/synthetic_market.ts
 import type { WatchlistRow, WatchlistStore } from '../_shared/quant/watchlist_contract.ts';
 import type { QuantErrorCode } from '../_shared/quant/errors.ts';
 import { quantLogEvent } from '../_shared/quant/observability.ts';
+import { buildExplanationRequest } from '../_shared/quant/ive_boundary.ts';
+import { resolveProviderMode, type ProviderMode } from '../_shared/quant_provider_mode.ts';
 import {
   bearerToken,
+  checkQuantCapability,
   enforceRateLimit,
   type ProjectAccessSource,
   quantCorsHeaders,
@@ -60,12 +69,25 @@ export interface AnalyzeDeps {
   rateLimiter?: QuantRateLimiter;
   /** quant.analyze.watchlist.v1: watchlist storage as the caller (tests inject a fake). */
   storeFor?: (accessToken: string) => WatchlistStore;
-  /** quant.analyze.watchlist.v1: server-side market data (default: cached in-process SYNTHETIC provider). */
-  marketProvider?: MarketDataProvider;
+  /**
+   * quant.analyze.watchlist.v1: server-side market data (test injection only).
+   * undefined/null = always SyntheticInProcessProvider (watchlist is always-synthetic at the current gate)
+   * provider       = injected fake provider (test injection; e.g. deterministic fake for QM-09/QM-11)
+   */
+  marketProvider?: MarketDataProvider | null;
 }
 
 /** Per-instance LRU (Edge isolates are short-lived; provenance is preserved on every hit). */
 const DEFAULT_MARKET_CACHE = new InMemoryMarketCache(256);
+
+// QUANT_PROVIDER_MODE: explicit provider selection (synthetic / real / auto_lab).
+// Replaces the binary QUANT_REQUIRE_LIVE_DATA (still supported as legacy alias).
+// See _shared/quant_provider_mode.ts for full semantics.
+// MACRO-05 FASE 3: Codex P2 fix (case/whitespace normalisation) is inherited via
+// resolveProviderMode() which uses .trim().toLowerCase() internally.
+// RIGHTS: YELLOW/NOT_VERIFIED — see docs/quant/BOOTSTRAP_PROVIDER_DECISION.md §2.2.
+const PROVIDER_MODE: ProviderMode = resolveProviderMode();
+
 
 export async function handler(
   req: Request,
@@ -101,6 +123,8 @@ export async function handler(
     log(JSON.stringify(quantLogEvent({
       analysisId: extra.analysisId ?? null,
       providerId: extra.providerId ?? 'user-csv',
+      providerMode: PROVIDER_MODE,
+      plan: access.subject.plan,
       instrumentCount: extra.instruments ?? (extra.analysisId ? 1 : 0),
       contract,
       cacheHits: extra.hits ?? 0,
@@ -129,6 +153,19 @@ export async function handler(
     ? (body.value as Record<string, unknown>).contract_version
     : undefined;
   contract = typeof version === 'string' ? version : null;
+
+  // Quant capability gate (MACRO-05 FASE 20): per-capability plan enforcement.
+  // Runs after module access (which gates lifecycle) and after contract version
+  // is known. Watchlist.v1 (server-side data) requires plan ≥ PRO.
+  // Admin bypasses. Inactive while lifecycle is INTERNAL (admin-only path).
+  const capDenied = checkQuantCapability(
+    access.subject.plan,
+    access.subject.roles.has('admin'),
+    contract,
+    cid,
+  );
+  if (capDenied) return done(capDenied, { errorCode: 'ENTITLEMENT_DENIED' });
+
   const token = bearerToken(req) ?? '';
   const checkProject = async (projectId: string | undefined): Promise<Response | null> => {
     if (!projectId) return null;
@@ -195,8 +232,21 @@ export async function handler(
       if (!inst.ok) return failWith('INVALID_INSTRUMENT');
       instruments.push(inst.value);
     }
-    const provider = deps.marketProvider ?? new CachingProvider(new SyntheticInProcessProvider(clock), DEFAULT_MARKET_CACHE, clock);
-    const result = await runWatchlistAnalysis(instruments, parsed.value, provider, clock());
+    // Fail-closed: QUANT_PROVIDER_MODE=real is not yet implemented for watchlist.v1.
+    // A real-data watchlist path requires Databento rights confirmation, an aligned
+    // adjustment policy (UNADJUSTED vs SPLIT_AND_DIVIDEND_ADJUSTED), and a contract
+    // update — all separately gated (BLOCKED_OWNER). Returning synthetic data when real
+    // mode was explicitly configured would violate the mode contract, so we fail closed.
+    if (PROVIDER_MODE === 'real' && deps.marketProvider === undefined) {
+      return failWith('INTERNAL_ERROR');
+    }
+    // Watchlist is always-synthetic at the current gate (contract enforces
+    // data_source=SYNTHETIC_PROVIDER at multi_contract.ts:184). Real-provider injection
+    // via deps.marketProvider is supported for testing.
+    const watchlistProvider: MarketDataProvider = deps.marketProvider !== undefined && deps.marketProvider !== null
+      ? deps.marketProvider
+      : new CachingProvider(new SyntheticInProcessProvider(clock), DEFAULT_MARKET_CACHE, clock);
+    const result = await runWatchlistAnalysis(instruments, parsed.value, watchlistProvider, clock());
     if (!result.ok) return failWith(result.error.code, result.error.details);
     const c = result.value.dataSource.cache;
     return multiDone(result.value, {
@@ -215,8 +265,14 @@ export async function handler(
   const result = await runAnalyze(parsed.value, clock());
   if (!result.ok) return failWith(result.error.code, result.error.details);
   const a = result.value;
+  // IVE integration (MACRO-05 FASE 9): include the structured explanation
+  // request so the Flutter client can forward it to IVE Core for narration.
+  // The explanation request carries only engine-computed facts and placeholders;
+  // no prices, portfolio positions, or numeric content that was not already in
+  // `analysis`. It is optional: clients that do not use IVE narration ignore it.
+  const explanation_request = buildExplanationRequest(a);
   return done(
-    quantJson({ contract_version: ANALYZE_CONTRACT_VERSION, correlation_id: cid, analysis: a }),
+    quantJson({ contract_version: ANALYZE_CONTRACT_VERSION, correlation_id: cid, analysis: a, explanation_request }),
     { analysisId: a.analysisId, bars: a.period.bars, period: [a.period.start, a.period.end], calcs: a.metrics.map((m) => m.id), freshness: a.dataSnapshot.freshness.state },
   );
 }

@@ -786,7 +786,7 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminVisible: true,
     adminClickable: false, // somente API nesta fase (sem tela própria)
     commercialEnabled: false,
-    minimumPlan: ModulePlan.free, // INTERNAL = admin-only via lifecycle
+    minimumPlan: ModulePlan.pro, // MACRO-05: server-side security gate requires pro (module_policy.ts)
     route: null,
     edgeFunctions: ['quant-watchlists'],
     databaseDependencies: ['quant_watchlists', 'quant_watchlist_items'],

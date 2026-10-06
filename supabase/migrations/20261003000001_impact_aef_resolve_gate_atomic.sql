@@ -44,7 +44,7 @@ CREATE OR REPLACE FUNCTION public.aef_resolve_gate(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_catalog
+SET search_path = pg_catalog, pg_temp
 AS $$
 DECLARE
   v_gate            public.impact_aef_gates%ROWTYPE;

@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/ive_exclusion_region.dart';
+import '../../shared/widgets/quant_disclaimer_banner.dart';
 import 'quant_lab_models.dart';
 import 'quant_lab_service.dart';
 
@@ -408,52 +409,39 @@ class _MultiResult extends StatelessWidget {
             TextSpan(text: v)
           ])),
         );
-    return Column(
-        key: const Key('quantMultiResult'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          section(l.quantLabDataSource, [
-            kv(l.quantLabKind, r.dataSourceKind ?? 'USER_UPLOAD'),
-            if (r.cacheHits != null)
-              kv(l.quantLabCacheLabel,
-                  l.quantLabCacheValue(r.cacheHits!, r.cacheMisses ?? 0)),
-            kv(l.quantLabIdLabel,
-                r.id.length > 19 ? r.id.substring(0, 19) : r.id),
-          ]),
-          section(l.quantLabAlignment, [
-            kv(l.quantLabPolicy, r.alignmentPolicy),
-            kv(l.quantLabPeriod,
-                '${r.alignmentStart ?? '—'} → ${r.alignmentEnd ?? '—'} · ${r.commonBars}'),
-          ]),
-          section(l.quantLabSeries, [
-            for (final s in r.series)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(s.label,
-                          style: const TextStyle(fontWeight: FontWeight.w700)),
-                      kv(l.quantLabAlignedReturn, quantPct(s.alignedReturn)),
-                      kv(l.quantLabFreshness, s.freshnessState),
-                      kv(l.quantLabTrustLabel, '${s.trust} · ${s.providerId}'),
-                      kv(l.quantLabBars, '${s.bars} (−${s.dropped})'),
-                    ]),
-              ),
-          ]),
-          if (r.correlation.isNotEmpty)
-            section(l.quantLabCorrelation, [
-              for (final c in r.correlation)
-                IveExclusionRegion(
-                    child: kv('${c.a} × ${c.b}',
-                        '${quantCorr(c.value)}${c.error != null ? ' (${c.error})' : ''} · n=${c.observations}')),
+    return Column(key: const Key('quantMultiResult'), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      // Mandatory disclaimer — QUANT_RESEARCH_ADVICE_BOUNDARY.md §5
+      const QuantDisclaimerBanner(),
+      const SizedBox(height: 4),
+      section(l.quantLabDataSource, [
+        kv(l.quantLabKind, r.dataSourceKind ?? 'USER_UPLOAD'),
+        if (r.cacheHits != null) kv(l.quantLabCacheLabel, l.quantLabCacheValue(r.cacheHits!, r.cacheMisses ?? 0)),
+        kv(l.quantLabIdLabel, r.id.length > 19 ? r.id.substring(0, 19) : r.id),
+      ]),
+      section(l.quantLabAlignment, [
+        kv(l.quantLabPolicy, r.alignmentPolicy),
+        kv(l.quantLabPeriod, '${r.alignmentStart ?? '—'} → ${r.alignmentEnd ?? '—'} · ${r.commonBars}'),
+      ]),
+      section(l.quantLabSeries, [
+        for (final s in r.series)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(s.label, style: const TextStyle(fontWeight: FontWeight.w700)),
+              kv(l.quantLabAlignedReturn, quantPct(s.alignedReturn)),
+              kv(l.quantLabFreshness, s.freshnessState),
+              kv(l.quantLabTrustLabel, '${s.trust} · ${s.providerId}'),
+              kv(l.quantLabBars, '${s.bars} (−${s.dropped})'),
             ]),
-          section(l.quantLabAssumptions,
-              [for (final s in r.assumptions) Text('• $s')]),
-          if (r.warnings.isNotEmpty)
-            section(l.quantLabWarnings, [
-              for (final w in r.warnings) Text('• ${w.code} — ${w.message}')
-            ]),
-        ]);
+          ),
+      ]),
+      if (r.correlation.isNotEmpty)
+        section(l.quantLabCorrelation, [
+          for (final c in r.correlation)
+            IveExclusionRegion(child: kv('${c.a} × ${c.b}', '${quantCorr(c.value)}${c.error != null ? ' (${c.error})' : ''} · n=${c.observations}')),
+        ]),
+      section(l.quantLabAssumptions, [for (final s in r.assumptions) Text('• $s')]),
+      if (r.warnings.isNotEmpty) section(l.quantLabWarnings, [for (final w in r.warnings) Text('• ${w.code} — ${w.message}')]),
+    ]);
   }
 }

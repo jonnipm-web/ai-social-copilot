@@ -87,6 +87,13 @@ INSERT INTO auth.users (id, email) VALUES
   ('aaaaaaaa-0000-0000-0000-00000000000a', 'user-a@test.invalid'),
   ('bbbbbbbb-0000-0000-0000-00000000000b', 'user-b@test.invalid')
 ON CONFLICT (id) DO NOTHING;
+-- 20261004000003 added impact_has_module_access() gating all Impact RLS policies.
+-- EXPERIMENTAL phase: admin-only. Grant both fixture users admin so the A/P-series
+-- tests focus on ownership isolation, not entitlement.
+INSERT INTO public.profiles (id, role) VALUES
+  ('aaaaaaaa-0000-0000-0000-00000000000a', 'admin'),
+  ('bbbbbbbb-0000-0000-0000-00000000000b', 'admin')
+ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
 INSERT INTO public.projects (id, user_id, name) VALUES
   ('a1111111-0000-0000-0000-00000000000a', 'aaaaaaaa-0000-0000-0000-00000000000a', 'Project A'),
   ('b1111111-0000-0000-0000-00000000000b', 'bbbbbbbb-0000-0000-0000-00000000000b', 'Project B')
@@ -522,12 +529,12 @@ SELECT pg_temp.expect_eq('V01 no verdict/score/trust/fraud column exists',
      AND column_name ~* '(verdict|score|rank|trust|fraud|scam|guilt|corrupt)'), 0);
 SELECT pg_temp.expect_eq('V02 claims table has no status column (engine is the authority)',
   (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'impact_claims' AND column_name = 'status'), 0);
-SELECT pg_temp.expect_eq('V03 RLS enabled on EVERY impact table (8 from I1 + impact_registry_conflicts from I2 + impact_artifacts, impact_evidence_candidates from I3 + impact_dossier_snapshots from I4 + impact_rate_limits from I5)',
+SELECT pg_temp.expect_eq('V03 RLS enabled on EVERY impact table (8 from I1 + impact_registry_conflicts from I2 + impact_artifacts, impact_evidence_candidates from I3 + impact_dossier_snapshots from I4 + impact_rate_limits from I5 + impact_aef_requests/decisions/gates/receipts from I7)',
   (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
    WHERE n.nspname = 'public' AND c.relname LIKE 'impact\_%' AND c.relkind = 'r' AND NOT c.relrowsecurity), 0);
 SELECT pg_temp.expect_eq('V03b impact table count (a new table must be added to this suite deliberately)',
   (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-   WHERE n.nspname = 'public' AND c.relname LIKE 'impact\_%' AND c.relkind = 'r'), 13);
+   WHERE n.nspname = 'public' AND c.relname LIKE 'impact\_%' AND c.relkind = 'r'), 17);
 SELECT pg_temp.expect_eq('V04 authenticated holds no write privilege on any impact table',
   (SELECT count(*) FROM information_schema.table_privileges
    WHERE table_schema = 'public' AND table_name LIKE 'impact\_%' AND grantee IN ('authenticated', 'anon', 'PUBLIC')

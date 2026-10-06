@@ -67,6 +67,12 @@ INSERT INTO auth.users (id, email) VALUES
   ('99999999-0000-0000-0000-000000000009', 'user-g@test.invalid'),
   ('88888888-0000-0000-0000-000000000008', 'user-h@test.invalid')
 ON CONFLICT (id) DO NOTHING;
+-- 20261004000003: impact_has_module_access() gates all Impact RLS. Admin-only in
+-- EXPERIMENTAL phase. Upsert because auth.users trigger auto-creates free profiles.
+INSERT INTO public.profiles (id, role) VALUES
+  ('99999999-0000-0000-0000-000000000009', 'admin'),
+  ('88888888-0000-0000-0000-000000000008', 'admin')
+ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
 
 SET ROLE service_role;
 INSERT INTO public.impact_investigations (id, owner_id, subject_org_ref, subject_org_type, subject_identity) VALUES

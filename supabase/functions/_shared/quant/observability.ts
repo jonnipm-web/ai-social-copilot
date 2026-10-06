@@ -11,10 +11,21 @@
 import type { QuantErrorCode } from './errors.ts';
 import type { FreshnessState } from './provenance.ts';
 
+/**
+ * Mirror of module_policy.ts Plan — kept local to preserve quant-core isolation (QB-03).
+ * If module_policy.ts adds a new tier, update this type and PLANS below; the `satisfies`
+ * guard on PLANS will flag the inconsistency at compile time.
+ */
+type Plan = 'free' | 'pro' | 'premium';
+
 export interface QuantLogEvent {
   readonly event: 'quant_analysis';
   readonly analysis_id: string | null;
   readonly provider_id: string | null;
+  /** MACRO-05 FASE 3: explicit provider mode (synthetic / real / auto_lab). */
+  readonly provider_mode: string | null;
+  /** Resolved plan for the calling subject; null when unknown or admin-bypass. */
+  readonly plan: Plan | null;
   readonly instrument_count: number;
   readonly dataset_size: number;
   readonly period_start: string | null;
@@ -33,6 +44,10 @@ export interface QuantLogEvent {
 export interface QuantLogInput {
   analysisId?: string | null;
   providerId?: string | null;
+  /** MACRO-05 FASE 3: explicit provider mode (synthetic / real / auto_lab). */
+  providerMode?: string | null;
+  /** Resolved plan from EntitlementSubject; null for unknown or admin-bypass. */
+  plan?: Plan | null;
   instrumentCount: number;
   datasetSize: number;
   periodStart?: string | null;
@@ -47,6 +62,8 @@ export interface QuantLogInput {
 }
 
 const SAFE_TOKEN_RE = /^[A-Za-z0-9_:.\-]{1,64}$/;
+const PROVIDER_MODES: ReadonlySet<string> = new Set(['synthetic', 'real', 'auto_lab']);
+const PLANS: ReadonlySet<string> = new Set(['free', 'pro', 'premium'] satisfies Plan[]);
 const FRESHNESS_STATES: ReadonlySet<string> = new Set(['FRESH', 'DELAYED', 'STALE', 'UNKNOWN']);
 const ERROR_CODES: ReadonlySet<string> = new Set([
   'INVALID_INSTRUMENT', 'INVALID_DATASET', 'DATASET_TOO_LARGE', 'INSUFFICIENT_DATA', 'STALE_DATA', 'PROVIDER_UNAVAILABLE',
@@ -66,6 +83,8 @@ export function quantLogEvent(i: QuantLogInput): QuantLogEvent {
     event: 'quant_analysis',
     analysis_id: safe(i.analysisId),
     provider_id: safe(i.providerId),
+    provider_mode: typeof i.providerMode === 'string' && PROVIDER_MODES.has(i.providerMode) ? i.providerMode : null,
+    plan: typeof i.plan === 'string' && PLANS.has(i.plan) ? (i.plan as Plan) : null,
     instrument_count: Number.isSafeInteger(i.instrumentCount) ? i.instrumentCount : 0,
     dataset_size: Number.isSafeInteger(i.datasetSize) ? i.datasetSize : 0,
     period_start: safe(i.periodStart),

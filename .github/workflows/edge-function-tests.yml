@@ -1,12 +1,12 @@
 name: Edge Function Tests
 
 on:
-  # IV-QUANT-DATA-PLANE-AND-API-02: the Quant Lab branch never merges to main
-  # during the lab phase, and workflow_dispatch needs the file on the default
-  # branch, so pushes to the Quant line run CI directly. Scoped to that line
-  # only; deploy workflows are unaffected (none trigger on these branches).
+  # IV-QUANT-DATA-PLANE-AND-API-02 / MACRO-05: the Quant Lab branches never
+  # merge to main during the lab phase, and workflow_dispatch needs the file on
+  # the default branch, so pushes to the Quant line run CI directly. Scoped to
+  # Quant lines only; deploy workflows are unaffected.
   push:
-    branches: ['claude/insightvalues-quant-**']
+    branches: ['claude/insightvalues-quant-**', 'claude/iv-quant-**']
   pull_request:
     branches: [main]
     paths:

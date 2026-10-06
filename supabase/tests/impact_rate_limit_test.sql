@@ -41,6 +41,12 @@ INSERT INTO auth.users (id, email) VALUES
   ('77777777-0000-0000-0000-000000000007', 'user-r1@test.invalid'),
   ('66666666-0000-0000-0000-000000000006', 'user-r2@test.invalid')
 ON CONFLICT (id) DO NOTHING;
+-- 20261004000003: impact_has_module_access() gates all Impact RLS. Admin-only in
+-- EXPERIMENTAL phase. Upsert because auth.users trigger auto-creates free profiles.
+INSERT INTO public.profiles (id, role) VALUES
+  ('77777777-0000-0000-0000-000000000007', 'admin'),
+  ('66666666-0000-0000-0000-000000000006', 'admin')
+ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
 
 SET ROLE authenticated;
 SELECT pg_temp.act_as('77777777-0000-0000-0000-000000000007');

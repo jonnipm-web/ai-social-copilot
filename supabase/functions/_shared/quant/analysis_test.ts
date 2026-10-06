@@ -316,7 +316,9 @@ Deno.test('AN-50 log event is an allowlist: no symbols, quantities, prices or fr
   const evil = quantLogEvent({ instrumentCount: 1, datasetSize: 1, latencyMs: 1, providerId: 'x y <script>', symbol: 'TSTA', apiKey: 'sk-live-123' } as any);
   const text = JSON.stringify([ev, evil]);
   for (const forbidden of ['TSTA', 'sk-live', '98.01', 'quantity', 'script']) assert(!text.includes(forbidden), forbidden);
-  assertEquals(Object.keys(ev).sort(), ['analysis_id', 'cache_hits', 'cache_misses', 'calculations', 'contract', 'dataset_size', 'error_code', 'event', 'freshness', 'instrument_count', 'latency_ms', 'period_end', 'period_start', 'provider_id']);
+  // MACRO-05 FASE 3: provider_mode added as safe operational field (synthetic/real/auto_lab).
+  // RECONCILIATION: plan added for tier-based usage monitoring (FASE J).
+  assertEquals(Object.keys(ev).sort(), ['analysis_id', 'cache_hits', 'cache_misses', 'calculations', 'contract', 'dataset_size', 'error_code', 'event', 'freshness', 'instrument_count', 'latency_ms', 'period_end', 'period_start', 'plan', 'provider_id', 'provider_mode']);
   assertEquals(ev.latency_ms, 4);
   assertEquals(evil.provider_id, null);
 });

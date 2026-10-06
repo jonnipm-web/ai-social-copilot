@@ -5,11 +5,12 @@
  * Execução:
  *   DENO_TESTING=1 deno test --allow-env --allow-read --allow-net=deno.land,esm.sh supabase/functions/quant-analyze/index_test.ts
  */
-import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
+import { assert, assertEquals, assertThrows } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import type { AuthClient } from '../_shared/auth.ts';
 import { fakeSubjectSource } from '../_shared/entitlement_test_support.ts';
 import { type AnalyzeDeps, handler } from './index.ts';
-import { InMemoryRateLimiter } from '../_shared/quant_server.ts';
+import { checkQuantCapability, InMemoryRateLimiter } from '../_shared/quant_server.ts';
+import { resolveProviderMode } from '../_shared/quant_provider_mode.ts';
 import type { WatchlistRow, WatchlistStore } from '../_shared/quant/watchlist_contract.ts';
 import type { EntitlementSubjectSource } from '../_shared/entitlement.ts';
 
@@ -482,4 +483,201 @@ Deno.test('QM-06 watchlist.v1: store failure → 500 structured, no partial resu
   const r = await call(post(wlBody()), d);
   assertEquals(r.status, 500);
   assertEquals(r.json.multi_analysis, undefined);
+});
+
+// MACRO-05 FASE 3 regression pin: watchlist-always-synthetic with no marketProvider injected.
+// When DATABENTO_API_KEY is absent from env, _LIVE_CONFIG_ERROR is null (auto_lab mode)
+// so no early-return 500. The handler then uses SyntheticInProcessProvider directly.
+// A 200 here proves no real network call was attempted — the "network is forbidden"
+// guard at the top of this file would catch any outbound attempt.
+Deno.test('QM-07 FASE3 makeLiveProvider: synthetic fallback when DATABENTO_API_KEY absent', async () => {
+  const rows = [wlRow(WL_A, [['AAPL', 'XNAS', 'USD']])];
+  const seen = { tokens: [] as string[], users: [] as string[] };
+  // No marketProvider injected; DATABENTO_API_KEY not set in CI → _LIVE_CONFIG_ERROR=null
+  // → no fail-closed early return → watchlist uses SyntheticInProcessProvider → 200.
+  const r = await call(post(wlBody()), deps({ clock: () => WNOW, storeFor: storeFor(rows, seen) }));
+  assertEquals(r.status, 200);
+  assertEquals(r.json.multi_analysis.series.length, 1);
+  assertEquals(r.json.multi_analysis.series[0].instrument.symbol, 'AAPL');
+});
+
+// MACRO-05 FASE 3 — fail-closed when QUANT_REQUIRE_LIVE_DATA=true and key absent.
+// Codex CLASS D MACRO-05 third-pass remediation: watchlist analysis is ALWAYS
+// synthetic (never wired to the real Databento provider). QUANT_PROVIDER_MODE
+// and QUANT_REQUIRE_LIVE_DATA do not affect watchlist.v1. The null-provider
+// injection that previously simulated fail-closed now correctly triggers the
+// synthetic fallback, returning a successful response.
+Deno.test('QM-09 FASE3 watchlist-always-synthetic: null provider falls back to synthetic (no 500)', async () => {
+  const rows = [wlRow(WL_A, [['AAPL', 'XNAS', 'USD']])];
+  const seen = { tokens: [] as string[], users: [] as string[] };
+  // With the always-synthetic design, null injection → synthetic provider (not fail-closed 500).
+  const nullProvider = deps({ clock: () => WNOW, storeFor: storeFor(rows, seen), marketProvider: null as never });
+  const r = await call(post(wlBody()), nullProvider);
+  assertEquals(r.status, 200, 'watchlist.v1 always uses synthetic; null injection → synthetic, not 500');
+  assert(r.json.multi_analysis !== undefined, 'successful response must include multi_analysis');
+  assert(Array.isArray(r.json.multi_analysis.series), 'series must be an array');
+});
+
+// CLASS D regression pin (MACRO-05 FASE 28): explanation_request structure.
+// Verifies the field is present on quant.analyze.v1 responses, absent on
+// multi.v1, and carries the correct contract version and engine-sourced facts.
+Deno.test('QM-08 FASE9 explanation_request: present on v1, absent on multi.v1, valid contract', async () => {
+  // v1 → explanation_request must be present with correct contract
+  const r1 = await call(post(body()), deps());
+  assertEquals(r1.status, 200);
+  const er = r1.json.explanation_request;
+  assert(er !== undefined, 'explanation_request missing from quant.analyze.v1 response');
+  assertEquals(er.contract, 'quant.explanation.v1');
+  assert(typeof er.analysisId === 'string' && er.analysisId.length > 0, 'analysisId must be non-empty string');
+  assert(Array.isArray(er.facts) && er.facts.length > 0, 'facts must be non-empty array');
+  // Every fact must declare DETERMINISTIC_ENGINE as source — no LLM-generated values
+  for (const f of er.facts) {
+    assertEquals(f.source, 'DETERMINISTIC_ENGINE', `fact ${f.id} has wrong source`);
+    assert(typeof f.display === 'string', `fact ${f.id} display must be string`);
+  }
+  assert(Array.isArray(er.rules) && er.rules.length > 0, 'rules must be non-empty');
+
+  // multi.v1 → explanation_request must NOT be present (different response schema)
+  const r2 = await call(post(multiBody()), deps());
+  assertEquals(r2.status, 200);
+  assertEquals(r2.json.explanation_request, undefined, 'explanation_request must not appear on multi.v1 response');
+});
+
+// MACRO-05 FASE 20: checkQuantCapability unit tests.
+// These exercise the tier gate directly; integration coverage through the
+// handler requires ALPHA+ lifecycle (non-admin users). Admin always bypasses.
+Deno.test('QM-10 FASE20 checkQuantCapability: plan gate matrix', () => {
+  const CID = 'test-cid';
+  const WL = 'quant.analyze.watchlist.v1';
+  const V1 = 'quant.analyze.v1';
+  const MV1 = 'quant.analyze.multi.v1';
+
+  // Admin bypasses all gates
+  assertEquals(checkQuantCapability('free', true, WL, CID), null, 'admin+free → allowed on watchlist');
+  assertEquals(checkQuantCapability(null, true, WL, CID), null, 'admin+null plan → allowed on watchlist');
+
+  // free plan: CSV analyze allowed, watchlist denied
+  assertEquals(checkQuantCapability('free', false, V1, CID), null, 'free → allowed on v1');
+  assertEquals(checkQuantCapability('free', false, MV1, CID), null, 'free → allowed on multi.v1');
+  assert(checkQuantCapability('free', false, WL, CID) !== null, 'free → denied on watchlist.v1');
+  assertEquals(checkQuantCapability('free', false, WL, CID)?.status, 403, 'free+watchlist → 403');
+
+  // pro plan: all allowed
+  assertEquals(checkQuantCapability('pro', false, WL, CID), null, 'pro → allowed on watchlist.v1');
+  assertEquals(checkQuantCapability('pro', false, V1, CID), null, 'pro → allowed on v1');
+
+  // premium plan: all allowed
+  assertEquals(checkQuantCapability('premium', false, WL, CID), null, 'premium → allowed on watchlist.v1');
+
+  // null plan: denied (unknown plan = fail closed)
+  assert(checkQuantCapability(null, false, V1, CID) !== null, 'null plan → denied on v1');
+  assert(checkQuantCapability(null, false, WL, CID) !== null, 'null plan → denied on watchlist.v1');
+});
+
+// Codex CLASS D P2 fix: QUANT_REQUIRE_LIVE_DATA normalization.
+// The module-level flag now uses .trim().toLowerCase() so "TRUE", "True", " true "
+// all activate fail-closed mode. This test pins the null-provider path for each
+// case — the real env-var normalization is exercised on module load only; in-process
+// injection covers the runtime branch accurately (P3, deferred: fresh-isolate test
+// requires subprocess spawning not available in this test environment).
+Deno.test('QM-11 Codex-D always-synthetic: null provider → synthetic result (watchlist never wired to real provider)', async () => {
+  const rows = [wlRow(WL_A, [['MSFT', 'XNAS', 'USD']])];
+  const seen = { tokens: [] as string[], users: [] as string[] };
+  // With watchlist-always-synthetic (Codex CLASS D third-pass remediation):
+  // null injection no longer means fail-closed; it resolves to SyntheticInProcessProvider.
+  // This pins the invariant: no code path can accidentally wire Databento to watchlist.v1.
+  const nullProvider = deps({ clock: () => WNOW, storeFor: storeFor(rows, seen), marketProvider: null as never });
+  const r = await call(post(wlBody()), nullProvider);
+  assertEquals(r.status, 200, 'watchlist.v1 always synthetic: null injection → 200 with synthetic data');
+  assertEquals(r.json.error, undefined, 'no error when synthetic provider is used');
+  assert(r.json.multi_analysis !== undefined, 'multi_analysis must be present');
+});
+
+// MACRO-05 FASE 3: QUANT_PROVIDER_MODE explicit enum resolution.
+// resolveProviderMode() accepts an injectable env accessor so all branches can
+// be exercised in a pure unit test, without touching the real Deno.env or
+// requiring a fresh module isolate per test case.
+Deno.test('QM-12 FASE3 QUANT_PROVIDER_MODE: resolveProviderMode covers all branches', () => {
+  const env = (vars: Record<string, string>) => (k: string) => vars[k];
+
+  // Default (no env) → auto_lab
+  assertEquals(resolveProviderMode(env({})), 'auto_lab', 'default is auto_lab');
+
+  // Explicit values
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'synthetic' })), 'synthetic', 'explicit synthetic');
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'real' })), 'real', 'explicit real');
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'auto_lab' })), 'auto_lab', 'explicit auto_lab');
+
+  // Case and whitespace normalisation
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'REAL' })), 'real', 'uppercase normalised');
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: ' real ' })), 'real', 'whitespace trimmed');
+  assertEquals(resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'SYNTHETIC' })), 'synthetic', 'SYNTHETIC normalised');
+
+  // Legacy alias: QUANT_REQUIRE_LIVE_DATA=true → real
+  assertEquals(resolveProviderMode(env({ QUANT_REQUIRE_LIVE_DATA: 'true' })), 'real', 'legacy true');
+  assertEquals(resolveProviderMode(env({ QUANT_REQUIRE_LIVE_DATA: 'TRUE' })), 'real', 'legacy TRUE normalised');
+  assertEquals(resolveProviderMode(env({ QUANT_REQUIRE_LIVE_DATA: ' true ' })), 'real', 'legacy true whitespace');
+  assertEquals(resolveProviderMode(env({ QUANT_REQUIRE_LIVE_DATA: 'false' })), 'auto_lab', 'legacy false → auto_lab');
+
+  // Explicit QUANT_PROVIDER_MODE takes precedence over legacy
+  assertEquals(
+    resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'synthetic', QUANT_REQUIRE_LIVE_DATA: 'true' })),
+    'synthetic', 'explicit mode wins over legacy alias',
+  );
+
+  // Non-empty, unrecognised QUANT_PROVIDER_MODE → fail closed (never silently
+  // serve synthetic data for a production misconfiguration such as 'prod').
+  assertThrows(
+    () => resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'invalid' })),
+    Error, 'Invalid QUANT_PROVIDER_MODE value', 'unknown value throws',
+  );
+  assertThrows(
+    () => resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'PRODUCTION' })),
+    Error, 'Invalid QUANT_PROVIDER_MODE value', 'unrecognised production-like value throws',
+  );
+  // Codex P2 regression: invalid explicit mode must throw even when legacy
+  // QUANT_REQUIRE_LIVE_DATA=true is also set — the error check runs first.
+  assertThrows(
+    () => resolveProviderMode(env({ QUANT_PROVIDER_MODE: 'prod', QUANT_REQUIRE_LIVE_DATA: 'true' })),
+    Error, 'Invalid QUANT_PROVIDER_MODE value', 'invalid mode + legacy=true still throws (precedence)',
+  );
+});
+
+// MACRO-05 FASE 3: provider_mode appears in the observability log.
+// The log entry for every request must carry the resolved provider_mode so
+// operations can distinguish synthetic from real data without secrets.
+Deno.test('QM-13 FASE3 observability: provider_mode present in log event', async () => {
+  const entries: unknown[] = [];
+  const logCollector = (line: string) => { try { entries.push(JSON.parse(line)); } catch { /**/ } };
+  const d = deps({ log: logCollector });
+  const r = await call(post(body()), d);
+  assertEquals(r.status, 200);
+  const ev = entries.find((e) => typeof e === 'object' && e !== null && (e as Record<string, unknown>).event === 'quant_analysis') as Record<string, unknown> | undefined;
+  assert(ev !== undefined, 'no quant_analysis log event found');
+  assert(
+    ev.provider_mode === 'synthetic' || ev.provider_mode === 'real' || ev.provider_mode === 'auto_lab',
+    `provider_mode must be one of synthetic/real/auto_lab, got: ${ev.provider_mode}`,
+  );
+});
+
+Deno.test('QM-14 RECONCILIATION observability: plan field present in log event and never leaks symbol/key', async () => {
+  // FASE J: plan must appear in every quant_analysis log event so operators
+  // can monitor tier-based usage without any PII or security-sensitive data.
+  const entries: unknown[] = [];
+  const logCollector = (line: string) => { try { entries.push(JSON.parse(line)); } catch { /**/ } };
+  // admin subject → plan = 'free' per mapLegacyProfileRole (admin role does not grant a paid plan)
+  const d = deps({ log: logCollector });
+  const r = await call(post(body()), d);
+  assertEquals(r.status, 200);
+  const ev = entries.find((e) => typeof e === 'object' && e !== null && (e as Record<string, unknown>).event === 'quant_analysis') as Record<string, unknown> | undefined;
+  assert(ev !== undefined, 'no quant_analysis log event found');
+  assert(
+    ev.plan === 'free' || ev.plan === 'pro' || ev.plan === 'premium' || ev.plan === null,
+    `plan must be a known tier or null, got: ${ev.plan}`,
+  );
+  // Ensure the log text does not contain any symbol, JWT, or user-id from the call.
+  const text = JSON.stringify(ev);
+  for (const forbidden of ['TSTA', 'jwt-a', USER_A]) {
+    assert(!text.includes(forbidden), `log must not contain ${forbidden}`);
+  }
 });

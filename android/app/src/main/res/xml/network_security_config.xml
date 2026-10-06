@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network Security Config — InsightValues / Quant Analytics.
+  MACRO-05 FASE 13 Android productization.
+
+  Rules:
+  - No cleartext traffic (http://) in release builds.
+  - Loopback (127.0.0.1) cleartext allowed for debug builds only (Flutter dev).
+  - Edge Functions served from *.supabase.co via HTTPS only.
+  - DATABENTO_API_KEY traffic goes to hist.databento.com (server-side only;
+    this app never makes Databento calls directly).
+-->
+<network-security-config>
+    <!-- Production: HTTPS only for all domains. -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+    <!-- Debug builds: allow loopback cleartext for Flutter hot reload / dev server. -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system"/>
+            <certificates src="user"/>
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>

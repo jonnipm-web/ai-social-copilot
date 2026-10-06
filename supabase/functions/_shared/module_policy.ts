@@ -113,6 +113,10 @@ export interface ModulePolicyDoc {
  */
 export const AEF_PERSISTENCE_AVAILABLE = false;
 
+// MACRO-05 FASE 20: quant tier policy.
+// quant-analytics (CSV analyze) minimumPlan="free": all plans when EXPOSED.
+// quant-watchlists (server-side data) minimumPlan="pro": requires PRO+, also
+// enforced by checkQuantCapability() in quant-analyze/index.ts independently.
 export const MODULE_POLICY: ModulePolicyDoc =
 // BEGIN_MODULE_POLICY_JSON
 {
@@ -159,7 +163,7 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "aef-runtime-lab": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
     "impact": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
     "quant-analytics": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "READ_ONLY" },
-    "quant-watchlists": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
+    "quant-watchlists": { "lifecycle": "INTERNAL", "minimumPlan": "pro", "actionClass": "REVERSIBLE" },
     "strategy-builder": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
     "ive-strategy-simulation": { "lifecycle": "BETA", "minimumPlan": "free", "actionClass": "CONSEQUENTIAL" }
   },
