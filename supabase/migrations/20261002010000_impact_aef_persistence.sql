@@ -68,7 +68,7 @@ CREATE POLICY impact_aef_requests_select ON public.impact_aef_requests
   USING (caller_user_id = (SELECT auth.uid()));
 
 -- only service_role may write
-REVOKE INSERT, UPDATE, DELETE ON public.impact_aef_requests FROM authenticated, anon;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON public.impact_aef_requests FROM authenticated, anon;
 
 -- ── impact_aef_decisions ──────────────────────────────────────────────────────
 
@@ -92,7 +92,7 @@ CREATE POLICY impact_aef_decisions_select ON public.impact_aef_decisions
     )
   );
 
-REVOKE INSERT, UPDATE, DELETE ON public.impact_aef_decisions FROM authenticated, anon;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON public.impact_aef_decisions FROM authenticated, anon;
 
 -- ── impact_aef_gates ──────────────────────────────────────────────────────────
 
@@ -147,7 +147,7 @@ CREATE POLICY impact_aef_gates_select ON public.impact_aef_gates
     )
   );
 
-REVOKE INSERT, UPDATE, DELETE ON public.impact_aef_gates FROM authenticated, anon;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON public.impact_aef_gates FROM authenticated, anon;
 
 -- ── impact_aef_receipts ───────────────────────────────────────────────────────
 
@@ -202,7 +202,7 @@ CREATE POLICY impact_aef_receipts_select ON public.impact_aef_receipts
   FOR SELECT TO authenticated
   USING (caller_user_id = (SELECT auth.uid()));
 
-REVOKE INSERT, UPDATE, DELETE ON public.impact_aef_receipts FROM authenticated, anon;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON public.impact_aef_receipts FROM authenticated, anon;
 
 -- ── indexes ───────────────────────────────────────────────────────────────────
 
