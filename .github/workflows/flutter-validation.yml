@@ -79,4 +79,9 @@ jobs:
         # Debug build only: no release keystore exists yet in CI, and none
         # should ever be added here as a plaintext secret -- see
         # android/app/build.gradle.kts's own signing-config doc comment.
-        run: flutter build apk --debug
+        # --flavor insightvalues: with productFlavors defined (IV-IMPACT-MACRO-08
+        # Phase 18), flutter build apk without --flavor produces only
+        # app-insightvalues-debug.apk / app-impact-debug.apk, never the
+        # app-debug.apk Flutter's build tool expects, causing a false "Gradle
+        # build failed to produce an .apk file" error. Builds the main flavor.
+        run: flutter build apk --debug --flavor insightvalues
