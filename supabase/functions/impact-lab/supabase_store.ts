@@ -483,6 +483,7 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
       if (reason === 'no_profile') return fail('INTERNAL_ERROR', 'no_profile');
       if (reason === 'experimental_gate') return fail('INVALID_REQUEST', 'entitlement_denied_experimental');
       if (reason === 'pro_required') return fail('INVALID_REQUEST', 'entitlement_denied_pro_required');
+      if (reason === 'not_found') return fail('INVESTIGATION_NOT_FOUND', 'investigation not found');
       if (reason === 'not_owner') return fail('INVESTIGATION_NOT_FOUND', 'investigation not found');
       return fail('INTERNAL_ERROR', `atomic_insert_denied: ${reason}`);
     }
