@@ -122,6 +122,12 @@ run -d "$RB" -f "$ROOT/supabase/rollbacks/20260926000000_aef_hardening.down.sql"
 check "$RB" aef_hardening_legacy_test.sql 'AEF_LEGACY: DOWN_OK' -v phase=down
 run -d "$RB" -c "DROP TABLE public.aef_legacy_probe;"
 run -d "$RB" -c "CREATE FUNCTION public.aef_unrelated_sentinel() RETURNS int LANGUAGE sql AS 'SELECT 1';"
+# IMPACT-MACRO-08 (1b323a7) added two SECURITY DEFINER RPCs with the aef_ prefix
+# (aef_submit_action, aef_resolve_gate) that belong to the Impact module, not the
+# core AEF persistence stack. They survive the AEF persistence rollback because they
+# reference impact_aef_* tables (a separate migration). Drop them explicitly here so
+# CF-02 can assert that no core AEF objects remain after rolling back the core stack.
+run -d "$RB" -c "DROP FUNCTION IF EXISTS public.aef_submit_action(uuid,text,uuid,uuid,text,text,uuid,uuid,text,timestamptz,text,text,text,uuid,timestamptz,uuid,text,text,timestamptz); DROP FUNCTION IF EXISTS public.aef_resolve_gate(uuid,text,text,text,uuid,text,text,timestamptz);" >/dev/null
 run -d "$RB" -f "$ROOT/supabase/rollbacks/20260925000000_aef_persistence.down.sql" >/dev/null
 left="$(run -d "$RB" -tA -c "SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind = 'r' AND left(c.relname, 4) = 'aef_') || '|' || (SELECT string_agg(p.proname, ',') FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_');")"
 # Codex Final CF-02: every AEF object gone, the unrelated sentinel untouched.
