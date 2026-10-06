@@ -395,3 +395,24 @@ Deno.test('SS-TOCTOU-10 insertVerification: atomic RPC denied=experimental_gate 
   assertEquals(result.error.code, 'INVALID_REQUEST', 'experimental_gate → INVALID_REQUEST');
   assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after experimental_gate denial');
 });
+
+Deno.test('SS-TOCTOU-11 insertVerification: atomic RPC denied=not_found → INVESTIGATION_NOT_FOUND', async () => {
+  // Migration 008 P2-2: when the investigation row does not exist, the RPC now
+  // returns not_found instead of masking it as not_owner. Both must map to
+  // INVESTIGATION_NOT_FOUND so callers can distinguish from entitlement errors.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_insert_verification') {
+      return { data: [{ stored_version: null, denied: true, denied_reason: 'not_found' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const a = (await goldenCases()).find((c) => c.id === 'A')!;
+  const r = await verifyClaim({ claim: a.claim, evidence: a.evidence, sources: a.sources }, a.ctx);
+  assert(r.ok);
+  const result = await store.insertVerification(INV, r.value, null, ACTOR);
+  assert(!result.ok, 'must fail when investigation does not exist');
+  assertEquals(result.error.code, 'INVESTIGATION_NOT_FOUND');
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after not_found denial');
+});
