@@ -63,6 +63,12 @@ INSERT INTO auth.users (id, email) VALUES
   ('cccccccc-0000-0000-0000-00000000000c', 'user-c@test.invalid'),
   ('dddddddd-0000-0000-0000-00000000000d', 'user-d@test.invalid')
 ON CONFLICT (id) DO NOTHING;
+-- 20261004000003: impact_has_module_access() gates all Impact RLS. Admin-only in
+-- EXPERIMENTAL phase. Upsert because auth.users trigger auto-creates free profiles.
+INSERT INTO public.profiles (id, role) VALUES
+  ('cccccccc-0000-0000-0000-00000000000c', 'admin'),
+  ('dddddddd-0000-0000-0000-00000000000d', 'admin')
+ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
 INSERT INTO public.impact_investigations (id, owner_id, subject_org_ref, subject_org_type, subject_identity) VALUES
   (:IC, :UC, 'org-northstar', 'COMMUNITY_PROJECT', '{"legalName":"Northstar Relief","registrations":[{"jurisdiction":{"country":"XA"},"scheme":"charity-number","value":"XA-999.0001"}]}'),
   (:ID, :UD, 'org-northstar', 'COMMUNITY_PROJECT', '{"legalName":"Northstar Relief"}');
