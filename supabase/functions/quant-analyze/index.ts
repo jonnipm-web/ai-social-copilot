@@ -124,6 +124,7 @@ export async function handler(
       analysisId: extra.analysisId ?? null,
       providerId: extra.providerId ?? 'user-csv',
       providerMode: PROVIDER_MODE,
+      plan: access.subject.plan,
       instrumentCount: extra.instruments ?? (extra.analysisId ? 1 : 0),
       contract,
       cacheHits: extra.hits ?? 0,

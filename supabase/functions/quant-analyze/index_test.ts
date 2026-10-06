@@ -659,3 +659,25 @@ Deno.test('QM-13 FASE3 observability: provider_mode present in log event', async
     `provider_mode must be one of synthetic/real/auto_lab, got: ${ev.provider_mode}`,
   );
 });
+
+Deno.test('QM-14 RECONCILIATION observability: plan field present in log event and never leaks symbol/key', async () => {
+  // FASE J: plan must appear in every quant_analysis log event so operators
+  // can monitor tier-based usage without any PII or security-sensitive data.
+  const entries: unknown[] = [];
+  const logCollector = (line: string) => { try { entries.push(JSON.parse(line)); } catch { /**/ } };
+  // admin subject → plan = 'free' per mapLegacyProfileRole (admin role does not grant a paid plan)
+  const d = deps({ log: logCollector });
+  const r = await call(post(body()), d);
+  assertEquals(r.status, 200);
+  const ev = entries.find((e) => typeof e === 'object' && e !== null && (e as Record<string, unknown>).event === 'quant_analysis') as Record<string, unknown> | undefined;
+  assert(ev !== undefined, 'no quant_analysis log event found');
+  assert(
+    ev.plan === 'free' || ev.plan === 'pro' || ev.plan === 'premium' || ev.plan === null,
+    `plan must be a known tier or null, got: ${ev.plan}`,
+  );
+  // Ensure the log text does not contain any symbol, JWT, or user-id from the call.
+  const text = JSON.stringify(ev);
+  for (const forbidden of ['TSTA', 'jwt-a', USER_A]) {
+    assert(!text.includes(forbidden), `log must not contain ${forbidden}`);
+  }
+});
