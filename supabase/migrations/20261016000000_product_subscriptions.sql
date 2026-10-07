@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS public.product_entitlement_events (
 
   CONSTRAINT pee_pkey PRIMARY KEY (id),
   CONSTRAINT pee_product_check CHECK (
-    product IN ('core','impact','quant','suite')
+    product IN ('core','impact','quant','suite','unknown')
   ),
   CONSTRAINT pee_event_type_check CHECK (
     event_type IN (
@@ -157,6 +157,16 @@ CREATE POLICY "pee_users_read_own"
 REVOKE ALL ON TABLE public.product_entitlement_events FROM PUBLIC;
 REVOKE ALL ON TABLE public.product_entitlement_events FROM anon, authenticated;
 GRANT SELECT ON TABLE public.product_entitlement_events TO authenticated;
+
+-- IDEMPOTENT constraint update: if table already existed with the old
+-- pee_product_check (without 'unknown'), replace it. This handles LAB
+-- environments that ran the original migration before this fix.
+ALTER TABLE IF EXISTS public.product_entitlement_events
+  DROP CONSTRAINT IF EXISTS pee_product_check;
+ALTER TABLE IF EXISTS public.product_entitlement_events
+  ADD CONSTRAINT pee_product_check CHECK (
+    product IN ('core','impact','quant','suite','unknown')
+  );
 
 COMMENT ON TABLE public.product_subscriptions IS
   'IV-WEB-ECOSYSTEM-UNIFICATION-01: per-product subscription state. '
