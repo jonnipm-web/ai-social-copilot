@@ -120,16 +120,25 @@ function fakeDb(initial: DbState) {
         };
         return Promise.resolve({ data: true, error: null });
       }
-      // IV-WEB-ECOSYSTEM-UNIFICATION-01: non-blocking product subscription upsert.
+      // IV-WEB-ECOSYSTEM-UNIFICATION-01: product subscription upsert with ordering.
       if (fn === 'upsert_product_subscription') {
         const userId = args.p_user_id as string;
         const product = args.p_product as string;
-        state.productSubscriptions[`${userId}:${product}`] = {
+        const key = `${userId}:${product}`;
+        const existing = state.productSubscriptions[key];
+        // Event ordering guard: reject stale events (mirrors SQL function)
+        const incomingCreated = args.p_stripe_event_created as string | null ?? null;
+        const lastCreated = existing?.last_stripe_event_created as string | null ?? null;
+        if (incomingCreated !== null && lastCreated !== null && incomingCreated < lastCreated) {
+          return Promise.resolve({ data: { ok: false, skipped: true, reason: 'STALE_EVENT', product }, error: null }) as never;
+        }
+        state.productSubscriptions[key] = {
           product, tier: args.p_tier, status: args.p_status, source: args.p_source,
           stripe_subscription_id: args.p_stripe_subscription_id,
           stripe_price_id: args.p_stripe_price_id,
+          last_stripe_event_created: incomingCreated,
         };
-        return Promise.resolve({ data: true, error: null });
+        return Promise.resolve({ data: { ok: true, product, tier: args.p_tier, status: args.p_status }, error: null }) as never;
       }
       throw new Error(`unexpected rpc in test fake: ${fn}`);
     },
@@ -400,6 +409,50 @@ Deno.test('WEBHOOK-16: evento cronologicamente mais antigo (event.created menor)
 });
 
 // IV-WEB-ECOSYSTEM-UNIFICATION-01 tests
+
+Deno.test('WEBHOOK-22: evento de produto antigo chega depois → ignorado (ordering guard)', async () => {
+  const priceMap = new Map([['price_impact', { product: 'impact', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_ord1', 'user_ord1'));
+
+  const newerTs = NOW - 100; // created earlier in test time but "newer" for product
+  const olderTs = NOW - 200; // truly older
+
+  // Newer event arrives first and writes product subscription
+  const newerEvt = evt({
+    id: 'evt_ord_newer',
+    type: 'checkout.session.completed',
+    created: newerTs,
+    data: { object: { customer: 'cus_ord1', subscription: 'sub_ord1' } },
+  });
+  const stripe1 = fakeStripe({ sub_ord1: makeSub({ id: 'sub_ord1', status: 'active', items: { data: [{ price: { id: 'price_impact' } }] } }) });
+  const res1 = await handler(await signedReq(newerEvt), stripe1, db as never, priceMap);
+  assertEquals(res1.status, 200);
+  assertEquals(db.state.productSubscriptions['user_ord1:impact']?.status, 'active');
+
+  // Simulate product subscription active state being set
+  const activePs = db.state.productSubscriptions['user_ord1:impact'];
+  assertEquals(activePs?.last_stripe_event_created, new Date(newerTs * 1000).toISOString());
+
+  // Now, mark subscription as canceled via a newer legacy event
+  db.state.productSubscriptions['user_ord1:impact'] = {
+    ...activePs,
+    status: 'canceled',
+    last_stripe_event_created: new Date((NOW + 100) * 1000).toISOString(), // future-ish
+  };
+
+  // Older event arrives (created earlier) — should be skipped by ordering guard
+  const olderEvt = evt({
+    id: 'evt_ord_older',
+    type: 'customer.subscription.updated',
+    created: olderTs,
+    data: { object: { id: 'sub_ord1', customer: 'cus_ord1' } },
+  });
+  const stripe2 = fakeStripe({ sub_ord1: makeSub({ id: 'sub_ord1', status: 'active' }) });
+  const res2 = await handler(await signedReq(olderEvt), stripe2, db as never, priceMap);
+  assertEquals(res2.status, 200);
+  // Stale event did NOT resurrect the active state
+  assertEquals(db.state.productSubscriptions['user_ord1:impact']?.status, 'canceled');
+});
 
 Deno.test('WEBHOOK-18: STRIPE_PRICE_MAP mapeado → product_subscriptions escrito com produto e tier corretos', async () => {
   const priceMap = new Map([['price_pro_impact_monthly', { product: 'impact', tier: 'pro' }]]);

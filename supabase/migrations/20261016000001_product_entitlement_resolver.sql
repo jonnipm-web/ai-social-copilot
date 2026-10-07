@@ -166,17 +166,18 @@ GRANT  EXECUTE ON FUNCTION public.resolve_product_entitlement(uuid,text) TO auth
 -- Called by stripe-webhook and admin tools to set/update a product subscription.
 -- Writes an audit event on every call. Idempotent (UPSERT).
 CREATE OR REPLACE FUNCTION public.upsert_product_subscription(
-  p_user_id               uuid,
-  p_product               text,
-  p_tier                  text,
-  p_status                text,
-  p_source                text,
-  p_stripe_subscription_id text DEFAULT NULL,
-  p_stripe_price_id        text DEFAULT NULL,
-  p_current_period_end     timestamptz DEFAULT NULL,
-  p_cancel_at_period_end   boolean DEFAULT false,
-  p_stripe_event_id        text DEFAULT NULL,
-  p_metadata               jsonb DEFAULT '{}'
+  p_user_id                 uuid,
+  p_product                 text,
+  p_tier                    text,
+  p_status                  text,
+  p_source                  text,
+  p_stripe_subscription_id  text DEFAULT NULL,
+  p_stripe_price_id         text DEFAULT NULL,
+  p_current_period_end      timestamptz DEFAULT NULL,
+  p_cancel_at_period_end    boolean DEFAULT false,
+  p_stripe_event_id         text DEFAULT NULL,
+  p_stripe_event_created    timestamptz DEFAULT NULL,
+  p_metadata                jsonb DEFAULT '{}'
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -184,9 +185,10 @@ SECURITY DEFINER
 SET search_path = pg_catalog, pg_temp
 AS $$
 DECLARE
-  v_old_status text;
-  v_old_tier   text;
-  v_event_type text;
+  v_old_status              text;
+  v_old_tier                text;
+  v_last_stripe_event_created timestamptz;
+  v_event_type              text;
 BEGIN
   -- Validation
   IF p_product NOT IN ('core','impact','quant','suite') THEN
@@ -205,10 +207,25 @@ BEGIN
     RAISE EXCEPTION 'UPSERT_PRODUCT: invalid source %', p_source;
   END IF;
 
-  -- Capture old state for audit
-  SELECT status, tier INTO v_old_status, v_old_tier
-  FROM public.product_subscriptions
-  WHERE user_id=p_user_id AND product=p_product;
+  -- Capture old state for audit and ordering check
+  SELECT status, tier, last_stripe_event_created
+  INTO   v_old_status, v_old_tier, v_last_stripe_event_created
+  FROM   public.product_subscriptions
+  WHERE  user_id=p_user_id AND product=p_product;
+
+  -- Event ordering guard: reject stale events (same as apply_stripe_subscription_state).
+  -- An older Stripe event arriving after a newer one must not overwrite the newer state.
+  -- Only applies to Stripe-sourced events carrying a creation timestamp.
+  IF p_stripe_event_created IS NOT NULL
+     AND v_last_stripe_event_created IS NOT NULL
+     AND p_stripe_event_created < v_last_stripe_event_created THEN
+    RETURN jsonb_build_object(
+      'ok',      false,
+      'skipped', true,
+      'reason',  'STALE_EVENT',
+      'product', p_product
+    );
+  END IF;
 
   -- Determine event type
   IF v_old_status IS NULL THEN
@@ -232,22 +249,25 @@ BEGIN
   INSERT INTO public.product_subscriptions (
     user_id, product, tier, status, source,
     stripe_subscription_id, stripe_price_id,
-    current_period_end, cancel_at_period_end, metadata
+    current_period_end, cancel_at_period_end,
+    last_stripe_event_created, metadata
   ) VALUES (
     p_user_id, p_product, p_tier, p_status, p_source,
     p_stripe_subscription_id, p_stripe_price_id,
-    p_current_period_end, p_cancel_at_period_end, p_metadata
+    p_current_period_end, p_cancel_at_period_end,
+    p_stripe_event_created, p_metadata
   )
   ON CONFLICT (user_id, product) DO UPDATE SET
-    tier                    = EXCLUDED.tier,
-    status                  = EXCLUDED.status,
-    source                  = EXCLUDED.source,
-    stripe_subscription_id  = COALESCE(EXCLUDED.stripe_subscription_id, product_subscriptions.stripe_subscription_id),
-    stripe_price_id         = COALESCE(EXCLUDED.stripe_price_id, product_subscriptions.stripe_price_id),
-    current_period_end      = EXCLUDED.current_period_end,
-    cancel_at_period_end    = EXCLUDED.cancel_at_period_end,
-    metadata                = EXCLUDED.metadata,
-    updated_at              = now();
+    tier                        = EXCLUDED.tier,
+    status                      = EXCLUDED.status,
+    source                      = EXCLUDED.source,
+    stripe_subscription_id      = COALESCE(EXCLUDED.stripe_subscription_id, product_subscriptions.stripe_subscription_id),
+    stripe_price_id             = COALESCE(EXCLUDED.stripe_price_id, product_subscriptions.stripe_price_id),
+    current_period_end          = EXCLUDED.current_period_end,
+    cancel_at_period_end        = EXCLUDED.cancel_at_period_end,
+    last_stripe_event_created   = COALESCE(EXCLUDED.last_stripe_event_created, product_subscriptions.last_stripe_event_created),
+    metadata                    = EXCLUDED.metadata,
+    updated_at                  = now();
 
   -- Audit event
   INSERT INTO public.product_entitlement_events (
@@ -270,9 +290,9 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL   ON FUNCTION public.upsert_product_subscription(uuid,text,text,text,text,text,text,timestamptz,boolean,text,jsonb) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.upsert_product_subscription(uuid,text,text,text,text,text,text,timestamptz,boolean,text,jsonb) FROM anon, authenticated;
-GRANT  EXECUTE ON FUNCTION public.upsert_product_subscription(uuid,text,text,text,text,text,text,timestamptz,boolean,text,jsonb) TO service_role;
+REVOKE ALL   ON FUNCTION public.upsert_product_subscription(uuid,text,text,text,text,text,text,timestamptz,boolean,text,timestamptz,jsonb) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.upsert_product_subscription(uuid,text,text,text,text,text,text,timestamptz,boolean,text,timestamptz,jsonb) FROM anon, authenticated;
+GRANT  EXECUTE ON FUNCTION public.upsert_product_subscription(uuid,text,text,text,text,text,text,timestamptz,boolean,text,timestamptz,jsonb) TO service_role;
 
 -- ── backfill_core_product_subscriptions ──────────────────────────────────────
 -- One-time backfill: Core subscribers → product_subscriptions.
@@ -353,7 +373,8 @@ COMMENT ON FUNCTION public.resolve_product_entitlement(uuid,text) IS
   'resolver. FAIL CLOSED. Checks product_subscriptions + legacy_core fallback '
   'for Core. PRODUCTION PROTECTION: not applied without AM+Paulo gate.';
 
-COMMENT ON FUNCTION public.upsert_product_subscription(uuid,text,text,text,text,text,text,timestamptz,boolean,text,jsonb) IS
+COMMENT ON FUNCTION public.upsert_product_subscription(uuid,text,text,text,text,text,text,timestamptz,boolean,text,timestamptz,jsonb) IS
   'IV-WEB-ECOSYSTEM-UNIFICATION-01: idempotent upsert for product entitlement '
   'state. Called by stripe-webhook and admin tools. Writes audit events. '
+  'Event ordering guard rejects stale Stripe events (p_stripe_event_created). '
   'service_role only. PRODUCTION PROTECTION: not applied without AM+Paulo gate.';

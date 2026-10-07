@@ -60,11 +60,12 @@ CREATE TABLE IF NOT EXISTS public.product_subscriptions (
   stripe_subscription_id  text        NULL,
   stripe_price_id         text        NULL,
   current_period_end      timestamptz NULL,
-  cancel_at_period_end    boolean     NOT NULL DEFAULT false,
-  granted_by              uuid        NULL,
-  metadata                jsonb       NOT NULL DEFAULT '{}'::jsonb,
-  created_at              timestamptz NOT NULL DEFAULT now(),
-  updated_at              timestamptz NOT NULL DEFAULT now(),
+  cancel_at_period_end          boolean     NOT NULL DEFAULT false,
+  last_stripe_event_created     timestamptz NULL,
+  granted_by                    uuid        NULL,
+  metadata                      jsonb       NOT NULL DEFAULT '{}'::jsonb,
+  created_at                    timestamptz NOT NULL DEFAULT now(),
+  updated_at                    timestamptz NOT NULL DEFAULT now(),
 
   CONSTRAINT product_subscriptions_pkey PRIMARY KEY (id),
   CONSTRAINT product_subscriptions_user_product_key UNIQUE (user_id, product),
@@ -140,7 +141,8 @@ CREATE TABLE IF NOT EXISTS public.product_entitlement_events (
   CONSTRAINT pee_event_type_check CHECK (
     event_type IN (
       'created','activated','upgraded','downgraded',
-      'canceled','expired','reinstated','admin_grant','trial_started'
+      'canceled','expired','reinstated','admin_grant','trial_started',
+      'pending_retry'
     )
   )
 );

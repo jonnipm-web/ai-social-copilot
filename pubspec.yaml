@@ -73,7 +73,7 @@ flutter:
   uses-material-design: true
   generate: true
   assets:
-    - .env
+    - flutter_env.cfg
     - assets/ive/reference/
     - assets/ive/rive/
     - assets/ive/source/

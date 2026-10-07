@@ -109,6 +109,7 @@ async function applyProductSubscriptionState(
   userId: string,
   sub: StripeSubscription,
   stripeEventId: string,
+  stripeEventCreated: string,
   priceMap: Map<string, PriceProductEntry>,
 ): Promise<void> {
   const priceId = sub.items?.data?.[0]?.price?.id ?? null;
@@ -140,6 +141,7 @@ async function applyProductSubscriptionState(
       p_current_period_end:     sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
       p_cancel_at_period_end:   !!sub.cancel_at_period_end,
       p_stripe_event_id:        stripeEventId,
+      p_stripe_event_created:   stripeEventCreated,
       p_metadata:               {},
     });
     if (!error) return; // Path A: success
@@ -152,6 +154,8 @@ async function applyProductSubscriptionState(
   // record to product_entitlement_events so the event is not silently lost.
   // A paid subscription confirmed by Stripe with no entitlement write is a
   // commercial failure; the durable record allows reconciliation or retry.
+  // No onConflict: auto-generated UUID PK means each call is always an insert
+  // (no unique constraint on stripe_event_id in this table).
   console.error('upsert_product_subscription failed; writing durable pending event:', upsertError);
   const { error: fallbackError } = await db
     .from('product_entitlement_events')
@@ -166,7 +170,6 @@ async function applyProductSubscriptionState(
         stripe_event_id: stripeEventId,
         metadata:        JSON.stringify({ error: String(upsertError), attempt: 1 }),
       },
-      { onConflict: 'stripe_event_id', ignoreDuplicates: false },
     )
     .select()
     .maybeSingle();
@@ -304,7 +307,7 @@ export async function handler(
         const sub = await retrieveSubscription(session.subscription, stripeClient);
         const applied = await applySubscriptionState(db, userId, eventCreatedIso, sub);
         if (!applied) console.log(`checkout.session.completed ${event.id} skipped: superseded by a newer event`);
-        if (applied) await applyProductSubscriptionState(db, userId, sub, event.id, priceMap);
+        if (applied) await applyProductSubscriptionState(db, userId, sub, event.id, eventCreatedIso, priceMap);
         break;
       }
       case 'customer.subscription.updated':
@@ -333,7 +336,7 @@ export async function handler(
         const sub = await retrieveSubscription(obj.id, stripeClient);
         const applied = await applySubscriptionState(db, userId, eventCreatedIso, sub);
         if (!applied) console.log(`${event.type} ${event.id} skipped: superseded by a newer event`);
-        if (applied) await applyProductSubscriptionState(db, userId, sub, event.id, priceMap);
+        if (applied) await applyProductSubscriptionState(db, userId, sub, event.id, eventCreatedIso, priceMap);
         break;
       }
       default:

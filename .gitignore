@@ -10,6 +10,7 @@ build/
 
 # Env — NUNCA enviar ao GitHub
 .env
+flutter_env.cfg
 
 # Supabase CLI temporários
 supabase/.temp/
