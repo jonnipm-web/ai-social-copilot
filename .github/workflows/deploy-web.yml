@@ -22,11 +22,11 @@ jobs:
           channel: stable
           cache: false
 
-      - name: Criar arquivo .env com as credenciais
+      - name: Criar arquivo flutter_env.cfg com as credenciais
         run: |
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
-          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
-          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > flutter_env.cfg
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> flutter_env.cfg
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> flutter_env.cfg
 
       - name: Adicionar suporte à plataforma Web
         run: flutter create --platforms web --project-name ai_social_copilot .

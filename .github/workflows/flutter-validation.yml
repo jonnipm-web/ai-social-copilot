@@ -32,11 +32,11 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Create .env (placeholder para asset loader)
+      - name: Create flutter_env.cfg (placeholder para asset loader)
         run: |
-          echo "SUPABASE_URL=https://placeholder.supabase.co" > .env
-          echo "SUPABASE_ANON_KEY=placeholder_anon_key" >> .env
-          echo "GOOGLE_CLIENT_ID=placeholder.apps.googleusercontent.com" >> .env
+          echo "SUPABASE_URL=https://placeholder.supabase.co" > flutter_env.cfg
+          echo "SUPABASE_ANON_KEY=placeholder_anon_key" >> flutter_env.cfg
+          echo "GOOGLE_CLIENT_ID=placeholder.apps.googleusercontent.com" >> flutter_env.cfg
 
       - name: flutter pub get
         run: flutter pub get

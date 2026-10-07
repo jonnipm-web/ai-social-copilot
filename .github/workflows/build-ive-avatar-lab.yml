@@ -87,11 +87,11 @@ jobs:
         run: flutter pub get
 
       # ── 7b. Criar .env vazio ──────────────────────────────────────────────────
-      # pubspec.yaml declara .env como asset (usado via flutter_dotenv em produção).
-      # O lab não usa variáveis de ambiente externas — um .env vazio satisfaz o
+      # pubspec.yaml declara flutter_env.cfg como asset (usado via flutter_dotenv em produção).
+      # O lab não usa variáveis de ambiente externas — um flutter_env.cfg vazio satisfaz o
       # bundler sem expor nenhum secret.
-      - name: Criar .env vazio (lab não usa variáveis de ambiente)
-        run: touch .env
+      - name: Criar flutter_env.cfg vazio (lab não usa variáveis de ambiente)
+        run: touch flutter_env.cfg
 
       # ── 8. Formatação ────────────────────────────────────────────────────────
       - name: dart format (verificar conformidade)
