@@ -189,6 +189,7 @@ DECLARE
   v_old_tier                text;
   v_last_stripe_event_created timestamptz;
   v_event_type              text;
+  v_rows_applied            int;
 BEGIN
   -- Validation
   IF p_product NOT IN ('core','impact','quant','suite') THEN
@@ -207,15 +208,19 @@ BEGIN
     RAISE EXCEPTION 'UPSERT_PRODUCT: invalid source %', p_source;
   END IF;
 
-  -- Capture old state for audit and ordering check
+  -- Capture old state for audit event classification.
+  -- This SELECT does NOT determine whether the upsert applies — that is
+  -- handled atomically by the ON CONFLICT WHERE predicate below.
   SELECT status, tier, last_stripe_event_created
   INTO   v_old_status, v_old_tier, v_last_stripe_event_created
   FROM   public.product_subscriptions
   WHERE  user_id=p_user_id AND product=p_product;
 
-  -- Event ordering guard: reject stale events (same as apply_stripe_subscription_state).
-  -- An older Stripe event arriving after a newer one must not overwrite the newer state.
-  -- Only applies to Stripe-sourced events carrying a creation timestamp.
+  -- Fast-path optimistic skip: if we already have a definitive newer event
+  -- recorded, skip before attempting the upsert. This is an optimisation
+  -- only; the real atomic guard is the WHERE clause on ON CONFLICT below.
+  -- Two concurrent webhooks that both read v_last=NULL will both proceed to
+  -- the INSERT; the ON CONFLICT WHERE ensures only the newer one writes.
   IF p_stripe_event_created IS NOT NULL
      AND v_last_stripe_event_created IS NOT NULL
      AND p_stripe_event_created < v_last_stripe_event_created THEN
@@ -227,7 +232,7 @@ BEGIN
     );
   END IF;
 
-  -- Determine event type
+  -- Determine event type (based on snapshot captured above)
   IF v_old_status IS NULL THEN
     v_event_type := 'created';
   ELSIF p_status IN ('active','trialing') AND v_old_status NOT IN ('active','trialing') THEN
@@ -246,6 +251,13 @@ BEGIN
     v_event_type := 'activated'; -- renewal / status update
   END IF;
 
+  -- Atomic upsert with event-ordering predicate on ON CONFLICT.
+  -- The WHERE clause prevents a concurrent older event from overwriting a
+  -- newer one even when both passed the optimistic pre-check above (race window:
+  -- both read v_last=NULL or the same older value, then the newer commits first;
+  -- the older's ON CONFLICT UPDATE is then rejected by this predicate).
+  -- Condition: apply the update only if the stored timestamp is NULL (first event)
+  -- or the incoming event is at least as recent as what is already stored.
   INSERT INTO public.product_subscriptions (
     user_id, product, tier, status, source,
     stripe_subscription_id, stripe_price_id,
@@ -267,9 +279,27 @@ BEGIN
     cancel_at_period_end        = EXCLUDED.cancel_at_period_end,
     last_stripe_event_created   = COALESCE(EXCLUDED.last_stripe_event_created, product_subscriptions.last_stripe_event_created),
     metadata                    = EXCLUDED.metadata,
-    updated_at                  = now();
+    updated_at                  = now()
+  WHERE (
+    product_subscriptions.last_stripe_event_created IS NULL
+    OR EXCLUDED.last_stripe_event_created IS NULL
+    OR product_subscriptions.last_stripe_event_created <= EXCLUDED.last_stripe_event_created
+  );
 
-  -- Audit event
+  GET DIAGNOSTICS v_rows_applied = ROW_COUNT;
+
+  -- If the upsert did not apply (concurrent newer event won the race),
+  -- return a STALE_EVENT skip without writing an audit record.
+  IF v_rows_applied = 0 THEN
+    RETURN jsonb_build_object(
+      'ok',      false,
+      'skipped', true,
+      'reason',  'STALE_EVENT',
+      'product', p_product
+    );
+  END IF;
+
+  -- Audit event: only written when the upsert actually applied.
   INSERT INTO public.product_entitlement_events (
     user_id, product, event_type,
     from_status, to_status, from_tier, to_tier,

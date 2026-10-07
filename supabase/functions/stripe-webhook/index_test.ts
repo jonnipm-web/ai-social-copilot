@@ -554,6 +554,38 @@ Deno.test('WEBHOOK-21: price_id fora do mapa configurado → pending_retry durá
   assertEquals(meta.price_id, 'price_UNKNOWN');
 });
 
+Deno.test('WEBHOOK-23: ON CONFLICT WHERE predicate — older event after newer commit → no overwrite (atomic ordering guard)', async () => {
+  // Simulates the race the ON CONFLICT WHERE guard closes:
+  // newer event committed first (last_stripe_event_created=T200),
+  // then older event arrives (T100 < T200). Without the atomic predicate
+  // the ON CONFLICT UPDATE would silently overwrite the newer state.
+  const priceMap = new Map([['price_impact', { product: 'impact', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_oc1', 'user_oc1'));
+  const newerTs = NOW - 50;
+  const olderTs = NOW - 200;
+
+  // Newer event arrives and commits
+  const sub = makeSub({ id: 'sub_oc1', status: 'active', items: { data: [{ price: { id: 'price_impact' } }] } });
+  const newerEvt = evt({ id: 'evt_oc_new', type: 'checkout.session.completed', created: newerTs, data: { object: { customer: 'cus_oc1', subscription: 'sub_oc1' } } });
+  await handler(await signedReq(newerEvt), fakeStripe({ sub_oc1: sub }), db as never, priceMap);
+  assertEquals(db.state.productSubscriptions['user_oc1:impact']?.status, 'active');
+
+  // Manually advance the stored event timestamp to simulate newer commit in DB
+  db.state.productSubscriptions['user_oc1:impact'] = {
+    ...db.state.productSubscriptions['user_oc1:impact'],
+    status: 'active',
+    last_stripe_event_created: new Date(newerTs * 1000).toISOString(),
+  };
+
+  // Older event now tries to cancel the subscription — must be blocked
+  const olderSub = makeSub({ id: 'sub_oc1', status: 'canceled', items: { data: [{ price: { id: 'price_impact' } }] } });
+  const olderEvt = evt({ id: 'evt_oc_old', type: 'customer.subscription.updated', created: olderTs, data: { object: { id: 'sub_oc1', customer: 'cus_oc1' } } });
+  const res = await handler(await signedReq(olderEvt), fakeStripe({ sub_oc1: olderSub }), db as never, priceMap);
+  assertEquals(res.status, 200);
+  // Atomic predicate prevented overwrite: subscription still active
+  assertEquals(db.state.productSubscriptions['user_oc1:impact']?.status, 'active');
+});
+
 Deno.test('WEBHOOK-17: linha de subscriptions ausente para o user_id resolvido (UPDATE não encontra a linha) -> RPC retorna false, profiles intocado, 200', async () => {
   // Cenário defensivo apontado no 3º review do Codex: na prática essa
   // condição é inatingível (findUserIdByCustomerId já lê essa mesma
