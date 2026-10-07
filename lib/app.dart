@@ -77,6 +77,8 @@ import 'features/impact/screens/impact_home_screen.dart';
 import 'features/impact/screens/impact_monitor_screen.dart';
 import 'features/strategy_lab/strategy_lab_screen.dart';
 import 'features/insights/screens/ive_analysis_screen.dart';
+import 'features/upgrade/screens/product_upgrade_screen.dart';
+import 'providers/product_entitlements_provider.dart';
 
 final _iveObserver = IveRouteObserver();
 
@@ -152,12 +154,42 @@ Future<String?> _resolveEntitlementRedirect(
   );
   switch (decision) {
     case RouteDecision.allow:
-      return null;
+      break; // fall through to product gate below
     case RouteDecision.redirectUpgrade:
       return AppConstants.routeUpgrade;
     case RouteDecision.redirectDenied:
       return AppConstants.routeDashboard;
   }
+
+  // IV-WEB-ECOSYSTEM-UNIFICATION-01 — product entitlement gate.
+  // Only fires when the plan gate already allowed access AND the route maps
+  // to a non-core product. Admin bypass mirrors the plan gate above.
+  // FAIL OPEN: on any error the RPC returns allowed=true (pre-migration safe).
+  if (!isAdmin) {
+    final requiredProduct = kRouteRequiredProduct[path];
+    if (requiredProduct != null) {
+      final container = ProviderScope.containerOf(context, listen: false);
+      ProviderSubscription<AsyncValue<ProductEntitlementResult>>? peSub;
+      try {
+        peSub = container.listen<AsyncValue<ProductEntitlementResult>>(
+          productEntitlementProvider(requiredProduct),
+          (_, __) {},
+        );
+        final pe = await container
+            .read(productEntitlementProvider(requiredProduct).future)
+            .timeout(const Duration(seconds: 8));
+        if (!pe.allowed) {
+          return '${AppConstants.routeProductUpgrade}?product=$requiredProduct';
+        }
+      } catch (_) {
+        // Fail open: RPC unavailable (migrations not yet applied) or timeout.
+      } finally {
+        peSub?.close();
+      }
+    }
+  }
+
+  return null;
 }
 
 // IVE-COMMERCIAL-OBSERVABILITY-07A — best-effort NAVIGATION event, covering
@@ -420,6 +452,15 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeUpgrade,
       builder: (_, __) => const UpgradeScreen(),
+    ),
+
+    // IV-WEB-ECOSYSTEM-UNIFICATION-01 — per-product upgrade CTA
+    GoRoute(
+      path: AppConstants.routeProductUpgrade,
+      builder: (context, state) {
+        final product = state.uri.queryParameters['product'] ?? 'core';
+        return ProductUpgradeScreen(product: product);
+      },
     ),
 
     // ── Personas ───────────────────────────────────────────────
