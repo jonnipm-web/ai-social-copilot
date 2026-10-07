@@ -1,9 +1,9 @@
 // IV-WEB-ECOSYSTEM-UNIFICATION-01 — client-side product entitlement resolver.
 //
 // Wraps the server-authoritative resolve_product_entitlement() SQL function.
-// FAIL OPEN: any error (network, table not found, unexpected shape) returns
-// allowed=true so existing behaviour is preserved before migrations are applied
-// to production. The server is the authority — this is a UX pre-check only.
+// FAIL CLOSED: any RPC/network error on a paid product returns
+// temporarily_unavailable (allowed=false). BASE_FREE and unknown products
+// remain accessible. The server is the authority — this is a UX pre-check only.
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProductEntitlementResult {
@@ -23,8 +23,18 @@ class ProductEntitlementResult {
     this.reason,
   });
 
+  bool get isTemporarilyUnavailable => code == 'TEMPORARILY_UNAVAILABLE';
+
   factory ProductEntitlementResult.failOpen(String product) =>
       ProductEntitlementResult(allowed: true, product: product, reason: 'FAIL_OPEN');
+
+  factory ProductEntitlementResult.temporarilyUnavailable(String product) =>
+      ProductEntitlementResult(
+        allowed: false,
+        product: product,
+        code: 'TEMPORARILY_UNAVAILABLE',
+        reason: 'Product entitlement check failed due to network/RPC error',
+      );
 
   factory ProductEntitlementResult.denied(String product, {String? code, String? reason}) =>
       ProductEntitlementResult(allowed: false, product: product, code: code, reason: reason);
@@ -37,6 +47,7 @@ class ProductEntitlementService {
 
   Future<ProductEntitlementResult> resolve(String product) async {
     if (!_validProducts.contains(product)) {
+      // BASE_FREE or unknown product: not gated, always accessible.
       return ProductEntitlementResult.failOpen(product);
     }
     final uid = _client.auth.currentUser?.id;
@@ -50,7 +61,8 @@ class ProductEntitlementService {
       ).timeout(const Duration(seconds: 8));
 
       if (result == null || result is! Map) {
-        return ProductEntitlementResult.failOpen(product);
+        // Unexpected server response shape: FAIL CLOSED for paid products.
+        return ProductEntitlementResult.temporarilyUnavailable(product);
       }
       final row = result as Map<String, dynamic>;
       return ProductEntitlementResult(
@@ -62,9 +74,9 @@ class ProductEntitlementService {
         reason: row['reason']?.toString(),
       );
     } catch (_) {
-      // RPC not available (migrations not applied), network error, etc.
-      // Fail open so existing behaviour is preserved pre-migration.
-      return ProductEntitlementResult.failOpen(product);
+      // RPC not available (migrations not applied), network error, timeout.
+      // FAIL CLOSED: paid products must DENY on any RPC failure.
+      return ProductEntitlementResult.temporarilyUnavailable(product);
     }
   }
 }

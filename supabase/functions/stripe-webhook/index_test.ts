@@ -75,44 +75,14 @@ interface DbState {
   processedEvents: Record<string, string>;
   // IV-WEB-ECOSYSTEM-UNIFICATION-01: keyed by `${user_id}:${product}`
   productSubscriptions: Record<string, Record<string, unknown>>;
+  // IV-WEB-ECOSYSTEM-UNIFICATION-01: durable fallback events, keyed by stripe_event_id
+  productEntitlementEvents: Record<string, Record<string, unknown>>;
 }
 
 function fakeDb(initial: DbState) {
   const state = initial;
   return {
     state,
-    from(table: string) {
-      if (table === 'processed_webhook_events') {
-        return {
-          select: (_c: string) => ({
-            eq: (_col: string, val: string) => ({
-              maybeSingle: () => Promise.resolve({ data: state.processedEvents[val] ? { event_id: val } : null, error: null }),
-            }),
-          }),
-          upsert: (row: Record<string, unknown>) => ({
-            select: () => ({
-              maybeSingle: () => {
-                state.processedEvents[row.event_id as string] = row.event_type as string;
-                return Promise.resolve({ data: row, error: null });
-              },
-            }),
-          }),
-        };
-      }
-      if (table === 'subscriptions') {
-        return {
-          select: (_c: string) => ({
-            eq: (_col: string, val: string) => ({
-              maybeSingle: () => {
-                const userId = state.customerToUser[val];
-                return Promise.resolve({ data: userId ? { user_id: userId } : null, error: null });
-              },
-            }),
-          }),
-        };
-      }
-      throw new Error(`unexpected table in test fake: ${table}`);
-    },
     // Mirrors public.apply_stripe_subscription_state (migrations
     // 20260911020000 + 20260911030000) as closely as a JS fake reasonably
     // can: a real Postgres `UPDATE ... WHERE user_id = X AND (...)`,
@@ -163,6 +133,52 @@ function fakeDb(initial: DbState) {
       }
       throw new Error(`unexpected rpc in test fake: ${fn}`);
     },
+    // Mirrors the product_entitlement_events table for the durable fallback path (Path B).
+    from(table: string) {
+      if (table === 'processed_webhook_events') {
+        return {
+          select: (_c: string) => ({
+            eq: (_col: string, val: string) => ({
+              maybeSingle: () => Promise.resolve({ data: state.processedEvents[val] ? { event_id: val } : null, error: null }),
+            }),
+          }),
+          upsert: (row: Record<string, unknown>) => ({
+            select: () => ({
+              maybeSingle: () => {
+                state.processedEvents[row.event_id as string] = row.event_type as string;
+                return Promise.resolve({ data: row, error: null });
+              },
+            }),
+          }),
+        };
+      }
+      if (table === 'subscriptions') {
+        return {
+          select: (_c: string) => ({
+            eq: (_col: string, val: string) => ({
+              maybeSingle: () => {
+                const userId = state.customerToUser[val];
+                return Promise.resolve({ data: userId ? { user_id: userId } : null, error: null });
+              },
+            }),
+          }),
+        };
+      }
+      if (table === 'product_entitlement_events') {
+        return {
+          upsert: (row: Record<string, unknown>, _opts?: unknown) => ({
+            select: () => ({
+              maybeSingle: () => {
+                const key = row.stripe_event_id as string ?? String(Date.now());
+                state.productEntitlementEvents[key] = row;
+                return Promise.resolve({ data: row, error: null });
+              },
+            }),
+          }),
+        };
+      }
+      throw new Error(`unexpected table in test fake: ${table}`);
+    },
   };
 }
 
@@ -177,6 +193,7 @@ function newState(customerId: string, userId: string): DbState {
     profiles: { [userId]: { role: 'free', monthly_limit: 15 } },
     processedEvents: {},
     productSubscriptions: {},
+    productEntitlementEvents: {},
   };
 }
 
@@ -384,12 +401,8 @@ Deno.test('WEBHOOK-16: evento cronologicamente mais antigo (event.created menor)
 
 // IV-WEB-ECOSYSTEM-UNIFICATION-01 tests
 
-Deno.test('WEBHOOK-18: STRIPE_PRICE_MAP mapeado -> product_subscriptions escrito com produto e tier corretos', async () => {
-  Deno.env.set('STRIPE_PRICE_MAP', JSON.stringify({
-    'price_pro_impact_monthly': { product: 'impact', tier: 'pro' },
-  }));
-  // Re-import to pick up the new env var parsed at module level.
-  // We exercise the behavior through fakeDb.state.productSubscriptions.
+Deno.test('WEBHOOK-18: STRIPE_PRICE_MAP mapeado → product_subscriptions escrito com produto e tier corretos', async () => {
+  const priceMap = new Map([['price_pro_impact_monthly', { product: 'impact', tier: 'pro' }]]);
   const db = fakeDb(newState('cus_ps1', 'user_ps1'));
   const stripe = fakeStripe({
     sub_ps1: makeSub({ id: 'sub_ps1', status: 'active', items: { data: [{ price: { id: 'price_pro_impact_monthly' } }] } }),
@@ -399,19 +412,16 @@ Deno.test('WEBHOOK-18: STRIPE_PRICE_MAP mapeado -> product_subscriptions escrito
     type: 'checkout.session.completed',
     data: { object: { customer: 'cus_ps1', subscription: 'sub_ps1' } },
   }));
-  // PRICE_MAP is parsed once at module load time. We validate the behavior
-  // via the fakeDb that now handles upsert_product_subscription.
-  const res = await handler(req, stripe, db as never);
+  const res = await handler(req, stripe, db as never, priceMap);
   assertEquals(res.status, 200);
   // Legacy path still applies
   assertEquals(db.state.profiles['user_ps1'].role, 'pro');
-  // product_subscriptions was written (the fakeDb records it)
-  const ps = db.state.productSubscriptions['user_ps1:core'] ?? db.state.productSubscriptions['user_ps1:impact'];
-  assertEquals(!!ps, true); // some product subscription was written
-  Deno.env.delete('STRIPE_PRICE_MAP');
+  // product_subscriptions written for 'impact' (mapped product), not 'core'
+  assertEquals(!!db.state.productSubscriptions['user_ps1:impact'], true);
+  assertEquals(db.state.productSubscriptions['user_ps1:core'], undefined);
 });
 
-Deno.test('WEBHOOK-19: upsert_product_subscription throw não-bloqueia o webhook (non-blocking)', async () => {
+Deno.test('WEBHOOK-19: upsert_product_subscription falha → evento durável gravado → webhook 200 (path B)', async () => {
   const db = fakeDb(newState('cus_ps2', 'user_ps2')) as ReturnType<typeof fakeDb> & { rpc: unknown };
   let applyCalls = 0;
   let upsertCalls = 0;
@@ -424,11 +434,61 @@ Deno.test('WEBHOOK-19: upsert_product_subscription throw não-bloqueia o webhook
   const stripe = fakeStripe({ sub_ps2: makeSub({ id: 'sub_ps2', status: 'active' }) });
   const body = evt({ id: 'evt_ps2', type: 'checkout.session.completed', data: { object: { customer: 'cus_ps2', subscription: 'sub_ps2' } } });
   const res = await handler(await signedReq(body), stripe, db as never);
-  // Webhook still returns 200: product upsert failure is non-blocking
+  // Path B: durable pending event written → webhook still returns 200
   assertEquals(res.status, 200);
   assertEquals(applyCalls, 1);
   assertEquals(upsertCalls, 1);
   assertEquals(db.state.profiles['user_ps2'].role, 'pro'); // legacy write succeeded
+  // Durable fallback event was persisted
+  assertEquals(Object.keys(db.state.productEntitlementEvents).length, 1);
+  const pendingEvt = Object.values(db.state.productEntitlementEvents)[0] as Record<string, unknown>;
+  assertEquals(pendingEvt.event_type, 'pending_retry');
+  assertEquals(pendingEvt.stripe_event_id, 'evt_ps2');
+});
+
+Deno.test('WEBHOOK-20: upsert_product_subscription E fallback ambos falham → webhook 500', async () => {
+  const db = fakeDb(newState('cus_ps3', 'user_ps3')) as ReturnType<typeof fakeDb> & { rpc: unknown; from: unknown };
+  const origRpc = db.rpc.bind(db);
+  db.rpc = (fn: string, args: Record<string, unknown>) => {
+    if (fn === 'apply_stripe_subscription_state') return origRpc(fn, args);
+    if (fn === 'upsert_product_subscription') throw new Error('simulated upsert failure');
+    return origRpc(fn, args);
+  };
+  // Make the product_entitlement_events upsert also fail
+  const origFrom = (db as unknown as { from: (t: string) => unknown }).from.bind(db);
+  (db as unknown as { from: (t: string) => unknown }).from = (table: string) => {
+    if (table === 'product_entitlement_events') {
+      return {
+        upsert: (_row: unknown, _opts?: unknown) => ({
+          select: () => ({
+            maybeSingle: () => Promise.resolve({ data: null, error: new Error('simulated fallback failure') }),
+          }),
+        }),
+      };
+    }
+    return origFrom(table);
+  };
+  const stripe = fakeStripe({ sub_ps3: makeSub({ id: 'sub_ps3', status: 'active' }) });
+  const body = evt({ id: 'evt_ps3', type: 'checkout.session.completed', data: { object: { customer: 'cus_ps3', subscription: 'sub_ps3' } } });
+  const res = await handler(await signedReq(body), stripe, db as never);
+  // Both writes failed → 500 so Stripe retries
+  assertEquals(res.status, 500);
+});
+
+Deno.test('WEBHOOK-21: price_id fora do mapa configurado → write de product_subscriptions ignorado (FAIL CLOSED) → webhook 200', async () => {
+  // Map is non-empty (configured), but incoming price_id is not in it.
+  const priceMap = new Map([['price_known_impact', { product: 'impact', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_ps4', 'user_ps4'));
+  const stripe = fakeStripe({
+    sub_ps4: makeSub({ id: 'sub_ps4', status: 'active', items: { data: [{ price: { id: 'price_UNKNOWN' } }] } }),
+  });
+  const body = evt({ id: 'evt_ps4', type: 'checkout.session.completed', data: { object: { customer: 'cus_ps4', subscription: 'sub_ps4' } } });
+  const res = await handler(await signedReq(body), stripe, db as never, priceMap);
+  assertEquals(res.status, 200);
+  // Legacy write still applied
+  assertEquals(db.state.profiles['user_ps4'].role, 'pro');
+  // Product subscription NOT written (FAIL CLOSED: unknown price in configured map)
+  assertEquals(Object.keys(db.state.productSubscriptions).length, 0);
 });
 
 Deno.test('WEBHOOK-17: linha de subscriptions ausente para o user_id resolvido (UPDATE não encontra a linha) -> RPC retorna false, profiles intocado, 200', async () => {

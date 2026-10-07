@@ -1,7 +1,8 @@
 // IV-WEB-ECOSYSTEM-UNIFICATION-01 — per-product upgrade CTA screen.
 //
 // Shown when a user navigates to a product-gated route without owning the
-// product. Receives ?product=impact|quant|suite as a query parameter.
+// product, or when the entitlement check fails due to a network/RPC error.
+// Query params: ?product=impact|quant|suite  and optional &state=unavailable.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,7 +11,15 @@ import '../../../core/constants/app_constants.dart';
 class ProductUpgradeScreen extends StatelessWidget {
   final String product;
 
-  const ProductUpgradeScreen({super.key, required this.product});
+  // true when the check failed due to a transient error (network/RPC),
+  // not because the user doesn't own the product.
+  final bool isUnavailable;
+
+  const ProductUpgradeScreen({
+    super.key,
+    required this.product,
+    this.isUnavailable = false,
+  });
 
   static const _productNames = {
     'impact': 'InsightValues Impact',
@@ -30,9 +39,17 @@ class ProductUpgradeScreen extends StatelessWidget {
     final description = _productDescriptions[product] ??
         'Faça upgrade para acessar este produto.';
 
+    final title = isUnavailable ? 'Produto temporariamente indisponível' : 'Produto não disponível';
+    final icon = isUnavailable ? Icons.cloud_off_outlined : Icons.lock_outline;
+    final bodyText = isUnavailable
+        ? 'Não foi possível verificar seu acesso ao $productName no momento (falha de rede ou serviço). '
+          'Tente novamente em alguns instantes.'
+        : 'Este produto não está incluído no seu plano atual. '
+          'Entre em contato ou faça upgrade para obter acesso.';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Produto não disponível'),
+        title: Text(title),
         leading: BackButton(onPressed: () {
           if (context.canPop()) {
             context.pop();
@@ -47,7 +64,7 @@ class ProductUpgradeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.lock_outline, size: 48),
+              Icon(icon, size: 48),
               const SizedBox(height: 24),
               Text(
                 productName,
@@ -56,25 +73,26 @@ class ProductUpgradeScreen extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: 12),
+              if (!isUnavailable)
+                Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              if (!isUnavailable) const SizedBox(height: 32),
               Text(
-                description,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 32),
-              Text(
-                'Este produto não está incluído no seu plano atual. '
-                'Entre em contato ou faça upgrade para obter acesso.',
+                bodyText,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => context.go(AppConstants.routeUpgrade),
-                  child: const Text('Ver opções de upgrade'),
+              if (!isUnavailable)
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => context.go(AppConstants.routeUpgrade),
+                    child: const Text('Ver opções de upgrade'),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
+              if (!isUnavailable) const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
@@ -85,7 +103,7 @@ class ProductUpgradeScreen extends StatelessWidget {
                       context.go(AppConstants.routeDashboard);
                     }
                   },
-                  child: const Text('Voltar'),
+                  child: isUnavailable ? const Text('Tentar novamente') : const Text('Voltar'),
                 ),
               ),
             ],

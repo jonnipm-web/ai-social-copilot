@@ -79,6 +79,7 @@ import 'features/strategy_lab/strategy_lab_screen.dart';
 import 'features/insights/screens/ive_analysis_screen.dart';
 import 'features/upgrade/screens/product_upgrade_screen.dart';
 import 'providers/product_entitlements_provider.dart';
+import 'data/services/product_entitlement_service.dart';
 
 final _iveObserver = IveRouteObserver();
 
@@ -179,10 +180,12 @@ Future<String?> _resolveEntitlementRedirect(
             .read(productEntitlementProvider(requiredProduct).future)
             .timeout(const Duration(seconds: 8));
         if (!pe.allowed) {
-          return '${AppConstants.routeProductUpgrade}?product=$requiredProduct';
+          final suffix = pe.isTemporarilyUnavailable ? '&state=unavailable' : '';
+          return '${AppConstants.routeProductUpgrade}?product=$requiredProduct$suffix';
         }
       } catch (_) {
-        // Fail open: RPC unavailable (migrations not yet applied) or timeout.
+        // FAIL CLOSED: RPC failure on a paid product must deny, not allow.
+        return '${AppConstants.routeProductUpgrade}?product=$requiredProduct&state=unavailable';
       } finally {
         peSub?.close();
       }
@@ -459,7 +462,8 @@ final _router = GoRouter(
       path: AppConstants.routeProductUpgrade,
       builder: (context, state) {
         final product = state.uri.queryParameters['product'] ?? 'core';
-        return ProductUpgradeScreen(product: product);
+        final isUnavailable = state.uri.queryParameters['state'] == 'unavailable';
+        return ProductUpgradeScreen(product: product, isUnavailable: isUnavailable);
       },
     ),
 

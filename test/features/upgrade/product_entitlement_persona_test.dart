@@ -31,7 +31,8 @@ String? _resolveProductRedirect({
   if (requiredProduct == null) return null;
   final pe = resolveProduct(requiredProduct);
   if (!pe.allowed) {
-    return '${AppConstants.routeProductUpgrade}?product=$requiredProduct';
+    final suffix = pe.isTemporarilyUnavailable ? '&state=unavailable' : '';
+    return '${AppConstants.routeProductUpgrade}?product=$requiredProduct$suffix';
   }
   return null;
 }
@@ -79,6 +80,7 @@ void main() {
       expect(r.allowed, isTrue);
       expect(r.product, 'impact');
       expect(r.reason, 'FAIL_OPEN');
+      expect(r.isTemporarilyUnavailable, isFalse);
     });
 
     test('PERSONA-CONTRACT-02: denied returns allowed=false', () {
@@ -87,6 +89,15 @@ void main() {
       expect(r.allowed, isFalse);
       expect(r.product, 'quant');
       expect(r.code, 'PRODUCT_NOT_SUBSCRIBED');
+      expect(r.isTemporarilyUnavailable, isFalse);
+    });
+
+    test('PERSONA-CONTRACT-03: temporarilyUnavailable returns allowed=false com código correto', () {
+      final r = ProductEntitlementResult.temporarilyUnavailable('impact');
+      expect(r.allowed, isFalse);
+      expect(r.product, 'impact');
+      expect(r.code, 'TEMPORARILY_UNAVAILABLE');
+      expect(r.isTemporarilyUnavailable, isTrue);
     });
   });
 
@@ -295,25 +306,49 @@ void main() {
     }
   });
 
-  // ── FAIL OPEN safety net ──────────────────────────────────────────────────
+  // ── FAIL CLOSED: RPC error bloqueia acesso a produtos pagos ──────────────
 
-  group('PERSONA-FAILOPEN: RPC error → fail open, no blocking', () {
-    // Simulates migration not yet applied — service returns FAIL_OPEN.
-    ProductEntitlementResult failOpenResolver(String product) =>
-        ProductEntitlementResult.failOpen(product);
+  group('PERSONA-FAILCLOSED: RPC error → temporarily_unavailable → acesso negado', () {
+    // Simula falha de RPC/rede — service retorna temporarilyUnavailable.
+    ProductEntitlementResult failClosedResolver(String product) =>
+        ProductEntitlementResult.temporarilyUnavailable(product);
 
     for (final route in [
       AppConstants.routeImpact,
       AppConstants.routeQuant,
     ]) {
-      test('PERSONA-FO-01: $route not blocked when FAIL_OPEN', () {
+      test('PERSONA-FC-01: $route bloqueado com state=unavailable quando RPC falha', () {
         final redirect = _resolveProductRedirect(
           path: route,
           isAdmin: false,
-          resolveProduct: failOpenResolver,
+          resolveProduct: failClosedResolver,
+        );
+        expect(redirect, isNotNull,
+            reason: 'FAIL CLOSED: RPC failure must block access to $route');
+        expect(redirect, contains('state=unavailable'),
+            reason: 'redirect must carry state=unavailable for temporarily_unavailable');
+      });
+    }
+  });
+
+  // ── BASE_FREE continua acessível ──────────────────────────────────────────
+
+  group('PERSONA-BASEFREE: produto desconhecido/base_free → failOpen, nunca bloqueado', () {
+    // BASE_FREE e produtos fora do conjunto pago retornam failOpen.
+    ProductEntitlementResult baseFreeResolver(String product) =>
+        ProductEntitlementResult.failOpen(product);
+
+    for (final route in [
+      AppConstants.routeDashboard,
+    ]) {
+      test('PERSONA-BF-01: $route não exige produto → sem redirecionamento', () {
+        final redirect = _resolveProductRedirect(
+          path: route,
+          isAdmin: false,
+          resolveProduct: baseFreeResolver,
         );
         expect(redirect, isNull,
-            reason: 'FAIL_OPEN must never block access to $route');
+            reason: 'BASE_FREE routes must never be blocked');
       });
     }
   });
