@@ -265,6 +265,47 @@ async function applySubscriptionState(
   return data === true;
 }
 
+/** Coordinates the legacy Core write (applySubscriptionState) and the
+ * per-product write (applyProductSubscriptionState).
+ *
+ * ISOLATION RULE: non-Core products (Impact, Quant, Suite) MUST NOT write
+ * legacy Core state (subscriptions + profiles). A user paying for Impact
+ * should never be upgraded to Core Pro, and a cancellation of Impact must
+ * not downgrade an independently paid Core subscription.
+ *
+ * Legacy write applies ONLY when:
+ *   (a) STRIPE_PRICE_MAP is empty (no map configured → legacy mode), OR
+ *   (b) price_id is NULL (webhook has no price item), OR
+ *   (c) price_id is unmapped in the configured map, OR
+ *   (d) mapped product is 'core'
+ */
+async function applySubscriptionAndProductState(
+  db: DbClient,
+  userId: string,
+  eventCreatedIso: string,
+  sub: StripeSubscription,
+  eventId: string,
+  priceMap: Map<string, PriceProductEntry>,
+  eventType: string,
+): Promise<void> {
+  const priceId = sub.items?.data?.[0]?.price?.id ?? null;
+  const mapped = priceId ? priceMap.get(priceId) : undefined;
+  const isLegacyCoreEvent =
+    priceMap.size === 0 ||   // (a) no map configured
+    priceId === null ||       // (b) no price item
+    !mapped ||                // (c) unmapped in configured map
+    mapped.product === 'core'; // (d) explicitly Core
+
+  if (isLegacyCoreEvent) {
+    const applied = await applySubscriptionState(db, userId, eventCreatedIso, sub);
+    if (!applied) console.log(`${eventType} ${eventId} skipped: superseded by a newer event`);
+    if (applied) await applyProductSubscriptionState(db, userId, sub, eventId, eventCreatedIso, priceMap);
+  } else {
+    // Non-Core product: skip legacy Core tables entirely.
+    await applyProductSubscriptionState(db, userId, sub, eventId, eventCreatedIso, priceMap);
+  }
+}
+
 // Parsed once per cold start; safe to share across invocations.
 const PRICE_MAP = parsePriceMap();
 
@@ -329,9 +370,7 @@ export async function handler(
           break;
         }
         const sub = await retrieveSubscription(session.subscription, stripeClient);
-        const applied = await applySubscriptionState(db, userId, eventCreatedIso, sub);
-        if (!applied) console.log(`checkout.session.completed ${event.id} skipped: superseded by a newer event`);
-        if (applied) await applyProductSubscriptionState(db, userId, sub, event.id, eventCreatedIso, priceMap);
+        await applySubscriptionAndProductState(db, userId, eventCreatedIso, sub, event.id, priceMap, event.type);
         break;
       }
       case 'customer.subscription.updated':
@@ -358,9 +397,7 @@ export async function handler(
         // is no safe fallback here: any failure must abort and let
         // Stripe's own retry re-attempt the fresh GET.
         const sub = await retrieveSubscription(obj.id, stripeClient);
-        const applied = await applySubscriptionState(db, userId, eventCreatedIso, sub);
-        if (!applied) console.log(`${event.type} ${event.id} skipped: superseded by a newer event`);
-        if (applied) await applyProductSubscriptionState(db, userId, sub, event.id, eventCreatedIso, priceMap);
+        await applySubscriptionAndProductState(db, userId, eventCreatedIso, sub, event.id, priceMap, event.type);
         break;
       }
       default:

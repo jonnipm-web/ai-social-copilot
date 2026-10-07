@@ -88,11 +88,12 @@ BEGIN
     -- Core backward compat: check legacy subscriptions + profiles.role
     IF p_product = 'core' THEN
       DECLARE
-        v_role   text;
-        v_status text;
+        v_role              text;
+        v_status            text;
+        v_legacy_period_end timestamptz;
       BEGIN
-        SELECT s.status, pr.role
-        INTO   v_status, v_role
+        SELECT s.status, pr.role, s.current_period_end
+        INTO   v_status, v_role, v_legacy_period_end
         FROM   public.subscriptions s
         JOIN   public.profiles      pr ON pr.id = s.user_id
         WHERE  s.user_id = p_user_id
@@ -100,7 +101,9 @@ BEGIN
 
         IF FOUND
            AND v_status IN ('active','trialing')
-           AND v_role   IN ('pro','premium') THEN
+           AND v_role   IN ('pro','premium')
+           AND (v_legacy_period_end IS NULL
+                OR clock_timestamp() <= v_legacy_period_end) THEN
           RETURN jsonb_build_object(
             'allowed', true,
             'product', 'core',
@@ -132,10 +135,11 @@ BEGIN
     );
   END IF;
 
-  -- Check expiry
+  -- Check expiry (applies to all statuses including 'trialing').
+  -- A stale trialing row must not grant indefinite access if the
+  -- trial-end webhook was delayed or lost.
   IF v_ps.current_period_end IS NOT NULL
-     AND clock_timestamp() > v_ps.current_period_end
-     AND v_ps.status <> 'trialing' THEN
+     AND clock_timestamp() > v_ps.current_period_end THEN
     RETURN jsonb_build_object(
       'allowed', false,
       'product', p_product,
@@ -300,6 +304,8 @@ BEGIN
   END IF;
 
   -- Audit event: only written when the upsert actually applied.
+  -- ON CONFLICT DO NOTHING: deduplicates concurrent duplicate-delivery races
+  -- via pee_stripe_event_product_uidx (stripe_event_id, product WHERE NOT pending_retry).
   INSERT INTO public.product_entitlement_events (
     user_id, product, event_type,
     from_status, to_status, from_tier, to_tier,
@@ -308,7 +314,8 @@ BEGIN
     p_user_id, p_product, v_event_type,
     v_old_status, p_status, v_old_tier, p_tier,
     p_source, p_stripe_event_id, p_metadata
-  );
+  )
+  ON CONFLICT DO NOTHING;
 
   RETURN jsonb_build_object(
     'ok',         true,

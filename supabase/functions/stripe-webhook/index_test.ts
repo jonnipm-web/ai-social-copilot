@@ -454,7 +454,8 @@ Deno.test('WEBHOOK-22: evento de produto antigo chega depois → ignorado (order
   assertEquals(db.state.productSubscriptions['user_ord1:impact']?.status, 'canceled');
 });
 
-Deno.test('WEBHOOK-18: STRIPE_PRICE_MAP mapeado → product_subscriptions escrito com produto e tier corretos', async () => {
+Deno.test('WEBHOOK-18: STRIPE_PRICE_MAP impact mapeado → product_subscriptions escrito, Core NÃO alterado', async () => {
+  // P1 isolation: Impact subscriptions MUST NOT write legacy Core state.
   const priceMap = new Map([['price_pro_impact_monthly', { product: 'impact', tier: 'pro' }]]);
   const db = fakeDb(newState('cus_ps1', 'user_ps1'));
   const stripe = fakeStripe({
@@ -467,11 +468,13 @@ Deno.test('WEBHOOK-18: STRIPE_PRICE_MAP mapeado → product_subscriptions escrit
   }));
   const res = await handler(req, stripe, db as never, priceMap);
   assertEquals(res.status, 200);
-  // Legacy path still applies
-  assertEquals(db.state.profiles['user_ps1'].role, 'pro');
+  // Impact event must NOT promote user to Core Pro (isolation rule)
+  assertEquals(db.state.profiles['user_ps1'].role, 'free');
   // product_subscriptions written for 'impact' (mapped product), not 'core'
   assertEquals(!!db.state.productSubscriptions['user_ps1:impact'], true);
   assertEquals(db.state.productSubscriptions['user_ps1:core'], undefined);
+  // Legacy subscriptions table NOT written for Impact event
+  assertEquals(db.state.subscriptions['user_ps1']?.status, 'none'); // initial value unchanged
 });
 
 Deno.test('WEBHOOK-19: upsert_product_subscription falha → evento durável gravado → webhook 200 (path B)', async () => {

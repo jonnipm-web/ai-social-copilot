@@ -168,6 +168,14 @@ ALTER TABLE IF EXISTS public.product_entitlement_events
     product IN ('core','impact','quant','suite','unknown')
   );
 
+-- Prevent duplicate audit rows from concurrent duplicate-delivery races.
+-- Partial unique: only non-pending_retry events are deduplicated because
+-- pending_retry records are intentionally written on each retry attempt.
+-- ON CONFLICT DO NOTHING in upsert_product_subscription handles the case.
+CREATE UNIQUE INDEX IF NOT EXISTS pee_stripe_event_product_uidx
+  ON public.product_entitlement_events (stripe_event_id, product)
+  WHERE stripe_event_id IS NOT NULL AND event_type <> 'pending_retry';
+
 COMMENT ON TABLE public.product_subscriptions IS
   'IV-WEB-ECOSYSTEM-UNIFICATION-01: per-product subscription state. '
   'Source-agnostic (Stripe, legacy_core backfill, admin grant, trial). '
