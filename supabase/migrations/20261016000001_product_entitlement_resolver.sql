@@ -36,6 +36,18 @@ BEGIN
     );
   END IF;
 
+  -- Tenant isolation: authenticated callers may only resolve their own entitlements.
+  -- service_role calls (backfill, admin) have auth.uid() = NULL and are allowed.
+  -- P2 fix (IV-WEB-ECOSYSTEM-UNIFICATION-01): prevents info-disclosure via cross-user lookups.
+  IF auth.uid() IS NOT NULL AND auth.uid() <> p_user_id THEN
+    RETURN jsonb_build_object(
+      'allowed', false,
+      'product', p_product,
+      'code',    'PERMISSION_DENIED',
+      'reason',  'May only resolve own product entitlements'
+    );
+  END IF;
+
   -- Check user account active (profiles.is_active when present, else assume active)
   -- We check existence in auth.users — a deleted user has no rows here.
   -- is_active column exists on profiles in some migrations; treat missing as active.
@@ -205,9 +217,13 @@ BEGIN
     v_event_type := 'activated';
   ELSIF p_status IN ('canceled','none') THEN
     v_event_type := 'canceled';
-  ELSIF p_tier > v_old_tier THEN
+  -- P2 fix: use semantic tier rank ('free'=0 < 'pro'=1 < 'premium'=2) instead of
+  -- alphabetical comparison ('pro' > 'premium' alphabetically, which is wrong).
+  ELSIF (CASE p_tier      WHEN 'premium' THEN 2 WHEN 'pro' THEN 1 ELSE 0 END) >
+        (CASE v_old_tier  WHEN 'premium' THEN 2 WHEN 'pro' THEN 1 ELSE 0 END) THEN
     v_event_type := 'upgraded';
-  ELSIF p_tier < v_old_tier THEN
+  ELSIF (CASE p_tier      WHEN 'premium' THEN 2 WHEN 'pro' THEN 1 ELSE 0 END) <
+        (CASE v_old_tier  WHEN 'premium' THEN 2 WHEN 'pro' THEN 1 ELSE 0 END) THEN
     v_event_type := 'downgraded';
   ELSE
     v_event_type := 'activated'; -- renewal / status update
