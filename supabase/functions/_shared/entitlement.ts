@@ -385,10 +385,68 @@ export type ModuleAccessResult =
   | { allowed: true; decision: EntitlementDecision; subject: EntitlementSubject; correlationId: string }
   | { allowed: false; decision: EntitlementDecision; response: Response; correlationId: string };
 
+// ── Product entitlement gate (IV-WEB-ECOSYSTEM-UNIFICATION-01) ───────────────
+
+export interface ProductEntitlementResult {
+  allowed: boolean;
+  product: string;
+  tier?: string;
+  source?: string;
+  code?: string;
+  reason?: string;
+}
+
+/**
+ * Calls the SQL SECURITY DEFINER function resolve_product_entitlement() via
+ * the caller's own JWT. Returns FAIL CLOSED on any error or unexpected shape.
+ * Only invoked when a module's policy.product is 'impact', 'quant', or 'suite'.
+ * Core modules bypass this — existing plan check is their only gate.
+ */
+export async function resolveProductEntitlement(
+  userId: string,
+  product: string,
+  accessToken: string,
+): Promise<ProductEntitlementResult> {
+  const url = Deno.env.get('SUPABASE_URL');
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!url || !anonKey) {
+    return { allowed: false, product, code: 'ENTITLEMENT_UNAVAILABLE', reason: 'product entitlement source misconfigured' };
+  }
+  try {
+    const client = createClient(url, anonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    });
+    const { data, error } = await client.rpc('resolve_product_entitlement', {
+      p_user_id: userId,
+      p_product: product,
+    });
+    if (error || !data || typeof data !== 'object') {
+      return { allowed: false, product, code: 'ENTITLEMENT_UNAVAILABLE', reason: 'product entitlement rpc failed' };
+    }
+    const row = data as Record<string, unknown>;
+    return {
+      allowed:  row.allowed === true,
+      product:  typeof row.product === 'string' ? row.product : product,
+      tier:     typeof row.tier   === 'string' ? row.tier   : undefined,
+      source:   typeof row.source === 'string' ? row.source : undefined,
+      code:     typeof row.code   === 'string' ? row.code   : undefined,
+      reason:   typeof row.reason === 'string' ? row.reason : undefined,
+    };
+  } catch {
+    return { allowed: false, product, code: 'ENTITLEMENT_UNAVAILABLE', reason: 'product entitlement exception' };
+  }
+}
+
 /**
  * The single call every MODULE-kind Edge Function makes, right after
  * resolveAuthenticatedUser() and before reserveQuota(). Fails closed on
  * every path, including an exception inside the subject source.
+ *
+ * IV-WEB-ECOSYSTEM-UNIFICATION-01: after the existing plan gate, a second
+ * product gate fires when the module's policy.product is 'impact', 'quant'
+ * or 'suite'. Core modules (product absent or 'core') skip the product gate.
+ * Admin roles bypass the product gate (same as the plan gate above).
  */
 export async function requireModuleAccess(
   req: Request,
@@ -403,9 +461,37 @@ export async function requireModuleAccess(
     ? { allowed: false, code: 'ENTITLEMENT_UNAVAILABLE', reason: 'SUBJECT_SOURCE_ERROR', moduleId }
     : decideModuleAccess(subject, moduleId);
   await logEntitlementDecision(subject, decision, correlationId);
-  if (decision.allowed && subject) return { allowed: true, decision, subject, correlationId };
-  const denied = decision.allowed
-    ? { ...decision, allowed: false, code: 'AUTH_REQUIRED' as const, reason: 'UNAUTHENTICATED' as const }
-    : decision;
-  return { allowed: false, decision: denied, response: entitlementDeniedResponse(denied, correlationId, corsHeaders), correlationId };
+  if (!decision.allowed || !subject) {
+    const denied = decision.allowed
+      ? { ...decision, allowed: false, code: 'AUTH_REQUIRED' as const, reason: 'UNAUTHENTICATED' as const }
+      : decision;
+    return { allowed: false, decision: denied, response: entitlementDeniedResponse(denied, correlationId, corsHeaders), correlationId };
+  }
+
+  // Product entitlement gate (additive, non-breaking for core modules).
+  const moduleProduct = MODULE_POLICY.modules[moduleId]?.product;
+  const requiresProductGate = moduleProduct && moduleProduct !== 'core';
+  if (requiresProductGate && !subject.roles.has('admin')) {
+    const token = req.headers.get('Authorization')?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+    if (!token) {
+      const denied: EntitlementDecision = { allowed: false, code: 'AUTH_REQUIRED', reason: 'UNAUTHENTICATED', moduleId };
+      return { allowed: false, decision: denied, response: entitlementDeniedResponse(denied, correlationId, corsHeaders), correlationId };
+    }
+    const pe = await resolveProductEntitlement(subject.id, moduleProduct, token);
+    if (!pe.allowed) {
+      const denied: EntitlementDecision = { allowed: false, code: 'PLAN_REQUIRED', reason: 'INSUFFICIENT_PLAN', moduleId };
+      console.log(JSON.stringify({
+        event: 'product_entitlement_denied',
+        module_id: moduleId,
+        product: moduleProduct,
+        code: pe.code,
+        reason: pe.reason,
+        correlation_id: correlationId,
+        ts: new Date().toISOString(),
+      }));
+      return { allowed: false, decision: denied, response: entitlementDeniedResponse(denied, correlationId, corsHeaders), correlationId };
+    }
+  }
+
+  return { allowed: true, decision, subject, correlationId };
 }

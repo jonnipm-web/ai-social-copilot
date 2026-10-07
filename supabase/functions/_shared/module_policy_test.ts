@@ -180,6 +180,16 @@ Deno.test('MP-12 (Codex final audit, round 4) isHardBlockedInDenyScript rejects 
   assert(isHardBlockedInDenyScript('if [ "$FUNCTION_NAME" = "quant-runtime" ]; then\n  deny "quant-runtime is LAB ONLY"\nfi\n', 'quant-runtime'));
 });
 
+Deno.test('MP-13 IV-WEB-ECOSYSTEM-UNIFICATION-01: when present, module.product must be one of the canonical product ids', () => {
+  const CANONICAL_PRODUCTS = new Set(['core', 'impact', 'quant', 'suite']);
+  for (const [id, m] of Object.entries(MODULE_POLICY.modules)) {
+    if ((m as Record<string, unknown>).product !== undefined) {
+      const p = (m as Record<string, unknown>).product;
+      assert(CANONICAL_PRODUCTS.has(p as string), `${id}.product=${p} not in canonical list`);
+    }
+  }
+});
+
 Deno.test('MP-11 an actionClassOverride may only RAISE a function\'s effective risk above its module default, never lower it', () => {
   const order = { READ_ONLY: 0, REVERSIBLE: 1, CONSEQUENTIAL: 2 } as const;
   for (const [fn, p] of Object.entries(MODULE_POLICY.edgeFunctions)) {

@@ -59,6 +59,80 @@ function entitlementForStatus(status: string): { role: string; monthly_limit: nu
   return { ...FREE_ROLE_LIMIT };
 }
 
+// IV-WEB-ECOSYSTEM-UNIFICATION-01 — per-product price mapping.
+//
+// STRIPE_PRICE_MAP env var: JSON object mapping Stripe price_id to
+// {product, tier}. Example:
+//   {"price_pro_core_monthly":{"product":"core","tier":"pro"},
+//    "price_pro_impact_monthly":{"product":"impact","tier":"pro"}}
+//
+// If a price_id is NOT in the map: falls back to product='core',
+// tier from entitlementForStatus (backward compat with all existing prices).
+// If the env var is absent or invalid: falls back silently (no throw).
+
+interface PriceProductEntry { product: string; tier: string }
+
+function parsePriceMap(): Map<string, PriceProductEntry> {
+  const raw = Deno.env.get('STRIPE_PRICE_MAP');
+  if (!raw) return new Map();
+  try {
+    const obj = JSON.parse(raw) as Record<string, unknown>;
+    const m = new Map<string, PriceProductEntry>();
+    for (const [k, v] of Object.entries(obj)) {
+      if (v && typeof v === 'object') {
+        const e = v as Record<string, unknown>;
+        if (typeof e.product === 'string' && typeof e.tier === 'string') {
+          m.set(k, { product: e.product, tier: e.tier });
+        }
+      }
+    }
+    return m;
+  } catch {
+    console.error('STRIPE_PRICE_MAP parse error: invalid JSON — falling back to core-only mode');
+    return new Map();
+  }
+}
+
+/** Non-blocking: writes to product_subscriptions after a successful legacy
+ * write. Logs errors without throwing — a product_subscriptions write
+ * failure must never cause a webhook retry that replays the legacy write. */
+async function applyProductSubscriptionState(
+  db: DbClient,
+  userId: string,
+  sub: StripeSubscription,
+  stripeEventId: string,
+  priceMap: Map<string, PriceProductEntry>,
+): Promise<void> {
+  const priceId = sub.items?.data?.[0]?.price?.id ?? null;
+  const legacyTier = entitlementForStatus(sub.status).role; // 'pro' | 'free'
+  const mapped = priceId ? priceMap.get(priceId) : undefined;
+  const product = mapped?.product ?? 'core';
+  const tier    = mapped?.tier    ?? legacyTier;
+
+  try {
+    const { error } = await (db as unknown as {
+      rpc(fn: string, args: Record<string, unknown>): Promise<{ data: unknown; error: unknown }>;
+    }).rpc('upsert_product_subscription', {
+      p_user_id:                userId,
+      p_product:                product,
+      p_tier:                   sub.status === 'active' || sub.status === 'trialing' ? tier : 'free',
+      p_status:                 sub.status,
+      p_source:                 'stripe',
+      p_stripe_subscription_id: sub.id,
+      p_stripe_price_id:        priceId,
+      p_current_period_end:     sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+      p_cancel_at_period_end:   !!sub.cancel_at_period_end,
+      p_stripe_event_id:        stripeEventId,
+      p_metadata:               {},
+    });
+    if (error) {
+      console.error('upsert_product_subscription failed (non-blocking):', JSON.stringify(error));
+    }
+  } catch (e) {
+    console.error('upsert_product_subscription exception (non-blocking):', e);
+  }
+}
+
 async function isEventAlreadyProcessed(db: DbClient, eventId: string): Promise<boolean> {
   const { data, error } = await db.from('processed_webhook_events').select('event_id').eq('event_id', eventId).maybeSingle();
   if (error) throw error;
@@ -117,6 +191,9 @@ async function applySubscriptionState(
   return data === true;
 }
 
+// Parsed once per cold start; safe to share across invocations.
+const PRICE_MAP = parsePriceMap();
+
 export async function handler(req: Request, stripeClient?: StripeFetch, dbClient?: DbClient): Promise<Response> {
   if (req.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 });
@@ -174,6 +251,7 @@ export async function handler(req: Request, stripeClient?: StripeFetch, dbClient
         const sub = await retrieveSubscription(session.subscription, stripeClient);
         const applied = await applySubscriptionState(db, userId, eventCreatedIso, sub);
         if (!applied) console.log(`checkout.session.completed ${event.id} skipped: superseded by a newer event`);
+        if (applied) await applyProductSubscriptionState(db, userId, sub, event.id, PRICE_MAP);
         break;
       }
       case 'customer.subscription.updated':
@@ -202,6 +280,7 @@ export async function handler(req: Request, stripeClient?: StripeFetch, dbClient
         const sub = await retrieveSubscription(obj.id, stripeClient);
         const applied = await applySubscriptionState(db, userId, eventCreatedIso, sub);
         if (!applied) console.log(`${event.type} ${event.id} skipped: superseded by a newer event`);
+        if (applied) await applyProductSubscriptionState(db, userId, sub, event.id, PRICE_MAP);
         break;
       }
       default:

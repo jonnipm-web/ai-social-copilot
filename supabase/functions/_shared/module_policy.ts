@@ -51,6 +51,17 @@ export interface ModulePolicy {
   lifecycle: ModuleLifecycle;
   minimumPlan: Plan;
   actionClass: ActionClass;
+  /**
+   * IV-WEB-ECOSYSTEM-UNIFICATION-01: which product owns this module.
+   * 'core' (default when absent) = gated by plan only (existing behaviour).
+   * 'impact' | 'quant' | 'suite' = ALSO requires a product_subscriptions row
+   * with status active/trialing for that product (checked by
+   * resolveProductEntitlement in entitlement.ts).
+   *
+   * Absent means 'core'. Explicit 'core' also means 'core'. Either way the
+   * existing plan check is the only gate — no product_subscriptions lookup.
+   */
+  product?: "core" | "impact" | "quant" | "suite";
 }
 
 // PRESENTATION (R16): cross-module presentation service (localize-content).
@@ -159,11 +170,11 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "intelligence-debug": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "READ_ONLY" },
     "admin-panel": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
     "ive-avatar": { "lifecycle": "COMMERCIAL", "minimumPlan": "free", "actionClass": "READ_ONLY" },
-    "ive-quant": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "CONSEQUENTIAL" },
+    "ive-quant": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "CONSEQUENTIAL", "product": "quant" },
     "aef-runtime-lab": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
-    "impact": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
-    "quant-analytics": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "READ_ONLY" },
-    "quant-watchlists": { "lifecycle": "INTERNAL", "minimumPlan": "pro", "actionClass": "REVERSIBLE" },
+    "impact": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE", "product": "impact" },
+    "quant-analytics": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "READ_ONLY", "product": "quant" },
+    "quant-watchlists": { "lifecycle": "INTERNAL", "minimumPlan": "pro", "actionClass": "REVERSIBLE", "product": "quant" },
     "strategy-builder": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
     "ive-strategy-simulation": { "lifecycle": "BETA", "minimumPlan": "free", "actionClass": "CONSEQUENTIAL" }
   },
