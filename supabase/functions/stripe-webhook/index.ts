@@ -290,11 +290,15 @@ async function applySubscriptionAndProductState(
 ): Promise<void> {
   const priceId = sub.items?.data?.[0]?.price?.id ?? null;
   const mapped = priceId ? priceMap.get(priceId) : undefined;
+  // An unmapped price (configured map, unknown price_id) is intentionally
+  // NOT treated as legacy Core — it writes only a pending_retry record
+  // and must not mutate subscriptions/profiles Core state.
   const isLegacyCoreEvent =
-    priceMap.size === 0 ||   // (a) no map configured
-    priceId === null ||       // (b) no price item
-    !mapped ||                // (c) unmapped in configured map
-    mapped.product === 'core'; // (d) explicitly Core
+    priceMap.size === 0 ||          // (a) no map configured → legacy mode
+    priceId === null ||             // (b) no price item in subscription
+    mapped?.product === 'core';     // (c) price explicitly maps to Core
+  // !mapped (unmapped in configured map) → falls through to applyProductSubscriptionState
+  // which writes the UNMAPPED_PRICE pending_retry without touching Core tables.
 
   if (isLegacyCoreEvent) {
     const applied = await applySubscriptionState(db, userId, eventCreatedIso, sub);

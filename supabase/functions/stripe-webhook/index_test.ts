@@ -543,8 +543,9 @@ Deno.test('WEBHOOK-21: price_id fora do mapa configurado → pending_retry durá
   const body = evt({ id: 'evt_ps4', type: 'checkout.session.completed', data: { object: { customer: 'cus_ps4', subscription: 'sub_ps4' } } });
   const res = await handler(await signedReq(body), stripe, db as never, priceMap);
   assertEquals(res.status, 200);
-  // Legacy write still applied (pre-existing profiles table)
-  assertEquals(db.state.profiles['user_ps4'].role, 'pro');
+  // Core NOT written (unmapped price in configured map → isolation rule)
+  assertEquals(db.state.profiles['user_ps4'].role, 'free'); // unchanged
+  assertEquals(db.state.subscriptions['user_ps4']?.status, 'none'); // unchanged
   // Product subscription NOT written (FAIL CLOSED: unknown price in configured map)
   assertEquals(Object.keys(db.state.productSubscriptions).length, 0);
   // Durable pending_retry written with UNMAPPED_PRICE reason (not silently dropped)
@@ -555,6 +556,31 @@ Deno.test('WEBHOOK-21: price_id fora do mapa configurado → pending_retry durá
   const meta = JSON.parse(unmappedEvt.metadata as string) as Record<string, unknown>;
   assertEquals(meta.reason, 'UNMAPPED_PRICE');
   assertEquals(meta.price_id, 'price_UNKNOWN');
+});
+
+Deno.test('WEBHOOK-24: unmapped price in configured map → Core state NOT mutated, pending_retry written', async () => {
+  // Regression for P1 Core isolation bug: when STRIPE_PRICE_MAP is configured
+  // but incoming price_id is not in it, the event must NOT write legacy Core
+  // state (subscriptions/profiles). Previously !mapped was included in
+  // isLegacyCoreEvent, which caused Core tables to be updated.
+  const priceMap = new Map([['price_known_core', { product: 'core', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_ul1', 'user_ul1'));
+  const stripe = fakeStripe({
+    sub_ul1: makeSub({ id: 'sub_ul1', status: 'active', items: { data: [{ price: { id: 'price_UNKNOWN_NON_CORE' } }] } }),
+  });
+  const body = evt({ id: 'evt_ul1', type: 'checkout.session.completed', data: { object: { customer: 'cus_ul1', subscription: 'sub_ul1' } } });
+  const res = await handler(await signedReq(body), stripe, db as never, priceMap);
+  assertEquals(res.status, 200);
+  // Core state must NOT be mutated (isolation rule for unmapped prices)
+  assertEquals(db.state.profiles['user_ul1'].role, 'free'); // unchanged
+  assertEquals(db.state.subscriptions['user_ul1']?.status, 'none'); // unchanged
+  // Only pending_retry written (durable record for reconciliation)
+  assertEquals(Object.keys(db.state.productSubscriptions).length, 0);
+  const peeEvents = Object.values(db.state.productEntitlementEvents) as Record<string, unknown>[];
+  assertEquals(peeEvents.length, 1);
+  assertEquals(peeEvents[0].event_type, 'pending_retry');
+  const meta = JSON.parse(peeEvents[0].metadata as string) as Record<string, unknown>;
+  assertEquals(meta.reason, 'UNMAPPED_PRICE');
 });
 
 Deno.test('WEBHOOK-23: ON CONFLICT WHERE predicate — older event after newer commit → no overwrite (atomic ordering guard)', async () => {
