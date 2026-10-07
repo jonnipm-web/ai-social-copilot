@@ -1,4 +1,4 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+﻿import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { retrieveSubscription, StripeFetch, StripeSubscription, verifyStripeSignature } from '../_shared/stripe.ts';
 import { createServiceClient } from '../_shared/service_client.ts';
 
@@ -68,13 +68,16 @@ function entitlementForStatus(status: string): { role: string; monthly_limit: nu
 //
 // If a price_id is NOT in the map: falls back to product='core',
 // tier from entitlementForStatus (backward compat with all existing prices).
-// If the env var is absent or invalid: falls back silently (no throw).
+// If the env var is absent: returns empty map -> legacy Core mode.
+// If the env var is present but invalid JSON: returns error string to fail
+// the request with 500 rather than silently misrouting Impact/Quant events
+// to Core state.
 
 interface PriceProductEntry { product: string; tier: string }
 
-function parsePriceMap(): Map<string, PriceProductEntry> {
+function parsePriceMap(): { map: Map<string, PriceProductEntry>; error: string | null } {
   const raw = Deno.env.get('STRIPE_PRICE_MAP');
-  if (!raw) return new Map();
+  if (!raw) return { map: new Map(), error: null };
   try {
     const obj = JSON.parse(raw) as Record<string, unknown>;
     const m = new Map<string, PriceProductEntry>();
@@ -86,10 +89,11 @@ function parsePriceMap(): Map<string, PriceProductEntry> {
         }
       }
     }
-    return m;
-  } catch {
-    console.error('STRIPE_PRICE_MAP parse error: invalid JSON — falling back to core-only mode');
-    return new Map();
+    return { map: m, error: null };
+  } catch (e) {
+    const msg = `STRIPE_PRICE_MAP invalid JSON: ${String(e)}`;
+    console.error(msg);
+    return { map: new Map(), error: msg };
   }
 }
 
@@ -311,7 +315,7 @@ async function applySubscriptionAndProductState(
 }
 
 // Parsed once per cold start; safe to share across invocations.
-const PRICE_MAP = parsePriceMap();
+const { map: PRICE_MAP, error: PRICE_MAP_ERROR } = parsePriceMap();
 
 export async function handler(
   req: Request,
@@ -351,6 +355,14 @@ export async function handler(
   }
   if (!event?.id || !event?.type || !event?.created) {
     return new Response('Malformed event', { status: 400 });
+  }
+
+  // Fail closed: if STRIPE_PRICE_MAP is configured but invalid, reject the
+  // request so Stripe retries rather than silently misrouting Impact/Quant
+  // events to Core state (isLegacyCoreEvent treats empty map as legacy mode).
+  if (!priceMapOverride && PRICE_MAP_ERROR) {
+    console.error('Rejecting webhook: ' + PRICE_MAP_ERROR);
+    return new Response('Internal configuration error', { status: 500 });
   }
 
   const db = (dbClient ?? createServiceClient()) as unknown as DbClient;

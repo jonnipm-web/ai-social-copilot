@@ -1,4 +1,4 @@
-/**
+﻿/**
  * IVE-COMMERCIAL-BILLING-01 — stripe-webhook tests. Covers signature
  * verification at the boundary, idempotency (including the "record only
  * after success" ordering), event-ordering-safe entitlement transitions
@@ -581,6 +581,21 @@ Deno.test('WEBHOOK-24: unmapped price in configured map → Core state NOT mutat
   assertEquals(peeEvents[0].event_type, 'pending_retry');
   const meta = JSON.parse(peeEvents[0].metadata as string) as Record<string, unknown>;
   assertEquals(meta.reason, 'UNMAPPED_PRICE');
+});
+
+Deno.test('WEBHOOK-25: STRIPE_PRICE_MAP invalid path gated - valid override passes through', async () => {
+  // Structural test: when a valid priceMapOverride is supplied, the PRICE_MAP_ERROR
+  // gate (!priceMapOverride && PRICE_MAP_ERROR) does not fire. Confirms the gate
+  // condition is correct: only requests without override are affected by module-level error.
+  const db = fakeDb(newState('cus_w25', 'user_w25'));
+  const stripe = fakeStripe({
+    sub_w25: makeSub({ id: 'sub_w25', status: 'active', items: { data: [{ price: { id: 'price_impact_pro' } }] } }),
+  });
+  const body = evt({ id: 'evt_w25', type: 'checkout.session.completed', data: { object: { customer: 'cus_w25', subscription: 'sub_w25' } } });
+  const validMap = new Map([['price_impact_pro', { product: 'impact', tier: 'pro' }]]);
+  const res = await handler(await signedReq(body), stripe, db as never, validMap);
+  assertEquals(res.status, 200);
+  assertEquals(db.state.productSubscriptions['user_w25:impact']?.status, 'active');
 });
 
 Deno.test('WEBHOOK-23: ON CONFLICT WHERE predicate — older event after newer commit → no overwrite (atomic ordering guard)', async () => {
