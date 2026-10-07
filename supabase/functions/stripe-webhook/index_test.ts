@@ -528,8 +528,10 @@ Deno.test('WEBHOOK-20: upsert_product_subscription E fallback ambos falham → w
   assertEquals(res.status, 500);
 });
 
-Deno.test('WEBHOOK-21: price_id fora do mapa configurado → write de product_subscriptions ignorado (FAIL CLOSED) → webhook 200', async () => {
+Deno.test('WEBHOOK-21: price_id fora do mapa configurado → pending_retry durável gravado (UNMAPPED_PRICE) → webhook 200', async () => {
   // Map is non-empty (configured), but incoming price_id is not in it.
+  // Expectation: product_subscriptions NOT written (FAIL CLOSED on entitlement),
+  // but a durable pending_retry record IS written so the gap is never silent.
   const priceMap = new Map([['price_known_impact', { product: 'impact', tier: 'pro' }]]);
   const db = fakeDb(newState('cus_ps4', 'user_ps4'));
   const stripe = fakeStripe({
@@ -538,10 +540,18 @@ Deno.test('WEBHOOK-21: price_id fora do mapa configurado → write de product_su
   const body = evt({ id: 'evt_ps4', type: 'checkout.session.completed', data: { object: { customer: 'cus_ps4', subscription: 'sub_ps4' } } });
   const res = await handler(await signedReq(body), stripe, db as never, priceMap);
   assertEquals(res.status, 200);
-  // Legacy write still applied
+  // Legacy write still applied (pre-existing profiles table)
   assertEquals(db.state.profiles['user_ps4'].role, 'pro');
   // Product subscription NOT written (FAIL CLOSED: unknown price in configured map)
   assertEquals(Object.keys(db.state.productSubscriptions).length, 0);
+  // Durable pending_retry written with UNMAPPED_PRICE reason (not silently dropped)
+  assertEquals(Object.keys(db.state.productEntitlementEvents).length, 1);
+  const unmappedEvt = Object.values(db.state.productEntitlementEvents)[0] as Record<string, unknown>;
+  assertEquals(unmappedEvt.event_type, 'pending_retry');
+  assertEquals(unmappedEvt.stripe_event_id, 'evt_ps4');
+  const meta = JSON.parse(unmappedEvt.metadata as string) as Record<string, unknown>;
+  assertEquals(meta.reason, 'UNMAPPED_PRICE');
+  assertEquals(meta.price_id, 'price_UNKNOWN');
 });
 
 Deno.test('WEBHOOK-17: linha de subscriptions ausente para o user_id resolvido (UPDATE não encontra a linha) -> RPC retorna false, profiles intocado, 200', async () => {

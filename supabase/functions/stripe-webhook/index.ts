@@ -101,9 +101,12 @@ function parsePriceMap(): Map<string, PriceProductEntry> {
 // returns 500 and Stripe retries the webhook.
 //
 // FAIL CLOSED routing: when STRIPE_PRICE_MAP is configured (non-empty)
-// and the incoming price_id has no mapping, the write is skipped entirely
-// (not silently fallback to 'core'). Legacy 'core' fallback only applies
-// when the map is empty (no map configured at all).
+// and the incoming price_id has no mapping, a durable pending_retry record
+// is written (not silently dropped) and the caller returns 200. This is
+// intentionally NOT a 5xx: a Stripe price that is genuinely legacy or
+// discontinued should not cause infinite retries; the pending_retry record
+// allows operator alerting and reconciliation. Legacy 'core' fallback only
+// applies when the map is empty (no map configured at all).
 async function applyProductSubscriptionState(
   db: DbClient,
   userId: string,
@@ -116,9 +119,30 @@ async function applyProductSubscriptionState(
   const legacyTier = entitlementForStatus(sub.status).role; // 'pro' | 'free'
   const mapped = priceId ? priceMap.get(priceId) : undefined;
 
-  // FAIL CLOSED: map configured + price unknown → skip, do not guess 'core'.
+  // FAIL CLOSED: map configured + price unknown → write durable pending_retry
+  // so the gap is never silent. 200 is still returned (not 5xx) to avoid
+  // infinite Stripe retries for genuinely legacy or future price IDs that
+  // will never appear in the map. The pending_retry record allows
+  // reconciliation and operator alerting.
   if (priceMap.size > 0 && priceId !== null && !mapped) {
-    console.warn(`applyProductSubscriptionState: price_id ${priceId} not in STRIPE_PRICE_MAP — skipping product subscription write`);
+    console.warn(`applyProductSubscriptionState: price_id ${priceId} not in STRIPE_PRICE_MAP — writing durable pending_retry`);
+    const { error: unmappedErr } = await db
+      .from('product_entitlement_events')
+      .upsert({
+        user_id:         userId,
+        product:         'unknown',
+        event_type:      'pending_retry',
+        to_status:       sub.status,
+        to_tier:         'free',
+        source:          'stripe',
+        stripe_event_id: stripeEventId,
+        metadata:        JSON.stringify({ reason: 'UNMAPPED_PRICE', price_id: priceId }),
+      })
+      .select()
+      .maybeSingle();
+    if (unmappedErr) {
+      throw new Error(`UNMAPPED_PRICE durable record failed: ${String(unmappedErr)}`);
+    }
     return;
   }
 
