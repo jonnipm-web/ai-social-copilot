@@ -6,23 +6,26 @@ name: Build Release AAB
 # The keystore is stored exclusively in GitHub Secrets — never committed.
 #
 # PREREQUISITE (BLOCKED_OWNER — must be done by Owner before first use):
-#   1. Generate upload keystore locally:
-#        keytool -genkey -v -keystore upload-keystore.jks \
-#          -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 \
-#          -alias upload
-#   2. Base64-encode it:
-#        base64 -i upload-keystore.jks | tr -d '\n'
-#   3. Store in repository GitHub Secrets (Settings → Secrets → Actions):
+#   1. Generate upload keystore locally (see android/key.properties.template).
+#   2. Store in repository GitHub Secrets (Settings → Secrets → Actions):
 #        KEYSTORE_BASE64         — base64 of upload-keystore.jks
 #        KEYSTORE_STORE_PASSWORD — store password
 #        KEYSTORE_KEY_ALIAS      — alias (e.g. "upload")
 #        KEYSTORE_KEY_PASSWORD   — key password
-#   4. Per-flavor google-services.json must exist at:
-#        android/app/src/<flavor>/google-services.json
+#        GOOGLE_CLIENT_ID        — Android Web OAuth 2.0 client ID
+#                                  (MUST NOT be the placeholder value)
 #
-# SECURITY: KEYSTORE_BASE64 + related secrets previously populated from
-# the now-disabled generate-keystore.yml (PLAY-READINESS-18 incident) MUST
-# be rotated by the Owner before this workflow is used.
+# SECURITY: KEYSTORE_* secrets previously populated from the now-disabled
+# generate-keystore.yml (PLAY-READINESS-18 incident) MUST be rotated by
+# the Owner before this workflow is used.
+#
+# P1-C01-A fix: flutter_env.cfg is an asset file read at runtime by
+#   flutter_dotenv. It is NOT a --dart-define-from-file JSON map.
+#   The build command does not pass --dart-define-from-file.
+#
+# P1-C01-B fix: workflow fails fast if GOOGLE_CLIENT_ID is absent or is
+#   still the placeholder value — a release AAB with a placeholder client
+#   will silently break Google Sign-In for all users.
 
 on:
   workflow_dispatch:
@@ -64,11 +67,29 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Create flutter_env.cfg
+      # P1-C01-B: fail fast before any build work if GOOGLE_CLIENT_ID is
+      # absent or still holds the placeholder value. A release build with
+      # a placeholder client ID silently breaks Google Sign-In for all users.
+      - name: Validate release configuration (GOOGLE_CLIENT_ID)
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: |
+          if [ -z "$GOOGLE_CLIENT_ID" ] || \
+             [ "$GOOGLE_CLIENT_ID" = "placeholder.apps.googleusercontent.com" ]; then
+            echo "::error::RELEASE BLOCKED: GOOGLE_CLIENT_ID secret is missing or still"
+            echo "::error::set to the placeholder value. Add the real Android Web OAuth 2.0"
+            echo "::error::client ID to the repository secrets as GOOGLE_CLIENT_ID."
+            exit 1
+          fi
+          echo "GOOGLE_CLIENT_ID validation: OK (non-placeholder value present)"
+
+      # P1-C01-A fix: flutter_env.cfg is an ASSET FILE loaded at runtime by
+      # flutter_dotenv. Do NOT pass it via --dart-define-from-file (JSON-only).
+      - name: Create flutter_env.cfg (runtime asset)
         run: |
           echo "SUPABASE_URL=https://nzngvbajrnruknpzzjbf.supabase.co" > flutter_env.cfg
           echo "SUPABASE_ANON_KEY=sb_publishable_fZboVtE9PeokahlYmhc_vg_t6JHOmFh" >> flutter_env.cfg
-          echo "GOOGLE_CLIENT_ID=placeholder.apps.googleusercontent.com" >> flutter_env.cfg
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> flutter_env.cfg
 
       - name: Decode release keystore
         env:
@@ -88,13 +109,14 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
+      # P1-C01-A fix: no --dart-define-from-file; flutter_env.cfg is an
+      # asset bundled into the AAB, read at runtime via flutter_dotenv.
       - name: Build release AAB (${{ inputs.flavor }})
         run: |
           FLAVOR="${{ inputs.flavor }}"
           flutter build appbundle --release \
             --flavor "$FLAVOR" \
-            -t "lib/main_${FLAVOR}.dart" \
-            --dart-define-from-file=flutter_env.cfg
+            -t "lib/main_${FLAVOR}.dart"
 
       - name: Secure cleanup — remove keystore and key.properties
         if: always()
