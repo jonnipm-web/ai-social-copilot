@@ -276,8 +276,10 @@ BEGIN
       status                 = p_status,
       current_period_end     = p_current_period_end,
       cancel_at_period_end   = p_cancel_at_period_end,
-      last_event_created     = p_event_created,
-      last_stripe_event_id   = p_stripe_event_id
+      -- COALESCE: preserve existing watermark when incoming is NULL (legacy callers).
+      -- Never erase a stored timestamp by overwriting with NULL.
+      last_event_created     = COALESCE(p_event_created, last_event_created),
+      last_stripe_event_id   = COALESCE(p_stripe_event_id, last_stripe_event_id)
   WHERE user_id = p_user_id
     AND (
       last_event_created IS NULL        -- (a) no prior event
