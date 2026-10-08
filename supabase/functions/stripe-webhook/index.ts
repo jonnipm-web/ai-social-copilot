@@ -75,6 +75,9 @@ function entitlementForStatus(status: string): { role: string; monthly_limit: nu
 
 interface PriceProductEntry { product: string; tier: string }
 
+const VALID_PRICE_MAP_PRODUCTS = new Set(['core', 'impact', 'quant', 'suite']);
+const VALID_PRICE_MAP_TIERS    = new Set(['free', 'pro', 'premium']);
+
 function parsePriceMap(): { map: Map<string, PriceProductEntry>; error: string | null } {
   const raw = Deno.env.get('STRIPE_PRICE_MAP');
   if (!raw) return { map: new Map(), error: null };
@@ -85,6 +88,16 @@ function parsePriceMap(): { map: Map<string, PriceProductEntry>; error: string |
       if (v && typeof v === 'object') {
         const e = v as Record<string, unknown>;
         if (typeof e.product === 'string' && typeof e.tier === 'string') {
+          if (!VALID_PRICE_MAP_PRODUCTS.has(e.product)) {
+            const msg = `STRIPE_PRICE_MAP invalid product "${e.product}" for price "${k}". Valid: ${[...VALID_PRICE_MAP_PRODUCTS].join(', ')}`;
+            console.error(msg);
+            return { map: new Map(), error: msg };
+          }
+          if (!VALID_PRICE_MAP_TIERS.has(e.tier)) {
+            const msg = `STRIPE_PRICE_MAP invalid tier "${e.tier}" for price "${k}". Valid: ${[...VALID_PRICE_MAP_TIERS].join(', ')}`;
+            console.error(msg);
+            return { map: new Map(), error: msg };
+          }
           m.set(k, { product: e.product, tier: e.tier });
         }
       }
@@ -114,6 +127,7 @@ function parsePriceMap(): { map: Map<string, PriceProductEntry>; error: string |
 async function applyProductSubscriptionState(
   db: DbClient,
   userId: string,
+  customerId: string | null,
   sub: StripeSubscription,
   stripeEventId: string,
   stripeEventCreated: string,
@@ -133,14 +147,20 @@ async function applyProductSubscriptionState(
     const { error: unmappedErr } = await db
       .from('product_entitlement_events')
       .upsert({
-        user_id:         userId,
-        product:         'unknown',
-        event_type:      'pending_retry',
-        to_status:       sub.status,
-        to_tier:         'free',
-        source:          'stripe',
-        stripe_event_id: stripeEventId,
-        metadata:        JSON.stringify({ reason: 'UNMAPPED_PRICE', price_id: priceId }),
+        user_id:               userId,
+        product:               'unknown',
+        event_type:            'pending_retry',
+        to_status:             sub.status,
+        to_tier:               'free',
+        source:                'stripe',
+        stripe_event_id:        stripeEventId,
+        stripe_event_created:   stripeEventCreated,
+        stripe_subscription_id: sub.id,
+        stripe_customer_id:     customerId,
+        stripe_price_id:        priceId,
+        current_period_end:     sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+        cancel_at_period_end:   !!sub.cancel_at_period_end,
+        metadata:               JSON.stringify({ reason: 'UNMAPPED_PRICE', price_id: priceId }),
       })
       .select()
       .maybeSingle();
@@ -165,6 +185,7 @@ async function applyProductSubscriptionState(
       p_status:                 sub.status,
       p_source:                 'stripe',
       p_stripe_subscription_id: sub.id,
+      p_stripe_customer_id:     customerId,
       p_stripe_price_id:        priceId,
       p_current_period_end:     sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
       p_cancel_at_period_end:   !!sub.cancel_at_period_end,
@@ -189,14 +210,20 @@ async function applyProductSubscriptionState(
     .from('product_entitlement_events')
     .upsert(
       {
-        user_id:         userId,
+        user_id:               userId,
         product,
-        event_type:      'pending_retry',
-        to_status:       sub.status,
-        to_tier:         effectiveTier,
-        source:          'stripe',
-        stripe_event_id: stripeEventId,
-        metadata:        JSON.stringify({ error: String(upsertError), attempt: 1 }),
+        event_type:            'pending_retry',
+        to_status:             sub.status,
+        to_tier:               effectiveTier,
+        source:                'stripe',
+        stripe_event_id:        stripeEventId,
+        stripe_event_created:   stripeEventCreated,
+        stripe_subscription_id: sub.id,
+        stripe_customer_id:     customerId,
+        stripe_price_id:        priceId,
+        current_period_end:     sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+        cancel_at_period_end:   !!sub.cancel_at_period_end,
+        metadata:               JSON.stringify({ error: String(upsertError), attempt: 1 }),
       },
     )
     .select()
@@ -282,10 +309,22 @@ async function applySubscriptionState(
  *   (b) price_id is NULL (webhook has no price item), OR
  *   (c) price_id is unmapped in the configured map, OR
  *   (d) mapped product is 'core'
+ *
+ * P1-I fix: for Core cancellations, product_subscriptions is written first,
+ * then resolve_product_entitlement is consulted. If another active Core
+ * subscription still grants access, the legacy subscriptions/profiles downgrade
+ * is skipped — cancelling one of multiple Core subs must not revoke access.
  */
+
+// Statuses that represent loss of active entitlement (anything not active/trialing).
+const CANCEL_STATUSES = new Set([
+  'canceled', 'unpaid', 'incomplete_expired', 'past_due', 'paused', 'none', 'incomplete',
+]);
+
 async function applySubscriptionAndProductState(
   db: DbClient,
   userId: string,
+  customerId: string | null,
   eventCreatedIso: string,
   sub: StripeSubscription,
   eventId: string,
@@ -303,14 +342,148 @@ async function applySubscriptionAndProductState(
     mapped?.product === 'core';     // (c) price explicitly maps to Core
   // !mapped (unmapped in configured map) → falls through to applyProductSubscriptionState
   // which writes the UNMAPPED_PRICE pending_retry without touching Core tables.
+  //
+  // P1-K fix: for unmapped-price cancellations, also check whether this sub.id
+  // matches the user's existing legacy Core subscription. If it does, the
+  // cancellation must downgrade legacy tables regardless of price mapping —
+  // leaving legacy Core active would grant indefinite access via the resolver's
+  // legacy fallback branch even though the real Stripe sub has been canceled.
+  let effectiveLegacyCoreEvent = isLegacyCoreEvent;
+  if (!isLegacyCoreEvent && CANCEL_STATUSES.has(sub.status)) {
+    const { data: legacyRow, error: legacyErr } = await db.from('subscriptions')
+      .select('stripe_subscription_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (!legacyErr && legacyRow !== null &&
+        (legacyRow as Record<string, unknown>).stripe_subscription_id === sub.id) {
+      effectiveLegacyCoreEvent = true;
+      console.log(`${eventType} ${eventId}: unmapped-price cancellation matches legacy Core sub — routing as Core`);
+    }
+  }
 
-  if (isLegacyCoreEvent) {
-    const applied = await applySubscriptionState(db, userId, eventCreatedIso, sub);
-    if (!applied) console.log(`${eventType} ${eventId} skipped: superseded by a newer event`);
-    if (applied) await applyProductSubscriptionState(db, userId, sub, eventId, eventCreatedIso, priceMap);
+  // P1-K: isUnmappedLegacyCore=true when the sub is being treated as Core only because
+  // its sub.id matched the legacy subscriptions row (unmapped price). In this case the
+  // resolver's legacy-fallback branch would return allowed=true (legacy tables not yet
+  // updated), so the resolve_product_entitlement check used in the P1-I path would
+  // incorrectly conclude that another active Core sub exists and skip the downgrade.
+  // For this path, always downgrade legacy state when no product_subscriptions rows exist.
+  const isUnmappedLegacyCore = effectiveLegacyCoreEvent && !isLegacyCoreEvent;
+
+  if (effectiveLegacyCoreEvent) {
+    if (!CANCEL_STATUSES.has(sub.status)) {
+      // R12 P1 fix: activation path now uses the same advisory-lock-protected RPC as
+      // the cancellation path. Both legacy and product writes happen in one PostgreSQL
+      // transaction; a concurrent cancel_core_entitlement_atomic blocks on the same
+      // lock and will see the product row once we commit.
+      const entitlement = entitlementForStatus(sub.status);
+      const product = mapped?.product ?? 'core';
+      const tier = mapped?.tier ?? entitlement.role;
+      const { data: activateResult, error: activateErr } = await (db as unknown as {
+        rpc(fn: string, args: Record<string, unknown>): Promise<{ data: unknown; error: unknown }>;
+      }).rpc('activate_core_entitlement_atomic', {
+        p_user_id:                userId,
+        p_product:                product,
+        p_tier:                   tier,
+        p_status:                 sub.status,
+        p_source:                 'stripe',
+        p_stripe_subscription_id: sub.id,
+        p_stripe_price_id:        priceId,
+        p_stripe_customer_id:     customerId,
+        p_current_period_end:     sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+        p_cancel_at_period_end:   !!sub.cancel_at_period_end,
+        p_stripe_event_id:        eventId,
+        p_stripe_event_created:   eventCreatedIso,
+        p_legacy_role:            entitlement.role,
+        p_legacy_monthly_limit:   entitlement.monthly_limit,
+      });
+      if (activateErr) {
+        throw new Error(`activate_core_entitlement_atomic failed (${eventType} ${eventId}): ${(activateErr as { message?: string }).message ?? activateErr}`);
+      }
+      const legacyApplied = (activateResult as Record<string, unknown>)?.legacy_applied;
+      if (!legacyApplied) console.log(`${eventType} ${eventId} skipped: superseded by a newer event`);
+    } else if (isUnmappedLegacyCore) {
+      // P1-K + R20-B fix: unmapped-price cancellation for legacy Core sub.
+      //
+      // Problem with naive resolver check: resolve_product_entitlement has a legacy
+      // fallback (migration 00002 lines 201-228) — when product_subscriptions has no
+      // Core row, it reads subscriptions/profiles directly and returns allowed=true
+      // if the legacy row is still active (not yet updated). Calling the resolver
+      // BEFORE updating product_subscriptions therefore always returns allowed=true,
+      // making the code skip the downgrade even when the sub is truly canceled.
+      //
+      // Fix: route through cancel_core_entitlement_atomic with product='core'.
+      // Step 1 of that RPC writes this sub as 'canceled' in product_subscriptions,
+      // so when Step 2 calls the resolver, v_has_any=true → resolver uses
+      // product_subscriptions (not the legacy fallback). If another mapped Core sub
+      // is active, resolver returns allowed=true → no downgrade. Otherwise allowed=false
+      // → legacy downgraded. All under the per-user advisory lock.
+      //
+      // Also write a pending_retry audit event (unknown product, price not in priceMap).
+      await applyProductSubscriptionState(db, userId, customerId, sub, eventId, eventCreatedIso, priceMap);
+      const entitlement = entitlementForStatus(sub.status);
+      const { data: cancelResult, error: cancelErr } = await db.rpc('cancel_core_entitlement_atomic', {
+        p_user_id:                userId,
+        p_product:                'core',
+        p_tier:                   'free',
+        p_status:                 sub.status,
+        p_source:                 'stripe',
+        p_stripe_subscription_id: sub.id,
+        p_stripe_price_id:        priceId,
+        p_stripe_customer_id:     customerId,
+        p_current_period_end:     sub.current_period_end
+          ? new Date(sub.current_period_end * 1000).toISOString()
+          : null,
+        p_cancel_at_period_end:   sub.cancel_at_period_end ?? false,
+        p_stripe_event_id:        eventId,
+        p_stripe_event_created:   eventCreatedIso,
+        p_metadata:               {},
+        p_legacy_role:            entitlement.role,
+        p_legacy_monthly_limit:   entitlement.monthly_limit,
+      });
+      if (cancelErr) {
+        throw new Error(`cancel_core_entitlement_atomic (unmapped) failed (${eventType} ${eventId}): ${(cancelErr as { message?: string }).message ?? cancelErr}`);
+      }
+      const legacyApplied = (cancelResult as unknown as Record<string, unknown>)?.legacy_applied;
+      if (!legacyApplied) console.log(`${eventType} ${eventId} unmapped-Core cancel: legacy not downgraded (another Core sub still active or superseded)`);
+    } else {
+      // P1-A + P1-I fix: atomic Core cancel — uses a single SQL RPC that acquires
+      // a per-user advisory lock so the product write, entitlement read, and
+      // conditional legacy write are never interleaved by a concurrent activation.
+      const priceId = sub.items?.data?.[0]?.price?.id ?? null;
+      const mapped = priceId ? priceMap.get(priceId) : undefined;
+      const entitlement = entitlementForStatus(sub.status);
+      const product = mapped?.product ?? 'core';
+      const tier = mapped?.tier ?? entitlement.role;
+      const effectiveTier = (sub.status === 'active' || sub.status === 'trialing') ? tier : 'free';
+      const { data: cancelResult, error: cancelErr } = await (db as unknown as {
+        rpc(fn: string, args: Record<string, unknown>): Promise<{ data: unknown; error: unknown }>;
+      }).rpc('cancel_core_entitlement_atomic', {
+        p_user_id:                userId,
+        p_product:                product,
+        p_tier:                   effectiveTier,
+        p_status:                 sub.status,
+        p_source:                 'stripe',
+        p_stripe_subscription_id: sub.id,
+        p_stripe_price_id:        priceId,
+        p_stripe_customer_id:     customerId,
+        p_current_period_end:     sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+        p_cancel_at_period_end:   !!sub.cancel_at_period_end,
+        p_stripe_event_id:        eventId,
+        p_stripe_event_created:   eventCreatedIso,
+        p_legacy_role:            entitlement.role,
+        p_legacy_monthly_limit:   entitlement.monthly_limit,
+      });
+      if (cancelErr) {
+        throw new Error(`cancel_core_entitlement_atomic failed (${eventType} ${eventId}): ${(cancelErr as { message?: string }).message ?? cancelErr}`);
+      }
+      const legacyApplied = (cancelResult as Record<string, unknown>)?.legacy_applied;
+      if (legacyApplied === false || legacyApplied === null) {
+        console.log(`${eventType} ${eventId}: Core entitlement survives via another active subscription — legacy downgrade skipped`);
+      }
+    }
   } else {
     // Non-Core product: skip legacy Core tables entirely.
-    await applyProductSubscriptionState(db, userId, sub, eventId, eventCreatedIso, priceMap);
+    await applyProductSubscriptionState(db, userId, customerId, sub, eventId, eventCreatedIso, priceMap);
   }
 }
 
@@ -386,7 +559,7 @@ export async function handler(
           break;
         }
         const sub = await retrieveSubscription(session.subscription, stripeClient);
-        await applySubscriptionAndProductState(db, userId, eventCreatedIso, sub, event.id, priceMap, event.type);
+        await applySubscriptionAndProductState(db, userId, session.customer ?? null, eventCreatedIso, sub, event.id, priceMap, event.type);
         break;
       }
       case 'customer.subscription.updated':
@@ -413,7 +586,7 @@ export async function handler(
         // is no safe fallback here: any failure must abort and let
         // Stripe's own retry re-attempt the fresh GET.
         const sub = await retrieveSubscription(obj.id, stripeClient);
-        await applySubscriptionAndProductState(db, userId, eventCreatedIso, sub, event.id, priceMap, event.type);
+        await applySubscriptionAndProductState(db, userId, obj.customer ?? null, eventCreatedIso, sub, event.id, priceMap, event.type);
         break;
       }
       default:

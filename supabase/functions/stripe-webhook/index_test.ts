@@ -8,7 +8,7 @@
  * Execução:
  *   DENO_TESTING=1 STRIPE_WEBHOOK_SECRET=whsec_test deno test --allow-env supabase/functions/stripe-webhook/index_test.ts
  */
-import { assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
+import { assertEquals, assertNotEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { StripeFetch, StripeSubscription } from '../_shared/stripe.ts';
 
 const SECRET = 'whsec_test_secret';
@@ -79,6 +79,26 @@ interface DbState {
   productEntitlementEvents: Record<string, Record<string, unknown>>;
 }
 
+/** Returns the effective (highest active tier) product subscription for (userId, product).
+ * Mirrors resolve_product_entitlement aggregation logic for test assertions.
+ * Falls back to first matching row if none are active. */
+function psEffective(state: DbState, userId: string, product: string): Record<string, unknown> | undefined {
+  const prefix = `${userId}:${product}:`;
+  const rows = Object.entries(state.productSubscriptions)
+    .filter(([k]) => k.startsWith(prefix))
+    .map(([, v]) => v);
+  if (rows.length === 0) return undefined;
+  const tierRank = (t: unknown) => t === 'premium' ? 2 : t === 'pro' ? 1 : 0;
+  const active = rows.filter(r => r.status === 'active' || r.status === 'trialing');
+  const pool = active.length > 0 ? active : rows;
+  return pool.sort((a, b) => tierRank(b.tier) - tierRank(a.tier))[0];
+}
+
+/** Returns the row for a specific subscription ID (for ordering/stale tests). */
+function psRow(state: DbState, userId: string, product: string, subId: string): Record<string, unknown> | undefined {
+  return state.productSubscriptions[`${userId}:${product}:${subId}`];
+}
+
 function fakeDb(initial: DbState) {
   const state = initial;
   return {
@@ -120,25 +140,196 @@ function fakeDb(initial: DbState) {
         };
         return Promise.resolve({ data: true, error: null });
       }
-      // IV-WEB-ECOSYSTEM-UNIFICATION-01: product subscription upsert with ordering.
+      // IV-WEB-ECOSYSTEM-UNIFICATION-01 v2: multi-subscription upsert.
+      // Key: `${userId}:${product}:${stripe_subscription_id}` — one row per subscription.
+      // Use psEffective(state, userId, product) to get the aggregated entitlement.
       if (fn === 'upsert_product_subscription') {
         const userId = args.p_user_id as string;
         const product = args.p_product as string;
-        const key = `${userId}:${product}`;
-        const existing = state.productSubscriptions[key];
-        // Event ordering guard: reject stale events (mirrors SQL function)
+        const subId = (args.p_stripe_subscription_id as string | null | undefined) ?? 'default';
+        const tripleKey = `${userId}:${product}:${subId}`;
+        const existing = state.productSubscriptions[tripleKey];
+        // Event ordering guard per-subscription (mirrors SQL function)
         const incomingCreated = args.p_stripe_event_created as string | null ?? null;
         const lastCreated = existing?.last_stripe_event_created as string | null ?? null;
         if (incomingCreated !== null && lastCreated !== null && incomingCreated < lastCreated) {
           return Promise.resolve({ data: { ok: false, skipped: true, reason: 'STALE_EVENT', product }, error: null }) as never;
         }
-        state.productSubscriptions[key] = {
+        state.productSubscriptions[tripleKey] = {
           product, tier: args.p_tier, status: args.p_status, source: args.p_source,
-          stripe_subscription_id: args.p_stripe_subscription_id,
+          stripe_subscription_id: subId,
+          stripe_customer_id: args.p_stripe_customer_id,
           stripe_price_id: args.p_stripe_price_id,
           last_stripe_event_created: incomingCreated,
         };
         return Promise.resolve({ data: { ok: true, product, tier: args.p_tier, status: args.p_status }, error: null }) as never;
+      }
+      // P1-I fix: resolve_product_entitlement — mirrors SQL aggregation for test assertions.
+      // Returns allowed=true if any active/trialing productSubscription exists for (userId, product).
+      if (fn === 'resolve_product_entitlement') {
+        const userId = args.p_user_id as string;
+        const product = args.p_product as string;
+        const prefix = `${userId}:${product}:`;
+        const rows = Object.entries(state.productSubscriptions)
+          .filter(([k]) => k.startsWith(prefix))
+          .map(([, v]) => v);
+        const activeRows = rows.filter(r => r.status === 'active' || r.status === 'trialing');
+        if (activeRows.length > 0) {
+          const tierRank = (t: unknown) => t === 'premium' ? 2 : t === 'pro' ? 1 : 0;
+          const best = [...activeRows].sort((a, b) => tierRank(b.tier) - tierRank(a.tier))[0];
+          return Promise.resolve({ data: { allowed: true, product, tier: best.tier, source: 'product_subscriptions' }, error: null }) as never;
+        }
+        return Promise.resolve({ data: { allowed: false, product, code: 'NO_ENTITLEMENT' }, error: null }) as never;
+      }
+      // P1-A fix: cancel_core_entitlement_atomic — mirrors the atomic SQL RPC for Core cancellation.
+      // Runs upsert_product_subscription + resolve_product_entitlement + conditional apply_stripe_subscription_state
+      // atomically (in production, protected by a per-user advisory lock).
+      if (fn === 'cancel_core_entitlement_atomic') {
+        const userId = args.p_user_id as string;
+        const product = args.p_product as string;
+        const subId = (args.p_stripe_subscription_id as string | null | undefined) ?? 'default';
+        const tripleKey = `${userId}:${product}:${subId}`;
+        const existing = state.productSubscriptions[tripleKey];
+        const incomingCreated = args.p_stripe_event_created as string | null ?? null;
+        const lastCreated = existing?.last_stripe_event_created as string | null ?? null;
+        let upsertResult: Record<string, unknown>;
+        if (incomingCreated !== null && lastCreated !== null && incomingCreated < lastCreated) {
+          upsertResult = { ok: false, skipped: true, reason: 'STALE_EVENT', product };
+        } else {
+          state.productSubscriptions[tripleKey] = {
+            product, tier: args.p_tier, status: args.p_status, source: args.p_source,
+            stripe_subscription_id: subId, stripe_customer_id: args.p_stripe_customer_id,
+            stripe_price_id: args.p_stripe_price_id, last_stripe_event_created: incomingCreated,
+          };
+          upsertResult = { ok: true, product, tier: args.p_tier, status: args.p_status };
+        }
+        // Check entitlement post-upsert
+        const prefix = `${userId}:${product}:`;
+        const rows = Object.entries(state.productSubscriptions).filter(([k]) => k.startsWith(prefix)).map(([, v]) => v);
+        const activeRows = rows.filter(r => r.status === 'active' || r.status === 'trialing');
+        const tierRank = (t: unknown) => t === 'premium' ? 2 : t === 'pro' ? 1 : 0;
+        const entResult = activeRows.length > 0
+          ? { allowed: true, product, tier: [...activeRows].sort((a, b) => tierRank(b.tier) - tierRank(a.tier))[0].tier }
+          : { allowed: false, product, code: 'NO_ENTITLEMENT' };
+        let legacyApplied = false;
+        // Conditionally apply legacy downgrade (mirrors apply_stripe_subscription_state)
+        if (!entResult.allowed) {
+          const existing = state.subscriptions[userId];
+          if (existing) {
+            const eventCreated = args.p_stripe_event_created as string | null ?? null;
+            const lastEventCreated = existing.last_event_created as string | null | undefined;
+            if (lastEventCreated == null || eventCreated == null || eventCreated >= lastEventCreated) {
+              state.subscriptions[userId] = {
+                ...existing, stripe_subscription_id: args.p_stripe_subscription_id,
+                stripe_price_id: args.p_stripe_price_id, status: args.p_status,
+                current_period_end: args.p_current_period_end, cancel_at_period_end: args.p_cancel_at_period_end,
+                last_event_created: eventCreated,
+              };
+              // Migration 20261010000000: only update Stripe-managed roles (free/pro).
+              // admin/beta_tester/premium are never touched by billing events.
+              const currentRoleCancel = state.profiles[userId]?.role as string | undefined;
+              if (currentRoleCancel === 'free' || currentRoleCancel === 'pro') {
+                state.profiles[userId] = { ...(state.profiles[userId] ?? {}), role: args.p_legacy_role, monthly_limit: args.p_legacy_monthly_limit };
+              }
+              legacyApplied = true;
+            }
+            // R22-A fix: if timestamp guard blocked the legacy write but entitlement is
+            // truly inactive, force-downgrade profiles so authorization reflects reality.
+            // Only applies to Stripe-managed roles ('pro'). admin/beta_tester/premium are
+            // granted outside Stripe and must not be changed by cancellation events.
+            // Mirrors the protection in apply_stripe_subscription_state (migration 20261010000000).
+            if (!legacyApplied) {
+              const currentRole = state.profiles[userId]?.role as string | undefined;
+              if (currentRole === 'pro') {
+                state.profiles[userId] = { ...(state.profiles[userId] ?? {}), role: 'free', monthly_limit: 15 };
+                legacyApplied = true;
+              }
+            }
+          }
+        }
+        return Promise.resolve({ data: { upsert: upsertResult, entitlement: entResult, legacy_applied: legacyApplied }, error: null }) as never;
+      }
+      // R12+R16-C fix: activate_core_entitlement_atomic — mirrors the revised SQL RPC for Core activation.
+      // Order: (1) product upsert, (2) resolve entitlement, (3) apply legacy (user-global guard),
+      // (4) if allowed AND legacy stale → force-update profiles from resolver tier.
+      if (fn === 'activate_core_entitlement_atomic') {
+        const userId = args.p_user_id as string;
+        const product = args.p_product as string;
+        const subId = (args.p_stripe_subscription_id as string | null | undefined) ?? 'default';
+        const tripleKey = `${userId}:${product}:${subId}`;
+        // Step 1: product activation (upsert_product_subscription)
+        const existingProd = state.productSubscriptions[tripleKey];
+        const incomingCreated = args.p_stripe_event_created as string | null ?? null;
+        const lastCreated = existingProd?.last_stripe_event_created as string | null ?? null;
+        let upsertResult: Record<string, unknown>;
+        if (incomingCreated !== null && lastCreated !== null && incomingCreated < lastCreated) {
+          upsertResult = { ok: false, skipped: true, reason: 'STALE_EVENT', product };
+        } else {
+          state.productSubscriptions[tripleKey] = {
+            product, tier: args.p_tier, status: args.p_status, source: args.p_source,
+            stripe_subscription_id: subId, stripe_customer_id: args.p_stripe_customer_id,
+            stripe_price_id: args.p_stripe_price_id, last_stripe_event_created: incomingCreated,
+          };
+          upsertResult = { ok: true, product, tier: args.p_tier, status: args.p_status };
+        }
+        // Step 2: resolve aggregated entitlement
+        const prefix = `${userId}:${product}:`;
+        const allRows = Object.entries(state.productSubscriptions).filter(([k]) => k.startsWith(prefix)).map(([, v]) => v);
+        const activeRows2 = allRows.filter(r => r.status === 'active' || r.status === 'trialing');
+        const tierRank2 = (t: unknown) => t === 'premium' ? 2 : t === 'pro' ? 1 : 0;
+        const entResult2 = activeRows2.length > 0
+          ? { allowed: true, product, tier: [...activeRows2].sort((a, b) => tierRank2(b.tier) - tierRank2(a.tier))[0].tier }
+          : { allowed: false, product, code: 'NO_ENTITLEMENT' };
+        let legacyApplied = false;
+        let legacyRowExists = false;
+        if (entResult2.allowed) {
+          // Step 3: apply legacy (user-global timestamp guard).
+          // R17-B fix: use aggregate resolver tier for role/limit, not the incoming event's individual tier.
+          const resolvedTierStep3 = (entResult2 as Record<string, unknown>).tier as string | undefined;
+          // R24 fix: Stripe billing capped at 'pro' — mirrors migration 20261016000006.
+          // tier='premium' → 'pro' (paid sub, cap applies); other → 'free'.
+          const applyRole   = (resolvedTierStep3 === 'premium' || resolvedTierStep3 === 'pro') ? 'pro' : 'free';
+          const applyLimit  = applyRole === 'pro' ? 300 : 15;
+          const existingLegacy = state.subscriptions[userId];
+          legacyRowExists = existingLegacy !== undefined;
+          if (existingLegacy) {
+            const eventCreated = args.p_stripe_event_created as string | null ?? null;
+            const lastEventCreated = existingLegacy.last_event_created as string | null | undefined;
+            if (lastEventCreated == null || eventCreated == null || eventCreated >= lastEventCreated) {
+              state.subscriptions[userId] = {
+                ...existingLegacy,
+                stripe_subscription_id: args.p_stripe_subscription_id,
+                stripe_price_id: args.p_stripe_price_id,
+                status: args.p_status,
+                current_period_end: args.p_current_period_end,
+                cancel_at_period_end: args.p_cancel_at_period_end,
+                last_event_created: eventCreated,
+              };
+              state.profiles[userId] = {
+                ...(state.profiles[userId] ?? {}),
+                role: applyRole,
+                monthly_limit: applyLimit,
+              };
+              legacyApplied = true;
+            }
+          }
+          // Step 4: R16-C fix — if product row was written (upsert ok=true) AND legacy row EXISTS
+          // but was skipped by the user-global timestamp guard (cross-subscription stale ordering),
+          // force-update profiles from resolver tier.
+          // If upsert was STALE_EVENT (same-sub duplicate): both upsert and legacy are stale → no repair.
+          // If subscriptions row absent: mapping is broken → no force-update.
+          const upsertWasOk = upsertResult.ok === true;
+          if (!legacyApplied && upsertWasOk && legacyRowExists && state.profiles[userId] !== undefined) {
+            // applyRole/applyLimit already derived from resolver tier above.
+            const currentRole = state.profiles[userId].role as string | undefined;
+            // R24: applyRole is always 'pro' or 'free'; only upgrade free/undefined.
+            if (currentRole === 'free' || currentRole === undefined) {
+              state.profiles[userId] = { ...(state.profiles[userId] ?? {}), role: applyRole, monthly_limit: applyLimit };
+              legacyApplied = true;
+            }
+          }
+        }
+        return Promise.resolve({ data: { legacy_applied: legacyApplied, upsert: upsertResult, entitlement: entResult2 }, error: null }) as never;
       }
       throw new Error(`unexpected rpc in test fake: ${fn}`);
     },
@@ -164,10 +355,18 @@ function fakeDb(initial: DbState) {
       if (table === 'subscriptions') {
         return {
           select: (_c: string) => ({
-            eq: (_col: string, val: string) => ({
+            eq: (col: string, val: string) => ({
               maybeSingle: () => {
-                const userId = state.customerToUser[val];
-                return Promise.resolve({ data: userId ? { user_id: userId } : null, error: null });
+                if (col === 'stripe_customer_id') {
+                  const userId = state.customerToUser[val];
+                  return Promise.resolve({ data: userId ? { user_id: userId } : null, error: null });
+                }
+                if (col === 'user_id') {
+                  // P1-K: return the subscription row for this user_id (for legacy sub_id check).
+                  const row = state.subscriptions[val];
+                  return Promise.resolve({ data: row ?? null, error: null });
+                }
+                return Promise.resolve({ data: null, error: null });
               },
             }),
           }),
@@ -427,14 +626,14 @@ Deno.test('WEBHOOK-22: evento de produto antigo chega depois → ignorado (order
   const stripe1 = fakeStripe({ sub_ord1: makeSub({ id: 'sub_ord1', status: 'active', items: { data: [{ price: { id: 'price_impact' } }] } }) });
   const res1 = await handler(await signedReq(newerEvt), stripe1, db as never, priceMap);
   assertEquals(res1.status, 200);
-  assertEquals(db.state.productSubscriptions['user_ord1:impact']?.status, 'active');
+  assertEquals(psEffective(db.state, 'user_ord1', 'impact')?.status, 'active');
 
   // Simulate product subscription active state being set
-  const activePs = db.state.productSubscriptions['user_ord1:impact'];
+  const activePs = psEffective(db.state, 'user_ord1', 'impact');
   assertEquals(activePs?.last_stripe_event_created, new Date(newerTs * 1000).toISOString());
 
   // Now, mark subscription as canceled via a newer legacy event
-  db.state.productSubscriptions['user_ord1:impact'] = {
+  db.state.productSubscriptions['user_ord1:impact:sub_ord1'] = {
     ...activePs,
     status: 'canceled',
     last_stripe_event_created: new Date((NOW + 100) * 1000).toISOString(), // future-ish
@@ -451,7 +650,7 @@ Deno.test('WEBHOOK-22: evento de produto antigo chega depois → ignorado (order
   const res2 = await handler(await signedReq(olderEvt), stripe2, db as never, priceMap);
   assertEquals(res2.status, 200);
   // Stale event did NOT resurrect the active state
-  assertEquals(db.state.productSubscriptions['user_ord1:impact']?.status, 'canceled');
+  assertEquals(psEffective(db.state, 'user_ord1', 'impact')?.status, 'canceled');
 });
 
 Deno.test('WEBHOOK-18: STRIPE_PRICE_MAP impact mapeado → product_subscriptions escrito, Core NÃO alterado', async () => {
@@ -471,30 +670,31 @@ Deno.test('WEBHOOK-18: STRIPE_PRICE_MAP impact mapeado → product_subscriptions
   // Impact event must NOT promote user to Core Pro (isolation rule)
   assertEquals(db.state.profiles['user_ps1'].role, 'free');
   // product_subscriptions written for 'impact' (mapped product), not 'core'
-  assertEquals(!!db.state.productSubscriptions['user_ps1:impact'], true);
-  assertEquals(db.state.productSubscriptions['user_ps1:core'], undefined);
+  assertEquals(!!psEffective(db.state, 'user_ps1', 'impact'), true);
+  assertEquals(psEffective(db.state, 'user_ps1', 'core'), undefined);
   // Legacy subscriptions table NOT written for Impact event
   assertEquals(db.state.subscriptions['user_ps1']?.status, 'none'); // initial value unchanged
 });
 
-Deno.test('WEBHOOK-19: upsert_product_subscription falha → evento durável gravado → webhook 200 (path B)', async () => {
+Deno.test('WEBHOOK-19: upsert_product_subscription falha para produto não-Core → evento durável gravado → webhook 200 (path B)', async () => {
+  // Non-Core products (Impact/Quant) still use applyProductSubscriptionState which has Path B.
+  // Core activation now uses activate_core_entitlement_atomic (no Path B — Stripe retries on failure).
+  const priceMap = new Map([['price_impact_pro', { product: 'impact', tier: 'pro' }]]);
   const db = fakeDb(newState('cus_ps2', 'user_ps2')) as ReturnType<typeof fakeDb> & { rpc: unknown };
-  let applyCalls = 0;
   let upsertCalls = 0;
   const origRpc = db.rpc.bind(db);
   db.rpc = (fn: string, args: Record<string, unknown>) => {
-    if (fn === 'apply_stripe_subscription_state') { applyCalls++; return origRpc(fn, args); }
     if (fn === 'upsert_product_subscription') { upsertCalls++; throw new Error('simulated product upsert failure'); }
     return origRpc(fn, args);
   };
-  const stripe = fakeStripe({ sub_ps2: makeSub({ id: 'sub_ps2', status: 'active' }) });
+  const stripe = fakeStripe({ sub_ps2: makeSub({ id: 'sub_ps2', status: 'active', items: { data: [{ price: { id: 'price_impact_pro' } }] } }) });
   const body = evt({ id: 'evt_ps2', type: 'checkout.session.completed', data: { object: { customer: 'cus_ps2', subscription: 'sub_ps2' } } });
-  const res = await handler(await signedReq(body), stripe, db as never);
+  const res = await handler(await signedReq(body), stripe, db as never, priceMap);
   // Path B: durable pending event written → webhook still returns 200
   assertEquals(res.status, 200);
-  assertEquals(applyCalls, 1);
   assertEquals(upsertCalls, 1);
-  assertEquals(db.state.profiles['user_ps2'].role, 'pro'); // legacy write succeeded
+  // Core NOT written (non-Core event → isolation rule)
+  assertEquals(db.state.profiles['user_ps2'].role, 'free');
   // Durable fallback event was persisted
   assertEquals(Object.keys(db.state.productEntitlementEvents).length, 1);
   const pendingEvt = Object.values(db.state.productEntitlementEvents)[0] as Record<string, unknown>;
@@ -502,11 +702,13 @@ Deno.test('WEBHOOK-19: upsert_product_subscription falha → evento durável gra
   assertEquals(pendingEvt.stripe_event_id, 'evt_ps2');
 });
 
-Deno.test('WEBHOOK-20: upsert_product_subscription E fallback ambos falham → webhook 500', async () => {
+Deno.test('WEBHOOK-20: upsert_product_subscription E fallback ambos falham para produto não-Core → webhook 500', async () => {
+  // Non-Core products (Impact/Quant) still use applyProductSubscriptionState which has Path B.
+  // Core activation now uses activate_core_entitlement_atomic (no Path B — Stripe retries on failure).
+  const priceMap = new Map([['price_impact_pro', { product: 'impact', tier: 'pro' }]]);
   const db = fakeDb(newState('cus_ps3', 'user_ps3')) as ReturnType<typeof fakeDb> & { rpc: unknown; from: unknown };
   const origRpc = db.rpc.bind(db);
   db.rpc = (fn: string, args: Record<string, unknown>) => {
-    if (fn === 'apply_stripe_subscription_state') return origRpc(fn, args);
     if (fn === 'upsert_product_subscription') throw new Error('simulated upsert failure');
     return origRpc(fn, args);
   };
@@ -524,9 +726,9 @@ Deno.test('WEBHOOK-20: upsert_product_subscription E fallback ambos falham → w
     }
     return origFrom(table);
   };
-  const stripe = fakeStripe({ sub_ps3: makeSub({ id: 'sub_ps3', status: 'active' }) });
+  const stripe = fakeStripe({ sub_ps3: makeSub({ id: 'sub_ps3', status: 'active', items: { data: [{ price: { id: 'price_impact_pro' } }] } }) });
   const body = evt({ id: 'evt_ps3', type: 'checkout.session.completed', data: { object: { customer: 'cus_ps3', subscription: 'sub_ps3' } } });
-  const res = await handler(await signedReq(body), stripe, db as never);
+  const res = await handler(await signedReq(body), stripe, db as never, priceMap);
   // Both writes failed → 500 so Stripe retries
   assertEquals(res.status, 500);
 });
@@ -595,7 +797,7 @@ Deno.test('WEBHOOK-25: STRIPE_PRICE_MAP invalid path gated - valid override pass
   const validMap = new Map([['price_impact_pro', { product: 'impact', tier: 'pro' }]]);
   const res = await handler(await signedReq(body), stripe, db as never, validMap);
   assertEquals(res.status, 200);
-  assertEquals(db.state.productSubscriptions['user_w25:impact']?.status, 'active');
+  assertEquals(psEffective(db.state, 'user_w25', 'impact')?.status, 'active');
 });
 
 Deno.test('WEBHOOK-23: ON CONFLICT WHERE predicate — older event after newer commit → no overwrite (atomic ordering guard)', async () => {
@@ -612,11 +814,11 @@ Deno.test('WEBHOOK-23: ON CONFLICT WHERE predicate — older event after newer c
   const sub = makeSub({ id: 'sub_oc1', status: 'active', items: { data: [{ price: { id: 'price_impact' } }] } });
   const newerEvt = evt({ id: 'evt_oc_new', type: 'checkout.session.completed', created: newerTs, data: { object: { customer: 'cus_oc1', subscription: 'sub_oc1' } } });
   await handler(await signedReq(newerEvt), fakeStripe({ sub_oc1: sub }), db as never, priceMap);
-  assertEquals(db.state.productSubscriptions['user_oc1:impact']?.status, 'active');
+  assertEquals(psEffective(db.state, 'user_oc1', 'impact')?.status, 'active');
 
   // Manually advance the stored event timestamp to simulate newer commit in DB
-  db.state.productSubscriptions['user_oc1:impact'] = {
-    ...db.state.productSubscriptions['user_oc1:impact'],
+  db.state.productSubscriptions['user_oc1:impact:sub_oc1'] = {
+    ...psEffective(db.state, 'user_oc1', 'impact')!,
     status: 'active',
     last_stripe_event_created: new Date(newerTs * 1000).toISOString(),
   };
@@ -627,7 +829,7 @@ Deno.test('WEBHOOK-23: ON CONFLICT WHERE predicate — older event after newer c
   const res = await handler(await signedReq(olderEvt), fakeStripe({ sub_oc1: olderSub }), db as never, priceMap);
   assertEquals(res.status, 200);
   // Atomic predicate prevented overwrite: subscription still active
-  assertEquals(db.state.productSubscriptions['user_oc1:impact']?.status, 'active');
+  assertEquals(psEffective(db.state, 'user_oc1', 'impact')?.status, 'active');
 });
 
 Deno.test('WEBHOOK-17: linha de subscriptions ausente para o user_id resolvido (UPDATE não encontra a linha) -> RPC retorna false, profiles intocado, 200', async () => {
@@ -644,4 +846,506 @@ Deno.test('WEBHOOK-17: linha de subscriptions ausente para o user_id resolvido (
   assertEquals(res.status, 200);
   assertEquals(db.state.profiles['user_9'].role, 'free'); // não promovido
   assertEquals(db.state.subscriptions['user_9'], undefined); // RPC não criou a linha (não é upsert)
+});
+
+Deno.test('WEBHOOK-34: R12 P1 fix — Core activation usa activate_core_entitlement_atomic: legacy + product escritos atomicamente', async () => {
+  // isLegacyCoreEvent=true (priceMap vazio → legacy mode) + sub active → activation path.
+  // activate_core_entitlement_atomic deve escrever legacy (profiles) E product row.
+  const db = fakeDb(newState('cus_r12a', 'user_r12a'));
+  // Verify that activate_core_entitlement_atomic is actually called (not the old separate RPCs).
+  let atomicCalled = false;
+  let legacyCalled = false;
+  const originalRpc = db.rpc.bind(db);
+  // deno-lint-ignore no-explicit-any
+  (db as any).rpc = (fn: string, args: Record<string, unknown>) => {
+    if (fn === 'activate_core_entitlement_atomic') atomicCalled = true;
+    if (fn === 'apply_stripe_subscription_state') legacyCalled = true;
+    return originalRpc(fn, args);
+  };
+  const stripe = fakeStripe({ sub_r12a: makeSub({ id: 'sub_r12a', status: 'active', cancel_at_period_end: false }) });
+  const body = evt({
+    id: 'evt_r12a_activate', type: 'customer.subscription.updated',
+    data: { object: { id: 'sub_r12a', customer: 'cus_r12a', status: 'active' } },
+  });
+  const res = await handler(await signedReq(body), stripe, db as never);
+  assertEquals(res.status, 200);
+  // Atomic RPC called, NOT the separate legacy RPC
+  assertEquals(atomicCalled, true, 'activate_core_entitlement_atomic must be called for Core activation');
+  assertEquals(legacyCalled, false, 'apply_stripe_subscription_state must NOT be called directly for Core activation');
+  // Legacy profile updated
+  assertEquals(db.state.profiles['user_r12a'].role, 'pro');
+  assertEquals(db.state.profiles['user_r12a'].monthly_limit, 300);
+  // Product row written
+  assertEquals(psEffective(db.state, 'user_r12a', 'core')?.status, 'active');
+  assertEquals(psEffective(db.state, 'user_r12a', 'core')?.tier, 'pro');
+});
+
+Deno.test('WEBHOOK-35: R12 P1 fix — activate_core_entitlement_atomic failure → 500, legacy E product NÃO alterados', async () => {
+  // If the atomic activation RPC fails, the webhook must return 500 and leave
+  // no partial state — legacy profile and product subscriptions must remain unchanged.
+  const db = fakeDb(newState('cus_r12b', 'user_r12b'));
+  db.state.profiles['user_r12b'] = { role: 'free', monthly_limit: 15 };
+  const originalRpc = db.rpc.bind(db);
+  // deno-lint-ignore no-explicit-any
+  (db as any).rpc = (fn: string, args: Record<string, unknown>) => {
+    if (fn === 'activate_core_entitlement_atomic') {
+      return Promise.resolve({ data: null, error: { message: 'simulated atomic activate transient failure' } });
+    }
+    return originalRpc(fn, args);
+  };
+  const stripe = fakeStripe({ sub_r12b: makeSub({ id: 'sub_r12b', status: 'active', cancel_at_period_end: false }) });
+  const body = evt({
+    id: 'evt_r12b_activate', type: 'customer.subscription.updated',
+    data: { object: { id: 'sub_r12b', customer: 'cus_r12b', status: 'active' } },
+  });
+  const res = await handler(await signedReq(body), stripe, db as never);
+  // Atomic RPC failure → 500 (Stripe retries, no partial state)
+  assertEquals(res.status, 500);
+  // Legacy profile must NOT have been upgraded
+  assertEquals(db.state.profiles['user_r12b'].role, 'free');
+  // Product row must NOT have been written
+  assertEquals(psEffective(db.state, 'user_r12b', 'core'), undefined);
+});
+
+Deno.test('WEBHOOK-33: P1-A fix — cancel_core_entitlement_atomic RPC failure → 500, legacy NÃO rebaixado', async () => {
+  // isLegacyCoreEvent=true (priceMap vazio → legacy mode) + sub canceled → P1-I path.
+  // cancel_core_entitlement_atomic retorna error → webhook deve retornar 500.
+  const db = fakeDb(newState('cus_p1b', 'user_p1b'));
+  db.state.profiles['user_p1b'] = { role: 'pro', monthly_limit: 300 };
+  // Set up a second Core product sub so the P1-I path (not P1-K) is exercised
+  db.state.productSubscriptions['user_p1b:core:sub_p1b'] = {
+    product: 'core', tier: 'pro', status: 'active', source: 'stripe',
+    stripe_subscription_id: 'sub_p1b', last_stripe_event_created: null,
+  };
+
+  // Patch the rpc call to return error for cancel_core_entitlement_atomic
+  const originalRpc = db.rpc.bind(db);
+  // deno-lint-ignore no-explicit-any
+  (db as any).rpc = (fn: string, args: Record<string, unknown>) => {
+    if (fn === 'cancel_core_entitlement_atomic') {
+      return Promise.resolve({ data: null, error: { message: 'simulated atomic cancel transient failure' } });
+    }
+    return originalRpc(fn, args);
+  };
+
+  const stripe = fakeStripe({
+    sub_p1b: makeSub({ id: 'sub_p1b', status: 'canceled', cancel_at_period_end: false }),
+  });
+  const body = evt({
+    id: 'evt_p1b_cancel', type: 'customer.subscription.deleted',
+    data: { object: { id: 'sub_p1b', customer: 'cus_p1b', status: 'canceled' } },
+  });
+  const res = await handler(await signedReq(body), stripe, db as never);
+  // P1-A fix: atomic RPC failure → 500 (Stripe retries, no partial state)
+  assertEquals(res.status, 500);
+  // Legacy profile must NOT have been downgraded (RPC failed before legacy write)
+  assertEquals(db.state.profiles['user_p1b'].role, 'pro');
+  // Legacy subscription must remain at its prior status
+  assertNotEquals(db.state.subscriptions['user_p1b']?.status, 'canceled');
+});
+
+// ── Multi-subscription tests (IV-WEB-ECOSYSTEM-UNIFICATION-01) ─────────────
+
+Deno.test('WEBHOOK-26: 2 subscriptions ativas para Quant — cancelar uma → entitlement Quant permanece ativo', async () => {
+  const priceMap = new Map([['price_quant_pro', { product: 'quant', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_mq1', 'user_mq1'));
+
+  // Sub 1: first checkout → Quant active
+  const sub_mq1 = makeSub({ id: 'sub_mq1', status: 'active', items: { data: [{ price: { id: 'price_quant_pro' } }] } });
+  await handler(await signedReq(evt({ id: 'evt_mq1', type: 'checkout.session.completed', data: { object: { customer: 'cus_mq1', subscription: 'sub_mq1' } } })), fakeStripe({ sub_mq1 }), db as never, priceMap);
+  assertEquals(psEffective(db.state, 'user_mq1', 'quant')?.status, 'active');
+
+  // Sub 2: second checkout → second Quant active (different sub ID)
+  const sub_mq2 = makeSub({ id: 'sub_mq2', status: 'active', items: { data: [{ price: { id: 'price_quant_pro' } }] } });
+  await handler(await signedReq(evt({ id: 'evt_mq2', type: 'checkout.session.completed', data: { object: { customer: 'cus_mq1', subscription: 'sub_mq2' } } })), fakeStripe({ sub_mq2 }), db as never, priceMap);
+  assertEquals(psRow(db.state, 'user_mq1', 'quant', 'sub_mq1')?.status, 'active');
+  assertEquals(psRow(db.state, 'user_mq1', 'quant', 'sub_mq2')?.status, 'active');
+
+  // Cancel sub_mq1 — sub_mq2 still active → entitlement preserved
+  const sub_mq1_canceled = makeSub({ id: 'sub_mq1', status: 'canceled', items: { data: [{ price: { id: 'price_quant_pro' } }] } });
+  const res = await handler(await signedReq(evt({ id: 'evt_mq3', type: 'customer.subscription.updated', data: { object: { id: 'sub_mq1', customer: 'cus_mq1' } } })), fakeStripe({ sub_mq1: sub_mq1_canceled }), db as never, priceMap);
+  assertEquals(res.status, 200);
+  assertEquals(psRow(db.state, 'user_mq1', 'quant', 'sub_mq1')?.status, 'canceled');
+  assertEquals(psRow(db.state, 'user_mq1', 'quant', 'sub_mq2')?.status, 'active');
+  // Effective entitlement: still active (sub_mq2 is active)
+  assertEquals(psEffective(db.state, 'user_mq1', 'quant')?.status, 'active');
+});
+
+Deno.test('WEBHOOK-27: cancelar a última subscription Quant → entitlement revogado (nenhuma sub ativa restante)', async () => {
+  const priceMap = new Map([['price_quant_pro', { product: 'quant', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_mq2', 'user_mq2'));
+  // Pre-populate 2 active Quant subscriptions with older timestamps
+  const oldTs = new Date((NOW - 100) * 1000).toISOString();
+  db.state.productSubscriptions['user_mq2:quant:sub_a'] = { product: 'quant', tier: 'pro', status: 'active', stripe_subscription_id: 'sub_a', last_stripe_event_created: oldTs };
+  db.state.productSubscriptions['user_mq2:quant:sub_b'] = { product: 'quant', tier: 'pro', status: 'active', stripe_subscription_id: 'sub_b', last_stripe_event_created: oldTs };
+  assertEquals(psEffective(db.state, 'user_mq2', 'quant')?.status, 'active');
+
+  // Cancel sub_a — sub_b still active
+  const sub_a_canceled = makeSub({ id: 'sub_a', status: 'canceled', items: { data: [{ price: { id: 'price_quant_pro' } }] } });
+  await handler(await signedReq(evt({ id: 'evt_mq4', type: 'customer.subscription.updated', data: { object: { id: 'sub_a', customer: 'cus_mq2' } } })), fakeStripe({ sub_a: sub_a_canceled }), db as never, priceMap);
+  assertEquals(psEffective(db.state, 'user_mq2', 'quant')?.status, 'active'); // sub_b still active
+
+  // Cancel sub_b — no more active Quant subs
+  const sub_b_canceled = makeSub({ id: 'sub_b', status: 'canceled', items: { data: [{ price: { id: 'price_quant_pro' } }] } });
+  const res = await handler(await signedReq(evt({ id: 'evt_mq5', type: 'customer.subscription.updated', data: { object: { id: 'sub_b', customer: 'cus_mq2' } } })), fakeStripe({ sub_b: sub_b_canceled }), db as never, priceMap);
+  assertEquals(res.status, 200);
+  assertEquals(psRow(db.state, 'user_mq2', 'quant', 'sub_a')?.status, 'canceled');
+  assertEquals(psRow(db.state, 'user_mq2', 'quant', 'sub_b')?.status, 'canceled');
+  // No active sub remaining → effective status must NOT be active/trialing
+  const effective = psEffective(db.state, 'user_mq2', 'quant');
+  assertEquals(effective?.status === 'active' || effective?.status === 'trialing', false);
+});
+
+Deno.test('WEBHOOK-28: Core + Quant independentes — cancelar Quant não toca Core (profiles/subscriptions)', async () => {
+  const priceMap = new Map([['price_quant_pro', { product: 'quant', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_cq1', 'user_cq1'));
+
+  // Activate Quant via webhook
+  const sub_q = makeSub({ id: 'sub_cq_q', status: 'active', items: { data: [{ price: { id: 'price_quant_pro' } }] } });
+  await handler(await signedReq(evt({ id: 'evt_cq1', type: 'checkout.session.completed', data: { object: { customer: 'cus_cq1', subscription: 'sub_cq_q' } } })), fakeStripe({ sub_cq_q: sub_q }), db as never, priceMap);
+
+  // Simulate Core active state (legacy flow already wrote Core tables)
+  db.state.subscriptions['user_cq1'] = { ...db.state.subscriptions['user_cq1'], status: 'active', last_event_created: new Date((NOW - 200) * 1000).toISOString() };
+  db.state.profiles['user_cq1'] = { role: 'pro', monthly_limit: 100 };
+  assertEquals(psEffective(db.state, 'user_cq1', 'quant')?.status, 'active');
+  assertEquals(db.state.profiles['user_cq1'].role, 'pro');
+
+  // Cancel Quant → Core (profiles/subscriptions) must remain untouched
+  const sub_q_canceled = makeSub({ id: 'sub_cq_q', status: 'canceled', items: { data: [{ price: { id: 'price_quant_pro' } }] } });
+  const res = await handler(await signedReq(evt({ id: 'evt_cq2', type: 'customer.subscription.updated', data: { object: { id: 'sub_cq_q', customer: 'cus_cq1' } } })), fakeStripe({ sub_cq_q: sub_q_canceled }), db as never, priceMap);
+  assertEquals(res.status, 200);
+  assertEquals(psRow(db.state, 'user_cq1', 'quant', 'sub_cq_q')?.status, 'canceled'); // Quant canceled
+  assertEquals(db.state.profiles['user_cq1'].role, 'pro'); // Core role UNCHANGED
+  assertEquals(db.state.subscriptions['user_cq1'].status, 'active'); // Core sub UNCHANGED
+});
+
+Deno.test('WEBHOOK-29: Suite + produto individual — Suite cancelado não revoga Impact individual', async () => {
+  const priceMap = new Map([
+    ['price_suite_pro', { product: 'suite', tier: 'pro' }],
+    ['price_impact_pro', { product: 'impact', tier: 'pro' }],
+  ]);
+  const db = fakeDb(newState('cus_st1', 'user_st1'));
+
+  // Activate Suite
+  const sub_suite = makeSub({ id: 'sub_st_suite', status: 'active', items: { data: [{ price: { id: 'price_suite_pro' } }] } });
+  await handler(await signedReq(evt({ id: 'evt_st1', type: 'checkout.session.completed', data: { object: { customer: 'cus_st1', subscription: 'sub_st_suite' } } })), fakeStripe({ sub_st_suite: sub_suite }), db as never, priceMap);
+  assertEquals(psEffective(db.state, 'user_st1', 'suite')?.status, 'active');
+
+  // Activate Impact individually
+  const sub_impact = makeSub({ id: 'sub_st_impact', status: 'active', items: { data: [{ price: { id: 'price_impact_pro' } }] } });
+  await handler(await signedReq(evt({ id: 'evt_st2', type: 'checkout.session.completed', data: { object: { customer: 'cus_st1', subscription: 'sub_st_impact' } } })), fakeStripe({ sub_st_impact: sub_impact }), db as never, priceMap);
+  assertEquals(psEffective(db.state, 'user_st1', 'impact')?.status, 'active');
+
+  // Cancel Suite — Impact individual subscription must remain active
+  const sub_suite_canceled = makeSub({ id: 'sub_st_suite', status: 'canceled', items: { data: [{ price: { id: 'price_suite_pro' } }] } });
+  const res = await handler(await signedReq(evt({ id: 'evt_st3', type: 'customer.subscription.updated', data: { object: { id: 'sub_st_suite', customer: 'cus_st1' } } })), fakeStripe({ sub_st_suite: sub_suite_canceled }), db as never, priceMap);
+  assertEquals(res.status, 200);
+  assertEquals(psRow(db.state, 'user_st1', 'suite', 'sub_st_suite')?.status, 'canceled'); // Suite canceled
+  assertEquals(psEffective(db.state, 'user_st1', 'impact')?.status, 'active'); // Impact still active
+});
+
+Deno.test('WEBHOOK-30: webhook duplicado (mesmo event_id) — segundo delivery é no-op, product_subscriptions inalterado', async () => {
+  const priceMap = new Map([['price_impact_pro', { product: 'impact', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_dup1', 'user_dup1'));
+  const stripe = fakeStripe({
+    sub_dup1: makeSub({ id: 'sub_dup1', status: 'active', items: { data: [{ price: { id: 'price_impact_pro' } }] } }),
+  });
+  const body = evt({ id: 'evt_dup1', type: 'checkout.session.completed', data: { object: { customer: 'cus_dup1', subscription: 'sub_dup1' } } });
+
+  // First delivery
+  const res1 = await handler(await signedReq(body), stripe, db as never, priceMap);
+  assertEquals(res1.status, 200);
+  assertEquals(psEffective(db.state, 'user_dup1', 'impact')?.status, 'active');
+  const snapAfterFirst = JSON.stringify(db.state.productSubscriptions);
+  const callsAfterFirst = stripe.calls.length;
+
+  // Second delivery (same event_id) — processedEvents guard fires → no-op
+  const res2 = await handler(await signedReq(body), stripe, db as never, priceMap);
+  assertEquals(res2.status, 200);
+  assertEquals(JSON.stringify(db.state.productSubscriptions), snapAfterFirst); // state unchanged
+  assertEquals(stripe.calls.length, callsAfterFirst); // Stripe not called again
+});
+
+Deno.test('WEBHOOK-31: out-of-order — evento antigo para sub distinta não revoga entitlement da sub ativa mais recente', async () => {
+  const priceMap = new Map([['price_quant_pro', { product: 'quant', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_oo1', 'user_oo1'));
+  const T_older = NOW - 300;
+  const T_newer = NOW - 100;
+
+  // Sub B: activated at T_newer (arrives first in this delivery order)
+  const sub_b = makeSub({ id: 'sub_oo_b', status: 'active', items: { data: [{ price: { id: 'price_quant_pro' } }] } });
+  await handler(await signedReq(evt({ id: 'evt_oo_b', type: 'checkout.session.completed', created: T_newer, data: { object: { customer: 'cus_oo1', subscription: 'sub_oo_b' } } })), fakeStripe({ sub_oo_b: sub_b }), db as never, priceMap);
+  assertEquals(psEffective(db.state, 'user_oo1', 'quant')?.status, 'active');
+
+  // Sub A: canceled event with older timestamp arrives late (different sub → no ordering conflict with sub B)
+  const sub_a_canceled = makeSub({ id: 'sub_oo_a', status: 'canceled', items: { data: [{ price: { id: 'price_quant_pro' } }] } });
+  const res = await handler(await signedReq(evt({ id: 'evt_oo_a', type: 'checkout.session.completed', created: T_older, data: { object: { customer: 'cus_oo1', subscription: 'sub_oo_a' } } })), fakeStripe({ sub_oo_a: sub_a_canceled }), db as never, priceMap);
+  assertEquals(res.status, 200);
+  // Sub B independent: its state is unaffected by sub A's cancel event
+  assertEquals(psRow(db.state, 'user_oo1', 'quant', 'sub_oo_b')?.status, 'active');
+  // Sub A's state written (different triple key — no conflict)
+  assertEquals(psRow(db.state, 'user_oo1', 'quant', 'sub_oo_a')?.status, 'canceled');
+  // Effective: sub B still active → entitlement preserved
+  assertEquals(psEffective(db.state, 'user_oo1', 'quant')?.status, 'active');
+});
+
+Deno.test('WEBHOOK-36: R16-C fix — Core activation com user-global guard stale → profiles.role atualizado via resolver (force-update)', async () => {
+  // Scenario: user has sub_A (Core, pro, canceled at T=200) and now activates sub_B (Core, pro, T=100).
+  // T=100 < T=200 → apply_stripe_subscription_state skips (stale by user-global guard).
+  // R16-C fix: activate_core_entitlement_atomic must still update profiles.role to 'pro'
+  // because the product row for sub_B IS active and the resolver returns allowed=true.
+  const db = fakeDb(newState('cus_r16c', 'user_r16c'));
+  const T_older = new Date((NOW - 200) * 1000).toISOString(); // T=200 (sub_A cancel, arrived first)
+  const T_activation = new Date((NOW - 300) * 1000).toISOString(); // T=100 (sub_B activate, arrives late)
+
+  // Pre-condition: sub_A canceled event already advanced last_event_created to T_older
+  db.state.subscriptions['user_r16c'] = {
+    ...db.state.subscriptions['user_r16c'],
+    last_event_created: T_older,
+    status: 'canceled',
+  };
+  db.state.profiles['user_r16c'] = { role: 'free', monthly_limit: 15 };
+
+  // Deliver late-arriving activation for sub_B (created at T_activation < T_older)
+  const sub_b = makeSub({ id: 'sub_r16c_b', status: 'active', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  const res = await handler(
+    await signedReq(evt({
+      id: 'evt_r16c_activate', type: 'checkout.session.completed',
+      created: NOW - 300, // event.created is T_activation
+      data: { object: { customer: 'cus_r16c', subscription: 'sub_r16c_b' } },
+    })),
+    fakeStripe({ sub_r16c_b: sub_b }),
+    db as never,
+    // No priceMap → legacy Core mode (effectiveLegacyCoreEvent=true)
+  );
+  assertEquals(res.status, 200);
+  // Product row must be written (per-subscription guard: no prior row for sub_B)
+  assertEquals(psRow(db.state, 'user_r16c', 'core', 'sub_r16c_b')?.status, 'active');
+  // R16-C fix: profiles.role must be 'pro' (force-update from resolver)
+  assertEquals(db.state.profiles['user_r16c'].role, 'pro', 'R16-C: profiles.role must be upgraded to pro via force-update');
+  assertEquals(db.state.profiles['user_r16c'].monthly_limit, 300);
+});
+
+Deno.test('WEBHOOK-32: substituição de subscription — nova sub ativa enquanto antiga é cancelada → entitlement preservado', async () => {
+  const priceMap = new Map([['price_impact_pro', { product: 'impact', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_rep1', 'user_rep1'));
+
+  // Old sub: active
+  const sub_old = makeSub({ id: 'sub_rep_old', status: 'active', items: { data: [{ price: { id: 'price_impact_pro' } }] } });
+  await handler(await signedReq(evt({ id: 'evt_rep1', type: 'checkout.session.completed', data: { object: { customer: 'cus_rep1', subscription: 'sub_rep_old' } } })), fakeStripe({ sub_rep_old: sub_old }), db as never, priceMap);
+  assertEquals(psEffective(db.state, 'user_rep1', 'impact')?.status, 'active');
+
+  // Replacement: new sub (upgrade) also activated
+  const sub_new = makeSub({ id: 'sub_rep_new', status: 'active', items: { data: [{ price: { id: 'price_impact_pro' } }] } });
+  await handler(await signedReq(evt({ id: 'evt_rep2', type: 'checkout.session.completed', data: { object: { customer: 'cus_rep1', subscription: 'sub_rep_new' } } })), fakeStripe({ sub_rep_new: sub_new }), db as never, priceMap);
+  assertEquals(psRow(db.state, 'user_rep1', 'impact', 'sub_rep_old')?.status, 'active');
+  assertEquals(psRow(db.state, 'user_rep1', 'impact', 'sub_rep_new')?.status, 'active');
+
+  // Old sub canceled — new sub still active → entitlement preserved
+  const sub_old_canceled = makeSub({ id: 'sub_rep_old', status: 'canceled', items: { data: [{ price: { id: 'price_impact_pro' } }] } });
+  const res = await handler(await signedReq(evt({ id: 'evt_rep3', type: 'customer.subscription.updated', data: { object: { id: 'sub_rep_old', customer: 'cus_rep1' } } })), fakeStripe({ sub_rep_old: sub_old_canceled }), db as never, priceMap);
+  assertEquals(res.status, 200);
+  assertEquals(psRow(db.state, 'user_rep1', 'impact', 'sub_rep_old')?.status, 'canceled');
+  assertEquals(psRow(db.state, 'user_rep1', 'impact', 'sub_rep_new')?.status, 'active');
+  // Entitlement preserved via new sub
+  assertEquals(psEffective(db.state, 'user_rep1', 'impact')?.status, 'active');
+});
+
+Deno.test('WEBHOOK-37: R20-B fix — unmapped-Core cancel com segunda sub Core ativa → profiles.role NÃO rebaixado', async () => {
+  // Scenario (P1-R20-B):
+  //   - sub_A (mapped Core pro, active) processed first → profiles.role='pro'
+  //   - sub_B (unmapped Core, cancel event) arrives — isUnmappedLegacyCore=true
+  // Before fix: applySubscriptionState called unconditionally → profiles.role='free'
+  // After fix:  resolve_product_entitlement called first → allowed=true (sub_A still active)
+  //             → legacy NOT downgraded → profiles.role stays 'pro'
+  const priceMap = new Map([['price_core_pro', { product: 'core', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_r20b', 'user_r20b'));
+
+  // Step 1: activate sub_A (mapped Core pro) → profiles.role='pro'
+  const sub_a = makeSub({ id: 'sub_r20b_a', status: 'active', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  const resA = await handler(
+    await signedReq(evt({ id: 'evt_r20b_a', type: 'checkout.session.completed', created: NOW - 400, data: { object: { customer: 'cus_r20b', subscription: 'sub_r20b_a' } } })),
+    fakeStripe({ sub_r20b_a: sub_a }),
+    db as never,
+    priceMap,
+  );
+  assertEquals(resA.status, 200, 'sub_A activation must succeed');
+  assertEquals(db.state.profiles['user_r20b'].role, 'pro', 'sub_A activation must set profiles.role=pro');
+  assertEquals(psRow(db.state, 'user_r20b', 'core', 'sub_r20b_a')?.status, 'active');
+
+  // Step 2: deliver unmapped-Core cancel for sub_B (price NOT in priceMap → isUnmappedLegacyCore=true)
+  // sub_B is the subscription in the event but its price is unmapped.
+  const sub_b_canceled = makeSub({
+    id: 'sub_r20b_b',
+    status: 'canceled',
+    items: { data: [{ price: { id: 'price_UNMAPPED_LEGACY' } }] },
+  });
+  const resB = await handler(
+    await signedReq(evt({ id: 'evt_r20b_b', type: 'customer.subscription.deleted', created: NOW - 200, data: { object: { id: 'sub_r20b_b', customer: 'cus_r20b' } } })),
+    fakeStripe({ sub_r20b_b: sub_b_canceled }),
+    db as never,
+    priceMap,
+  );
+  assertEquals(resB.status, 200, 'unmapped-Core cancel must return 200');
+  // R20-B fix: sub_A is still active → resolve_product_entitlement returns allowed=true
+  // → applySubscriptionState must NOT be called → profiles.role stays 'pro'
+  assertEquals(db.state.profiles['user_r20b'].role, 'pro', 'R20-B: profiles.role must NOT be downgraded when another Core sub is active');
+  assertEquals(db.state.profiles['user_r20b'].monthly_limit, 300);
+  // sub_A product row must still be active
+  assertEquals(psRow(db.state, 'user_r20b', 'core', 'sub_r20b_a')?.status, 'active');
+});
+
+Deno.test('WEBHOOK-38: R20-B fix — unmapped-Core cancel sem outra sub Core ativa → profiles.role rebaixado para free', async () => {
+  // Complemento do WEBHOOK-37: quando NÃO há outra sub Core ativa,
+  // o cancelamento unmapped DEVE downgradar profiles.role (caminho legítimo).
+  const priceMap = new Map([['price_core_pro', { product: 'core', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_r20b2', 'user_r20b2'));
+
+  // Set up legacy state: user has profiles.role='pro' but no active Core product row.
+  // stripe_subscription_id must match sub_r20b2_x so that the code detects
+  // effectiveLegacyCoreEvent=true (unmapped-price cancel matching legacy sub).
+  db.state.profiles['user_r20b2'] = { role: 'pro', monthly_limit: 300 };
+  db.state.subscriptions['user_r20b2'] = {
+    ...db.state.subscriptions['user_r20b2'],
+    stripe_subscription_id: 'sub_r20b2_x',
+    status: 'active',
+    last_event_created: new Date((NOW - 500) * 1000).toISOString(),
+  };
+
+  // Deliver unmapped-Core cancel (no active Core product rows exist in productSubscriptions)
+  const sub_x = makeSub({
+    id: 'sub_r20b2_x',
+    status: 'canceled',
+    items: { data: [{ price: { id: 'price_UNMAPPED_LEGACY' } }] },
+  });
+  const res = await handler(
+    await signedReq(evt({ id: 'evt_r20b2_x', type: 'customer.subscription.deleted', created: NOW - 100, data: { object: { id: 'sub_r20b2_x', customer: 'cus_r20b2' } } })),
+    fakeStripe({ sub_r20b2_x: sub_x }),
+    db as never,
+    priceMap,
+  );
+  assertEquals(res.status, 200, 'unmapped-Core cancel must return 200');
+  // No active Core sub → resolve returns allowed=false → legacy MUST be downgraded
+  assertEquals(db.state.profiles['user_r20b2'].role, 'free', 'R20-B: profiles.role must be downgraded to free when no other Core sub is active');
+  assertEquals(db.state.profiles['user_r20b2'].monthly_limit, 15);
+});
+
+Deno.test('WEBHOOK-39: R22-A fix — cancel última sub Core com user-global guard bloqueando → force-downgrade profiles para free', async () => {
+  // Scenario (P1-R22-A):
+  //   sub_A activated at T=100, sub_B activated at T=300 → last_event_created=T=300
+  //   sub_B canceled at T=400 → last_event_created=T=400, resolver: sub_A still active → no downgrade
+  //   sub_A canceled at T=200 (late-arriving, T=200 > T=100 so per-sub guard accepts,
+  //                             but T=200 < T=400 so user-global guard rejects legacy write)
+  //   → product_subscriptions: both canceled → resolver allowed=false
+  //   → apply_stripe_subscription_state blocked by T=200 < T=400 → profiles.role stays 'pro'
+  //   R22-A fix: force-downgrade profiles.role to 'free' when allowed=false + guard blocked
+  const priceMap = new Map([['price_core_pro', { product: 'core', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_r22a', 'user_r22a'));
+
+  // Step 1: activate sub_A at T=100
+  const sub_a = makeSub({ id: 'sub_r22a_a', status: 'active', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  const resA1 = await handler(
+    await signedReq(evt({ id: 'evt_r22a_actA', type: 'checkout.session.completed', created: NOW - 400, data: { object: { customer: 'cus_r22a', subscription: 'sub_r22a_a' } } })),
+    fakeStripe({ sub_r22a_a: sub_a }),
+    db as never,
+    priceMap,
+  );
+  assertEquals(resA1.status, 200);
+  assertEquals(db.state.profiles['user_r22a'].role, 'pro', 'sub_A activation must set profiles.role=pro');
+
+  // Step 2: activate sub_B at T=300 → last_event_created advances to T=300
+  const sub_b = makeSub({ id: 'sub_r22a_b', status: 'active', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  const resA2 = await handler(
+    await signedReq(evt({ id: 'evt_r22a_actB', type: 'checkout.session.completed', created: NOW - 200, data: { object: { customer: 'cus_r22a', subscription: 'sub_r22a_b' } } })),
+    fakeStripe({ sub_r22a_b: sub_b }),
+    db as never,
+    priceMap,
+  );
+  assertEquals(resA2.status, 200);
+
+  // Step 3: cancel sub_B at T=400 → last_event_created=T=400; resolver sees sub_A active → no downgrade
+  const sub_b_canceled = makeSub({ id: 'sub_r22a_b', status: 'canceled', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  const resC = await handler(
+    await signedReq(evt({ id: 'evt_r22a_canB', type: 'customer.subscription.deleted', created: NOW - 100, data: { object: { id: 'sub_r22a_b', customer: 'cus_r22a' } } })),
+    fakeStripe({ sub_r22a_b: sub_b_canceled }),
+    db as never,
+    priceMap,
+  );
+  assertEquals(resC.status, 200);
+  // sub_B canceled, but sub_A still active → no legacy downgrade
+  assertEquals(db.state.profiles['user_r22a'].role, 'pro', 'sub_B cancel must NOT downgrade (sub_A still active)');
+
+  // Step 4: late-arriving cancel for sub_A at T=200 (T=200 > T=100 → per-sub accepts,
+  //          but T=200 < T=400 → user-global guard rejects legacy write)
+  const sub_a_canceled = makeSub({ id: 'sub_r22a_a', status: 'canceled', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  const resD = await handler(
+    await signedReq(evt({ id: 'evt_r22a_canA', type: 'customer.subscription.deleted', created: NOW - 300, data: { object: { id: 'sub_r22a_a', customer: 'cus_r22a' } } })),
+    fakeStripe({ sub_r22a_a: sub_a_canceled }),
+    db as never,
+    priceMap,
+  );
+  assertEquals(resD.status, 200);
+  // Both subs now canceled in product_subscriptions
+  assertEquals(psRow(db.state, 'user_r22a', 'core', 'sub_r22a_a')?.status, 'canceled', 'sub_A must be canceled in product_subscriptions');
+  assertEquals(psRow(db.state, 'user_r22a', 'core', 'sub_r22a_b')?.status, 'canceled', 'sub_B must be canceled in product_subscriptions');
+  // R22-A fix: resolver returns allowed=false (both canceled), but user-global guard blocks
+  // apply_stripe_subscription_state (T=200 < T=400). Force-downgrade must apply.
+  assertEquals(db.state.profiles['user_r22a'].role, 'free', 'R22-A: force-downgrade must set profiles.role=free when all subs canceled and guard blocks legacy write');
+  assertEquals(db.state.profiles['user_r22a'].monthly_limit, 15);
+});
+
+Deno.test('WEBHOOK-40: R23-A fix — premium manual NÃO rebaixado por cancelamento Stripe (role protection)', async () => {
+  // Scenario: user has manual premium role + Core subscription.
+  // Cancellation event arrives. No active Core sub in product_subscriptions.
+  // R22-A force-downgrade must NOT touch premium roles (Stripe does not own them).
+  const priceMap = new Map([['price_core_pro', { product: 'core', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_r23a', 'user_r23a'));
+
+  // Set user as manually-granted premium
+  db.state.profiles['user_r23a'] = { role: 'premium', monthly_limit: 1000 };
+  db.state.subscriptions['user_r23a'] = {
+    ...db.state.subscriptions['user_r23a'],
+    stripe_subscription_id: 'sub_r23a',
+    status: 'active',
+    last_event_created: new Date((NOW - 500) * 1000).toISOString(),
+  };
+
+  // Cancel: priceMap configured, price IS mapped to Core → normal Core cancel path
+  const sub_canceled = makeSub({ id: 'sub_r23a', status: 'canceled', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  const res = await handler(
+    await signedReq(evt({ id: 'evt_r23a', type: 'customer.subscription.deleted', created: NOW - 100, data: { object: { id: 'sub_r23a', customer: 'cus_r23a' } } })),
+    fakeStripe({ sub_r23a: sub_canceled }),
+    db as never,
+    priceMap,
+  );
+  assertEquals(res.status, 200);
+  // product_subscriptions must show canceled
+  assertEquals(psRow(db.state, 'user_r23a', 'core', 'sub_r23a')?.status, 'canceled');
+  // R23-A fix: premium role must NOT be downgraded by Stripe cancellation
+  assertEquals(db.state.profiles['user_r23a'].role, 'premium', 'R23-A: premium manual role must NOT be downgraded by Stripe cancellation');
+  assertEquals(db.state.profiles['user_r23a'].monthly_limit, 1000);
+});
+
+Deno.test('WEBHOOK-41: R24 fix — activate com tier=premium no priceMap grava profiles.role=pro (não premium)', async () => {
+  // Scenario: STRIPE_PRICE_MAP has a price mapped to tier='premium' (misconfiguration or future tier).
+  // Migration 20261010000000 defines 'premium' as manually-granted only.
+  // activate_core_entitlement_atomic must cap Stripe-managed role to 'pro' maximum.
+  const priceMap = new Map([['price_core_premium', { product: 'core', tier: 'premium' }]]);
+  const db = fakeDb(newState('cus_r24a', 'user_r24a'));
+  // User starts at free
+  db.state.profiles['user_r24a'] = { role: 'free', monthly_limit: 15 };
+
+  const sub_active = makeSub({ id: 'sub_r24a', status: 'active', items: { data: [{ price: { id: 'price_core_premium' } }] } });
+  const res = await handler(
+    await signedReq(evt({ id: 'evt_r24a', type: 'customer.subscription.updated', created: NOW, data: { object: { id: 'sub_r24a', customer: 'cus_r24a', status: 'active' } } })),
+    fakeStripe({ sub_r24a: sub_active }),
+    db as never,
+    priceMap,
+  );
+  assertEquals(res.status, 200);
+  // product_subscriptions correctly records tier=premium (factual data)
+  assertEquals(psEffective(db.state, 'user_r24a', 'core')?.tier, 'premium');
+  // R24 fix: profiles.role must be capped at 'pro', NOT 'premium'
+  assertEquals(db.state.profiles['user_r24a'].role, 'pro', 'R24: Stripe billing must not elevate profiles.role to premium');
+  assertEquals(db.state.profiles['user_r24a'].monthly_limit, 300);
 });
