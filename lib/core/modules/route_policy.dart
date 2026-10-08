@@ -1,6 +1,7 @@
 import 'module_definition.dart';
 import 'module_registry.dart';
 import '../constants/app_constants.dart';
+import '../../mobile/config/product_flavor.dart';
 
 /// IV-WEB-ECOSYSTEM-UNIFICATION-01 — routes that require a product entitlement
 /// BEYOND the plan gate. Only populated for non-core products.
@@ -199,7 +200,14 @@ bool isModuleRestricted(ModuleDefinition module) =>
 bool routeMayBeRestricted(String path) {
   if (kAlwaysAllowedRoutes.contains(path)) return false;
   final module = _moduleForRoute(path);
-  if (module == null) return false;
+  if (module == null) {
+    // P1-R9-A fix: a product-specific route (e.g. concrete /impact/<id>) has
+    // no module mapping via exact lookup but may still be restricted by the
+    // flavor gate inside evaluateRouteAccess. Returning true here ensures the
+    // full evaluateRouteAccess path is taken, including the admin bypass and
+    // flavor isolation check, rather than allowing the fast-path to skip it.
+    return resolveRequiredProduct(path) != null;
+  }
   return isModuleRestricted(module);
 }
 
@@ -324,9 +332,85 @@ bool isModuleActionable(String moduleId, {required bool isAdmin}) {
   return true;
 }
 
+/// IV-MOBILE-ECOSYSTEM-FOUNDATION-01 — per-flavor route isolation gate.
+///
+/// Uses [kRouteRequiredProduct] to determine if [path] belongs to a different
+/// product than the active [flavor]. Cross-product routes are blocked
+/// (redirectDenied) so that the Impact APK cannot navigate to Quant screens
+/// and vice versa.
+///
+/// Returns false (not blocked) when:
+///   - [flavor] is null (Web / no flavor initialized, backward-compatible)
+///   - [flavor] is core (base product — all routes accessible)
+///   - [path] is not owned by any other product
+///   - [path] belongs to [flavor]'s own product
+///
+/// Matching is PREFIX-based (P1-R5-A fix): [kRouteRequiredProduct] stores
+/// GoRouter templates with `:param` segments (e.g. `/impact/:id`). A concrete
+/// navigation path like `/impact/abc123` would miss an exact lookup. Instead,
+/// each template is reduced to its concrete prefix (all segments up to the
+/// first `:param`), and [path] is matched against that prefix.
+///
+/// This is purely additive over the existing module/plan gates, not a
+/// replacement — both gates must pass for navigation to proceed.
+
+// Returns the concrete prefix of a GoRouter route template — all segments
+// before the first parameterized segment (`:paramName`).
+// '/impact/:id' → '/impact'    '/impact/:id/monitor' → '/impact'
+// '/impact/discover' → '/impact/discover'   '/quant-lab' → '/quant-lab'
+String _routeTemplatePrefix(String template) {
+  final segments = template.split('/');
+  final concrete = <String>[];
+  for (final seg in segments) {
+    if (seg.startsWith(':')) break;
+    concrete.add(seg);
+  }
+  final prefix = concrete.join('/');
+  return prefix.isEmpty ? template : prefix;
+}
+
+bool isRouteBlockedByFlavor(String path, ProductFlavor? flavor) {
+  if (flavor == null) return false;
+  if (flavor == ProductFlavor.core) return false;
+  for (final entry in kRouteRequiredProduct.entries) {
+    final requiredProduct = entry.value;
+    if (requiredProduct == flavor.productId) continue;
+    final prefix = _routeTemplatePrefix(entry.key);
+    if (path == prefix || path.startsWith('$prefix/')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// IV-MOBILE-ECOSYSTEM-FOUNDATION-01 — canonical product lookup for a concrete
+/// (possibly resolved) navigation path. Uses the same prefix matcher as
+/// [isRouteBlockedByFlavor] so that `/impact/abc123` resolves to `'impact'`
+/// the same way `/impact/:id` does. Called by [lib/app.dart]'s entitlement
+/// gate so that the gate does not silently skip parameterized product routes.
+///
+/// Returns null when [path] does not belong to any product-specific route.
+String? resolveRequiredProduct(String path) {
+  final exact = kRouteRequiredProduct[path];
+  if (exact != null) return exact;
+  for (final entry in kRouteRequiredProduct.entries) {
+    final prefix = _routeTemplatePrefix(entry.key);
+    if (path == prefix || path.startsWith('$prefix/')) {
+      return entry.value;
+    }
+  }
+  return null;
+}
+
 /// Real-data wrapper around [decideForModule]: resolves [path] against the
 /// actual kRouteModuleOwnership map and kModuleRegistry. This is what
 /// lib/app.dart's redirect actually calls.
+///
+/// IV-MOBILE-ECOSYSTEM-FOUNDATION-01: [flavorOverride] lets callers (or tests)
+/// supply a specific flavor without touching FlavorRegistry. When omitted (the
+/// common case), [FlavorRegistry.maybeCurrentFlavor] is used:
+///   - Web / desktop (no flavor initialized) → null → flavor gate is a no-op.
+///   - Mobile entry points (FlavorRegistry.init called) → gate is active.
 RouteDecision evaluateRouteAccess({
   required String path,
   required bool isAdmin,
@@ -334,7 +418,17 @@ RouteDecision evaluateRouteAccess({
   required bool profileResolved,
   bool isPremium = false,
   bool isBetaTester = false,
+  ProductFlavor? flavorOverride,
 }) {
+  final resolvedFlavor = flavorOverride ?? FlavorRegistry.maybeCurrentFlavor;
+
+  // Flavor gate: block cross-product routes before any module/plan checks.
+  // Admins bypass the flavor gate (they may need to access any route for
+  // support/debugging).
+  if (!isAdmin && isRouteBlockedByFlavor(path, resolvedFlavor)) {
+    return RouteDecision.redirectDenied;
+  }
+
   return decideForModule(
     module: _moduleForRoute(path),
     isAlwaysAllowed: kAlwaysAllowedRoutes.contains(path),

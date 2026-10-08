@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- IV-MOBILE-ECOSYSTEM-FOUNDATION-01 — default app_name (fallback).
+     Per-flavor overrides live in android/app/src/<flavor>/res/values/strings.xml
+     and take precedence during the Android resource merge for that build variant. -->
+<resources>
+    <string name="app_name">InsightValues</string>
+</resources>

@@ -51,6 +51,13 @@ dependencies:
   # chuva explicitamente para poder importá-lo diretamente.
   url_launcher: ^6.3.1
 
+  # IV-MOBILE-ECOSYSTEM-FOUNDATION-01 — Mobile IAP abstraction.
+  # Wired in via BillingProviderFactory (lib/mobile/billing/):
+  #   - Android: Google Play Billing (STUB — BLOCKED_OWNER until IV-MOBILE-BILLING-01)
+  #   - iOS: Apple IAP (STUB — BLOCKED_OWNER until IV-MOBILE-BILLING-01)
+  # No LIVE billing is activated in this macro.
+  in_app_purchase: ^3.2.0
+
   # IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 — versão/build para a tela
   # "Sobre" (About). Já era resolvido transitivamente via
   # dependency_overrides abaixo; declarado direto para poder importar.

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- IV-MOBILE-ECOSYSTEM-FOUNDATION-01 — Quant flavor manifest overlay.
+     Merged into android/app/src/main/AndroidManifest.xml by the Android
+     manifest merger during a 'quant' flavor build. Only elements specific
+     to the Quant product are declared here; everything else comes from main.
+
+     Deep link scheme: insightvalues://quant/<path>
+     Examples:
+       insightvalues://quant/              (watchlist home)
+       insightvalues://quant/analyze       (start analysis)
+       insightvalues://quant/watchlist     (watchlist view)
+
+     Moved here from main/AndroidManifest.xml so the Core and Impact APKs
+     do not handle Quant deep links.
+
+     PRODUCTION PROTECTION: autoVerify="false" until assetlinks.json for
+     com.insightvalues.quant is deployed to insightvalues.com/.well-known/.
+     Do NOT enable autoVerify="true" without that file in place. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name=".MainActivity">
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="insightvalues" android:host="quant"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="insightvalues" android:host="quant" android:pathPrefix="/analyze"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="insightvalues" android:host="quant" android:pathPrefix="/watchlist"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

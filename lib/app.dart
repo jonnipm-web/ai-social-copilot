@@ -166,8 +166,11 @@ Future<String?> _resolveEntitlementRedirect(
   // Only fires when the plan gate already allowed access AND the route maps
   // to a non-core product. Admin bypass mirrors the plan gate above.
   // FAIL OPEN: on any error the RPC returns allowed=true (pre-migration safe).
+  //
+  // P1-R6-A fix: use resolveRequiredProduct() instead of exact map lookup so
+  // concrete parameterized paths like /impact/<id> are correctly gated.
   if (!isAdmin) {
-    final requiredProduct = kRouteRequiredProduct[path];
+    final requiredProduct = resolveRequiredProduct(path);
     if (requiredProduct != null) {
       final container = ProviderScope.containerOf(context, listen: false);
       ProviderSubscription<AsyncValue<ProductEntitlementResult>>? peSub;

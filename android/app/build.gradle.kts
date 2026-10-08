@@ -112,36 +112,45 @@ android {
         }
     }
 
-    // IV-IMPACT-MACRO-08 Phase 18 — standalone Impact product flavor.
+    // IV-MOBILE-ECOSYSTEM-FOUNDATION-01 — three independent product flavors.
     //
-    // PRODUCTION PROTECTION: this flavor exists as a BUILD CONFIGURATION only.
-    // No release build, no Play Store publish, no Firebase setup has been done
-    // for this flavor. Activating it for production release requires:
-    //   - Paulo + Agente Martins explicit authorization
-    //   - A separate Firebase/Google Services project for com.insightvalues.impact
-    //   - A separate upload keystore entry in key.properties
-    //   - A separate Play Console app
+    // Each flavor produces a separate APK/AAB that installs as an independent
+    // app on the same device. The 'product' dimension routes the build to the
+    // correct entry point (-t lib/main_<flavor>.dart) and applies per-flavor
+    // resources (res/values/strings.xml → app_name, icon overlays in future).
     //
-    // Usage (local debug install):
-    //   flutter build apk --debug --flavor impact -t lib/main.dart
-    //   flutter install --flavor impact
+    // Usage (local debug installs):
+    //   flutter build apk --debug --flavor core    -t lib/main_core.dart
+    //   flutter build apk --debug --flavor impact  -t lib/main_impact.dart
+    //   flutter build apk --debug --flavor quant   -t lib/main_quant.dart
+    //
+    // Firebase (BLOCKED_OWNER — RELEASE_GATE):
+    //   Each flavor MUST have android/app/src/<flavor>/google-services.json with
+    //   the real Firebase project for that applicationId before being published
+    //   to the Play Store. Until registered:
+    //     - Debug APK builds succeed (build gate passes)
+    //     - Firebase Auth will be limited to the default com.insightvalues.app ID
+    //     - DO NOT publish to Play Store without per-flavor Firebase registration
+    //   RELEASE_BLOCKED: Não publicar em loja sem gate AM+Paulo + Firebase setup.
     flavorDimensions += "product"
     productFlavors {
-        create("insightvalues") {
+        create("core") {
             dimension = "product"
-            // Default: unchanged applicationId, same as the main app.
+            applicationId = "com.insightvalues.core"
+            versionNameSuffix = "-core"
+            // Firebase: android/app/src/core/google-services.json (BLOCKED_OWNER)
         }
         create("impact") {
             dimension = "product"
             applicationId = "com.insightvalues.impact"
             versionNameSuffix = "-impact"
-            // In a future release, a separate google-services.json for
-            // com.insightvalues.impact would be placed in:
-            //   android/app/src/impact/google-services.json
-            // For now this flavor uses the default google-services.json
-            // (which means Firebase Auth works only for the main package ID —
-            // the standalone app will need its own Firebase project before
-            // production release).
+            // Firebase: android/app/src/impact/google-services.json (BLOCKED_OWNER)
+        }
+        create("quant") {
+            dimension = "product"
+            applicationId = "com.insightvalues.quant"
+            versionNameSuffix = "-quant"
+            // Firebase: android/app/src/quant/google-services.json (BLOCKED_OWNER)
         }
     }
 

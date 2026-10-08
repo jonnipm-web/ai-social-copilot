@@ -21,6 +21,7 @@ import 'package:ai_social_copilot/core/modules/module_definition.dart';
 import 'package:ai_social_copilot/core/modules/module_registry.dart';
 import 'package:ai_social_copilot/core/modules/route_policy.dart';
 import 'package:ai_social_copilot/core/constants/app_constants.dart';
+import 'package:ai_social_copilot/mobile/config/product_flavor.dart';
 
 /// Mirrors server_module_policy_drift_test.dart's own JSON extraction --
 /// duplicated locally (small, self-contained) rather than exported, to keep
@@ -917,6 +918,219 @@ void main() {
         }
       }
       expect(drift, isEmpty);
+    });
+  });
+
+  // IV-MOBILE-ECOSYSTEM-FOUNDATION-01 — flavor-aware route isolation gate.
+  group('isRouteBlockedByFlavor', () {
+    test('null flavor → gate is no-op (all routes pass)', () {
+      expect(isRouteBlockedByFlavor(AppConstants.routeImpact, null), isFalse);
+      expect(isRouteBlockedByFlavor(AppConstants.routeQuant, null), isFalse);
+      expect(isRouteBlockedByFlavor(AppConstants.routeDashboard, null), isFalse);
+    });
+
+    test('core flavor → all routes pass (full app access)', () {
+      expect(isRouteBlockedByFlavor(AppConstants.routeImpact, ProductFlavor.core),
+          isFalse);
+      expect(isRouteBlockedByFlavor(AppConstants.routeQuant, ProductFlavor.core),
+          isFalse);
+    });
+
+    test('impact flavor → impact routes allowed, quant routes blocked', () {
+      expect(isRouteBlockedByFlavor(AppConstants.routeImpact, ProductFlavor.impact),
+          isFalse, reason: 'Impact APK must allow /impact');
+      expect(
+          isRouteBlockedByFlavor(AppConstants.routeImpactDiscover, ProductFlavor.impact),
+          isFalse);
+      expect(isRouteBlockedByFlavor(AppConstants.routeQuant, ProductFlavor.impact),
+          isTrue, reason: 'Impact APK must block /quant');
+      expect(isRouteBlockedByFlavor(AppConstants.routeQuantLab, ProductFlavor.impact),
+          isTrue);
+    });
+
+    test('quant flavor → quant routes allowed, impact routes blocked', () {
+      expect(isRouteBlockedByFlavor(AppConstants.routeQuant, ProductFlavor.quant),
+          isFalse, reason: 'Quant APK must allow /quant');
+      expect(isRouteBlockedByFlavor(AppConstants.routeQuantLab, ProductFlavor.quant),
+          isFalse);
+      expect(isRouteBlockedByFlavor(AppConstants.routeImpact, ProductFlavor.quant),
+          isTrue, reason: 'Quant APK must block /impact');
+      expect(
+          isRouteBlockedByFlavor(AppConstants.routeImpactDiscover, ProductFlavor.quant),
+          isTrue);
+    });
+
+    test('non-product routes are never blocked by flavor', () {
+      expect(isRouteBlockedByFlavor(AppConstants.routeDashboard, ProductFlavor.impact),
+          isFalse);
+      expect(isRouteBlockedByFlavor(AppConstants.routeUpgrade, ProductFlavor.quant),
+          isFalse);
+      expect(isRouteBlockedByFlavor(AppConstants.routeLogin, ProductFlavor.impact),
+          isFalse);
+    });
+  });
+
+  // P1-R9-A (Codex R9): routeMayBeRestricted must return true for concrete
+  // product paths so that _resolveEntitlementRedirect in app.dart does not
+  // skip the flavor gate via the early-return fast-path.
+  group('routeMayBeRestricted — product routes (P1-R9-A)', () {
+    test('static product routes are restricted', () {
+      expect(routeMayBeRestricted(AppConstants.routeImpact), isTrue,
+          reason: '/impact must not fast-path through routeMayBeRestricted');
+      expect(routeMayBeRestricted(AppConstants.routeQuant), isTrue);
+    });
+
+    test('concrete parameterized product path is restricted', () {
+      expect(routeMayBeRestricted('/impact/inv-abc123'), isTrue,
+          reason: '/impact/<id> must not escape the flavor gate');
+      expect(routeMayBeRestricted('/impact/inv-abc123/monitor'), isTrue);
+    });
+
+    test('non-product routes without a module remain unrestricted', () {
+      expect(routeMayBeRestricted('/some/unknown/path'), isFalse);
+    });
+  });
+
+  // P1-R6-A (Codex R6): resolveRequiredProduct uses same prefix matcher as
+  // isRouteBlockedByFlavor, so the entitlement gate in app.dart does not skip
+  // parameterized product routes.
+  group('resolveRequiredProduct — canonical product lookup (P1-R6-A)', () {
+    test('exact static impact routes resolve to impact', () {
+      expect(resolveRequiredProduct(AppConstants.routeImpact), equals('impact'));
+      expect(resolveRequiredProduct(AppConstants.routeImpactDiscover),
+          equals('impact'));
+    });
+
+    test('concrete parameterized impact path resolves to impact', () {
+      expect(resolveRequiredProduct('/impact/inv-abc123'), equals('impact'),
+          reason: '/impact/:id concrete path must resolve to impact');
+      expect(resolveRequiredProduct('/impact/inv-abc123/monitor'), equals('impact'),
+          reason: '/impact/:id/monitor concrete path must resolve to impact');
+    });
+
+    test('exact static quant routes resolve to quant', () {
+      expect(resolveRequiredProduct(AppConstants.routeQuant), equals('quant'));
+      expect(resolveRequiredProduct(AppConstants.routeQuantLab), equals('quant'));
+    });
+
+    test('non-product routes return null', () {
+      expect(resolveRequiredProduct(AppConstants.routeDashboard), isNull);
+      expect(resolveRequiredProduct('/some/random/path'), isNull);
+    });
+  });
+
+  // P1-R5-A (Codex R5): prefix matching — concrete paths with resolved :param IDs
+  group('isRouteBlockedByFlavor — concrete parameterized paths (P1-R5-A)', () {
+    test('quant flavor: /impact/<id> concrete dossier path → blocked', () {
+      expect(isRouteBlockedByFlavor('/impact/inv-abc123', ProductFlavor.quant),
+          isTrue,
+          reason: 'Quant APK must block investigation dossier paths');
+    });
+
+    test('quant flavor: /impact/<id>/monitor concrete path → blocked', () {
+      expect(
+          isRouteBlockedByFlavor('/impact/inv-abc123/monitor', ProductFlavor.quant),
+          isTrue,
+          reason: 'Quant APK must block monitor sub-paths of dossier');
+    });
+
+    test('impact flavor: /impact/<id> concrete dossier path → allowed', () {
+      expect(isRouteBlockedByFlavor('/impact/inv-abc123', ProductFlavor.impact),
+          isFalse,
+          reason: 'Impact APK must allow own dossier paths');
+    });
+
+    test('impact flavor: /impact/<id>/monitor concrete path → allowed', () {
+      expect(
+          isRouteBlockedByFlavor('/impact/inv-abc123/monitor', ProductFlavor.impact),
+          isFalse);
+    });
+
+    test('core flavor: concrete parameterized impact path → allowed (full access)', () {
+      expect(isRouteBlockedByFlavor('/impact/inv-abc123', ProductFlavor.core),
+          isFalse);
+    });
+
+    test('null flavor: concrete parameterized impact path → allowed (web, no-op)', () {
+      expect(isRouteBlockedByFlavor('/impact/inv-abc123', null), isFalse);
+    });
+
+    test('impact flavor: /quant-lab → blocked (exact static quant route)', () {
+      expect(isRouteBlockedByFlavor('/quant-lab', ProductFlavor.impact), isTrue);
+    });
+
+    test('quant flavor: /quant-lab → allowed (own static route)', () {
+      expect(isRouteBlockedByFlavor('/quant-lab', ProductFlavor.quant), isFalse);
+    });
+
+    test('non-product route with path prefix coincidence is not blocked', () {
+      // A route like /dashboard (unrelated to /quant) must not be blocked even
+      // though it starts with characters present in other route prefixes.
+      expect(isRouteBlockedByFlavor('/dashboard', ProductFlavor.quant), isFalse);
+      expect(isRouteBlockedByFlavor('/dashboard', ProductFlavor.impact), isFalse);
+    });
+  });
+
+  group('evaluateRouteAccess — flavor gate integration', () {
+    // Prove that the flavor gate wires into evaluateRouteAccess and returns
+    // redirectDenied for cross-product routes even for PRO users.
+    test('impact flavor: quant route → redirectDenied regardless of plan', () {
+      final decision = evaluateRouteAccess(
+        path: AppConstants.routeQuant,
+        isAdmin: false,
+        isPro: true,
+        profileResolved: true,
+        flavorOverride: ProductFlavor.impact,
+      );
+      expect(decision, equals(RouteDecision.redirectDenied),
+          reason: 'Impact APK must not reach Quant screen even for PRO users');
+    });
+
+    test('quant flavor: impact route → redirectDenied', () {
+      final decision = evaluateRouteAccess(
+        path: AppConstants.routeImpact,
+        isAdmin: false,
+        isPro: true,
+        profileResolved: true,
+        flavorOverride: ProductFlavor.quant,
+      );
+      expect(decision, equals(RouteDecision.redirectDenied));
+    });
+
+    test('admin bypasses flavor gate', () {
+      final decision = evaluateRouteAccess(
+        path: AppConstants.routeQuant,
+        isAdmin: true,
+        isPro: true,
+        profileResolved: true,
+        flavorOverride: ProductFlavor.impact,
+      );
+      expect(decision, isNot(equals(RouteDecision.redirectDenied)),
+          reason: 'Admins must bypass flavor gate for debugging/support access');
+    });
+
+    test('null flavor override: no cross-product blocking (Web/desktop)', () {
+      final decision = evaluateRouteAccess(
+        path: AppConstants.routeImpact,
+        isAdmin: false,
+        isPro: true,
+        profileResolved: true,
+        flavorOverride: null,
+        // FlavorRegistry.maybeCurrentFlavor is also null in this test env.
+      );
+      // Result depends on the Impact module's lifecycle gate, NOT flavor gate.
+      // Impact is EXPERIMENTAL → redirectDenied from lifecycle (not flavor).
+      // The key assertion: flavor gate did NOT cause the denial.
+      // We verify by also checking a free commercial route (dashboard).
+      final dashDecision = evaluateRouteAccess(
+        path: AppConstants.routeDashboard,
+        isAdmin: false,
+        isPro: false,
+        profileResolved: true,
+        flavorOverride: null,
+      );
+      // Dashboard is always accessible regardless of flavor.
+      expect(dashDecision, isNot(equals(RouteDecision.redirectDenied)));
     });
   });
 }

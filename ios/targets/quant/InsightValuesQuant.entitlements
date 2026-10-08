@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- IV-MOBILE-ECOSYSTEM-FOUNDATION-01 — InsightValues Quant entitlements stub. -->
+<plist version="1.0">
+<dict>
+    <key>com.apple.developer.associated-domains</key>
+    <array>
+        <!-- BLOCKED_OWNER: <string>applinks:insightvalues.com</string> -->
+    </array>
+    <!-- In-App Purchase: enable once IV-MOBILE-BILLING-01 is authorized -->
+    <!-- <key>com.apple.developer.in-app-payments</key>
+    <array>
+        <string>com.insightvalues.quant.quant_subscription_monthly</string>
+    </array> -->
+</dict>
+</plist>

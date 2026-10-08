@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="InsightValues"
+        android:label="@string/app_name"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
@@ -27,49 +27,12 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- IV-IMPACT-MACRO-08 Phase 20 — deep links for InsightValues Impact.
-                 Scheme: insightvalues://impact/<path>
-                 Examples:
-                   insightvalues://impact/discover
-                   insightvalues://impact/<investigation-id>
-                   insightvalues://impact/<investigation-id>/monitor
-                 PRODUCTION PROTECTION: verified=false intentionally until
-                 assetlinks.json is deployed to insightvalues.com.
-                 Do NOT change to autoVerify="true" without first deploying
-                 /.well-known/assetlinks.json with the correct SHA-256 fingerprint. -->
-            <intent-filter android:autoVerify="false">
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data
-                    android:scheme="insightvalues"
-                    android:host="impact"/>
-            </intent-filter>
-            <!-- Quant deep links: insightvalues://quant/* (custom scheme).
-                 autoVerify is intentionally false — domain verification requires
-                 assetlinks.json at insightvalues.com/.well-known/, which depends
-                 on the production domain (BLOCKED_OWNER).
-                 IMPLEMENTATION_COMPLETE; RUNTIME_VERIFIED after domain config. -->
-            <intent-filter android:autoVerify="false">
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="insightvalues" android:host="quant"/>
-            </intent-filter>
-            <!-- Quant analyze deep link: insightvalues://quant/analyze -->
-            <intent-filter android:autoVerify="false">
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="insightvalues" android:host="quant" android:pathPrefix="/analyze"/>
-            </intent-filter>
-            <!-- Quant watchlist deep link: insightvalues://quant/watchlist -->
-            <intent-filter android:autoVerify="false">
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="insightvalues" android:host="quant" android:pathPrefix="/watchlist"/>
-            </intent-filter>
+            <!-- IV-MOBILE-ECOSYSTEM-FOUNDATION-01 — product deep links moved to
+                 per-flavor manifests in android/app/src/<flavor>/AndroidManifest.xml
+                 so that each independent APK only handles its own scheme host.
+                 insightvalues://core/*  → android/app/src/core/AndroidManifest.xml
+                 insightvalues://impact/* → android/app/src/impact/AndroidManifest.xml
+                 insightvalues://quant/*  → android/app/src/quant/AndroidManifest.xml -->
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

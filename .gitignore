@@ -16,6 +16,12 @@ flutter_env.cfg
 supabase/.temp/
 
 # Android
+# IV-MOBILE-ECOSYSTEM-FOUNDATION-01: per-flavor Firebase configs contain real API keys.
+# Placeholder structure is documented in android/app/build.gradle.kts comments.
+# Register each applicationId in Firebase Console and download the real file.
+android/app/src/core/google-services.json
+android/app/src/impact/google-services.json
+android/app/src/quant/google-services.json
 **/android/**/gradle-wrapper.jar
 **/android/.gradle
 **/android/captures/

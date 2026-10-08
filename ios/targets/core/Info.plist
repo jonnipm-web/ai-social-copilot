@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- IV-MOBILE-ECOSYSTEM-FOUNDATION-01 — InsightValues Core iOS Info.plist stub.
+     BLOCKED_OWNER: complete configuration requires Xcode on macOS.
+     Copy this file into the InsightValuesCore Xcode target's Info.plist
+     and update CFBundleURLSchemes to match Firebase configuration. -->
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>InsightValues Core</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.insightvalues.core</string>
+    <key>CFBundleName</key>
+    <string>InsightValuesCore</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <!-- P1-R9-B fix: product-specific scheme prevents deep-link collision when
+         multiple InsightValues apps are installed on the same device. iOS routes
+         custom-scheme URLs by scheme only (not host), so shared scheme + host
+         disambiguation does not work. Each product uses its own scheme. -->
+    <!-- Deep links: insightvalues-core://core/* (P1-R9-B: unique per-product scheme) -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>insightvalues-core</string>
+            </array>
+            <key>CFBundleURLName</key>
+            <string>com.insightvalues.core.deeplink</string>
+        </dict>
+    </array>
+    <!-- Google Sign-In redirect URL — update REVERSED_CLIENT_ID from GoogleService-Info.plist -->
+    <key>GIDClientID</key>
+    <string>PLACEHOLDER_CLIENT_ID</string>
+</dict>
+</plist>
