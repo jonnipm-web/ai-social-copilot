@@ -333,4 +333,51 @@ void main() {
       expect(result.allowed, isTrue);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // P1-R14-A: Uninitialized flavor FAIL CLOSED
+  // Verifies that FlavorRegistry.maybeCurrentFlavor == null is detectable and
+  // that the route gate (isRouteBlockedByFlavor) returns false when flavor is
+  // null — confirming the P1-R14-A gap exists at the route_policy level and
+  // that app.dart's runtime guard is the correct layer to close it.
+  // ---------------------------------------------------------------------------
+
+  group('P1-R14-A — uninitialized flavor: app-layer guard required', () {
+    tearDown(() => FlavorRegistry.resetForTesting());
+
+    test('FlavorRegistry.maybeCurrentFlavor is null before init', () {
+      // No FlavorRegistry.init() called — simulates main.dart path without -t.
+      expect(FlavorRegistry.maybeCurrentFlavor, isNull,
+          reason: 'FlavorRegistry must be null before any main_X.dart calls init()');
+    });
+
+    test('isRouteBlockedByFlavor returns false for null flavor (route_policy gap)', () {
+      // Confirms the gap that P1-R14-A identified: route_policy alone cannot
+      // block cross-product routes when flavor is uninitialized. The app.dart
+      // runtime guard (P1-R14-A fix) closes this gap at a higher layer.
+      expect(isRouteBlockedByFlavor('/impact', null), isFalse,
+          reason: 'route_policy alone: null flavor passes all routes — '
+              'app.dart runtime guard required for fail-closed behavior');
+      expect(isRouteBlockedByFlavor('/quant', null), isFalse,
+          reason: 'route_policy alone: null flavor passes all routes — '
+              'app.dart runtime guard required for fail-closed behavior');
+    });
+
+    test('resolveRequiredProduct identifies product routes correctly', () {
+      // app.dart runtime guard uses resolveRequiredProduct to detect product
+      // routes before applying fail-closed. Verify mapping is correct.
+      expect(resolveRequiredProduct('/impact'), isNotNull,
+          reason: '/impact must resolve to a required product');
+      expect(resolveRequiredProduct('/quant'), isNotNull,
+          reason: '/quant must resolve to a required product');
+      expect(resolveRequiredProduct('/dashboard'), isNull,
+          reason: '/dashboard must NOT require a paid product');
+    });
+
+    test('after FlavorRegistry.init(), maybeCurrentFlavor is non-null', () {
+      FlavorRegistry.init(ProductFlavor.core);
+      expect(FlavorRegistry.maybeCurrentFlavor, equals(ProductFlavor.core),
+          reason: 'FlavorRegistry must be non-null after main_core.dart calls init()');
+    });
+  });
 }

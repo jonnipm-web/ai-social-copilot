@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart' show SchedulerPhase;
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -78,6 +79,7 @@ import 'features/impact/screens/impact_monitor_screen.dart';
 import 'features/strategy_lab/strategy_lab_screen.dart';
 import 'features/insights/screens/ive_analysis_screen.dart';
 import 'features/upgrade/screens/product_upgrade_screen.dart';
+import 'mobile/config/product_flavor.dart';
 import 'providers/mobile_entitlement_provider.dart';
 import 'data/services/product_entitlement_service.dart';
 
@@ -172,6 +174,17 @@ Future<String?> _resolveEntitlementRedirect(
   // IV-MOBILE-ECOSYSTEM-FOUNDATION-01 (P1-R10-A): uses runtimeProductEntitlementProvider
   // which routes to MobileEntitlementResolver on mobile (offline cache + identity anchor +
   // FAIL CLOSED) and to ProductEntitlementService on web (unchanged Web behavior).
+  //
+  // P1-R14-A fix: on mobile, FlavorRegistry must be initialized (by main_core.dart,
+  // main_impact.dart, or main_quant.dart). A flavor APK built without -t (defaulting
+  // to lib/main.dart) would never call FlavorRegistry.init(), leaving flavor isolation
+  // disabled. FAIL CLOSED for all product routes when mobile + flavor uninitialized.
+  if (!kIsWeb) {
+    final uninitializedFlavor = FlavorRegistry.maybeCurrentFlavor == null;
+    if (!isAdmin && uninitializedFlavor && resolveRequiredProduct(path) != null) {
+      return '${AppConstants.routeProductUpgrade}?product=uninitialized&state=unavailable';
+    }
+  }
   if (!isAdmin) {
     final requiredProduct = resolveRequiredProduct(path);
     if (requiredProduct != null) {
