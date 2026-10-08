@@ -14,22 +14,48 @@ name: Build Release AAB
 #        KEYSTORE_KEY_PASSWORD   — key password
 #        GOOGLE_CLIENT_ID        — Android Web OAuth 2.0 client ID
 #                                  (format: <digits>.apps.googleusercontent.com)
+#   3. Create a GitHub protected environment named "release-signing":
+#        Settings → Environments → release-signing
+#          - Required reviewers: Owner (Paulo)
+#          - Deployment branches: main only (Selected branches → main)
+#        This provides the authoritative ref restriction at the GitHub API
+#        level, independent of the inline ref-guard step.
+#   4. Pin actions/upload-artifact to an immutable SHA before production use:
+#        npx pin-github-action .github/workflows/build-release-aab.yml
 #
 # SECURITY: KEYSTORE_* secrets previously populated from the now-disabled
 # generate-keystore.yml (PLAY-READINESS-18 incident) MUST be rotated by
 # the Owner before this workflow is used.
 #
-# Security fixes applied (Codex R2/R3):
-#   P1-C02-A / P1-C03-A: release builds restricted to main or vX.Y.Z tags.
-#     A hard ref-guard step at job start rejects any other dispatching ref
-#     before any secret is exposed.
-#     Additionally, the job uses `environment: release-signing` — configure
-#     this environment in GitHub (Settings → Environments → release-signing)
-#     with required reviewers and branch protection (main only) for defense-
-#     in-depth.
-#   P1-C02-B: All secrets are passed through step `env:` variables and written
-#     to files via printf/Python, never interpolated directly into shell bodies.
-#   P2-C02-C: GOOGLE_CLIENT_ID must match *.apps.googleusercontent.com format.
+# Security properties (Codex R1–R9):
+#   - workflow_dispatch only (no PR/push triggers).
+#   - Restricted to refs/heads/main via job-level if: (layer 1) and an
+#     early inline ref-guard step via env: (layer 2 — P1-C05-A fix).
+#     Tags removed: only main is trusted as a release ref.
+#   - Protected by the release-signing GitHub environment (requires Owner
+#     manual approval before any step runs — BLOCKED_OWNER to configure).
+#   - inputs.flavor validated via env: + case allowlist before any secrets
+#     are materialized; exported as step output for reliable use in action
+#     `with:` fields (P1-C06-B / P1-C07-A fix).
+#   - Signing secrets created AFTER pub get — minimizes exposure window
+#     (P2-C07-C fix).
+#   - All secrets written via env: variables + Python/printf, never
+#     interpolated directly into shell bodies (P1-C02-B fix).
+#   - Flutter installed from official Google storage with archive SHA-256
+#     verified against the official releases manifest (P1-C04-B / P2-C05-C).
+#   - actions/checkout pinned to immutable SHA 11bd71901bbe5b1630ceea73d27597364c9af683
+#     (v4.2.2) — verified against github.com/actions/checkout releases.
+#   - actions/setup-java eliminated; Java 17 pre-installed on ubuntu-latest
+#     used via $JAVA_HOME_17_X64 (eliminates mutable third-party action).
+#   - Minimum permissions: contents: read (P1-C04-B).
+#   - Keystore and key.properties removed in an always-run cleanup step.
+#
+# BLOCKED_OWNER — action SHA pinning (P1 residual after Codex R9):
+#   actions/upload-artifact@v4.3.3 is pinned below. Owner MUST verify
+#   this SHA matches the intended release at github.com/actions/upload-artifact
+#   before enabling production signing, and run:
+#     npx pin-github-action .github/workflows/build-release-aab.yml
+#   to refresh all SHAs using a current tool.
 
 on:
   workflow_dispatch:
@@ -44,7 +70,7 @@ on:
           - impact
           - quant
 
-# Only allow one release build at a time; cancel any in-progress run.
+# Only allow one release build at a time per flavor.
 concurrency:
   group: release-aab-${{ inputs.flavor }}
   cancel-in-progress: false
@@ -52,52 +78,124 @@ concurrency:
 jobs:
   build-release:
     name: Build release AAB (${{ inputs.flavor }})
-    runs-on: ubuntu-latest
-    # P1-C03-A fix (defense-in-depth): GitHub protected environment.
-    # Configure in Settings → Environments → release-signing:
+    # Pin to ubuntu-22.04 for toolchain stability (P2-C10-B fix).
+    # ubuntu-latest is mutable; ubuntu-22.04 images are updated monthly but
+    # do not have major toolchain removals without deprecation notice.
+    runs-on: ubuntu-22.04
+
+    # Defense-in-depth layer 1: job-level conditional evaluated before ANY
+    # step executes. The job is skipped entirely (including actions/checkout)
+    # when dispatched from a non-main ref.
+    if: github.ref == 'refs/heads/main'
+
+    # Least-privilege permissions — no write access needed (P1-C04-B fix).
+    permissions:
+      contents: read
+
+    # Defense-in-depth layer 0: GitHub protected environment.
+    # BLOCKED_OWNER: configure in Settings → Environments → release-signing
     #   - Required reviewers: Owner
     #   - Deployment branches: main only
-    # When configured, GitHub will require manual approval AND enforce branch
-    # restrictions BEFORE this job starts (before any secret is available).
-    # The ref-guard step below adds a second enforcement layer in case the
-    # environment has not yet been fully configured.
     environment: release-signing
 
     steps:
-      # P1-C03-A fix: hard ref guard — reject any dispatching ref that is
-      # not main or a vX.Y.Z semantic release tag. Runs BEFORE any secret is
-      # consumed, so a branch with modified build scripts cannot exfiltrate
-      # signing material even if the protected environment is misconfigured.
-      - name: Enforce protected release ref
+      # Layer 2: hard ref guard. github.ref via env:, NOT interpolated into
+      # the shell body (P1-C05-A fix — prevents injection via crafted branch
+      # names with shell metacharacters). Runs before checkout or secrets.
+      - name: Enforce main-only release ref
+        env:
+          GUARD_REF: ${{ github.ref }}
         run: |
-          REF="${{ github.ref }}"
-          if [ "$REF" = "refs/heads/main" ]; then
-            echo "Release ref check: OK (main)"
-          elif echo "$REF" | grep -qE '^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "Release ref check: OK (release tag $REF)"
-          else
-            echo "::error::RELEASE BLOCKED: dispatch from untrusted ref '$REF'."
-            echo "::error::Only refs/heads/main and refs/tags/vX.Y.Z are allowed."
+          if [ "$GUARD_REF" != "refs/heads/main" ]; then
+            echo "::error::RELEASE BLOCKED: dispatched from an untrusted ref."
+            echo "::error::Only refs/heads/main is allowed for release builds."
+            exit 1
+          fi
+          echo "Release ref check: OK (refs/heads/main)"
+
+      # P1-C06-B / P1-C07-A fix: validate inputs.flavor via env: + case
+      # allowlist BEFORE any secrets are materialized. Exported as a step
+      # output for reliable use in action `with:` fields.
+      - name: Validate and normalize flavor input
+        id: validate-flavor
+        env:
+          INPUT_FLAVOR: ${{ inputs.flavor }}
+        run: |
+          case "$INPUT_FLAVOR" in
+            core|impact|quant)
+              echo "flavor=$INPUT_FLAVOR" >> "$GITHUB_OUTPUT"
+              echo "FLAVOR=$INPUT_FLAVOR" >> "$GITHUB_ENV"
+              echo "Flavor validation: OK ($INPUT_FLAVOR)"
+              ;;
+            *)
+              echo "::error::RELEASE BLOCKED: unknown flavor — must be core, impact, or quant."
+              exit 1
+              ;;
+          esac
+
+      # P1-C07-B fix: pinned to immutable commit SHA (v4.2.2).
+      # SHA 11bd71901bbe5b1630ceea73d27597364c9af683 verified against
+      # https://github.com/actions/checkout/releases/tag/v4.2.2
+      # BLOCKED_OWNER: re-verify when updating checkout version.
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: false
+
+      # P1-C07-B fix: eliminates actions/setup-java@v4 mutable tag.
+      # ubuntu-latest runners provide Java 17 pre-installed; $JAVA_HOME_17_X64
+      # is a documented runner variable guaranteed on ubuntu-22.04+.
+      - name: Use Java 17 (pre-installed on ubuntu-latest)
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_17_X64/bin" >> "$GITHUB_PATH"
+          "$JAVA_HOME_17_X64/bin/java" -version
+
+      # P1-C04-B / P2-C05-C fix: Flutter installed from official Google
+      # storage at a pinned version, SHA-256 verified against the official
+      # Flutter releases manifest before extraction.
+      - name: Install Flutter 3.47.4 (stable, SHA-256 verified)
+        run: |
+          FLUTTER_VERSION="3.47.4"
+          RELEASES_URL="https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json"
+          ARCHIVE_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
+
+          EXPECTED_SHA256=$(curl -fsSL "$RELEASES_URL" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          target = '${FLUTTER_VERSION}'
+          for r in data.get('releases', []):
+              if r.get('version') == target and r.get('channel') == 'stable':
+                  print(r.get('sha256', ''))
+                  break
+          ")
+
+          if [ -z "$EXPECTED_SHA256" ]; then
+            echo "::error::Flutter ${FLUTTER_VERSION} SHA-256 not in releases manifest."
             exit 1
           fi
 
-      - name: Checkout
-        uses: actions/checkout@v4
+          curl -fsSL "$ARCHIVE_URL" -o flutter.tar.xz
+          ACTUAL_SHA256=$(sha256sum flutter.tar.xz | cut -d' ' -f1)
 
-      - name: Setup Java 17 (Temurin)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+          if [ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]; then
+            echo "::error::Flutter archive integrity check FAILED."
+            echo "::error::Expected: $EXPECTED_SHA256  Actual: $ACTUAL_SHA256"
+            rm -f flutter.tar.xz
+            exit 1
+          fi
 
-      - name: Setup Flutter (stable)
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
+          echo "Flutter archive integrity: OK ($ACTUAL_SHA256)"
+          tar xf flutter.tar.xz
+          rm flutter.tar.xz
+          echo "$GITHUB_WORKSPACE/flutter/bin" >> "$GITHUB_PATH"
+          flutter/bin/flutter config --no-analytics
+          flutter/bin/flutter precache --android --no-ios --no-web
 
-      # P1-C01-B + P2-C02-C fix: validate GOOGLE_CLIENT_ID before any build
-      # work. Fails if absent, placeholder, or wrong format.
+      - name: flutter pub get
+        run: flutter pub get
+
+      # P1-C01-B + P2-C02-C fix: validate GOOGLE_CLIENT_ID before signing.
       - name: Validate release configuration (GOOGLE_CLIENT_ID)
         env:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
@@ -107,20 +205,20 @@ jobs:
             exit 1
           fi
           if [ "$GOOGLE_CLIENT_ID" = "placeholder.apps.googleusercontent.com" ]; then
-            echo "::error::RELEASE BLOCKED: GOOGLE_CLIENT_ID is still the placeholder value."
+            echo "::error::RELEASE BLOCKED: GOOGLE_CLIENT_ID is a placeholder value."
             exit 1
           fi
-          # P2-C02-C: validate format — must end with .apps.googleusercontent.com
           if ! echo "$GOOGLE_CLIENT_ID" | grep -qE '^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$'; then
-            echo "::error::RELEASE BLOCKED: GOOGLE_CLIENT_ID does not match expected format."
-            echo "::error::Expected format: <numeric_project_id>-<client_hash>.apps.googleusercontent.com"
+            echo "::error::RELEASE BLOCKED: GOOGLE_CLIENT_ID format is invalid."
             exit 1
           fi
           echo "GOOGLE_CLIENT_ID validation: OK"
 
-      # P1-C01-A fix: flutter_env.cfg is an ASSET FILE loaded at runtime by
-      # flutter_dotenv. Do NOT pass via --dart-define-from-file (JSON-only).
-      # P1-C02-B fix: GOOGLE_CLIENT_ID written via env var, not direct interpolation.
+      # P2-C07-C fix: signing material created AFTER pub get, minimizing the
+      # window during which secrets exist in the workspace.
+      #
+      # P1-C01-A fix: flutter_env.cfg is a RUNTIME ASSET read by flutter_dotenv.
+      # P1-C02-B fix: GOOGLE_CLIENT_ID via env:, never shell-interpolated.
       - name: Create flutter_env.cfg (runtime asset)
         env:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
@@ -129,19 +227,14 @@ jobs:
           printf 'SUPABASE_ANON_KEY=sb_publishable_fZboVtE9PeokahlYmhc_vg_t6JHOmFh\n' >> flutter_env.cfg
           printf 'GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID" >> flutter_env.cfg
 
-      # P1-C02-B fix: decode keystore from env var (not direct interpolation).
+      # P1-C02-B fix: keystore decoded from env var.
       - name: Decode release keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
-          # Validate that the decoded file is a valid JKS/PKCS12 keystore.
-          if ! file android/upload-keystore.jks | grep -qE 'Java KeyStore|PKCS'; then
-            echo "::warning::Decoded keystore may not be a valid JKS file — verify KEYSTORE_BASE64 secret."
-          fi
 
-      # P1-C02-B fix: key.properties written via Python with env vars,
-      # never via shell heredoc with direct secret interpolation.
+      # P1-C02-B fix: key.properties written via Python os.environ.
       - name: Create key.properties
         env:
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
@@ -160,14 +253,10 @@ jobs:
               f.write("\n".join(lines) + "\n")
           PYEOF
 
-      - name: flutter pub get
-        run: flutter pub get
-
-      # P1-C01-A fix: no --dart-define-from-file; flutter_env.cfg is an
-      # asset bundled into the AAB, read at runtime via flutter_dotenv.
-      - name: Build release AAB (${{ inputs.flavor }})
+      # P1-C06-B / P1-C07-A fix: $FLAVOR from GITHUB_ENV (validated above).
+      # P1-C01-A fix: no --dart-define-from-file.
+      - name: Build release AAB
         run: |
-          FLAVOR="${{ inputs.flavor }}"
           flutter build appbundle --release \
             --flavor "$FLAVOR" \
             -t "lib/main_${FLAVOR}.dart"
@@ -179,7 +268,6 @@ jobs:
 
       - name: Record build provenance
         run: |
-          FLAVOR="${{ inputs.flavor }}"
           SOURCE_SHA=$(git rev-parse HEAD)
           AAB_PATH="build/app/outputs/bundle/${FLAVOR}Release/app-${FLAVOR}-release.aab"
           AAB_SHA256=$(sha256sum "$AAB_PATH" | cut -d' ' -f1)
@@ -189,10 +277,15 @@ jobs:
           echo "AAB_SIZE_BYTES=$AAB_SIZE" >> "$GITHUB_STEP_SUMMARY"
           echo "FLAVOR=$FLAVOR" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload release AAB (${{ inputs.flavor }})
-        uses: actions/upload-artifact@v4
+      # P1-C07-A fix: uses steps.validate-flavor.outputs.flavor (step output).
+      # BLOCKED_OWNER (SHA pinning): SHA a8a3f3ad30e3422c9c7b888a15615d19a852ae32
+      # is pinned for v4.3.3. Owner MUST verify this SHA against
+      # https://github.com/actions/upload-artifact/releases/tag/v4.3.3
+      # and run `npx pin-github-action` to refresh before production use.
+      - name: Upload release AAB
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32  # v4.3.3
         with:
-          name: ive-${{ inputs.flavor }}-release-aab-${{ github.run_number }}
-          path: build/app/outputs/bundle/${{ inputs.flavor }}Release/app-${{ inputs.flavor }}-release.aab
+          name: ive-${{ steps.validate-flavor.outputs.flavor }}-release-aab-${{ github.run_number }}
+          path: build/app/outputs/bundle/${{ steps.validate-flavor.outputs.flavor }}Release/app-${{ steps.validate-flavor.outputs.flavor }}-release.aab
           retention-days: 30
           if-no-files-found: error
