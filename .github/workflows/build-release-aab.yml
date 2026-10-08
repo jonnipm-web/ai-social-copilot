@@ -1,0 +1,123 @@
+name: Build Release AAB
+
+# IV-CORE-MOBILE-COMMERCIAL-01 — secure release bundle build.
+#
+# Produces a signed Android App Bundle (AAB) for a product flavor.
+# The keystore is stored exclusively in GitHub Secrets — never committed.
+#
+# PREREQUISITE (BLOCKED_OWNER — must be done by Owner before first use):
+#   1. Generate upload keystore locally:
+#        keytool -genkey -v -keystore upload-keystore.jks \
+#          -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 \
+#          -alias upload
+#   2. Base64-encode it:
+#        base64 -i upload-keystore.jks | tr -d '\n'
+#   3. Store in repository GitHub Secrets (Settings → Secrets → Actions):
+#        KEYSTORE_BASE64         — base64 of upload-keystore.jks
+#        KEYSTORE_STORE_PASSWORD — store password
+#        KEYSTORE_KEY_ALIAS      — alias (e.g. "upload")
+#        KEYSTORE_KEY_PASSWORD   — key password
+#   4. Per-flavor google-services.json must exist at:
+#        android/app/src/<flavor>/google-services.json
+#
+# SECURITY: KEYSTORE_BASE64 + related secrets previously populated from
+# the now-disabled generate-keystore.yml (PLAY-READINESS-18 incident) MUST
+# be rotated by the Owner before this workflow is used.
+
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: 'Product flavor to build'
+        required: true
+        default: 'core'
+        type: choice
+        options:
+          - core
+          - impact
+          - quant
+      ref:
+        description: 'Branch or SHA (default: main)'
+        required: false
+        default: ''
+
+jobs:
+  build-release:
+    name: Build release AAB (${{ inputs.flavor }})
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create flutter_env.cfg
+        run: |
+          echo "SUPABASE_URL=https://nzngvbajrnruknpzzjbf.supabase.co" > flutter_env.cfg
+          echo "SUPABASE_ANON_KEY=sb_publishable_fZboVtE9PeokahlYmhc_vg_t6JHOmFh" >> flutter_env.cfg
+          echo "GOOGLE_CLIENT_ID=placeholder.apps.googleusercontent.com" >> flutter_env.cfg
+
+      - name: Decode release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+
+      - name: Create key.properties
+        run: |
+          cat > android/key.properties <<EOF
+          storePassword=${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          keyPassword=${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEYSTORE_KEY_ALIAS }}
+          storeFile=../upload-keystore.jks
+          EOF
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: Build release AAB (${{ inputs.flavor }})
+        run: |
+          FLAVOR="${{ inputs.flavor }}"
+          flutter build appbundle --release \
+            --flavor "$FLAVOR" \
+            -t "lib/main_${FLAVOR}.dart" \
+            --dart-define-from-file=flutter_env.cfg
+
+      - name: Secure cleanup — remove keystore and key.properties
+        if: always()
+        run: |
+          rm -f android/upload-keystore.jks android/key.properties
+
+      - name: Record build provenance
+        run: |
+          FLAVOR="${{ inputs.flavor }}"
+          SOURCE_SHA=$(git rev-parse HEAD)
+          AAB_PATH="build/app/outputs/bundle/${FLAVOR}Release/app-${FLAVOR}-release.aab"
+          AAB_SHA256=$(sha256sum "$AAB_PATH" | cut -d' ' -f1)
+          AAB_SIZE=$(stat -c%s "$AAB_PATH")
+          echo "SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "AAB_SHA256=$AAB_SHA256" >> "$GITHUB_STEP_SUMMARY"
+          echo "AAB_SIZE_BYTES=$AAB_SIZE" >> "$GITHUB_STEP_SUMMARY"
+          echo "FLAVOR=$FLAVOR" >> "$GITHUB_STEP_SUMMARY"
+          echo "BUILD_REF=${{ inputs.ref || github.ref }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release AAB (${{ inputs.flavor }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: ive-${{ inputs.flavor }}-release-aab-${{ github.run_number }}
+          path: build/app/outputs/bundle/${{ inputs.flavor }}Release/app-${{ inputs.flavor }}-release.aab
+          retention-days: 30
+          if-no-files-found: error

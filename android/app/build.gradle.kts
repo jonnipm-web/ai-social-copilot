@@ -179,6 +179,15 @@ android {
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            // IV-CORE-MOBILE-COMMERCIAL-01: enable R8 full-mode shrinking for
+            // release builds. Reduces APK/AAB size and makes reverse-engineering
+            // harder. proguard-rules.pro contains app-specific keep rules.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
