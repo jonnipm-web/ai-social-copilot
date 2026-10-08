@@ -100,6 +100,12 @@ done < <(grep -rl "for .* in .*supabase/functions/\*" "$WORKFLOWS" 2>/dev/null |
 # a real governance defect, unrelated to any later mission, fixed here
 # (IV-SECURITY-REMEDIATION-03).
 #
+# IV-WEB-ECOSYSTEM-UNIFICATION-01 (P1-R32-A fix): entitlement-reconcile is
+# called server-to-server by pg_cron via net.http_post with a service_role
+# Bearer token -- it never receives a Supabase-issued user JWT, so
+# verify_jwt=true would reject every invocation. Its trust boundary is the
+# service_role key check inside the function.
+#
 # This exception list is intentionally a single hardcoded name, not a
 # pattern, a wildcard, or anything read from an unreviewed input --
 # adding to it requires editing this script in a reviewed PR, the same
@@ -112,7 +118,7 @@ done < <(grep -rl "for .* in .*supabase/functions/\*" "$WORKFLOWS" 2>/dev/null |
 # ---------------------------------------------------------------------
 ALLOWLIST="$REPO_ROOT/.github/deploy-allowlist.tsv"
 CONFIG_TOML="$REPO_ROOT/supabase/config.toml"
-NO_VERIFY_JWT_EXCEPTIONS=("stripe-webhook")
+NO_VERIFY_JWT_EXCEPTIONS=("stripe-webhook" "entitlement-reconcile")
 
 is_allowed_exception() {
   local candidate="$1"

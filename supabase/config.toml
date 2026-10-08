@@ -78,3 +78,12 @@ verify_jwt = true
 # or DB write. See .github/deploy-allowlist.tsv for the matching entry.
 [functions.stripe-webhook]
 verify_jwt = false
+
+# IV-WEB-ECOSYSTEM-UNIFICATION-01 (P1-R32-A fix): pg_cron calls this function
+# server-to-server via net.http_post with a service_role Bearer token in the
+# Authorization header. It never receives a Supabase-issued user JWT, so
+# verify_jwt=true would reject every legitimate invocation. The real trust
+# boundary is the service_role key check inside the function (custom auth).
+# See .github/deploy-allowlist.tsv for the matching entry.
+[functions.entitlement-reconcile]
+verify_jwt = false

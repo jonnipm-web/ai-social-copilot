@@ -147,9 +147,11 @@ async function applyProductSubscriptionState(
   // reconciliation and operator alerting.
   if (priceMap.size > 0 && priceId !== null && !mapped) {
     console.warn(`applyProductSubscriptionState: price_id ${priceId} not in STRIPE_PRICE_MAP — writing durable pending_retry`);
+    // Uses INSERT (not upsert): pee_pending_retry_dedup_idx makes concurrent or
+    // retry deliveries idempotent. 23505 = existing unprocessed row — not an error.
     const { error: unmappedErr } = await db
       .from('product_entitlement_events')
-      .upsert({
+      .insert({
         user_id:               userId,
         product:               'unknown',
         event_type:            'pending_retry',
@@ -167,7 +169,8 @@ async function applyProductSubscriptionState(
       })
       .select()
       .maybeSingle();
-    if (unmappedErr) {
+    // 23505 = unique_violation from pee_pending_retry_dedup_idx: concurrent or retry delivery — idempotent
+    if (unmappedErr && (unmappedErr as { code?: string }).code !== '23505') {
       throw new Error(`UNMAPPED_PRICE durable record failed: ${String(unmappedErr)}`);
     }
     return;

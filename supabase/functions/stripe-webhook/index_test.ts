@@ -1627,3 +1627,48 @@ Deno.test('WEBHOOK-50: P1-R31-A — delivery concurrent do mesmo evento falho cr
   assertEquals(res2.status, 200, 'P1-R31-A: second (concurrent) delivery must return 200, not 500');
   assertEquals(Object.keys(db.state.productEntitlementEvents).length, 1, 'P1-R31-A: exactly one pending_retry row after duplicate delivery (no new row)');
 });
+
+Deno.test('WEBHOOK-51: P1-R32-B — unmapped-price legacy-Core retry não bloqueia cancel_core_entitlement_atomic após pending_retry 23505', async () => {
+  // Scenario: unmapped-price cancellation for a sub whose ID matches the user's legacy Core sub.
+  // isUnmappedLegacyCore=true → applyProductSubscriptionState writes pending_retry, then calls
+  // cancel_core_entitlement_atomic. If the cancel fails on the first delivery (→ 500), Stripe
+  // retries. The second delivery must:
+  //   1. See 23505 from the pending_retry insert → treat as idempotent (not throw)
+  //   2. Still call cancel_core_entitlement_atomic → return 200.
+  // Before P1-R32-B fix, the 23505 was fatal (throw), so the cancel was never reached.
+  const priceMap = new Map([['price_impact_pro', { product: 'impact', tier: 'pro' }]]);
+  const state = newState('cus_r32b', 'user_r32b');
+  // Seed legacy Core sub — subscriptions row must carry the same sub.id for the P1-K legacy match.
+  state.subscriptions['user_r32b'] = {
+    ...state.subscriptions['user_r32b'],
+    stripe_subscription_id: 'sub_r32b_core',
+    status: 'active',
+    last_event_created: null,
+  };
+  const db = fakeDb(state) as ReturnType<typeof fakeDb> & { rpc: unknown };
+  const origRpc = db.rpc.bind(db);
+  let cancelCount = 0;
+  db.rpc = (fn: string, args: Record<string, unknown>) => {
+    if (fn === 'cancel_core_entitlement_atomic') {
+      cancelCount++;
+      if (cancelCount === 1) throw new Error('simulated cancel failure on first delivery');
+    }
+    return origRpc(fn, args);
+  };
+
+  // Sub: unmapped price + canceled — triggers isUnmappedLegacyCore (matches legacy subscriptions.stripe_subscription_id)
+  const sub = makeSub({ id: 'sub_r32b_core', status: 'canceled', items: { data: [{ price: { id: 'price_unknown_r32b' } }] } });
+  const body = evt({ id: 'evt_r32b', type: 'customer.subscription.updated', data: { object: { id: 'sub_r32b_core', customer: 'cus_r32b', status: 'canceled' } } });
+
+  // First delivery: pending_retry written, cancel fails → 500 (Stripe will retry)
+  const res1 = await handler(await signedReq(body), fakeStripe({ sub_r32b_core: sub }), db as never, priceMap);
+  assertEquals(res1.status, 500, 'P1-R32-B: first delivery with cancel failure must return 500 so Stripe retries');
+  assertEquals(Object.keys(db.state.productEntitlementEvents).length, 1, 'P1-R32-B: pending_retry row written on first delivery');
+  assertEquals(cancelCount, 1, 'P1-R32-B: cancel_core_entitlement_atomic called once on first delivery');
+
+  // Second delivery: pending_retry insert → 23505 (idempotent), cancel succeeds → 200
+  const res2 = await handler(await signedReq(body), fakeStripe({ sub_r32b_core: sub }), db as never, priceMap);
+  assertEquals(res2.status, 200, 'P1-R32-B: second delivery (Stripe retry) must return 200 — 23505 must not block the cancel');
+  assertEquals(Object.keys(db.state.productEntitlementEvents).length, 1, 'P1-R32-B: still exactly one pending_retry row after retry');
+  assertEquals(cancelCount, 2, 'P1-R32-B: cancel_core_entitlement_atomic called on retry delivery too');
+});
