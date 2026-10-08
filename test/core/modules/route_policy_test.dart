@@ -1121,6 +1121,8 @@ void main() {
       // Result depends on the Impact module's lifecycle gate, NOT flavor gate.
       // Impact is EXPERIMENTAL → redirectDenied from lifecycle (not flavor).
       // The key assertion: flavor gate did NOT cause the denial.
+      expect(decision, equals(RouteDecision.redirectDenied),
+          reason: 'Impact is EXPERIMENTAL; redirectDenied from lifecycle, not flavor');
       // We verify by also checking a free commercial route (dashboard).
       final dashDecision = evaluateRouteAccess(
         path: AppConstants.routeDashboard,

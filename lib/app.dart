@@ -78,7 +78,7 @@ import 'features/impact/screens/impact_monitor_screen.dart';
 import 'features/strategy_lab/strategy_lab_screen.dart';
 import 'features/insights/screens/ive_analysis_screen.dart';
 import 'features/upgrade/screens/product_upgrade_screen.dart';
-import 'providers/product_entitlements_provider.dart';
+import 'providers/mobile_entitlement_provider.dart';
 import 'data/services/product_entitlement_service.dart';
 
 final _iveObserver = IveRouteObserver();
@@ -162,13 +162,16 @@ Future<String?> _resolveEntitlementRedirect(
       return AppConstants.routeDashboard;
   }
 
-  // IV-WEB-ECOSYSTEM-UNIFICATION-01 — product entitlement gate.
+  // Product entitlement gate.
   // Only fires when the plan gate already allowed access AND the route maps
   // to a non-core product. Admin bypass mirrors the plan gate above.
-  // FAIL OPEN: on any error the RPC returns allowed=true (pre-migration safe).
   //
   // P1-R6-A fix: use resolveRequiredProduct() instead of exact map lookup so
   // concrete parameterized paths like /impact/<id> are correctly gated.
+  //
+  // IV-MOBILE-ECOSYSTEM-FOUNDATION-01 (P1-R10-A): uses runtimeProductEntitlementProvider
+  // which routes to MobileEntitlementResolver on mobile (offline cache + identity anchor +
+  // FAIL CLOSED) and to ProductEntitlementService on web (unchanged Web behavior).
   if (!isAdmin) {
     final requiredProduct = resolveRequiredProduct(path);
     if (requiredProduct != null) {
@@ -176,11 +179,11 @@ Future<String?> _resolveEntitlementRedirect(
       ProviderSubscription<AsyncValue<ProductEntitlementResult>>? peSub;
       try {
         peSub = container.listen<AsyncValue<ProductEntitlementResult>>(
-          productEntitlementProvider(requiredProduct),
+          runtimeProductEntitlementProvider(requiredProduct),
           (_, __) {},
         );
         final pe = await container
-            .read(productEntitlementProvider(requiredProduct).future)
+            .read(runtimeProductEntitlementProvider(requiredProduct).future)
             .timeout(const Duration(seconds: 8));
         if (!pe.allowed) {
           final suffix = pe.isTemporarilyUnavailable ? '&state=unavailable' : '';
