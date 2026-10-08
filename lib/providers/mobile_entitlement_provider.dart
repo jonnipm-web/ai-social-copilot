@@ -19,13 +19,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/services/product_entitlement_service.dart';
 import '../mobile/entitlements/mobile_entitlement_resolver.dart';
+import '../mobile/offline/offline_entitlement_policy.dart';
 import 'product_entitlements_provider.dart';
+
+// Offline policy singleton — shared between resolver and auth sign-out path.
+// Exposed as a provider so tests can override it without touching SharedPreferences.
+final offlineEntitlementPolicyProvider =
+    Provider<OfflineEntitlementPolicy>((_) => OfflineEntitlementPolicy());
 
 // Single resolver instance per ProviderScope. MobileEntitlementResolver holds
 // no shared mutable state between calls (userId is anchored per call), so this
 // singleton is safe to share across concurrent resolve() calls.
-final mobileEntitlementResolverProvider =
-    Provider<MobileEntitlementResolver>((_) => MobileEntitlementResolver());
+final mobileEntitlementResolverProvider = Provider<MobileEntitlementResolver>(
+  (ref) => MobileEntitlementResolver(
+    // Reuse the same policy instance so sign-out clearAll() and the resolver's
+    // cache reads/writes operate on the same SharedPreferences namespace.
+    offlinePolicy: ref.watch(offlineEntitlementPolicyProvider),
+  ),
+);
 
 /// Platform-aware product entitlement resolution.
 ///

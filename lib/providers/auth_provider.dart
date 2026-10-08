@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -7,6 +8,7 @@ import 'context_copilot_provider.dart';
 import 'diagnostic_session_provider.dart';
 import 'ive_memory_provider.dart';
 import 'ive_session_isolation.dart';
+import 'mobile_entitlement_provider.dart';
 import 'profile_provider.dart';
 import 'project_provider.dart';
 import 'quota_provider.dart';
@@ -138,6 +140,15 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
 
   Future<void> signOut() async {
     state = const AsyncValue.loading();
+    // P1-R13-B fix: clear mobile offline entitlement cache BEFORE Supabase
+    // sign-out so cached grants cannot be served to a different session after
+    // the outgoing user's auth is invalidated. Best-effort: never blocks sign-out.
+    // Web has no offline cache, so this is a no-op on that platform.
+    if (!kIsWeb) {
+      try {
+        await _ref.read(offlineEntitlementPolicyProvider).clearAll();
+      } catch (_) {}
+    }
     state = await AsyncValue.guard(_service.signOut);
     // Logged BEFORE the reset below, deliberately: the sign_out event
     // itself still belongs to the OUTGOING user's session.

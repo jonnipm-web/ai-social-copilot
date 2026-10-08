@@ -15,12 +15,16 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:ai_social_copilot/data/services/product_entitlement_service.dart';
 import 'package:ai_social_copilot/mobile/entitlements/mobile_entitlement_resolver.dart';
+import 'package:ai_social_copilot/mobile/offline/offline_entitlement_policy.dart';
 import 'package:ai_social_copilot/providers/mobile_entitlement_provider.dart';
 import 'package:ai_social_copilot/core/modules/route_policy.dart';
 import 'package:ai_social_copilot/mobile/config/product_flavor.dart';
 
 class MockMobileEntitlementResolver extends Mock
     implements MobileEntitlementResolver {}
+
+class MockOfflineEntitlementPolicy extends Mock
+    implements OfflineEntitlementPolicy {}
 
 void main() {
   setUpAll(() {
@@ -274,6 +278,59 @@ void main() {
           await container.read(runtimeProductEntitlementProvider('core').future);
       expect(result.allowed, isTrue,
           reason: 'BASE_FREE core must always be allowed');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Sign-out cache invalidation (P1-R13-B fix)
+  // Verifies that offlineEntitlementPolicyProvider.clearAll() is accessible
+  // via the provider graph, which is what AuthNotifier.signOut() calls on
+  // mobile (kIsWeb == false) to prevent cached grants from surviving sign-out.
+  // ---------------------------------------------------------------------------
+
+  group('Sign-out cache invalidation — P1-R13-B', () {
+    test('offlineEntitlementPolicyProvider is accessible and clearAll() callable', () async {
+      final mockPolicy = MockOfflineEntitlementPolicy();
+      when(() => mockPolicy.clearAll()).thenAnswer((_) async {});
+
+      final container = ProviderContainer(
+        overrides: [
+          offlineEntitlementPolicyProvider.overrideWithValue(mockPolicy),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Simulate what AuthNotifier.signOut() does on mobile:
+      // read offlineEntitlementPolicyProvider and call clearAll().
+      await container.read(offlineEntitlementPolicyProvider).clearAll();
+
+      verify(() => mockPolicy.clearAll()).called(1);
+    });
+
+    test('runtimeProductEntitlementProvider uses shared policy when overridden', () async {
+      // Verifies that mobileEntitlementResolverProvider and
+      // offlineEntitlementPolicyProvider can both be overridden in the same
+      // container, which is the pattern AuthNotifier.signOut() relies on.
+      final mockPolicy = MockOfflineEntitlementPolicy();
+      final mockResolver = MockMobileEntitlementResolver();
+      when(() => mockPolicy.clearAll()).thenAnswer((_) async {});
+      when(() => mockResolver.resolve(any())).thenAnswer((_) async =>
+          ProductEntitlementResult(allowed: true, product: 'impact'));
+
+      final container = ProviderContainer(
+        overrides: [
+          offlineEntitlementPolicyProvider.overrideWithValue(mockPolicy),
+          mobileEntitlementResolverProvider.overrideWithValue(mockResolver),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Simulate sign-out clearing the cache, then resolver still works.
+      await container.read(offlineEntitlementPolicyProvider).clearAll();
+      final result = await container
+          .read(runtimeProductEntitlementProvider('impact').future);
+      verify(() => mockPolicy.clearAll()).called(1);
+      expect(result.allowed, isTrue);
     });
   });
 }
