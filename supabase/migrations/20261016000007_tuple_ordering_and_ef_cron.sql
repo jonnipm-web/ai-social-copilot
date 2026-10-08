@@ -264,9 +264,12 @@ BEGIN
   -- R25-A: tuple ordering on (last_event_created, last_stripe_event_id).
   -- Apply if:
   --   a) stored timestamp is NULL (no prior event)
-  --   b) incoming is strictly newer
-  --   c) same timestamp with tie-breaker advantage (higher event_id or no stored id)
+  --   b) incoming timestamp is NULL (legacy callers, always apply — backward-compat)
+  --   c) incoming is strictly newer
+  --   d) same timestamp with tie-breaker advantage (higher event_id or no stored id)
   -- Replaces the old `>= last_event_created` which allowed equal timestamps without a tie-breaker.
+  -- NULL incoming timestamp (b) preserves backward compatibility: callers that omit
+  -- p_event_created still get their writes applied, consistent with migration 20261010000000.
   UPDATE public.subscriptions
   SET stripe_subscription_id = p_stripe_subscription_id,
       stripe_price_id        = p_stripe_price_id,
@@ -277,10 +280,11 @@ BEGIN
       last_stripe_event_id   = p_stripe_event_id
   WHERE user_id = p_user_id
     AND (
-      last_event_created IS NULL
-      OR p_event_created > last_event_created
+      last_event_created IS NULL        -- (a) no prior event
+      OR p_event_created IS NULL        -- (b) legacy caller, no ordering info → apply
+      OR p_event_created > last_event_created  -- (c) strictly newer
       OR (
-        p_event_created = last_event_created
+        p_event_created = last_event_created   -- (d) same timestamp: use event_id tie-breaker
         AND (
           last_stripe_event_id IS NULL
           OR p_stripe_event_id IS NULL
