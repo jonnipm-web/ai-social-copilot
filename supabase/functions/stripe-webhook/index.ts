@@ -26,6 +26,9 @@ export interface DbClient {
       row: Record<string, unknown>,
       opts?: { onConflict?: string; ignoreDuplicates?: boolean },
     ): { select(): { maybeSingle(): Promise<{ data: Record<string, unknown> | null; error: unknown }> } };
+    insert(
+      row: Record<string, unknown>,
+    ): { select(): { maybeSingle(): Promise<{ data: Record<string, unknown> | null; error: unknown }> } };
   };
   /** Wraps the subscriptions+profiles write in one Postgres transaction
    * (public.apply_stripe_subscription_state) -- see migrations
@@ -203,12 +206,14 @@ async function applyProductSubscriptionState(
   // record to product_entitlement_events so the event is not silently lost.
   // A paid subscription confirmed by Stripe with no entitlement write is a
   // commercial failure; the durable record allows reconciliation or retry.
-  // No onConflict: auto-generated UUID PK means each call is always an insert
-  // (no unique constraint on stripe_event_id in this table).
+  // Uses INSERT (not upsert): pee_pending_retry_dedup_idx (partial unique on
+  // user_id,stripe_event_id,product WHERE pending_retry+unprocessed) makes
+  // concurrent deliveries of the same event idempotent — the second insert
+  // returns 23505 which is treated as success (existing row will be replayed).
   console.error('upsert_product_subscription failed; writing durable pending event:', upsertError);
   const { error: fallbackError } = await db
     .from('product_entitlement_events')
-    .upsert(
+    .insert(
       {
         user_id:               userId,
         product,
@@ -230,6 +235,10 @@ async function applyProductSubscriptionState(
     .maybeSingle();
 
   if (fallbackError) {
+    // 23505 = unique_violation from pee_pending_retry_dedup_idx: a pending_retry
+    // for this logical event already exists (concurrent webhook delivery).
+    // The existing row will be replayed by the worker — this is idempotent.
+    if ((fallbackError as { code?: string }).code === '23505') return;
     // Both writes failed: throw so the caller returns 500 and Stripe retries.
     throw new Error(
       `Product entitlement write completely failed: upsert=${String(upsertError)}, fallback=${String(fallbackError)}`,

@@ -417,11 +417,29 @@ function fakeDb(initial: DbState) {
       }
       if (table === 'product_entitlement_events') {
         return {
+          // Legacy upsert kept for any test path that still calls it.
           upsert: (row: Record<string, unknown>, _opts?: unknown) => ({
             select: () => ({
               maybeSingle: () => {
                 const key = row.stripe_event_id as string ?? String(Date.now());
                 state.productEntitlementEvents[key] = row;
+                return Promise.resolve({ data: row, error: null });
+              },
+            }),
+          }),
+          // P1-R31-A fix: production code uses insert() so pee_pending_retry_dedup_idx
+          // can enforce uniqueness.  Duplicate (user_id,stripe_event_id,product) for an
+          // unprocessed pending_retry returns 23505 — the webhook treats that as success.
+          insert: (row: Record<string, unknown>) => ({
+            select: () => ({
+              maybeSingle: () => {
+                const dedupKey = `${row.user_id as string}|${row.stripe_event_id as string}|${row.product as string}`;
+                const existing = state.productEntitlementEvents[dedupKey];
+                if (existing && existing.event_type === 'pending_retry' && !existing.is_processed) {
+                  // Simulate unique_violation from pee_pending_retry_dedup_idx.
+                  return Promise.resolve({ data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint "pee_pending_retry_dedup_idx"' } });
+                }
+                state.productEntitlementEvents[dedupKey] = { ...row, is_processed: false };
                 return Promise.resolve({ data: row, error: null });
               },
             }),
@@ -755,11 +773,16 @@ Deno.test('WEBHOOK-20: upsert_product_subscription E fallback ambos falham para 
     if (fn === 'upsert_product_subscription') throw new Error('simulated upsert failure');
     return origRpc(fn, args);
   };
-  // Make the product_entitlement_events upsert also fail
+  // Make the product_entitlement_events insert also fail (P1-R31-A: now uses insert not upsert)
   const origFrom = (db as unknown as { from: (t: string) => unknown }).from.bind(db);
   (db as unknown as { from: (t: string) => unknown }).from = (table: string) => {
     if (table === 'product_entitlement_events') {
       return {
+        insert: (_row: unknown) => ({
+          select: () => ({
+            maybeSingle: () => Promise.resolve({ data: null, error: new Error('simulated fallback failure') }),
+          }),
+        }),
         upsert: (_row: unknown, _opts?: unknown) => ({
           select: () => ({
             maybeSingle: () => Promise.resolve({ data: null, error: new Error('simulated fallback failure') }),
@@ -1576,4 +1599,31 @@ Deno.test('WEBHOOK-49: R25-A — entrega fora de ordem (stale chega após novo) 
   assertEquals(res.status, 200);
   assertEquals(psRow(db.state, 'user_r25h', 'core', 'sub_r25h')?.status, 'canceled', 'R25-A: out-of-order delivery must not revert cancel to active');
   assertEquals(db.state.profiles['user_r25h'].role, 'free', 'R25-A: profile must remain free after stale activate');
+});
+
+Deno.test('WEBHOOK-50: P1-R31-A — delivery concurrent do mesmo evento falho cria apenas um pending_retry (dedup via 23505)', async () => {
+  // Scenario: upsert_product_subscription fails for both webhook deliveries.
+  // The first delivery creates a pending_retry row.
+  // The second (concurrent) delivery gets 23505 from pee_pending_retry_dedup_idx
+  // and must return 200 (idempotent) — NOT 500.
+  const priceMap = new Map([['price_impact_pro', { product: 'impact', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_r31a', 'user_r31a')) as ReturnType<typeof fakeDb> & { rpc: unknown };
+  const origRpc = db.rpc.bind(db);
+  db.rpc = (fn: string, args: Record<string, unknown>) => {
+    if (fn === 'upsert_product_subscription') throw new Error('simulated product upsert failure for dedup test');
+    return origRpc(fn, args);
+  };
+
+  const sub = makeSub({ id: 'sub_r31a', status: 'active', items: { data: [{ price: { id: 'price_impact_pro' } }] } });
+  const body = evt({ id: 'evt_r31a_dedup', type: 'checkout.session.completed', data: { object: { customer: 'cus_r31a', subscription: 'sub_r31a' } } });
+
+  // First delivery: pending_retry row created
+  const res1 = await handler(await signedReq(body), fakeStripe({ sub_r31a: sub }), db as never, priceMap);
+  assertEquals(res1.status, 200, 'P1-R31-A: first delivery (path B) must return 200');
+  assertEquals(Object.keys(db.state.productEntitlementEvents).length, 1, 'P1-R31-A: exactly one pending_retry row after first delivery');
+
+  // Second delivery: same event — pee_pending_retry_dedup_idx returns 23505 → still 200
+  const res2 = await handler(await signedReq(body), fakeStripe({ sub_r31a: sub }), db as never, priceMap);
+  assertEquals(res2.status, 200, 'P1-R31-A: second (concurrent) delivery must return 200, not 500');
+  assertEquals(Object.keys(db.state.productEntitlementEvents).length, 1, 'P1-R31-A: exactly one pending_retry row after duplicate delivery (no new row)');
 });
