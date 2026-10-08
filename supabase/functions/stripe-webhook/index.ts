@@ -278,6 +278,7 @@ async function applySubscriptionState(
   userId: string,
   eventCreatedIso: string,
   sub: StripeSubscription,
+  eventId: string | null = null, // R25-A: pass event_id for tuple tie-breaking
 ): Promise<boolean> {
   const priceId = sub.items?.data?.[0]?.price?.id ?? null;
   const entitlement = entitlementForStatus(sub.status);
@@ -291,6 +292,7 @@ async function applySubscriptionState(
     p_cancel_at_period_end: !!sub.cancel_at_period_end,
     p_role: entitlement.role,
     p_monthly_limit: entitlement.monthly_limit,
+    p_stripe_event_id: eventId, // R25-A: 10th param for tuple ordering
   });
   if (error) throw error;
   return data === true;
