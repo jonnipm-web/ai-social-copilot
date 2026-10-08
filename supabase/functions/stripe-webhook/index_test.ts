@@ -121,7 +121,14 @@ function fakeDb(initial: DbState) {
         if (!existing) return Promise.resolve({ data: false, error: null }); // UPDATE matched zero rows
         const eventCreated = args.p_event_created as string;
         const lastEventCreated = existing.last_event_created as string | null | undefined;
-        if (lastEventCreated != null && eventCreated < lastEventCreated) {
+        const incomingEventId = args.p_stripe_event_id as string | null ?? null;
+        const lastEventId = existing.last_stripe_event_id as string | null ?? null;
+        // R25-A: tuple ordering — mirrors migration 20261016000007.
+        const legacyTupleStale = (lastEventCreated != null) && (
+          eventCreated < lastEventCreated ||
+          (eventCreated === lastEventCreated && incomingEventId !== null && lastEventId !== null && incomingEventId < lastEventId)
+        );
+        if (legacyTupleStale) {
           return Promise.resolve({ data: false, error: null }); // stale -- skipped
         }
         state.subscriptions[userId] = {
@@ -132,6 +139,7 @@ function fakeDb(initial: DbState) {
           current_period_end: args.p_current_period_end,
           cancel_at_period_end: args.p_cancel_at_period_end,
           last_event_created: eventCreated,
+          last_stripe_event_id: incomingEventId,
         };
         state.profiles[userId] = {
           ...(state.profiles[userId] ?? {}),
@@ -149,10 +157,16 @@ function fakeDb(initial: DbState) {
         const subId = (args.p_stripe_subscription_id as string | null | undefined) ?? 'default';
         const tripleKey = `${userId}:${product}:${subId}`;
         const existing = state.productSubscriptions[tripleKey];
-        // Event ordering guard per-subscription (mirrors SQL function)
+        // R25-A: tuple ordering (event_created, event_id) — mirrors migration 20261016000007.
         const incomingCreated = args.p_stripe_event_created as string | null ?? null;
         const lastCreated = existing?.last_stripe_event_created as string | null ?? null;
-        if (incomingCreated !== null && lastCreated !== null && incomingCreated < lastCreated) {
+        const incomingEventId = args.p_stripe_event_id as string | null ?? null;
+        const lastEventId = existing?.last_stripe_event_id as string | null ?? null;
+        const tupleStale = (incomingCreated !== null && lastCreated !== null) && (
+          incomingCreated < lastCreated ||
+          (incomingCreated === lastCreated && incomingEventId !== null && lastEventId !== null && incomingEventId <= lastEventId)
+        );
+        if (tupleStale) {
           return Promise.resolve({ data: { ok: false, skipped: true, reason: 'STALE_EVENT', product }, error: null }) as never;
         }
         state.productSubscriptions[tripleKey] = {
@@ -161,6 +175,7 @@ function fakeDb(initial: DbState) {
           stripe_customer_id: args.p_stripe_customer_id,
           stripe_price_id: args.p_stripe_price_id,
           last_stripe_event_created: incomingCreated,
+          last_stripe_event_id: incomingEventId,
         };
         return Promise.resolve({ data: { ok: true, product, tier: args.p_tier, status: args.p_status }, error: null }) as never;
       }
@@ -192,14 +207,22 @@ function fakeDb(initial: DbState) {
         const existing = state.productSubscriptions[tripleKey];
         const incomingCreated = args.p_stripe_event_created as string | null ?? null;
         const lastCreated = existing?.last_stripe_event_created as string | null ?? null;
+        const incomingEventId = args.p_stripe_event_id as string | null ?? null;
+        const lastEventId = existing?.last_stripe_event_id as string | null ?? null;
+        // R25-A: tuple ordering
+        const cancelTupleStale = (incomingCreated !== null && lastCreated !== null) && (
+          incomingCreated < lastCreated ||
+          (incomingCreated === lastCreated && incomingEventId !== null && lastEventId !== null && incomingEventId <= lastEventId)
+        );
         let upsertResult: Record<string, unknown>;
-        if (incomingCreated !== null && lastCreated !== null && incomingCreated < lastCreated) {
+        if (cancelTupleStale) {
           upsertResult = { ok: false, skipped: true, reason: 'STALE_EVENT', product };
         } else {
           state.productSubscriptions[tripleKey] = {
             product, tier: args.p_tier, status: args.p_status, source: args.p_source,
             stripe_subscription_id: subId, stripe_customer_id: args.p_stripe_customer_id,
             stripe_price_id: args.p_stripe_price_id, last_stripe_event_created: incomingCreated,
+            last_stripe_event_id: incomingEventId,
           };
           upsertResult = { ok: true, product, tier: args.p_tier, status: args.p_status };
         }
@@ -218,12 +241,18 @@ function fakeDb(initial: DbState) {
           if (existing) {
             const eventCreated = args.p_stripe_event_created as string | null ?? null;
             const lastEventCreated = existing.last_event_created as string | null | undefined;
-            if (lastEventCreated == null || eventCreated == null || eventCreated >= lastEventCreated) {
+            const lastLegacyEventId = existing.last_stripe_event_id as string | null ?? null;
+            // R25-A tuple ordering for legacy path
+            const legacyStale = (lastEventCreated != null && eventCreated != null) && (
+              eventCreated < lastEventCreated ||
+              (eventCreated === lastEventCreated && incomingEventId !== null && lastLegacyEventId !== null && incomingEventId < lastLegacyEventId)
+            );
+            if (!legacyStale) {
               state.subscriptions[userId] = {
                 ...existing, stripe_subscription_id: args.p_stripe_subscription_id,
                 stripe_price_id: args.p_stripe_price_id, status: args.p_status,
                 current_period_end: args.p_current_period_end, cancel_at_period_end: args.p_cancel_at_period_end,
-                last_event_created: eventCreated,
+                last_event_created: eventCreated, last_stripe_event_id: incomingEventId,
               };
               // Migration 20261010000000: only update Stripe-managed roles (free/pro).
               // admin/beta_tester/premium are never touched by billing events.
@@ -257,18 +286,25 @@ function fakeDb(initial: DbState) {
         const product = args.p_product as string;
         const subId = (args.p_stripe_subscription_id as string | null | undefined) ?? 'default';
         const tripleKey = `${userId}:${product}:${subId}`;
-        // Step 1: product activation (upsert_product_subscription)
+        // Step 1: product activation — R25-A tuple ordering
         const existingProd = state.productSubscriptions[tripleKey];
         const incomingCreated = args.p_stripe_event_created as string | null ?? null;
         const lastCreated = existingProd?.last_stripe_event_created as string | null ?? null;
+        const incomingEventId = args.p_stripe_event_id as string | null ?? null;
+        const lastEventIdAct = existingProd?.last_stripe_event_id as string | null ?? null;
+        const activateTupleStale = (incomingCreated !== null && lastCreated !== null) && (
+          incomingCreated < lastCreated ||
+          (incomingCreated === lastCreated && incomingEventId !== null && lastEventIdAct !== null && incomingEventId <= lastEventIdAct)
+        );
         let upsertResult: Record<string, unknown>;
-        if (incomingCreated !== null && lastCreated !== null && incomingCreated < lastCreated) {
+        if (activateTupleStale) {
           upsertResult = { ok: false, skipped: true, reason: 'STALE_EVENT', product };
         } else {
           state.productSubscriptions[tripleKey] = {
             product, tier: args.p_tier, status: args.p_status, source: args.p_source,
             stripe_subscription_id: subId, stripe_customer_id: args.p_stripe_customer_id,
             stripe_price_id: args.p_stripe_price_id, last_stripe_event_created: incomingCreated,
+            last_stripe_event_id: incomingEventId,
           };
           upsertResult = { ok: true, product, tier: args.p_tier, status: args.p_status };
         }
@@ -295,7 +331,13 @@ function fakeDb(initial: DbState) {
           if (existingLegacy) {
             const eventCreated = args.p_stripe_event_created as string | null ?? null;
             const lastEventCreated = existingLegacy.last_event_created as string | null | undefined;
-            if (lastEventCreated == null || eventCreated == null || eventCreated >= lastEventCreated) {
+            const lastLegacyEventIdAct = existingLegacy.last_stripe_event_id as string | null ?? null;
+            // R25-A: tuple ordering for legacy path in activate
+            const legActStale = (lastEventCreated != null && eventCreated != null) && (
+              eventCreated < lastEventCreated ||
+              (eventCreated === lastEventCreated && incomingEventId !== null && lastLegacyEventIdAct !== null && incomingEventId < lastLegacyEventIdAct)
+            );
+            if (!legActStale) {
               state.subscriptions[userId] = {
                 ...existingLegacy,
                 stripe_subscription_id: args.p_stripe_subscription_id,
@@ -304,6 +346,7 @@ function fakeDb(initial: DbState) {
                 current_period_end: args.p_current_period_end,
                 cancel_at_period_end: args.p_cancel_at_period_end,
                 last_event_created: eventCreated,
+                last_stripe_event_id: incomingEventId,
               };
               state.profiles[userId] = {
                 ...(state.profiles[userId] ?? {}),
@@ -1348,4 +1391,189 @@ Deno.test('WEBHOOK-41: R24 fix — activate com tier=premium no priceMap grava p
   // R24 fix: profiles.role must be capped at 'pro', NOT 'premium'
   assertEquals(db.state.profiles['user_r24a'].role, 'pro', 'R24: Stripe billing must not elevate profiles.role to premium');
   assertEquals(db.state.profiles['user_r24a'].monthly_limit, 300);
+});
+
+// ─── R25-A: Tuple ordering tests ─────────────────────────────────────────────
+
+Deno.test('WEBHOOK-42: R25-A — mesmo timestamp, event_id maior vence (aplicado)', async () => {
+  // Two activate events at IDENTICAL timestamp. Higher event_id must win.
+  const priceMap = new Map([['price_core_pro', { product: 'core', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_r25a_a', 'user_r25a_a'));
+  db.state.profiles['user_r25a_a'] = { role: 'free', monthly_limit: 15 };
+  const TS = NOW;
+  const subA = makeSub({ id: 'sub_r25_ts_a', status: 'active', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  // First event (lexicographically lower event_id: _1)
+  await handler(
+    await signedReq(evt({ id: 'evt_r25a_001', type: 'customer.subscription.updated', created: TS, data: { object: { id: 'sub_r25_ts_a', customer: 'cus_r25a_a', status: 'active' } } })),
+    fakeStripe({ sub_r25_ts_a: subA }), db as never, priceMap,
+  );
+  // Second event same timestamp, HIGHER event_id (_002 > _001) → must apply
+  const res = await handler(
+    await signedReq(evt({ id: 'evt_r25a_002', type: 'customer.subscription.updated', created: TS, data: { object: { id: 'sub_r25_ts_a', customer: 'cus_r25a_a', status: 'active' } } })),
+    fakeStripe({ sub_r25_ts_a: subA }), db as never, priceMap,
+  );
+  assertEquals(res.status, 200);
+  // Higher event_id was applied: last_stripe_event_id must be evt_r25a_002
+  assertEquals(psRow(db.state, 'user_r25a_a', 'core', 'sub_r25_ts_a')?.last_stripe_event_id, 'evt_r25a_002', 'R25-A: higher event_id at same timestamp must win');
+});
+
+Deno.test('WEBHOOK-43: R25-A — mesmo timestamp, event_id menor é stale (ignorado)', async () => {
+  // Two activate events at IDENTICAL timestamp. Lower event_id must be skipped.
+  const priceMap = new Map([['price_core_pro', { product: 'core', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_r25b', 'user_r25b'));
+  db.state.profiles['user_r25b'] = { role: 'free', monthly_limit: 15 };
+  const TS = NOW;
+  const subA = makeSub({ id: 'sub_r25b', status: 'active', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  // First: lexicographically higher event_id (_002) arrives first (simulates inversion)
+  await handler(
+    await signedReq(evt({ id: 'evt_r25b_002', type: 'customer.subscription.updated', created: TS, data: { object: { id: 'sub_r25b', customer: 'cus_r25b', status: 'active' } } })),
+    fakeStripe({ sub_r25b: subA }), db as never, priceMap,
+  );
+  // Second: lower event_id (_001) at same timestamp → must be stale
+  const res = await handler(
+    await signedReq(evt({ id: 'evt_r25b_001', type: 'customer.subscription.updated', created: TS, data: { object: { id: 'sub_r25b', customer: 'cus_r25b', status: 'active' } } })),
+    fakeStripe({ sub_r25b: subA }), db as never, priceMap,
+  );
+  assertEquals(res.status, 200);
+  // Low event_id was skipped: stored event_id must still be _002
+  assertEquals(psRow(db.state, 'user_r25b', 'core', 'sub_r25b')?.last_stripe_event_id, 'evt_r25b_002', 'R25-A: lower event_id at same timestamp must be stale');
+});
+
+Deno.test('WEBHOOK-44: R25-A — replay exato do mesmo evento é idempotente (no-op)', async () => {
+  // Replaying the exact same event_id at same timestamp must be a no-op.
+  const priceMap = new Map([['price_core_pro', { product: 'core', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_r25c', 'user_r25c'));
+  db.state.profiles['user_r25c'] = { role: 'free', monthly_limit: 15 };
+  const subA = makeSub({ id: 'sub_r25c', status: 'active', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  // Apply once
+  await handler(
+    await signedReq(evt({ id: 'evt_r25c_1', type: 'customer.subscription.updated', created: NOW, data: { object: { id: 'sub_r25c', customer: 'cus_r25c', status: 'active' } } })),
+    fakeStripe({ sub_r25c: subA }), db as never, priceMap,
+  );
+  assertEquals(db.state.profiles['user_r25c'].role, 'pro');
+  // Replay identical event
+  db.state.profiles['user_r25c'] = { role: 'pro', monthly_limit: 300 }; // state unchanged
+  const res = await handler(
+    await signedReq(evt({ id: 'evt_r25c_1', type: 'customer.subscription.updated', created: NOW, data: { object: { id: 'sub_r25c', customer: 'cus_r25c', status: 'active' } } })),
+    fakeStripe({ sub_r25c: subA }), db as never, priceMap,
+  );
+  assertEquals(res.status, 200, 'replay must not fail');
+  // Idempotent: profiles.role unchanged (still pro, not double-applied)
+  assertEquals(db.state.profiles['user_r25c'].role, 'pro', 'R25-A: replay must be idempotent');
+});
+
+Deno.test('WEBHOOK-45: R25-A — evento mais novo (timestamp maior) sempre aplicado', async () => {
+  // A newer-timestamp event always wins, regardless of event_id.
+  const priceMap = new Map([['price_core_pro', { product: 'core', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_r25d', 'user_r25d'));
+  db.state.profiles['user_r25d'] = { role: 'free', monthly_limit: 15 };
+  const subActive = makeSub({ id: 'sub_r25d', status: 'active', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  // Older event
+  await handler(
+    await signedReq(evt({ id: 'evt_r25d_old', type: 'customer.subscription.updated', created: NOW - 100, data: { object: { id: 'sub_r25d', customer: 'cus_r25d', status: 'active' } } })),
+    fakeStripe({ sub_r25d: subActive }), db as never, priceMap,
+  );
+  // Newer event with LOWER event_id (should still apply — timestamp wins)
+  const res = await handler(
+    await signedReq(evt({ id: 'evt_r25d_new', type: 'customer.subscription.updated', created: NOW, data: { object: { id: 'sub_r25d', customer: 'cus_r25d', status: 'active' } } })),
+    fakeStripe({ sub_r25d: subActive }), db as never, priceMap,
+  );
+  assertEquals(res.status, 200);
+  assertEquals(psRow(db.state, 'user_r25d', 'core', 'sub_r25d')?.last_stripe_event_id, 'evt_r25d_new', 'R25-A: newer timestamp must always apply');
+  assertEquals(db.state.profiles['user_r25d'].role, 'pro');
+});
+
+Deno.test('WEBHOOK-46: R25-A — evento mais antigo (timestamp menor) é stale', async () => {
+  // An older-timestamp event must not overwrite a newer one (classic stale prevention).
+  const priceMap = new Map([['price_core_pro', { product: 'core', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_r25e', 'user_r25e'));
+  db.state.profiles['user_r25e'] = { role: 'pro', monthly_limit: 300 };
+  const subCanceled = makeSub({ id: 'sub_r25e', status: 'canceled', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  const subActive  = makeSub({ id: 'sub_r25e', status: 'active',   items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  // Newer cancel arrives first
+  await handler(
+    await signedReq(evt({ id: 'evt_r25e_cancel', type: 'customer.subscription.deleted', created: NOW, data: { object: { id: 'sub_r25e', customer: 'cus_r25e', status: 'canceled' } } })),
+    fakeStripe({ sub_r25e: subCanceled }), db as never, priceMap,
+  );
+  assertEquals(db.state.profiles['user_r25e'].role, 'free');
+  // Older activate arrives late — must be stale
+  const res = await handler(
+    await signedReq(evt({ id: 'evt_r25e_old_act', type: 'customer.subscription.updated', created: NOW - 100, data: { object: { id: 'sub_r25e', customer: 'cus_r25e', status: 'active' } } })),
+    fakeStripe({ sub_r25e: subActive }), db as never, priceMap,
+  );
+  assertEquals(res.status, 200);
+  assertEquals(db.state.profiles['user_r25e'].role, 'free', 'R25-A: older activate must not restore after newer cancel');
+});
+
+Deno.test('WEBHOOK-47: R25-A — cancelamento + ativação mesmo timestamp → event_id decide', async () => {
+  // Cancel and activate at SAME second. Higher event_id is canonical.
+  const priceMap = new Map([['price_core_pro', { product: 'core', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_r25f', 'user_r25f'));
+  db.state.profiles['user_r25f'] = { role: 'free', monthly_limit: 15 };
+  const TS = NOW;
+  const subCanceled = makeSub({ id: 'sub_r25f', status: 'canceled', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  const subActive   = makeSub({ id: 'sub_r25f', status: 'active',   items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  // Cancel with HIGHER event_id arrives first
+  await handler(
+    await signedReq(evt({ id: 'evt_r25f_cancel_high', type: 'customer.subscription.deleted', created: TS, data: { object: { id: 'sub_r25f', customer: 'cus_r25f', status: 'canceled' } } })),
+    fakeStripe({ sub_r25f: subCanceled }), db as never, priceMap,
+  );
+  assertEquals(psRow(db.state, 'user_r25f', 'core', 'sub_r25f')?.status, 'canceled');
+  // Activate with LOWER event_id arrives second — must be stale
+  const res = await handler(
+    await signedReq(evt({ id: 'evt_r25f_act_low', type: 'customer.subscription.updated', created: TS, data: { object: { id: 'sub_r25f', customer: 'cus_r25f', status: 'active' } } })),
+    fakeStripe({ sub_r25f: subActive }), db as never, priceMap,
+  );
+  assertEquals(res.status, 200);
+  assertEquals(psRow(db.state, 'user_r25f', 'core', 'sub_r25f')?.status, 'canceled', 'R25-A: lower event_id activate at same timestamp must NOT override higher event_id cancel');
+  assertEquals(db.state.profiles['user_r25f'].role, 'free', 'R25-A: profiles.role must remain free after stale activate is skipped');
+});
+
+Deno.test('WEBHOOK-48: R25-A — multi-sub mesmo produto mesmo timestamp → event_id por sub independente', async () => {
+  // Two different subscriptions for same product at same timestamp.
+  // Each subscription has its own ordering state (per-sub guard).
+  const priceMap = new Map([['price_core_pro', { product: 'core', tier: 'pro' }]]);
+  const db = fakeDb({ ...newState('cus_r25g', 'user_r25g'), customerToUser: { cus_r25g: 'user_r25g' } });
+  db.state.profiles['user_r25g'] = { role: 'free', monthly_limit: 15 };
+  const TS = NOW;
+  const subA = makeSub({ id: 'sub_r25g_a', status: 'active', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  const subB = makeSub({ id: 'sub_r25g_b', status: 'active', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  // Process sub A
+  await handler(
+    await signedReq(evt({ id: 'evt_r25g_a1', type: 'customer.subscription.updated', created: TS, data: { object: { id: 'sub_r25g_a', customer: 'cus_r25g', status: 'active' } } })),
+    fakeStripe({ sub_r25g_a: subA }), db as never, priceMap,
+  );
+  // Process sub B at same timestamp — independent guard, must apply
+  const res = await handler(
+    await signedReq(evt({ id: 'evt_r25g_b1', type: 'customer.subscription.updated', created: TS, data: { object: { id: 'sub_r25g_b', customer: 'cus_r25g', status: 'active' } } })),
+    fakeStripe({ sub_r25g_b: subB }), db as never, priceMap,
+  );
+  assertEquals(res.status, 200);
+  assertEquals(psRow(db.state, 'user_r25g', 'core', 'sub_r25g_a')?.last_stripe_event_id, 'evt_r25g_a1', 'sub_A event_id preserved');
+  assertEquals(psRow(db.state, 'user_r25g', 'core', 'sub_r25g_b')?.last_stripe_event_id, 'evt_r25g_b1', 'sub_B event_id applied independently');
+  assertEquals(db.state.profiles['user_r25g'].role, 'pro', 'Both subs active → pro');
+});
+
+Deno.test('WEBHOOK-49: R25-A — entrega fora de ordem (stale chega após novo) não reverte estado', async () => {
+  // Event 1 (T=200) arrives AFTER Event 2 (T=100).
+  // Net: Event 2 is the newest, Event 1 must be rejected as stale.
+  const priceMap = new Map([['price_core_pro', { product: 'core', tier: 'pro' }]]);
+  const db = fakeDb(newState('cus_r25h', 'user_r25h'));
+  db.state.profiles['user_r25h'] = { role: 'free', monthly_limit: 15 };
+  const subActive   = makeSub({ id: 'sub_r25h', status: 'active',   items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  const subCanceled = makeSub({ id: 'sub_r25h', status: 'canceled', items: { data: [{ price: { id: 'price_core_pro' } }] } });
+  // Newer cancel (T=200) arrives first
+  await handler(
+    await signedReq(evt({ id: 'evt_r25h_cancel', type: 'customer.subscription.deleted', created: NOW + 100, data: { object: { id: 'sub_r25h', customer: 'cus_r25h', status: 'canceled' } } })),
+    fakeStripe({ sub_r25h: subCanceled }), db as never, priceMap,
+  );
+  assertEquals(db.state.profiles['user_r25h'].role, 'free');
+  // Older activate (T=100) arrives late — stale
+  const res = await handler(
+    await signedReq(evt({ id: 'evt_r25h_activate', type: 'customer.subscription.updated', created: NOW, data: { object: { id: 'sub_r25h', customer: 'cus_r25h', status: 'active' } } })),
+    fakeStripe({ sub_r25h: subActive }), db as never, priceMap,
+  );
+  assertEquals(res.status, 200);
+  assertEquals(psRow(db.state, 'user_r25h', 'core', 'sub_r25h')?.status, 'canceled', 'R25-A: out-of-order delivery must not revert cancel to active');
+  assertEquals(db.state.profiles['user_r25h'].role, 'free', 'R25-A: profile must remain free after stale activate');
 });
