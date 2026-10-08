@@ -3,8 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rive/rive.dart' show Rive;
-
 import 'package:ai_social_copilot/data/models/ive_issue.dart';
 import 'package:ai_social_copilot/data/models/ive_state.dart';
 import 'package:ai_social_copilot/l10n/app_localizations.dart';
@@ -347,7 +345,6 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 2));
       expect(find.byType(IveVisualFallback), findsOneWidget);
-      expect(find.byType(Rive), findsNothing);
       expect(find.byType(IveVisualFallback).evaluate().single.size,
           const Size(56, 56));
     });

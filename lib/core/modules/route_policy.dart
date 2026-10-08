@@ -2,6 +2,23 @@ import 'module_definition.dart';
 import 'module_registry.dart';
 import '../constants/app_constants.dart';
 
+/// IV-WEB-ECOSYSTEM-UNIFICATION-01 — routes that require a product entitlement
+/// BEYOND the plan gate. Only populated for non-core products.
+/// Checked AFTER the lifecycle/plan gate allows access — so when a module is
+/// EXPERIMENTAL/INTERNAL (current state of impact + quant), this map is never
+/// consulted (the lifecycle gate already denies). Takes effect when the owning
+/// module is promoted to COMMERCIAL.
+///
+/// Values must be from the canonical product list: 'impact' | 'quant' | 'suite'.
+const Map<String, String> kRouteRequiredProduct = {
+  AppConstants.routeImpact:        'impact',
+  AppConstants.routeImpactDiscover:'impact',
+  AppConstants.routeImpactDossier: 'impact',
+  AppConstants.routeImpactMonitor: 'impact',
+  AppConstants.routeQuant:         'quant',
+  AppConstants.routeQuantLab:      'quant',
+};
+
 /// IVE-COMMERCIAL-TARGETED-REMEDIATION-06R — route-level commercial/plan
 /// entitlement policy.
 ///
@@ -124,6 +141,7 @@ const Map<String, String> kRouteModuleOwnership = {
 ///   would be a step backward).
 const Set<String> kAlwaysAllowedRoutes = {
   AppConstants.routeUpgrade,
+  AppConstants.routeProductUpgrade,
   AppConstants.routeAccount,
   AppConstants.routeAbout,
   AppConstants.routeSupport,

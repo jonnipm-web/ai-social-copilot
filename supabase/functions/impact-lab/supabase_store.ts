@@ -398,7 +398,9 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
       const reason = row.denied_reason as string;
       if (reason === 'no_session') return fail('INTERNAL_ERROR', 'no_session');
       if (reason === 'no_profile') return fail('INTERNAL_ERROR', 'no_profile');
+      if (reason === 'experimental_gate') return fail('INVALID_REQUEST', 'entitlement_denied_experimental');
       if (reason === 'pro_required') return fail('INVALID_REQUEST', 'entitlement_denied_pro_required');
+      if (reason === 'not_owner') return fail('INVALID_REQUEST', 'project_not_found_or_not_owned');
       if (reason === 'limit_exceeded') return fail('LIMIT_EXCEEDED', 'too many investigations');
       return fail('INTERNAL_ERROR', `atomic_create_denied: ${reason}`);
     }
@@ -479,7 +481,9 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
       const reason = row.denied_reason as string;
       if (reason === 'no_session') return fail('INTERNAL_ERROR', 'no_session');
       if (reason === 'no_profile') return fail('INTERNAL_ERROR', 'no_profile');
+      if (reason === 'experimental_gate') return fail('INVALID_REQUEST', 'entitlement_denied_experimental');
       if (reason === 'pro_required') return fail('INVALID_REQUEST', 'entitlement_denied_pro_required');
+      if (reason === 'not_found') return fail('INVESTIGATION_NOT_FOUND', 'investigation not found');
       if (reason === 'not_owner') return fail('INVESTIGATION_NOT_FOUND', 'investigation not found');
       return fail('INTERNAL_ERROR', `atomic_insert_denied: ${reason}`);
     }
@@ -763,6 +767,8 @@ export class SupabaseAefStore implements AefStore {
     const result = data as { ok: boolean; code?: string } | null;
     if (!result?.ok) {
       if (result?.code === 'ALREADY_EXISTS') return aefFail('ALREADY_EXISTS');
+      // P1-3: caller_user_id did not match investigation.owner_id in DB.
+      if (result?.code === 'AEF_CALLER_NOT_OWNER') return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
       return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
     }
     return aefOk(undefined);

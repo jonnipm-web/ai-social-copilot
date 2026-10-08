@@ -31,11 +31,11 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Criar .env com credenciais reais
+      - name: Criar flutter_env.cfg com credenciais reais
         run: |
-          echo "SUPABASE_URL=https://nzngvbajrnruknpzzjbf.supabase.co" > .env
-          echo "SUPABASE_ANON_KEY=sb_publishable_fZboVtE9PeokahlYmhc_vg_t6JHOmFh" >> .env
-          echo "GOOGLE_CLIENT_ID=placeholder.apps.googleusercontent.com" >> .env
+          echo "SUPABASE_URL=https://nzngvbajrnruknpzzjbf.supabase.co" > flutter_env.cfg
+          echo "SUPABASE_ANON_KEY=sb_publishable_fZboVtE9PeokahlYmhc_vg_t6JHOmFh" >> flutter_env.cfg
+          echo "GOOGLE_CLIENT_ID=placeholder.apps.googleusercontent.com" >> flutter_env.cfg
 
       - name: flutter pub get
         run: flutter pub get

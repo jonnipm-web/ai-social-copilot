@@ -122,6 +122,10 @@ class AppConstants {
   // IV-QUANT-MACRO-05 — Quant product shell (INTERNAL pilot, entitlement-gated)
   static const routeQuant                = '/quant';
 
+  // IV-WEB-ECOSYSTEM-UNIFICATION-01 — per-product upgrade CTA
+  // Query parameter ?product=impact|quant|suite identifies the product.
+  static const routeProductUpgrade = '/product-upgrade';
+
   // IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01
   static const routeAccount = '/account';
   static const routeAbout = '/about';

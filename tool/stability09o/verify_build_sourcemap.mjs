@@ -84,7 +84,7 @@ const MARKERS = [
   "debugPrint('[uncaught] ${error.runtimeType}",
   'diagnosticLogger.logEvent(',
   'WidgetsFlutterBinding.ensureInitialized();',
-  "await dotenv.load(fileName: '.env');",
+  "await dotenv.load(fileName: 'flutter_env.cfg');",
   'runApp(UncontrolledProviderScope',
 ];
 

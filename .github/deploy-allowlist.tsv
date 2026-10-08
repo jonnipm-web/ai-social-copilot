@@ -97,3 +97,7 @@ localize-content
 process-file
 create-checkout-session
 stripe-webhook	--no-verify-jwt
+# R25-B: Entitlement reconciliation scheduler — called by pg_cron via net.http_post.
+# Server-to-server: authenticated by service_role Bearer token in Authorization header.
+# Never called directly by clients. verify_jwt=false intentional (uses custom auth check).
+entitlement-reconcile	--no-verify-jwt

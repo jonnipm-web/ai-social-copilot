@@ -13,6 +13,7 @@ import {
   rowToEvidence,
   rowToSource,
   sourceToRow,
+  SupabaseAefStore,
   SupabaseImpactLabStore,
 } from './supabase_store.ts';
 
@@ -336,5 +337,146 @@ Deno.test('SS-TOCTOU-07 insertVerification: atomic RPC denied=no_profile → INT
   const result = await store.insertVerification(INV, r.value, null, ACTOR);
   assert(!result.ok, 'must fail when profiles row is absent');
   assertEquals(result.error.code, 'INTERNAL_ERROR');
-  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after no_profile denial');
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after no_profile denial (verification path)');
+});
+
+// IV-IMPACT-MACRO-08 POST-MERGE HARDENING tests (migrations 005/006)
+
+Deno.test('SS-TOCTOU-08 createInvestigation: atomic RPC denied=experimental_gate → INVALID_REQUEST', async () => {
+  // Simulates a free/pro caller who bypassed the Edge Function module gate
+  // and called the RPC directly; the EXPERIMENTAL gate inside the RPC
+  // returns experimental_gate → INVALID_REQUEST.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_create_investigation') {
+      return { data: [{ investigation_id: null, subject_org_ref: 'org-x', denied: true, denied_reason: 'experimental_gate' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const result = await store.createInvestigation({ ownerId: ACTOR, projectId: null, subjectOrgRef: 'org-x', subjectOrgType: 'NGO', subjectIdentity: {} });
+  assert(!result.ok, 'must fail when experimental gate blocks access');
+  assertEquals(result.error.code, 'INVALID_REQUEST', 'experimental_gate → INVALID_REQUEST');
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after experimental_gate denial');
+});
+
+Deno.test('SS-TOCTOU-09 createInvestigation: atomic RPC denied=not_owner (project) → INVALID_REQUEST', async () => {
+  // Simulates an admin caller specifying a p_project_id they do not own;
+  // the ownership check inside the RPC returns not_owner → INVALID_REQUEST.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_create_investigation') {
+      return { data: [{ investigation_id: null, subject_org_ref: 'org-x', denied: true, denied_reason: 'not_owner' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const result = await store.createInvestigation({ ownerId: ACTOR, projectId: 'bbbbbbbb-0000-4000-8000-000000000001', subjectOrgRef: 'org-x', subjectOrgType: 'NGO', subjectIdentity: {} });
+  assert(!result.ok, 'must fail when project is not owned by caller');
+  assertEquals(result.error.code, 'INVALID_REQUEST', 'not_owner (project) → INVALID_REQUEST');
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after project not_owner denial');
+});
+
+Deno.test('SS-TOCTOU-10 insertVerification: atomic RPC denied=experimental_gate → INVALID_REQUEST', async () => {
+  // Simulates a free/pro caller bypassing the module gate; experimental_gate
+  // returned by the atomic RPC must map to INVALID_REQUEST.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_insert_verification') {
+      return { data: [{ stored_version: null, denied: true, denied_reason: 'experimental_gate' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const a = (await goldenCases()).find((c) => c.id === 'A')!;
+  const r = await verifyClaim({ claim: a.claim, evidence: a.evidence, sources: a.sources }, a.ctx);
+  assert(r.ok);
+  const result = await store.insertVerification(INV, r.value, null, ACTOR);
+  assert(!result.ok, 'must fail when experimental gate blocks verification');
+  assertEquals(result.error.code, 'INVALID_REQUEST', 'experimental_gate → INVALID_REQUEST');
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after experimental_gate denial');
+});
+
+Deno.test('SS-TOCTOU-11 insertVerification: atomic RPC denied=not_found → INVESTIGATION_NOT_FOUND', async () => {
+  // Migration 008 P2-2: when the investigation row does not exist, the RPC now
+  // returns not_found instead of masking it as not_owner. Both must map to
+  // INVESTIGATION_NOT_FOUND so callers can distinguish from entitlement errors.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'impact_atomic_insert_verification') {
+      return { data: [{ stored_version: null, denied: true, denied_reason: 'not_found' }], error: null };
+    }
+    return { data: null, error: null };
+  };
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const a = (await goldenCases()).find((c) => c.id === 'A')!;
+  const r = await verifyClaim({ claim: a.claim, evidence: a.evidence, sources: a.sources }, a.ctx);
+  assert(r.ok);
+  const result = await store.insertVerification(INV, r.value, null, ACTOR);
+  assert(!result.ok, 'must fail when investigation does not exist');
+  assertEquals(result.error.code, 'INVESTIGATION_NOT_FOUND');
+  assert(!calls.some((c) => c.client === 'service' && c.op === 'insert'), 'no service insert after not_found denial');
+});
+
+Deno.test('SS-OWNERSHIP-01 (migration 009 P1-2) DB trigger raises IMPACT_ACTOR_NOT_OWNER → INVESTIGATION_NOT_FOUND for service writes', async () => {
+  // The impact_child_ownership_gate trigger fires BEFORE INSERT on child tables.
+  // When created_by ≠ investigation.owner_id the trigger raises IMPACT_ACTOR_NOT_OWNER
+  // (ERRCODE 42501). mapDbError maps that message to INVESTIGATION_NOT_FOUND so
+  // the caller cannot distinguish a missing investigation from an ownership violation
+  // (information hiding — no oracle for valid investigation IDs).
+  const ownershipError = { code: '42501', message: 'IMPACT_ACTOR_NOT_OWNER' };
+  // 1. Error code mapping is stable.
+  assertEquals(mapDbError(ownershipError), 'INVESTIGATION_NOT_FOUND');
+
+  // 2. Service-role insertSource propagates DB errors through dbFail → mapDbError.
+  const calls: Call[] = [];
+  const respond = (_c: Call) => ({ data: null, error: ownershipError });
+  const store = new SupabaseImpactLabStore(
+    fakeClient('user', calls, respond),
+    fakeClient('service', calls, respond),
+  );
+  // Ownership gate failure happens inside the DB; we only need the error to propagate.
+  // Use a minimal stub that satisfies StoredSource structurally.
+  // deno-lint-ignore no-explicit-any
+  const stubSource = { source: { id: 'x', type: 'OFFICIAL_REGISTRY', acquisition: { method: 'DIRECT' } } as any, snapshot: null };
+  const result = await store.insertSource(INV, stubSource, ACTOR);
+  assert(!result.ok, 'must fail on ownership gate violation');
+  assertEquals(result.error.code, 'INVESTIGATION_NOT_FOUND');
+});
+
+Deno.test('SS-TOCTOU-12 (migration 009 P1-3) AEF submitAtomic: AEF_CALLER_NOT_OWNER → AEF_PERSISTENCE_UNAVAILABLE', async () => {
+  // aef_submit_action() returns {ok:false, code:'AEF_CALLER_NOT_OWNER'} when
+  // p_caller_user_id does not match investigation.owner_id (P1-3 caller binding).
+  // The store treats this as a persistence failure (AEF_PERSISTENCE_UNAVAILABLE)
+  // so the caller cannot use it as an oracle for investigation ownership.
+  const calls: Call[] = [];
+  const respond = (c: Call) => {
+    if (c.op === 'rpc' && c.table === 'aef_submit_action') {
+      return { data: { ok: false, code: 'AEF_CALLER_NOT_OWNER' }, error: null };
+    }
+    return { data: null, error: null };
+  };
+  const aefStore = new SupabaseAefStore(fakeClient('service', calls, respond));
+  const now = new Date().toISOString();
+  const result = await aefStore.submitAtomic(
+    {
+      requestId: 'req-0000-0000-0000-000000000001',
+      correlationId: 'corr-1',
+      caller: { authenticatedUserId: ACTOR, moduleId: 'impact', correlationId: 'corr-1', projectId: null, serviceId: 'impact-lab' },
+      intent: { kind: 'ACKNOWLEDGE_CONFLICT', investigationId: INV, idempotencyKey: 'idem-1', classification: 'REVERSIBLE' },
+      requestedAt: now,
+    },
+    { requestId: 'req-0000-0000-0000-000000000001', outcome: 'AUTHORIZED', policyVersion: 'v1', decidedAt: now, reason: 'admin_unrestricted' },
+    null,
+    {
+      receiptId: 'rec-0000-0000-0000-000000000001', requestId: 'req-0000-0000-0000-000000000001',
+      correlationId: 'corr-1', callerUserId: ACTOR, projectId: null, serviceId: 'impact-lab',
+      intentKind: 'ACKNOWLEDGE_CONFLICT', investigationId: INV, idempotencyKey: 'idem-1',
+      classification: 'REVERSIBLE', policyVersion: 'v1', policyOutcome: 'AUTHORIZED',
+      executionOutcome: 'EXECUTED', humanGateId: null, errorCode: null,
+      issuedAt: now, receiptHash: 'a'.repeat(64),
+    },
+  );
+  assert(!result.ok, 'AEF_CALLER_NOT_OWNER must be a failure');
+  assertEquals(result.code, 'AEF_PERSISTENCE_UNAVAILABLE');
 });

@@ -88,7 +88,7 @@ void main() {
       _logUncaughtError(details.exception, details.stack ?? StackTrace.empty);
     };
 
-    await dotenv.load(fileName: '.env');
+    await dotenv.load(fileName: 'flutter_env.cfg');
 
     await Supabase.initialize(
       url: dotenv.env['SUPABASE_URL']!,
