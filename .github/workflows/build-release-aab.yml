@@ -19,10 +19,14 @@ name: Build Release AAB
 # generate-keystore.yml (PLAY-READINESS-18 incident) MUST be rotated by
 # the Owner before this workflow is used.
 #
-# Security fixes applied (Codex R2):
-#   P1-C02-A: `ref` input removed — release builds ONLY from the SHA of the
-#     workflow file itself (i.e. main). Arbitrary refs cannot execute with
-#     signing secrets.
+# Security fixes applied (Codex R2/R3):
+#   P1-C02-A / P1-C03-A: release builds restricted to main or vX.Y.Z tags.
+#     A hard ref-guard step at job start rejects any other dispatching ref
+#     before any secret is exposed.
+#     Additionally, the job uses `environment: release-signing` — configure
+#     this environment in GitHub (Settings → Environments → release-signing)
+#     with required reviewers and branch protection (main only) for defense-
+#     in-depth.
 #   P1-C02-B: All secrets are passed through step `env:` variables and written
 #     to files via printf/Python, never interpolated directly into shell bodies.
 #   P2-C02-C: GOOGLE_CLIENT_ID must match *.apps.googleusercontent.com format.
@@ -49,14 +53,35 @@ jobs:
   build-release:
     name: Build release AAB (${{ inputs.flavor }})
     runs-on: ubuntu-latest
+    # P1-C03-A fix (defense-in-depth): GitHub protected environment.
+    # Configure in Settings → Environments → release-signing:
+    #   - Required reviewers: Owner
+    #   - Deployment branches: main only
+    # When configured, GitHub will require manual approval AND enforce branch
+    # restrictions BEFORE this job starts (before any secret is available).
+    # The ref-guard step below adds a second enforcement layer in case the
+    # environment has not yet been fully configured.
+    environment: release-signing
 
     steps:
-      # P1-C02-A fix: no `ref` input — the workflow always runs on the SHA
-      # the workflow file is checked out from (i.e. main / the dispatching
-      # branch). Signing secrets are never exposed to contributor-controlled
-      # refs. If a release from a specific tagged commit is needed, the tag
-      # must be merged to main first and the workflow dispatched from there.
-      - name: Checkout (main only — no arbitrary ref)
+      # P1-C03-A fix: hard ref guard — reject any dispatching ref that is
+      # not main or a vX.Y.Z semantic release tag. Runs BEFORE any secret is
+      # consumed, so a branch with modified build scripts cannot exfiltrate
+      # signing material even if the protected environment is misconfigured.
+      - name: Enforce protected release ref
+        run: |
+          REF="${{ github.ref }}"
+          if [ "$REF" = "refs/heads/main" ]; then
+            echo "Release ref check: OK (main)"
+          elif echo "$REF" | grep -qE '^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Release ref check: OK (release tag $REF)"
+          else
+            echo "::error::RELEASE BLOCKED: dispatch from untrusted ref '$REF'."
+            echo "::error::Only refs/heads/main and refs/tags/vX.Y.Z are allowed."
+            exit 1
+          fi
+
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Java 17 (Temurin)
