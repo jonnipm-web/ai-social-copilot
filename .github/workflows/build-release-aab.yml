@@ -13,19 +13,19 @@ name: Build Release AAB
 #        KEYSTORE_KEY_ALIAS      — alias (e.g. "upload")
 #        KEYSTORE_KEY_PASSWORD   — key password
 #        GOOGLE_CLIENT_ID        — Android Web OAuth 2.0 client ID
-#                                  (MUST NOT be the placeholder value)
+#                                  (format: <digits>.apps.googleusercontent.com)
 #
 # SECURITY: KEYSTORE_* secrets previously populated from the now-disabled
 # generate-keystore.yml (PLAY-READINESS-18 incident) MUST be rotated by
 # the Owner before this workflow is used.
 #
-# P1-C01-A fix: flutter_env.cfg is an asset file read at runtime by
-#   flutter_dotenv. It is NOT a --dart-define-from-file JSON map.
-#   The build command does not pass --dart-define-from-file.
-#
-# P1-C01-B fix: workflow fails fast if GOOGLE_CLIENT_ID is absent or is
-#   still the placeholder value — a release AAB with a placeholder client
-#   will silently break Google Sign-In for all users.
+# Security fixes applied (Codex R2):
+#   P1-C02-A: `ref` input removed — release builds ONLY from the SHA of the
+#     workflow file itself (i.e. main). Arbitrary refs cannot execute with
+#     signing secrets.
+#   P1-C02-B: All secrets are passed through step `env:` variables and written
+#     to files via printf/Python, never interpolated directly into shell bodies.
+#   P2-C02-C: GOOGLE_CLIENT_ID must match *.apps.googleusercontent.com format.
 
 on:
   workflow_dispatch:
@@ -39,10 +39,11 @@ on:
           - core
           - impact
           - quant
-      ref:
-        description: 'Branch or SHA (default: main)'
-        required: false
-        default: ''
+
+# Only allow one release build at a time; cancel any in-progress run.
+concurrency:
+  group: release-aab-${{ inputs.flavor }}
+  cancel-in-progress: false
 
 jobs:
   build-release:
@@ -50,10 +51,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      # P1-C02-A fix: no `ref` input — the workflow always runs on the SHA
+      # the workflow file is checked out from (i.e. main / the dispatching
+      # branch). Signing secrets are never exposed to contributor-controlled
+      # refs. If a release from a specific tagged commit is needed, the tag
+      # must be merged to main first and the workflow dispatched from there.
+      - name: Checkout (main only — no arbitrary ref)
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Java 17 (Temurin)
         uses: actions/setup-java@v4
@@ -67,44 +71,69 @@ jobs:
           channel: stable
           cache: true
 
-      # P1-C01-B: fail fast before any build work if GOOGLE_CLIENT_ID is
-      # absent or still holds the placeholder value. A release build with
-      # a placeholder client ID silently breaks Google Sign-In for all users.
+      # P1-C01-B + P2-C02-C fix: validate GOOGLE_CLIENT_ID before any build
+      # work. Fails if absent, placeholder, or wrong format.
       - name: Validate release configuration (GOOGLE_CLIENT_ID)
         env:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         run: |
-          if [ -z "$GOOGLE_CLIENT_ID" ] || \
-             [ "$GOOGLE_CLIENT_ID" = "placeholder.apps.googleusercontent.com" ]; then
-            echo "::error::RELEASE BLOCKED: GOOGLE_CLIENT_ID secret is missing or still"
-            echo "::error::set to the placeholder value. Add the real Android Web OAuth 2.0"
-            echo "::error::client ID to the repository secrets as GOOGLE_CLIENT_ID."
+          if [ -z "$GOOGLE_CLIENT_ID" ]; then
+            echo "::error::RELEASE BLOCKED: GOOGLE_CLIENT_ID secret is missing."
             exit 1
           fi
-          echo "GOOGLE_CLIENT_ID validation: OK (non-placeholder value present)"
+          if [ "$GOOGLE_CLIENT_ID" = "placeholder.apps.googleusercontent.com" ]; then
+            echo "::error::RELEASE BLOCKED: GOOGLE_CLIENT_ID is still the placeholder value."
+            exit 1
+          fi
+          # P2-C02-C: validate format — must end with .apps.googleusercontent.com
+          if ! echo "$GOOGLE_CLIENT_ID" | grep -qE '^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$'; then
+            echo "::error::RELEASE BLOCKED: GOOGLE_CLIENT_ID does not match expected format."
+            echo "::error::Expected format: <numeric_project_id>-<client_hash>.apps.googleusercontent.com"
+            exit 1
+          fi
+          echo "GOOGLE_CLIENT_ID validation: OK"
 
       # P1-C01-A fix: flutter_env.cfg is an ASSET FILE loaded at runtime by
-      # flutter_dotenv. Do NOT pass it via --dart-define-from-file (JSON-only).
+      # flutter_dotenv. Do NOT pass via --dart-define-from-file (JSON-only).
+      # P1-C02-B fix: GOOGLE_CLIENT_ID written via env var, not direct interpolation.
       - name: Create flutter_env.cfg (runtime asset)
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         run: |
-          echo "SUPABASE_URL=https://nzngvbajrnruknpzzjbf.supabase.co" > flutter_env.cfg
-          echo "SUPABASE_ANON_KEY=sb_publishable_fZboVtE9PeokahlYmhc_vg_t6JHOmFh" >> flutter_env.cfg
-          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> flutter_env.cfg
+          printf 'SUPABASE_URL=https://nzngvbajrnruknpzzjbf.supabase.co\n' > flutter_env.cfg
+          printf 'SUPABASE_ANON_KEY=sb_publishable_fZboVtE9PeokahlYmhc_vg_t6JHOmFh\n' >> flutter_env.cfg
+          printf 'GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID" >> flutter_env.cfg
 
+      # P1-C02-B fix: decode keystore from env var (not direct interpolation).
       - name: Decode release keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+          # Validate that the decoded file is a valid JKS/PKCS12 keystore.
+          if ! file android/upload-keystore.jks | grep -qE 'Java KeyStore|PKCS'; then
+            echo "::warning::Decoded keystore may not be a valid JKS file — verify KEYSTORE_BASE64 secret."
+          fi
 
+      # P1-C02-B fix: key.properties written via Python with env vars,
+      # never via shell heredoc with direct secret interpolation.
       - name: Create key.properties
+        env:
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
         run: |
-          cat > android/key.properties <<EOF
-          storePassword=${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          keyPassword=${{ secrets.KEYSTORE_KEY_PASSWORD }}
-          keyAlias=${{ secrets.KEYSTORE_KEY_ALIAS }}
-          storeFile=../upload-keystore.jks
-          EOF
+          python3 - <<'PYEOF'
+          import os
+          lines = [
+              f"storePassword={os.environ['KEYSTORE_STORE_PASSWORD']}",
+              f"keyPassword={os.environ['KEYSTORE_KEY_PASSWORD']}",
+              f"keyAlias={os.environ['KEYSTORE_KEY_ALIAS']}",
+              "storeFile=../upload-keystore.jks",
+          ]
+          with open("android/key.properties", "w") as f:
+              f.write("\n".join(lines) + "\n")
+          PYEOF
 
       - name: flutter pub get
         run: flutter pub get
@@ -134,7 +163,6 @@ jobs:
           echo "AAB_SHA256=$AAB_SHA256" >> "$GITHUB_STEP_SUMMARY"
           echo "AAB_SIZE_BYTES=$AAB_SIZE" >> "$GITHUB_STEP_SUMMARY"
           echo "FLAVOR=$FLAVOR" >> "$GITHUB_STEP_SUMMARY"
-          echo "BUILD_REF=${{ inputs.ref || github.ref }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload release AAB (${{ inputs.flavor }})
         uses: actions/upload-artifact@v4
