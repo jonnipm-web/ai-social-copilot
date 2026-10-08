@@ -7,6 +7,18 @@ on:
         description: 'Branch or SHA to build from (default: main)'
         required: false
         default: 'main'
+      # IV-MOBILE-ECOSYSTEM-FOUNDATION-01 (P1-R11-A fix): with three product
+      # flavors, the unflavored `flutter build apk --debug` is no longer valid.
+      # Select an explicit flavor; the produced APK is flavor-specific.
+      flavor:
+        description: 'Product flavor to build (core | impact | quant)'
+        required: false
+        default: 'core'
+        type: choice
+        options:
+          - core
+          - impact
+          - quant
 
 jobs:
   build:
@@ -40,28 +52,33 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
-      - name: Build APK debug
-        run: flutter build apk --debug
+      - name: Build APK debug (${{ inputs.flavor || 'core' }})
+        run: |
+          FLAVOR="${{ inputs.flavor || 'core' }}"
+          flutter build apk --debug --flavor "$FLAVOR" -t "lib/main_${FLAVOR}.dart"
 
       - name: Record build provenance
         run: |
+          FLAVOR="${{ inputs.flavor || 'core' }}"
           SOURCE_SHA=$(git rev-parse HEAD)
-          APK_PATH=build/app/outputs/flutter-apk/app-debug.apk
+          APK_PATH="build/app/outputs/flutter-apk/app-${FLAVOR}-debug.apk"
           APK_SHA256=$(sha256sum "$APK_PATH" | cut -d' ' -f1)
           APK_SIZE=$(stat -c%s "$APK_PATH")
           echo "SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
           echo "APK_SHA256=$APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
           echo "APK_SIZE_BYTES=$APK_SIZE" >> "$GITHUB_STEP_SUMMARY"
           echo "BUILD_REF=${{ inputs.ref || 'main' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "FLAVOR=$FLAVOR" >> "$GITHUB_STEP_SUMMARY"
           echo "---"
           echo "SOURCE_SHA=$SOURCE_SHA"
           echo "APK_SHA256=$APK_SHA256"
           echo "APK_SIZE_BYTES=$APK_SIZE"
+          echo "FLAVOR=$FLAVOR"
 
-      - name: Upload APK debug
+      - name: Upload APK debug (${{ inputs.flavor || 'core' }})
         uses: actions/upload-artifact@v4
         with:
-          name: ive-debug-apk-${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: ive-${{ inputs.flavor || 'core' }}-debug-apk-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-${{ inputs.flavor || 'core' }}-debug.apk
           retention-days: 30
           if-no-files-found: error
