@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Branch or SHA to build from (default: main)'
+        description: 'Branch or SHA to build from (default: current branch)'
         required: false
-        default: 'main'
+        default: ''
       # IV-MOBILE-ECOSYSTEM-FOUNDATION-01 (P1-R11-A fix): with three product
       # flavors, the unflavored `flutter build apk --debug` is no longer valid.
       # Select an explicit flavor; the produced APK is flavor-specific.
@@ -29,7 +29,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || 'main' }}
+          # P2-R12-A fix: default to the dispatching branch (github.ref) so the
+          # workflow builds the correct flavor entry points without requiring an
+          # explicit ref override before the branch is merged to main.
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Java 17 (Temurin)
         uses: actions/setup-java@v4
@@ -67,7 +70,7 @@ jobs:
           echo "SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
           echo "APK_SHA256=$APK_SHA256" >> "$GITHUB_STEP_SUMMARY"
           echo "APK_SIZE_BYTES=$APK_SIZE" >> "$GITHUB_STEP_SUMMARY"
-          echo "BUILD_REF=${{ inputs.ref || 'main' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "BUILD_REF=${{ inputs.ref || github.ref }}" >> "$GITHUB_STEP_SUMMARY"
           echo "FLAVOR=$FLAVOR" >> "$GITHUB_STEP_SUMMARY"
           echo "---"
           echo "SOURCE_SHA=$SOURCE_SHA"
