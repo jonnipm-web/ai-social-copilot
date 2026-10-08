@@ -14,23 +14,74 @@ on:
 jobs:
   validate:
     name: flutter analyze + flutter test
-    runs-on: ubuntu-latest
+    # IV-MOBILE-ECOSYSTEM-RELEASE-CLOSURE-01: pin to ubuntu-22.04 for toolchain
+    # stability, matching build-release-aab.yml. ubuntu-latest is mutable.
+    runs-on: ubuntu-22.04
+
+    # Least-privilege permissions. No write access needed.
+    permissions:
+      contents: read
 
     steps:
+      # IV-MOBILE-ECOSYSTEM-RELEASE-CLOSURE-01: pinned to immutable commit SHA
+      # (v4.2.2). Matches build-release-aab.yml. Eliminates mutable @v4 tag.
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
-          distribution: temurin
-          java-version: '17'
+          persist-credentials: false
 
-      - name: Setup Flutter (stable)
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
+      # IV-MOBILE-ECOSYSTEM-RELEASE-CLOSURE-01: eliminates actions/setup-java@v4
+      # mutable tag (same fix applied to build-release-aab.yml). Java 17 is
+      # pre-installed on ubuntu-22.04 runners; $JAVA_HOME_17_X64 is documented.
+      - name: Use Java 17 (pre-installed on ubuntu-22.04)
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_17_X64/bin" >> "$GITHUB_PATH"
+          "$JAVA_HOME_17_X64/bin/java" -version
+
+      # IV-MOBILE-ECOSYSTEM-RELEASE-CLOSURE-01: eliminates subosito/flutter-action@v2
+      # mutable third-party tag. Direct installation from Google storage, pinned
+      # version, SHA-256 verified against official releases manifest — same
+      # security posture as build-release-aab.yml.
+      # Note: no action-level caching; Flutter precache --android --web covers
+      # the tool artifacts needed by both build gates below.
+      - name: Install Flutter 3.47.4 (stable, SHA-256 verified)
+        run: |
+          FLUTTER_VERSION="3.47.4"
+          RELEASES_URL="https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json"
+          ARCHIVE_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
+
+          EXPECTED_SHA256=$(curl -fsSL "$RELEASES_URL" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          target = '${FLUTTER_VERSION}'
+          for r in data.get('releases', []):
+              if r.get('version') == target and r.get('channel') == 'stable':
+                  print(r.get('sha256', ''))
+                  break
+          ")
+
+          if [ -z "$EXPECTED_SHA256" ]; then
+            echo "::error::Flutter ${FLUTTER_VERSION} SHA-256 not in releases manifest."
+            exit 1
+          fi
+
+          curl -fsSL "$ARCHIVE_URL" -o flutter.tar.xz
+          ACTUAL_SHA256=$(sha256sum flutter.tar.xz | cut -d' ' -f1)
+
+          if [ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]; then
+            echo "::error::Flutter archive integrity check FAILED."
+            echo "::error::Expected: $EXPECTED_SHA256  Actual: $ACTUAL_SHA256"
+            rm -f flutter.tar.xz
+            exit 1
+          fi
+
+          echo "Flutter archive integrity: OK ($ACTUAL_SHA256)"
+          tar xf flutter.tar.xz
+          rm flutter.tar.xz
+          echo "$GITHUB_WORKSPACE/flutter/bin" >> "$GITHUB_PATH"
+          flutter/bin/flutter config --no-analytics
+          flutter/bin/flutter precache --android --web --no-ios
 
       - name: Create flutter_env.cfg (placeholder para asset loader)
         run: |

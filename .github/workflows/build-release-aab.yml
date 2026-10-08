@@ -69,6 +69,10 @@ on:
           - core
           - impact
           - quant
+      ecosystem_gate_run_id:
+        description: 'Run ID from the Mobile Ecosystem Release Gate PASS (release-mobile-ecosystem.yml). Copy from the gate run URL: github.com/.../actions/runs/<RUN_ID>. The build verifies via GitHub API that this run succeeded against the same commit.'
+        required: true
+        type: string
 
 # Only allow one release build at a time per flavor.
 concurrency:
@@ -89,8 +93,11 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     # Least-privilege permissions — no write access needed (P1-C04-B fix).
+    # IV-MOBILE-ECOSYSTEM-RELEASE-CLOSURE-01 / Codex R3 P1-B: actions: read
+    # is required to verify the ecosystem gate run via the GitHub API.
     permissions:
       contents: read
+      actions: read
 
     # Defense-in-depth layer 0: GitHub protected environment.
     # BLOCKED_OWNER: configure in Settings → Environments → release-signing
@@ -99,6 +106,66 @@ jobs:
     environment: release-signing
 
     steps:
+      # IV-MOBILE-ECOSYSTEM-RELEASE-CLOSURE-01 / Codex R3 P1-B:
+      # Machine-verifiable ecosystem gate enforcement via GitHub API.
+      # Verifies that:
+      #   1. The run ID corresponds to a real Actions run (not operator-guessed).
+      #   2. The run is from release-mobile-ecosystem.yml (not a different workflow).
+      #   3. The run concluded successfully.
+      #   4. The run's head_sha matches the current build commit.
+      # This prevents building a signed AAB without a successful gate run at the
+      # same commit that validated all signing secrets via keytool.
+      - name: Verify ecosystem gate run (GitHub API)
+        env:
+          GATE_RUN_ID: ${{ inputs.ecosystem_gate_run_id }}
+          CURRENT_SHA: ${{ github.sha }}
+          REPO:        ${{ github.repository }}
+          GH_TOKEN:    ${{ github.token }}
+        run: |
+          if [ -z "$GATE_RUN_ID" ]; then
+            echo "::error::RELEASE BLOCKED: ecosystem_gate_run_id is empty."
+            echo "::error::Run release-mobile-ecosystem.yml first, then copy the run ID from its URL."
+            exit 1
+          fi
+
+          RUN_DATA=$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/actions/runs/$GATE_RUN_ID")
+
+          WORKFLOW_NAME=$(echo "$RUN_DATA" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          print(d.get('name', ''))
+          ")
+          if [ "$WORKFLOW_NAME" != "Mobile Ecosystem Release Gate" ]; then
+            echo "::error::RELEASE BLOCKED: run $GATE_RUN_ID is not from the Mobile Ecosystem Release Gate (got: '$WORKFLOW_NAME')."
+            exit 1
+          fi
+
+          CONCLUSION=$(echo "$RUN_DATA" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          print(d.get('conclusion', ''))
+          ")
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "::error::RELEASE BLOCKED: ecosystem gate run $GATE_RUN_ID did not succeed (conclusion: '$CONCLUSION')."
+            exit 1
+          fi
+
+          GATE_SHA=$(echo "$RUN_DATA" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          print(d.get('head_sha', ''))
+          ")
+          if [ "$GATE_SHA" != "$CURRENT_SHA" ]; then
+            echo "::error::RELEASE BLOCKED: gate run $GATE_RUN_ID was for commit $GATE_SHA but this build is at $CURRENT_SHA."
+            echo "::error::Re-run release-mobile-ecosystem.yml at the current main tip before building."
+            exit 1
+          fi
+
+          echo "Ecosystem gate verification: OK (run $GATE_RUN_ID: success, SHA $GATE_SHA)"
+
       # Layer 2: hard ref guard. github.ref via env:, NOT interpolated into
       # the shell body (P1-C05-A fix — prevents injection via crafted branch
       # names with shell metacharacters). Runs before checkout or secrets.
@@ -233,6 +300,39 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+
+      # IV-MOBILE-ECOSYSTEM-RELEASE-CLOSURE-01 / Codex R1 P1-A + R2 P2:
+      # Verify the decoded JKS/PKCS12 keystore is valid with the configured
+      # store password, alias, AND key password before Gradle signs the AAB.
+      # Fails fast rather than after a long Flutter build.
+      - name: Validate keystore credentials (keytool)
+        env:
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_ALIAS:      ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASSWORD:   ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+        run: |
+          # Validate store password + alias.
+          keytool -list \
+            -keystore android/upload-keystore.jks \
+            -storepass "$KEYSTORE_STORE_PASSWORD" \
+            -alias "$KEYSTORE_KEY_ALIAS" 2>&1
+          if [ $? -ne 0 ]; then
+            echo "::error::RELEASE BLOCKED: keystore invalid or credentials do not match — check KEYSTORE_STORE_PASSWORD / KEYSTORE_KEY_ALIAS."
+            exit 1
+          fi
+
+          # Validate key password via CSR generation (accesses private key).
+          keytool -certreq \
+            -alias "$KEYSTORE_KEY_ALIAS" \
+            -keystore android/upload-keystore.jks \
+            -storepass "$KEYSTORE_STORE_PASSWORD" \
+            -keypass "$KEYSTORE_KEY_PASSWORD" \
+            -file /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "::error::RELEASE BLOCKED: wrong KEYSTORE_KEY_PASSWORD for alias $KEYSTORE_KEY_ALIAS."
+            exit 1
+          fi
+          echo "Keystore validation: OK (store password, alias, and key password all correct)"
 
       # P1-C02-B fix: key.properties written via Python os.environ.
       - name: Create key.properties

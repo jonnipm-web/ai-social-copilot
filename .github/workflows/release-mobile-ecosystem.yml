@@ -1,0 +1,223 @@
+name: Mobile Ecosystem Release Gate
+
+# IV-MOBILE-ECOSYSTEM-RELEASE-CLOSURE-01 — Pre-release validation gate.
+#
+# Validates that all signing secrets are populated and non-placeholder
+# before a coordinated multi-flavor ecosystem release. Run this gate
+# BEFORE triggering build-release-aab.yml for each flavor.
+#
+# Security properties:
+#   - workflow_dispatch only — no automatic triggers.
+#   - RELEASE confirmation input prevents accidental runs.
+#   - Uses the release-signing environment (Owner approval required before
+#     any step executes — BLOCKED_OWNER to configure if not yet done).
+#   - All secret access via env: variables, never interpolated into shell.
+#   - No checkout, no artifact production — validation only.
+#   - Minimum permissions: contents: read.
+#
+# BLOCKED_OWNER prerequisites (required before this gate can pass):
+#   1. Generate upload keystore locally — see android/key.properties.template.
+#   2. Rotate KEYSTORE_* secrets (PLAY-READINESS-18 incident: any secrets
+#      populated by the disabled generate-keystore.yml are compromised).
+#   3. Populate GitHub Secrets: KEYSTORE_BASE64, KEYSTORE_STORE_PASSWORD,
+#      KEYSTORE_KEY_ALIAS, KEYSTORE_KEY_PASSWORD, GOOGLE_CLIENT_ID.
+#   4. Create the release-signing environment (Settings → Environments).
+#
+# Owner release sequence after this gate PASSES:
+#   1. Run this workflow → PASS (confirms secrets ready + Owner approved)
+#   2. Run build-release-aab.yml (flavor=core)   → download core AAB
+#   3. Run build-release-aab.yml (flavor=impact) → download impact AAB
+#   4. Run build-release-aab.yml (flavor=quant)  → download quant AAB
+#   5. Upload each AAB to Google Play Console (BLOCKED_OWNER)
+#   6. Complete per-flavor store listings + content rating (BLOCKED_OWNER)
+#   7. Add per-flavor Firebase google-services.json (BLOCKED_OWNER)
+#   8. Publish assetlinks.json for each applicationId (BLOCKED_OWNER)
+#   9. Submit each app for review (BLOCKED_OWNER)
+#
+# ARCHITECTURAL_ESCALATION (P1-C10-A, PR #123): SLSA provenance attestation
+# for the signed AABs — decision pending Agente Martins + Paulo.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_release:
+        description: "Type RELEASE to confirm ecosystem pre-release check"
+        required: true
+        type: string
+
+jobs:
+  ecosystem-gate:
+    name: Mobile ecosystem pre-release gate
+    runs-on: ubuntu-22.04
+    # Minimum permissions — no checkout, no write needed.
+    permissions:
+      contents: read
+    # Owner approval gate: the release-signing environment requires manual
+    # review before any step runs (BLOCKED_OWNER to configure if not done).
+    environment: release-signing
+
+    steps:
+      # Explicit RELEASE confirmation prevents accidental gate runs that
+      # would consume the Owner approval for the release-signing environment.
+      - name: Confirm release intent
+        env:
+          CONFIRM: ${{ inputs.confirm_release }}
+        run: |
+          if [ "$CONFIRM" != "RELEASE" ]; then
+            echo "::error::Gate aborted — input must be exactly RELEASE."
+            exit 1
+          fi
+          echo "Release intent confirmed."
+
+      # Validates all five required secrets are present and non-placeholder.
+      # All inputs arrive via env: — never interpolated into the shell body.
+      - name: Validate signing secrets — present and non-placeholder
+        env:
+          KEYSTORE_BASE64:         ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_ALIAS:      ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASSWORD:   ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          GOOGLE_CLIENT_ID:        ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: |
+          missing=()
+          placeholder=()
+
+          check_secret() {
+            local name="$1" val="$2" placeholder_val="$3"
+            if [ -z "$val" ]; then
+              missing+=("$name")
+            elif [ -n "$placeholder_val" ] && [ "$val" = "$placeholder_val" ]; then
+              placeholder+=("$name")
+            fi
+          }
+
+          check_secret "KEYSTORE_BASE64"         "$KEYSTORE_BASE64"         ""
+          check_secret "KEYSTORE_STORE_PASSWORD" "$KEYSTORE_STORE_PASSWORD" "REPLACE_WITH_YOUR_STORE_PASSWORD"
+          check_secret "KEYSTORE_KEY_ALIAS"      "$KEYSTORE_KEY_ALIAS"      "REPLACE_WITH_YOUR_KEY_ALIAS"
+          check_secret "KEYSTORE_KEY_PASSWORD"   "$KEYSTORE_KEY_PASSWORD"   "REPLACE_WITH_YOUR_KEY_PASSWORD"
+          check_secret "GOOGLE_CLIENT_ID"        "$GOOGLE_CLIENT_ID"        "placeholder.apps.googleusercontent.com"
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+          if [ ${#placeholder[@]} -gt 0 ]; then
+            echo "::error::Secrets contain placeholder values (PLAY-READINESS-18: rotate before use): ${placeholder[*]}"
+            exit 1
+          fi
+
+          if ! echo "$GOOGLE_CLIENT_ID" | grep -qE '^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$'; then
+            echo "::error::GOOGLE_CLIENT_ID format is invalid (expected: <digits>-<alphanum>.apps.googleusercontent.com)."
+            exit 1
+          fi
+
+          echo "All signing secrets: PRESENT and non-placeholder."
+
+      # Java 17 is pre-installed on ubuntu-22.04; $JAVA_HOME_17_X64 is a
+      # documented runner variable. Required only for keytool below.
+      - name: Use Java 17 (pre-installed on ubuntu-22.04)
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_17_X64/bin" >> "$GITHUB_PATH"
+
+      # Codex R1 P1-A: verify the decoded bytes are a valid JKS/PKCS12 keystore
+      # AND that the configured store password and key alias/key password are
+      # correct. base64 --decode accepts any valid base64 (including random
+      # bytes), so this step is the real keystore validity check.
+      #
+      # Decoded keystore lives only in a mktemp file and is always removed in
+      # the cleanup step regardless of whether validation succeeds or fails.
+      - name: Validate keystore — JKS/PKCS12 integrity and credentials
+        env:
+          KEYSTORE_BASE64:         ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_ALIAS:      ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASSWORD:   ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+        run: |
+          KEYSTORE_TMP=$(mktemp --suffix=.jks)
+          echo "KEYSTORE_TMP=$KEYSTORE_TMP" >> "$GITHUB_ENV"
+
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_TMP"
+
+          # Validate store password + alias existence.
+          keytool -list \
+            -keystore "$KEYSTORE_TMP" \
+            -storepass "$KEYSTORE_STORE_PASSWORD" \
+            -alias "$KEYSTORE_KEY_ALIAS" 2>&1
+          if [ $? -ne 0 ]; then
+            echo "::error::Keystore validation FAILED — invalid keystore, wrong store password, or alias not found."
+            rm -f "$KEYSTORE_TMP"
+            exit 1
+          fi
+          echo "Keystore store password + alias: OK"
+
+          # Codex R2 P2: validate the private-key password by generating a
+          # Certificate Signing Request (CSR) — keytool accesses the private
+          # key with KEYSTORE_KEY_PASSWORD to sign the request. This fails
+          # closed if the key password is wrong, unlike -list which only
+          # opens the keystore with the store password.
+          keytool -certreq \
+            -alias "$KEYSTORE_KEY_ALIAS" \
+            -keystore "$KEYSTORE_TMP" \
+            -storepass "$KEYSTORE_STORE_PASSWORD" \
+            -keypass "$KEYSTORE_KEY_PASSWORD" \
+            -file /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "::error::Keystore key password validation FAILED — wrong KEYSTORE_KEY_PASSWORD for alias $KEYSTORE_KEY_ALIAS."
+            rm -f "$KEYSTORE_TMP"
+            exit 1
+          fi
+
+          echo "Keystore validation: OK (JKS/PKCS12 valid, store password, alias, and key password all correct)"
+
+      # Always-run cleanup: remove the temp keystore even if validation failed.
+      - name: Cleanup temp keystore
+        if: always()
+        run: |
+          if [ -n "$KEYSTORE_TMP" ]; then
+            rm -f "$KEYSTORE_TMP"
+            echo "Temp keystore removed."
+          fi
+
+      # Writes a per-run ecosystem readiness summary visible in the Actions UI.
+      # Codex R1 P1-B: records the exact source SHA and run ID so the Owner
+      # can verify that subsequent build-release-aab.yml runs are for the
+      # same commit and secret snapshot validated here.
+      # NOTE: build-release-aab.yml also performs independent keytool
+      # validation at build time — the gate PASS does not bypass that check.
+      - name: Report ecosystem release readiness
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          RUN_ID:     ${{ github.run_id }}
+        run: |
+          {
+            echo "## Mobile Ecosystem Release Gate — PASS"
+            echo ""
+            echo "> **Gate run ID**: \`${RUN_ID}\` — copy this to the \`ecosystem_gate_run_id\` input of \`build-release-aab.yml\`."
+            echo "> The build verifies via GitHub API that this run succeeded and matches the build commit."
+            echo "> If secrets change or \`main\` advances, re-run this gate and use the new run ID."
+            echo ""
+            echo "All signing secrets validated (presence, format, keytool store password, alias, and key password)."
+            echo ""
+            echo "| Flavor | applicationId | Signing |"
+            echo "|--------|--------------|---------|"
+            echo "| core   | com.insightvalues.core   | Upload keystore (keytool OK) |"
+            echo "| impact | com.insightvalues.impact | Upload keystore (keytool OK) |"
+            echo "| quant  | com.insightvalues.quant  | Upload keystore (keytool OK) |"
+            echo ""
+            echo "### Next steps (Owner)"
+            echo "1. Copy this gate run ID: \`${RUN_ID}\`"
+            echo "2. Run \`build-release-aab.yml\` for each flavor, passing \`ecosystem_gate_run_id=${RUN_ID}\`"
+            echo "3. Download the AAB artifacts from each workflow run"
+            echo "4. Upload to [Google Play Console](https://play.google.com/console)"
+            echo ""
+            echo "### Remaining Owner Gates (BLOCKED_OWNER)"
+            echo "- Firebase: per-flavor \`google-services.json\` for each applicationId"
+            echo "- Deep links: \`assetlinks.json\` at \`insightvalues.com/.well-known/\`"
+            echo "- Store listings: screenshots, short/full descriptions, content rating"
+            echo "- SLSA attestation: \`ARCHITECTURAL_ESCALATION\` (PR #123, pending AM+Paulo)"
+            echo "- Impact backend: \`impact-lab\` Edge Function + migrations NOT deployed"
+            echo "- Quant backend: \`quant-analyze\` / \`quant-watchlists\` admin-only"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Ecosystem release gate: PASS"
