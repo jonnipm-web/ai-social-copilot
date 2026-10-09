@@ -211,7 +211,8 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "action-engine-runtime": { "kind": "MODULE", "moduleId": "action-engine", "gateFile": "_shared/aef_runtime_endpoint.ts", "actionClassOverride": "CONSEQUENTIAL" },
     "quant-runtime": { "kind": "MODULE", "moduleId": "ive-quant", "gateFile": "_shared/aef_runtime_endpoint.ts" },
     "strategy-builder": { "kind": "MODULE", "moduleId": "strategy-builder" },
-    "strategy-simulation-runtime": { "kind": "MODULE", "moduleId": "ive-strategy-simulation", "gateFile": "_shared/aef_runtime_endpoint.ts" }
+    "strategy-simulation-runtime": { "kind": "MODULE", "moduleId": "ive-strategy-simulation", "gateFile": "_shared/aef_runtime_endpoint.ts" },
+    "validate-mobile-purchase": { "kind": "BILLING" }
   }
 }
 // END_MODULE_POLICY_JSON

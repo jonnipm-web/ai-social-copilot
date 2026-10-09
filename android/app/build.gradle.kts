@@ -7,6 +7,46 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// IV-ECOSYSTEM-COMMERCIAL-RELEASE-SUPERMACRO-01 D2 — per-flavor version catalog.
+// android/app/version_catalog.properties holds independent versionCode/versionName
+// sequences for each product (separate Play Store apps). Each flavor reads its own
+// entry; pubspec.yaml's version is overridden at the flavor level.
+val versionCatalogFile = rootProject.file("app/version_catalog.properties")
+val versionCatalog = Properties()
+if (versionCatalogFile.exists()) {
+    versionCatalog.load(FileInputStream(versionCatalogFile))
+}
+
+fun catalogVersionCode(flavor: String): Int {
+    val raw = versionCatalog.getProperty("$flavor.versionCode")?.trim()
+        ?: throw GradleException(
+            "D2: android/app/version_catalog.properties is missing '$flavor.versionCode'. " +
+                "Set a valid positive integer before building."
+        )
+    val v = raw.toIntOrNull()
+        ?: throw GradleException(
+            "D2: '$flavor.versionCode' = '$raw' is not a valid integer in version_catalog.properties."
+        )
+    if (v < 1) throw GradleException(
+        "D2: '$flavor.versionCode' = $v must be >= 1. Play Store rejects versionCode < 1."
+    )
+    return v
+}
+
+fun catalogVersionName(flavor: String): String {
+    val v = versionCatalog.getProperty("$flavor.versionName")?.trim()
+        ?: throw GradleException(
+            "D2: android/app/version_catalog.properties is missing '$flavor.versionName'. " +
+                "Set a semver string (e.g. 1.0.0) before building."
+        )
+    if (!Regex("""^\d+\.\d+\.\d+$""").matches(v)) {
+        throw GradleException(
+            "D2: '$flavor.versionName' = '$v' must be MAJOR.MINOR.PATCH semver format."
+        )
+    }
+    return v
+}
+
 // PLAY-READINESS-18 (Section 6-7) — standard Flutter/Android release-signing
 // pattern: reads android/key.properties (never committed -- see
 // android/.gitignore) if it exists. The actual keystore file and its
@@ -137,19 +177,22 @@ android {
         create("core") {
             dimension = "product"
             applicationId = "com.insightvalues.core"
-            versionNameSuffix = "-core"
+            versionCode = catalogVersionCode("core")
+            versionName = catalogVersionName("core")
             // Firebase: android/app/src/core/google-services.json (BLOCKED_OWNER)
         }
         create("impact") {
             dimension = "product"
             applicationId = "com.insightvalues.impact"
-            versionNameSuffix = "-impact"
+            versionCode = catalogVersionCode("impact")
+            versionName = catalogVersionName("impact")
             // Firebase: android/app/src/impact/google-services.json (BLOCKED_OWNER)
         }
         create("quant") {
             dimension = "product"
             applicationId = "com.insightvalues.quant"
-            versionNameSuffix = "-quant"
+            versionCode = catalogVersionCode("quant")
+            versionName = catalogVersionName("quant")
             // Firebase: android/app/src/quant/google-services.json (BLOCKED_OWNER)
         }
     }

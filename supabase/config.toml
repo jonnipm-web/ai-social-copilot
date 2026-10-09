@@ -87,3 +87,10 @@ verify_jwt = false
 # See .github/deploy-allowlist.tsv for the matching entry.
 [functions.entitlement-reconcile]
 verify_jwt = false
+
+# IV-ECOSYSTEM-COMMERCIAL-RELEASE-SUPERMACRO-01 D6/D7: mobile receipt
+# validation stub. verify_jwt=true (user session required). Returns
+# BILLING_NOT_ACTIVATED until IV-MOBILE-BILLING-01 gate is cleared by
+# Paulo + Agente Martins. See validate-mobile-purchase/index.ts.
+[functions.validate-mobile-purchase]
+verify_jwt = true

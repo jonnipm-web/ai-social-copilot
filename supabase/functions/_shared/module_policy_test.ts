@@ -215,5 +215,6 @@ Deno.test('MP-10 non-MODULE kinds are a closed, reviewed allowlist — a new fun
     'localize-content:PRESENTATION',
     'module-access:ENTITLEMENT',
     'stripe-webhook:PUBLIC_WEBHOOK',
+    'validate-mobile-purchase:BILLING',
   ]);
 });

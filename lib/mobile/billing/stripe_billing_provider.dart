@@ -59,5 +59,11 @@ class StripeBillingProvider implements BillingProvider {
   }
 
   @override
+  Future<void> acknowledgePurchase(String transactionId) async {
+    // Stripe entitlement is server-driven via webhooks.
+    // There is no client-side acknowledgement step for Stripe.
+  }
+
+  @override
   Future<void> dispose() async {}
 }

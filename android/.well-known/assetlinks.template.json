@@ -1,0 +1,32 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.insightvalues.core",
+      "sha256_cert_fingerprints": [
+        "<SHA256_CORE>"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.insightvalues.impact",
+      "sha256_cert_fingerprints": [
+        "<SHA256_IMPACT>"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.insightvalues.quant",
+      "sha256_cert_fingerprints": [
+        "<SHA256_QUANT>"
+      ]
+    }
+  }
+]

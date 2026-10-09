@@ -101,3 +101,7 @@ stripe-webhook	--no-verify-jwt
 # Server-to-server: authenticated by service_role Bearer token in Authorization header.
 # Never called directly by clients. verify_jwt=false intentional (uses custom auth check).
 entitlement-reconcile	--no-verify-jwt
+# IV-ECOSYSTEM-COMMERCIAL-RELEASE-SUPERMACRO-01 D6/D7: mobile receipt validation stub.
+# verify_jwt=true (user session required). Stub returns BILLING_NOT_ACTIVATED (503) until
+# IV-MOBILE-BILLING-01 gate is cleared by Paulo + Agente Martins.
+validate-mobile-purchase
