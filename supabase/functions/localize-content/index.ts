@@ -77,6 +77,12 @@ export interface LocalizationDeps {
   fetchCache(userId: string, table: string, ids: string[], lang: TargetLanguage): Promise<CachedLocalization[]>;
   /** Counts model-backed attempts (success + failure) in the last 24h. */
   countFreshToday(userId: string): Promise<number>;
+  /**
+   * Atomically reserves up to `count` translation slots via DB advisory lock
+   * (migration 00012). Returns the actual number reserved (0 = quota exhausted).
+   * Optional for backward-compat with existing tests; falls back to countFreshToday.
+   */
+  reserveQuota?(userId: string, count: number): Promise<number>;
   /** profiles.is_active — deactivated accounts get no paid capacity. */
   isActive(userId: string): Promise<boolean>;
   saveCache(row: {
@@ -119,8 +125,15 @@ export async function handler(req: Request, deps?: LocalizationDeps, authClient?
   const cache = new Map((await d.fetchCache(userId, table, rows.map((r) => String(r.id)), lang)).map((c) => [c.source_id, c]));
 
   const items: Record<string, { source_language: string | null; payload: Record<string, unknown> }> = {};
-  const fresh = DAILY_FRESH_TRANSLATION_CAP - await d.countFreshToday(userId);
-  let freshBudget = fresh;
+  // R6 P1 fix (migration 00012): use atomic DB reservation when available to prevent
+  // concurrent requests from all reading the same stale count. Falls back to the
+  // non-atomic countFreshToday path for test mocks that do not supply reserveQuota.
+  let freshBudget: number;
+  if (d.reserveQuota) {
+    freshBudget = await d.reserveQuota(userId, rows.length);
+  } else {
+    freshBudget = Math.max(0, DAILY_FRESH_TRANSLATION_CAP - await d.countFreshToday(userId));
+  }
 
   const work = async (row: Record<string, unknown>) => {
     const id = String(row.id);
@@ -212,6 +225,15 @@ function defaultDeps(): LocalizationDeps {
         .neq('model', MODEL_SAME_LANGUAGE);
       if (error) throw error;
       return count ?? 0;
+    },
+    async reserveQuota(userId, count) {
+      const { data, error } = await (await db()).rpc('try_reserve_localization_quota', {
+        p_user_id: userId,
+        p_requested: count,
+        p_cap: DAILY_FRESH_TRANSLATION_CAP,
+      });
+      if (error) throw error;
+      return (data as number) ?? 0;
     },
     async isActive(userId) {
       const { data, error } = await (await db()).from('profiles')
