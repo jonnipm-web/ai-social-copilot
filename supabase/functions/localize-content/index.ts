@@ -179,7 +179,9 @@ export async function handler(req: Request, deps?: LocalizationDeps, authClient?
       // Infinity-decrements for subsequent batches — correct because tests never
       // exercise multi-batch rows with a tight budget.
       if (d.reserveOneSlot) {
-        if (!(await d.reserveOneSlot(userId))) { await recordFailure(); return; }
+        // Quota exhaustion mid-row: skip gracefully — do NOT overwrite any prior cache
+        // entry with a failure record. Quota self-refills; re-attempt on next request.
+        if (!(await d.reserveOneSlot(userId))) return;
       } else if (freshBudget <= 0) {
         return; // graceful: row stays original this time
       } else {
@@ -241,12 +243,24 @@ function defaultDeps(): LocalizationDeps {
       return count ?? 0;
     },
     async reserveOneSlot(userId) {
-      const { data, error } = await (await db()).rpc('try_reserve_localization_slot', {
-        p_user_id: userId,
-        p_cap: DAILY_FRESH_TRANSLATION_CAP,
-      });
-      if (error) throw error;
-      return data === true;
+      try {
+        const { data, error } = await (await db()).rpc('try_reserve_localization_slot', {
+          p_user_id: userId,
+          p_cap: DAILY_FRESH_TRANSLATION_CAP,
+        });
+        if (error) throw error;
+        return data === true;
+      } catch {
+        // Migration 00012 not yet applied: fall back to non-atomic count check so the
+        // function stays available during the deployment window (quota races may occur
+        // briefly until the migration is applied — acceptable transient degradation).
+        const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+        const { count } = await (await db()).from('content_localizations')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId).gte('updated_at', since)
+          .neq('model', MODEL_SAME_LANGUAGE);
+        return (count ?? 0) < DAILY_FRESH_TRANSLATION_CAP;
+      }
     },
     async isActive(userId) {
       const { data, error } = await (await db()).from('profiles')
