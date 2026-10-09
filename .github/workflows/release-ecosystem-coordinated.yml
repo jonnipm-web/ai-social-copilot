@@ -1,0 +1,599 @@
+name: Coordinated Ecosystem Release
+
+# IV-MOBILE-ECOSYSTEM-RELEASE-CLOSURE-01 — Codex R4 P1 fix.
+#
+# Single authoritative release workflow: signing secret validation, keystore
+# integrity check, and all three product flavor AAB builds happen in the SAME
+# approved run, under the SAME environment approval, with the SAME secret
+# snapshot. This eliminates the stale-gate risk where an old ecosystem gate
+# run could authorise a build after secret rotation.
+#
+# This is the CANONICAL release path. build-release-aab.yml remains available
+# for single-flavor development builds but is NOT the release path.
+#
+# BLOCKED_OWNER prerequisites (required before this workflow can succeed):
+#   1. Generate upload keystore locally — see android/key.properties.template
+#   2. Rotate KEYSTORE_* secrets (PLAY-READINESS-18: any secrets from the
+#      disabled generate-keystore.yml are permanently compromised)
+#   3. Populate GitHub Secrets: KEYSTORE_BASE64, KEYSTORE_STORE_PASSWORD,
+#      KEYSTORE_KEY_ALIAS, KEYSTORE_KEY_PASSWORD, GOOGLE_CLIENT_ID
+#   4. Create the release-signing environment (Settings → Environments):
+#        - Required reviewers: Owner (Paulo)
+#        - Deployment branches: main only
+#
+# Security properties:
+#   - workflow_dispatch only + RELEASE confirmation input
+#   - main-only enforcement at job-level (if:) and inline ref guard
+#   - environment: release-signing (single Owner approval gates all builds)
+#   - ubuntu-22.04 (pinned, not mutable ubuntu-latest)
+#   - actions/checkout pinned to immutable SHA (v4.2.2)
+#   - Flutter 3.47.4 from Google storage, SHA-256 verified vs official manifest
+#   - Java 17 pre-installed on ubuntu-22.04 (no mutable third-party action)
+#   - All secrets via env: only, never interpolated into shell bodies
+#   - Keystore validated by keytool before any AAB build starts
+#   - Keystore decoded to temp file; always-run cleanup step
+#   - Signing material created after pub get; removed by always-run cleanup
+#   - upload-artifact pinned to immutable SHA (v4.6.2)
+#   - permissions: contents: read (minimum)
+#
+# Release sequence (run this workflow, then upload the artifacts):
+#   1. Dispatch this workflow → Owner approves via release-signing environment
+#   2. Workflow validates all secrets + builds Core, Impact, Quant AABs
+#   3. Download the three AAB artifacts + release-manifest.json from this run
+#   4. Upload each AAB to Google Play Console (BLOCKED_OWNER)
+#   5. Complete per-flavor store listings + content rating (BLOCKED_OWNER)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_release:
+        description: "Type RELEASE to confirm coordinated ecosystem release"
+        required: true
+        type: string
+
+jobs:
+  release:
+    name: Validate + Build — Core / Impact / Quant
+    runs-on: ubuntu-22.04
+    if: github.ref == 'refs/heads/main'
+
+    # Codex R7 P1-A fix: prevent overlapping dispatches for the same release.
+    # cancel-in-progress: false ensures a running release is never cancelled by
+    # a concurrent dispatch — the second dispatch will queue and wait instead.
+    # This does not prevent a second dispatch after a successful upload with the
+    # same pubspec version; the Owner MUST increment pubspec.yaml version before
+    # every dispatch intended for a new Play Store upload (versionCode is
+    # monotonically increasing and cannot be reused after a successful upload).
+    concurrency:
+      group: ecosystem-release
+      cancel-in-progress: false
+
+    permissions:
+      contents: read
+
+    environment: release-signing
+
+    steps:
+      # Codex R7/R13/R14/R15 P1 — defence-in-depth for release signing authorization.
+      # GitHub's `environment: release-signing` provides Owner-approval gating when
+      # correctly configured, but the YAML cannot query its own environment's
+      # protection rules without admin permissions (no API call is self-referential
+      # from inside the approved run without elevated `administration:read` scope).
+      #
+      # To enforce signing authorization in code, this step additionally requires
+      # that the dispatching actor IS the repository owner (github.repository_owner).
+      # This uses GitHub's own identity system — not a self-attestation — and ensures
+      # only the repo Owner (Paulo) can produce signed release artifacts regardless
+      # of environment configuration. An unauthorized actor with write access cannot
+      # pass this check.
+      #
+      # BLOCKED_OWNER — release-signing environment setup required before first run:
+      #   1. Settings → Environments → New environment: release-signing
+      #   2. Required reviewers: Owner (Paulo)
+      #   3. Deployment branches: Selected branches → main only
+      - name: Confirm release intent and verify authorized actor
+        env:
+          CONFIRM:    ${{ inputs.confirm_release }}
+          ACTOR:      ${{ github.actor }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: |
+          if [ "$CONFIRM" != "RELEASE" ]; then
+            echo "::error::Release aborted — input must be exactly: RELEASE"
+            exit 1
+          fi
+          # Machine-enforceable: only the repository owner may dispatch releases.
+          if [ "$ACTOR" != "$REPO_OWNER" ]; then
+            echo "::error::RELEASE BLOCKED: dispatch rejected — actor '$ACTOR' is not the repository owner '$REPO_OWNER'."
+            echo "::error::Only the repository owner may dispatch the coordinated ecosystem release."
+            exit 1
+          fi
+          echo "Release intent: confirmed."
+          echo "Actor authorization: OK — '$ACTOR' is the repository owner."
+
+      - name: Enforce main-only release ref
+        env:
+          GUARD_REF: ${{ github.ref }}
+        run: |
+          if [ "$GUARD_REF" != "refs/heads/main" ]; then
+            echo "::error::RELEASE BLOCKED: dispatched from non-main ref ($GUARD_REF)."
+            exit 1
+          fi
+          echo "Release ref check: OK (refs/heads/main)"
+
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Use Java 17 (pre-installed on ubuntu-22.04)
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_17_X64/bin" >> "$GITHUB_PATH"
+          "$JAVA_HOME_17_X64/bin/java" -version
+
+      # Codex R12 P1 fix: Flutter archive is now verified against a SHA-256
+      # pinned in this reviewed YAML (trust root = repository), NOT the live
+      # releases manifest. The manifest is still fetched and cross-checked to
+      # detect out-of-band updates to Flutter 3.47.4, but the authoritative
+      # digest is the PINNED value below. To upgrade Flutter: update BOTH
+      # FLUTTER_VERSION and PINNED_FLUTTER_SHA256 together in a reviewed commit.
+      # SHA-256 was verified against storage.googleapis.com/flutter_infra_release
+      # on 2026-10-09 and matches the stable channel release for 3.47.4.
+      - name: Install Flutter 3.47.4 (stable, SHA-256 pinned in repo)
+        run: |
+          FLUTTER_VERSION="3.47.4"
+          # Pinned SHA-256 — update this together with FLUTTER_VERSION when upgrading.
+          PINNED_FLUTTER_SHA256="5b45f0ceda99b9bebdc873e7e69f6450aeb4c30f454b505e2e62fc9255a907d3"
+
+          ARCHIVE_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
+          RELEASES_URL="https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json"
+
+          # Cross-check: verify the live manifest still advertises the same digest.
+          # A mismatch means Flutter ${FLUTTER_VERSION} was re-released with a new
+          # binary — this workflow must be updated before the next release build.
+          MANIFEST_SHA256=$(curl -fsSL "$RELEASES_URL" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for r in data.get('releases', []):
+              if r.get('version') == '${FLUTTER_VERSION}' and r.get('channel') == 'stable':
+                  print(r.get('sha256', ''))
+                  break
+          " || echo "")
+
+          if [ -n "$MANIFEST_SHA256" ] && [ "$MANIFEST_SHA256" != "$PINNED_FLUTTER_SHA256" ]; then
+            echo "::error::Flutter manifest SHA-256 drift detected: pinned=$PINNED_FLUTTER_SHA256 manifest=$MANIFEST_SHA256"
+            echo "::error::Update PINNED_FLUTTER_SHA256 in this workflow after reviewing the new release."
+            exit 1
+          fi
+
+          curl -fsSL "$ARCHIVE_URL" -o flutter.tar.xz
+          ACTUAL_SHA256=$(sha256sum flutter.tar.xz | cut -d' ' -f1)
+
+          if [ "$ACTUAL_SHA256" != "$PINNED_FLUTTER_SHA256" ]; then
+            echo "::error::Flutter archive integrity check FAILED (against pinned digest)."
+            echo "::error::Pinned: $PINNED_FLUTTER_SHA256  Actual: $ACTUAL_SHA256"
+            rm -f flutter.tar.xz
+            exit 1
+          fi
+
+          echo "Flutter archive integrity: OK (SHA-256 matches pinned digest)"
+          tar xf flutter.tar.xz
+          rm flutter.tar.xz
+          echo "$GITHUB_WORKSPACE/flutter/bin" >> "$GITHUB_PATH"
+          flutter/bin/flutter config --no-analytics
+          flutter/bin/flutter precache --android --no-ios --no-web
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: Validate signing secrets — presence + format
+        env:
+          KEYSTORE_BASE64:         ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_ALIAS:      ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASSWORD:   ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          GOOGLE_CLIENT_ID:        ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: |
+          missing=()
+          placeholder=()
+
+          check_secret() {
+            local name="$1" val="$2" placeholder_val="$3"
+            if [ -z "$val" ]; then
+              missing+=("$name")
+            elif [ -n "$placeholder_val" ] && [ "$val" = "$placeholder_val" ]; then
+              placeholder+=("$name")
+            fi
+          }
+
+          check_secret "KEYSTORE_BASE64"         "$KEYSTORE_BASE64"         ""
+          check_secret "KEYSTORE_STORE_PASSWORD" "$KEYSTORE_STORE_PASSWORD" "REPLACE_WITH_YOUR_STORE_PASSWORD"
+          check_secret "KEYSTORE_KEY_ALIAS"      "$KEYSTORE_KEY_ALIAS"      "REPLACE_WITH_YOUR_KEY_ALIAS"
+          check_secret "KEYSTORE_KEY_PASSWORD"   "$KEYSTORE_KEY_PASSWORD"   "REPLACE_WITH_YOUR_KEY_PASSWORD"
+          check_secret "GOOGLE_CLIENT_ID"        "$GOOGLE_CLIENT_ID"        "placeholder.apps.googleusercontent.com"
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing secrets: ${missing[*]}"
+            exit 1
+          fi
+          if [ ${#placeholder[@]} -gt 0 ]; then
+            echo "::error::Secrets contain placeholder values (PLAY-READINESS-18): ${placeholder[*]}"
+            exit 1
+          fi
+          if ! echo "$GOOGLE_CLIENT_ID" | grep -qE '^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$'; then
+            echo "::error::GOOGLE_CLIENT_ID format invalid."
+            exit 1
+          fi
+          echo "All signing secrets: PRESENT and non-placeholder."
+
+      - name: Validate keystore (JKS/PKCS12 + store password + alias + key password)
+        env:
+          KEYSTORE_BASE64:         ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_ALIAS:      ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASSWORD:   ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+        run: |
+          KEYSTORE_TMP=$(mktemp --suffix=.jks)
+          echo "KEYSTORE_PRECHECK_TMP=$KEYSTORE_TMP" >> "$GITHUB_ENV"
+
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_TMP"
+
+          # Validate store password + alias existence.
+          keytool -list \
+            -keystore "$KEYSTORE_TMP" \
+            -storepass "$KEYSTORE_STORE_PASSWORD" \
+            -alias "$KEYSTORE_KEY_ALIAS" 2>&1
+          if [ $? -ne 0 ]; then
+            echo "::error::RELEASE BLOCKED: invalid keystore, wrong store password, or alias not found."
+            rm -f "$KEYSTORE_TMP"
+            exit 1
+          fi
+
+          # Validate key password via CSR generation (accesses the private key).
+          keytool -certreq \
+            -alias "$KEYSTORE_KEY_ALIAS" \
+            -keystore "$KEYSTORE_TMP" \
+            -storepass "$KEYSTORE_STORE_PASSWORD" \
+            -keypass "$KEYSTORE_KEY_PASSWORD" \
+            -file /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "::error::RELEASE BLOCKED: wrong KEYSTORE_KEY_PASSWORD for alias $KEYSTORE_KEY_ALIAS."
+            rm -f "$KEYSTORE_TMP"
+            exit 1
+          fi
+
+          # Codex R8 P1-B: capture the certificate SHA-256 fingerprint from the
+          # validated keystore for post-build AAB signing verification.
+          CERT_FP=$(keytool -list -v \
+            -keystore "$KEYSTORE_TMP" \
+            -storepass "$KEYSTORE_STORE_PASSWORD" \
+            -alias "$KEYSTORE_KEY_ALIAS" 2>&1 \
+            | grep "SHA256:" | head -1 | sed 's/.*SHA256: *//' | tr -d ' ')
+          if [ -z "$CERT_FP" ]; then
+            echo "::error::Failed to extract certificate fingerprint from keystore."
+            rm -f "$KEYSTORE_TMP"
+            exit 1
+          fi
+          echo "EXPECTED_CERT_SHA256=$CERT_FP" >> "$GITHUB_ENV"
+          echo "Keystore pre-check: OK (store password, alias, and key password all valid)"
+          echo "Certificate SHA-256 fingerprint captured for post-build AAB verification."
+
+      # Remove the validation-only temp keystore before the build-time keystore
+      # is decoded into the workspace. The build uses android/upload-keystore.jks
+      # (below), not this temp file.
+      - name: Cleanup pre-build temp keystore
+        if: always()
+        run: |
+          if [ -n "${KEYSTORE_PRECHECK_TMP:-}" ]; then
+            rm -f "$KEYSTORE_PRECHECK_TMP"
+          fi
+
+      # flutter_env.cfg is the runtime asset read by flutter_dotenv at startup.
+      # GOOGLE_CLIENT_ID written via env: + printf (never shell-interpolated).
+      - name: Create flutter_env.cfg (runtime asset)
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: |
+          printf 'SUPABASE_URL=https://nzngvbajrnruknpzzjbf.supabase.co\n' > flutter_env.cfg
+          printf 'SUPABASE_ANON_KEY=sb_publishable_fZboVtE9PeokahlYmhc_vg_t6JHOmFh\n' >> flutter_env.cfg
+          printf 'GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID" >> flutter_env.cfg
+
+      # Signing material created after pub get (minimises exposure window).
+      # KEYSTORE_BASE64 decoded from env var (not interpolated).
+      - name: Decode release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+
+      # key.properties written via Python os.environ (no shell interpolation).
+      - name: Create key.properties
+        env:
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD:   ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_KEY_ALIAS:      ${{ secrets.KEYSTORE_KEY_ALIAS }}
+        run: |
+          python3 - <<'PYEOF'
+          import os
+          lines = [
+              f"storePassword={os.environ['KEYSTORE_STORE_PASSWORD']}",
+              f"keyPassword={os.environ['KEYSTORE_KEY_PASSWORD']}",
+              f"keyAlias={os.environ['KEYSTORE_KEY_ALIAS']}",
+              "storeFile=../upload-keystore.jks",
+          ]
+          with open("android/key.properties", "w") as f:
+              f.write("\n".join(lines) + "\n")
+          PYEOF
+
+      - name: Build Core AAB (release)
+        run: |
+          flutter build appbundle --release \
+            --flavor core \
+            -t lib/main_core.dart
+
+      - name: Build Impact AAB (release)
+        run: |
+          flutter build appbundle --release \
+            --flavor impact \
+            -t lib/main_impact.dart
+
+      - name: Build Quant AAB (release)
+        run: |
+          flutter build appbundle --release \
+            --flavor quant \
+            -t lib/main_quant.dart
+
+      # Codex R8 P1-B: verify each AAB was signed with the expected keystore.
+      # Uses the certificate SHA-256 fingerprint captured from the keystore during
+      # validation. Catches accidental use of a different or wrong keystore by Gradle
+      # (e.g. debug keystore, rotated keystore, wrong flavor signing config).
+      # Uses keytool -printcert -jarfile which reads V1 JAR signing blocks in AABs.
+      - name: Verify AAB signing certificates
+        run: |
+          CORE_AAB="build/app/outputs/bundle/coreRelease/app-core-release.aab"
+          IMPACT_AAB="build/app/outputs/bundle/impactRelease/app-impact-release.aab"
+          QUANT_AAB="build/app/outputs/bundle/quantRelease/app-quant-release.aab"
+
+          cert_failures=()
+          for entry in "core:$CORE_AAB" "impact:$IMPACT_AAB" "quant:$QUANT_AAB"; do
+            FLAVOR="${entry%%:*}"
+            AAB="${entry#*:}"
+
+            ACTUAL_FP=$(keytool -printcert -jarfile "$AAB" 2>&1 \
+              | grep "SHA256:" | head -1 | sed 's/.*SHA256: *//' | tr -d ' ')
+
+            if [ -z "$ACTUAL_FP" ]; then
+              cert_failures+=("$FLAVOR: could not extract signing certificate from AAB (V2-only signing or build error)")
+            elif [ "$ACTUAL_FP" != "$EXPECTED_CERT_SHA256" ]; then
+              cert_failures+=("$FLAVOR: certificate mismatch — expected $EXPECTED_CERT_SHA256 got $ACTUAL_FP")
+            else
+              echo "$FLAVOR AAB signing certificate: OK"
+            fi
+          done
+
+          if [ ${#cert_failures[@]} -gt 0 ]; then
+            echo "::error::AAB signing certificate verification FAILED:"
+            for msg in "${cert_failures[@]}"; do
+              echo "::error::  $msg"
+            done
+            exit 1
+          fi
+          echo "All three AABs signed with expected keystore certificate: PASS"
+
+      # Always-run cleanup: remove signing material even if a build failed.
+      - name: Secure cleanup — keystore and key.properties
+        if: always()
+        run: |
+          rm -f android/upload-keystore.jks android/key.properties
+          echo "Signing material removed."
+
+      # Record SHA-256, version (derived from pubspec.yaml — not hardcoded),
+      # and provenance for release manifest and summary.
+      # Codex R6 P1-A fix: read version_code and version_name from the checked-out
+      # source to avoid hardcoded values that would repeat on subsequent Play uploads.
+      - name: Record artifact provenance
+        run: |
+          SOURCE_SHA=$(git rev-parse HEAD)
+
+          CORE_AAB="build/app/outputs/bundle/coreRelease/app-core-release.aab"
+          IMPACT_AAB="build/app/outputs/bundle/impactRelease/app-impact-release.aab"
+          QUANT_AAB="build/app/outputs/bundle/quantRelease/app-quant-release.aab"
+
+          CORE_SHA=$(sha256sum "$CORE_AAB" | cut -d' ' -f1)
+          IMPACT_SHA=$(sha256sum "$IMPACT_AAB" | cut -d' ' -f1)
+          QUANT_SHA=$(sha256sum "$QUANT_AAB" | cut -d' ' -f1)
+
+          DART_VERSION=$(flutter/bin/flutter --version 2>/dev/null | grep -oP '(?<=Dart )[0-9.]+' || echo "unknown")
+
+          # Derive version from pubspec.yaml (format: "version: X.Y.Z+N").
+          # The +N part is versionCode; X.Y.Z is versionName base.
+          # Gradle appends the flavor suffix (-core, -impact, -quant) at build time.
+          PUBSPEC_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: *//')
+          PUBSPEC_VERSION_NAME=$(echo "$PUBSPEC_VERSION" | cut -d'+' -f1)
+          PUBSPEC_VERSION_CODE=$(echo "$PUBSPEC_VERSION" | cut -d'+' -f2)
+
+          echo "SOURCE_SHA=$SOURCE_SHA"                     >> "$GITHUB_ENV"
+          echo "CORE_AAB_SHA256=$CORE_SHA"                  >> "$GITHUB_ENV"
+          echo "IMPACT_AAB_SHA256=$IMPACT_SHA"              >> "$GITHUB_ENV"
+          echo "QUANT_AAB_SHA256=$QUANT_SHA"                >> "$GITHUB_ENV"
+          echo "DART_VERSION=$DART_VERSION"                 >> "$GITHUB_ENV"
+          echo "PUBSPEC_VERSION_NAME=$PUBSPEC_VERSION_NAME" >> "$GITHUB_ENV"
+          echo "PUBSPEC_VERSION_CODE=$PUBSPEC_VERSION_CODE" >> "$GITHUB_ENV"
+
+          echo "Core:         $CORE_SHA"
+          echo "Impact:       $IMPACT_SHA"
+          echo "Quant:        $QUANT_SHA"
+          echo "Version:      $PUBSPEC_VERSION_NAME+$PUBSPEC_VERSION_CODE"
+
+      # Release manifest: machine-readable provenance record for this run.
+      # Written via python3 to avoid shell interpolation issues with JSON.
+      # Codex R6 P1-A: version fields derived from pubspec.yaml, not hardcoded.
+      # Codex R6 P2: manifest fields reflect only what this workflow actually
+      # verifies (build + signing); unverified gates are listed as NOT_VERIFIED.
+      - name: Generate release manifest
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, os
+          from datetime import datetime, timezone
+
+          version_name = os.environ.get("PUBSPEC_VERSION_NAME", "unknown")
+          version_code_str = os.environ.get("PUBSPEC_VERSION_CODE", "0")
+          try:
+              version_code = int(version_code_str)
+          except ValueError:
+              version_code = 0
+
+          manifest = {
+              "release": {
+                  "git_sha": os.environ.get("SOURCE_SHA", ""),
+                  "run_id": os.environ.get("RUN_ID", ""),
+                  "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                  "flutter_version": "3.47.4",
+                  "dart_version": os.environ.get("DART_VERSION", "unknown"),
+                  "scope": "ci_build_and_signing_only",
+                  "billing_mode": "FAIL_CLOSED_NOT_ACTIVATED",
+                  "backend_entitlement": "NOT_VERIFIED_BY_THIS_WORKFLOW",
+                  "security_audit_ci": "Codex CLASS D R6 PASS P0=0 P1=0 (CI workflows only)",
+                  "production_readiness": "NOT_VERIFIED — backend, store, and deployment gates not run by this workflow"
+              },
+              "flavors": {
+                  "core": {
+                      "application_id": "com.insightvalues.core",
+                      "version_name": f"{version_name}-core",
+                      "version_code": version_code,
+                      "aab_sha256": os.environ.get("CORE_AAB_SHA256", "")
+                  },
+                  "impact": {
+                      "application_id": "com.insightvalues.impact",
+                      "version_name": f"{version_name}-impact",
+                      "version_code": version_code,
+                      "aab_sha256": os.environ.get("IMPACT_AAB_SHA256", "")
+                  },
+                  "quant": {
+                      "application_id": "com.insightvalues.quant",
+                      "version_name": f"{version_name}-quant",
+                      "version_code": version_code,
+                      "aab_sha256": os.environ.get("QUANT_AAB_SHA256", "")
+                  }
+              },
+              "signing": {
+                  "validation": "keytool PASS — store password, alias, and key password verified in this run",
+                  "type": "upload_keystore",
+                  "play_app_signing": "BLOCKED_OWNER — enroll after first upload to Play Console"
+              },
+              "version_note": (
+                  f"Version {version_name}+{version_code} derived from pubspec.yaml at {os.environ.get('SOURCE_SHA','')[:8]}. "
+                  "Increment pubspec version before each Play Store upload (version_code must be monotonically increasing)."
+              ),
+              "blocked_owner": [
+                  "upload_keystore_generation",
+                  "keystore_secret_rotation_play_readiness_18",
+                  "play_console_app_creation_per_flavor",
+                  "firebase_google_services_json_per_flavor",
+                  "assetlinks_json_per_application_id",
+                  "store_listings_screenshots_content_rating",
+                  "billing_live_activation",
+                  "backend_production_migration_and_deploy"
+              ]
+          }
+
+          with open("release-manifest.json", "w") as f:
+              json.dump(manifest, f, indent=2)
+          print(f"Release manifest written (v{version_name}+{version_code}).")
+          PYEOF
+
+      - name: Upload Core AAB
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: ive-core-release-aab-${{ github.run_number }}
+          path: build/app/outputs/bundle/coreRelease/app-core-release.aab
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Impact AAB
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: ive-impact-release-aab-${{ github.run_number }}
+          path: build/app/outputs/bundle/impactRelease/app-impact-release.aab
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Quant AAB
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: ive-quant-release-aab-${{ github.run_number }}
+          path: build/app/outputs/bundle/quantRelease/app-quant-release.aab
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload release manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: ive-release-manifest-${{ github.run_number }}
+          path: release-manifest.json
+          retention-days: 30
+          if-no-files-found: error
+
+      # Codex R13 P1-B mitigation: make scope and BLOCKED_OWNER status explicit
+      # so an operator cannot mistake a successful CI run for a Play Store-ready release.
+      - name: Release summary — signed build (NOT YET play-store-ready)
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          {
+            echo "## Signed Ecosystem Build — CI COMPLETE"
+            echo ""
+            echo "> **⛔ SCOPE: CI BUILD + SIGNING ONLY — NOT READY FOR PLAY STORE UPLOAD**"
+            echo "> This workflow validated signing secrets, built three signed AABs, and verified"
+            echo "> signing certificates. It did NOT verify backend, Firebase, billing, or"
+            echo "> store configuration. Do NOT upload to Google Play until all BLOCKED_OWNER"
+            echo "> items below are marked complete."
+            echo ""
+            echo "| | |"
+            echo "|-|-|"
+            echo "| Git SHA | \`${SOURCE_SHA}\` |"
+            echo "| Run ID | \`${RUN_ID}\` |"
+            echo "| Flutter | 3.47.4 |"
+            echo "| Dart | ${DART_VERSION} |"
+            echo "| Scope | \`ci_build_and_signing_only\` |"
+            echo ""
+            echo "## AAB Artifacts (signing verified — not production-ready)"
+            echo ""
+            echo "| Flavor | applicationId | SHA-256 |"
+            echo "|--------|--------------|---------|"
+            echo "| core   | com.insightvalues.core   | \`${CORE_AAB_SHA256}\` |"
+            echo "| impact | com.insightvalues.impact | \`${IMPACT_AAB_SHA256}\` |"
+            echo "| quant  | com.insightvalues.quant  | \`${QUANT_AAB_SHA256}\` |"
+            echo ""
+            echo "## Version (from pubspec.yaml)"
+            echo ""
+            echo "| | |"
+            echo "|-|-|"
+            echo "| pubspec version | \`${PUBSPEC_VERSION_NAME}+${PUBSPEC_VERSION_CODE}\` |"
+            echo "| versionCode (all flavors) | \`${PUBSPEC_VERSION_CODE}\` |"
+            echo ""
+            echo "> **⚠️ Before re-dispatching for a new Play Store upload:**"
+            echo "> Increment \`version:\` in \`pubspec.yaml\` (versionCode must be monotonically"
+            echo "> increasing). Google Play permanently rejects any build with a reused versionCode."
+            echo ""
+            echo "## Pre-Upload Owner Checklist (BLOCKED_OWNER — must all be ✅ before Play Store)"
+            echo ""
+            echo "| Status | Prerequisite |"
+            echo "|--------|-------------|"
+            echo "| ❌ | Generate upload keystore locally (\`android/key.properties.template\`) |"
+            echo "| ❌ | Rotate KEYSTORE_* secrets (PLAY-READINESS-18) |"
+            echo "| ❌ | Firebase: per-flavor \`google-services.json\` (core, impact, quant) |"
+            echo "| ❌ | Firebase: SHA-1 fingerprint registered per flavor in Firebase Console |"
+            echo "| ❌ | Google Play Console: create app for each flavor (3 apps) |"
+            echo "| ❌ | Play App Signing: enroll each app after first AAB upload |"
+            echo "| ❌ | \`assetlinks.json\` at \`insightvalues.com/.well-known/\` (per applicationId) |"
+            echo "| ❌ | Backend production migrations applied (Supabase) |"
+            echo "| ❌ | Billing: live activation |"
+            echo "| ❌ | Store listings: descriptions, screenshots, content rating (3 apps) |"
+            echo ""
+            echo "Upload to Play Store ONLY after all items above are marked ✅."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Coordinated build workflow: COMPLETE (CI scope only — see BLOCKED_OWNER checklist)"
