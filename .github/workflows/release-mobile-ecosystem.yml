@@ -1,0 +1,42 @@
+name: Mobile Ecosystem Release Gate (SUPERSEDED — use release-ecosystem-coordinated.yml)
+
+# IV-MOBILE-ECOSYSTEM-RELEASE-CLOSURE-01 — SUPERSEDED.
+#
+# This pre-release gate workflow was designed as Phase 1 of a two-step release
+# process: validate secrets here, then run build-release-aab.yml per flavor.
+# That architecture was superseded by the Single Coordinated Release Workflow
+# (Codex R4 P1 fix): release-ecosystem-coordinated.yml performs validation AND
+# all three AAB builds in a single approved run.
+#
+# Codex R10 P1 finding: this workflow's documented release sequence
+# (gate → build-release-aab.yml × 3) is permanently broken because
+# build-release-aab.yml is disabled (Codex R5 P1). Operators following these
+# instructions would see a successful gate followed by three deliberate failures.
+#
+# CANONICAL RELEASE PATH: .github/workflows/release-ecosystem-coordinated.yml
+#   — validates all secrets, runs keytool checks, builds Core+Impact+Quant AABs,
+#     verifies signing certificates, and uploads all artifacts in a single run.
+#
+# Security history:
+#   R1-R2: keytool -list + keytool -certreq signing validation implemented here
+#   R3: run ID / SHA binding (later made redundant by coordinated workflow)
+#   R4 ARCHITECTURAL: stale-gate risk resolved by merging gate+builds into one workflow
+#   R5: build-release-aab.yml disabled (alternate signing path removed)
+#   R10: this gate disabled (obsolete two-step sequence removed)
+
+# No trigger configured — this workflow is disabled (superseded by
+# release-ecosystem-coordinated.yml). The file is retained for audit trail only.
+# Codex R16 P2: removing workflow_dispatch prevents it from appearing in the
+# GitHub Actions UI and being confused for an executable release path.
+
+jobs:
+  disabled:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse to run
+        run: |
+          echo "This workflow is permanently superseded (Codex R10 P1)."
+          echo "Use .github/workflows/release-ecosystem-coordinated.yml for signed releases."
+          echo "It validates secrets, checks signing certificates, and builds all three"
+          echo "product flavor AABs (core, impact, quant) in a single Owner-approved run."
+          exit 1
