@@ -204,9 +204,17 @@ export async function handler(req: Request, deps?: LocalizationDeps, authClient?
 
   // Bounded concurrency keeps latency low without bursting the provider.
   const queue = [...rows];
-  await Promise.all(Array.from({ length: Math.min(4, queue.length) }, async () => {
-    while (queue.length > 0) await work(queue.shift()!);
-  }));
+  try {
+    await Promise.all(Array.from({ length: Math.min(4, queue.length) }, async () => {
+      while (queue.length > 0) await work(queue.shift()!);
+    }));
+  } catch (e) {
+    if (e instanceof Error && e.message === 'QUOTA_RPC_UNAVAILABLE') {
+      // Migration 00012 not applied: fail closed (P2 AM decision — no non-atomic fallback).
+      return json({ error: 'service_temporarily_unavailable', detail: 'quota_rpc_unavailable' }, 503);
+    }
+    throw e;
+  }
 
   return json({ items, language: lang });
 }
@@ -243,24 +251,20 @@ function defaultDeps(): LocalizationDeps {
       return count ?? 0;
     },
     async reserveOneSlot(userId) {
-      try {
-        const { data, error } = await (await db()).rpc('try_reserve_localization_slot', {
-          p_user_id: userId,
-          p_cap: DAILY_FRESH_TRANSLATION_CAP,
-        });
-        if (error) throw error;
-        return data === true;
-      } catch {
-        // Migration 00012 not yet applied: fall back to non-atomic count check so the
-        // function stays available during the deployment window (quota races may occur
-        // briefly until the migration is applied — acceptable transient degradation).
-        const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-        const { count } = await (await db()).from('content_localizations')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId).gte('updated_at', since)
-          .neq('model', MODEL_SAME_LANGUAGE);
-        return (count ?? 0) < DAILY_FRESH_TRANSLATION_CAP;
+      const { data, error } = await (await db()).rpc('try_reserve_localization_slot', {
+        p_user_id: userId,
+        p_cap: DAILY_FRESH_TRANSLATION_CAP,
+      });
+      if (error) {
+        // Migration 00012 MUST be applied before deploying this Edge Function.
+        // Fail closed: no non-atomic fallback in production (quota-bypass risk).
+        // Apply migration 00012 first, then deploy this function.
+        throw Object.assign(
+          new Error('QUOTA_RPC_UNAVAILABLE'),
+          { status: 503 },
+        );
       }
+      return data === true;
     },
     async isActive(userId) {
       const { data, error } = await (await db()).from('profiles')

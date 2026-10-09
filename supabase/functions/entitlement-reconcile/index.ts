@@ -32,6 +32,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL       = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+// EA-01 (2026-10-09): dedicated reconciler credential from Vault (via ENTITLEMENT_RECONCILE_SECRET
+// env var). pg_cron uses this token so service_role_key is never stored in pg_settings.
+// The Supabase client still uses SERVICE_ROLE_KEY (unchanged); only the inbound auth token
+// also accepts ENTITLEMENT_RECONCILE_SECRET. If set, it is the PREFERRED credential for
+// the pg_cron caller; SERVICE_ROLE_KEY remains accepted for backward compat during rollout.
+const RECONCILE_SECRET   = Deno.env.get('ENTITLEMENT_RECONCILE_SECRET') ?? '';
 const DEFAULT_BATCH_SIZE = 50;
 const MAX_BATCH_SIZE     = 200;
 
@@ -76,10 +82,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return new Response('Method Not Allowed', { status: 405 });
   }
 
-  // Auth: require service_role key
+  // Auth: accept ENTITLEMENT_RECONCILE_SECRET (dedicated pg_cron token, EA-01) OR
+  // SERVICE_ROLE_KEY (backward compat during rollout). At least one must be configured.
+  // ENTITLEMENT_RECONCILE_SECRET is the preferred credential post-EA-01; pg_cron reads
+  // it from Vault via invoke_entitlement_reconciler — service_role_key never in GUC.
   const authHeader = req.headers.get('Authorization') ?? '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
-  if (!SERVICE_ROLE_KEY || token !== SERVICE_ROLE_KEY) {
+  const validToken = (RECONCILE_SECRET && token === RECONCILE_SECRET)
+                  || (SERVICE_ROLE_KEY  && token === SERVICE_ROLE_KEY);
+  if (!validToken) {
     return new Response('Unauthorized', { status: 401 });
   }
 
