@@ -78,11 +78,13 @@ export interface LocalizationDeps {
   /** Counts model-backed attempts (success + failure) in the last 24h. */
   countFreshToday(userId: string): Promise<number>;
   /**
-   * Atomically reserves up to `count` translation slots via DB advisory lock
-   * (migration 00012). Returns the actual number reserved (0 = quota exhausted).
+   * Atomically reserves one translation slot via DB advisory lock (migration 00012).
+   * Returns true when the slot was granted, false when quota is exhausted.
+   * Called once per LLM attempt, not upfront per request, so cache hits and
+   * same-language rows never consume quota.
    * Optional for backward-compat with existing tests; falls back to countFreshToday.
    */
-  reserveQuota?(userId: string, count: number): Promise<number>;
+  reserveOneSlot?(userId: string): Promise<boolean>;
   /** profiles.is_active — deactivated accounts get no paid capacity. */
   isActive(userId: string): Promise<boolean>;
   saveCache(row: {
@@ -125,15 +127,14 @@ export async function handler(req: Request, deps?: LocalizationDeps, authClient?
   const cache = new Map((await d.fetchCache(userId, table, rows.map((r) => String(r.id)), lang)).map((c) => [c.source_id, c]));
 
   const items: Record<string, { source_language: string | null; payload: Record<string, unknown> }> = {};
-  // R6 P1 fix (migration 00012): use atomic DB reservation when available to prevent
-  // concurrent requests from all reading the same stale count. Falls back to the
-  // non-atomic countFreshToday path for test mocks that do not supply reserveQuota.
-  let freshBudget: number;
-  if (d.reserveQuota) {
-    freshBudget = await d.reserveQuota(userId, rows.length);
-  } else {
-    freshBudget = Math.max(0, DAILY_FRESH_TRANSLATION_CAP - await d.countFreshToday(userId));
-  }
+  // R6 P1 fix rev (migration 00012): when reserveOneSlot is wired (production), the
+  // per-call DB reservation handles quota atomically; the in-memory freshBudget is
+  // Infinity and never gates. When reserveOneSlot is absent (test mocks), fall back
+  // to the countFreshToday-based in-memory budget (non-atomic but sufficient for tests).
+  const fresh = d.reserveOneSlot
+    ? Infinity
+    : Math.max(0, DAILY_FRESH_TRANSLATION_CAP - await d.countFreshToday(userId));
+  let freshBudget = fresh;
 
   const work = async (row: Record<string, unknown>) => {
     const id = String(row.id);
@@ -161,8 +162,14 @@ export async function handler(req: Request, deps?: LocalizationDeps, authClient?
       return;
     }
 
-    if (freshBudget <= 0) return; // graceful: row stays original this time
-    freshBudget -= 1;
+    // R6 P1 fix (00012 rev2): per-call atomic reservation in production; in-memory
+    // freshBudget fallback for tests that do not supply reserveOneSlot.
+    if (d.reserveOneSlot) {
+      if (!(await d.reserveOneSlot(userId))) return; // quota exhausted
+    } else {
+      if (freshBudget <= 0) return; // graceful: row stays original this time
+      freshBudget -= 1;
+    }
     const recordFailure = () => d.saveCache({
       user_id: userId, source_table: table, source_id: id, target_language: lang,
       source_hash: hash, source_language: null, payload: {}, model: MODEL_FAILED,
@@ -226,14 +233,13 @@ function defaultDeps(): LocalizationDeps {
       if (error) throw error;
       return count ?? 0;
     },
-    async reserveQuota(userId, count) {
-      const { data, error } = await (await db()).rpc('try_reserve_localization_quota', {
+    async reserveOneSlot(userId) {
+      const { data, error } = await (await db()).rpc('try_reserve_localization_slot', {
         p_user_id: userId,
-        p_requested: count,
         p_cap: DAILY_FRESH_TRANSLATION_CAP,
       });
       if (error) throw error;
-      return (data as number) ?? 0;
+      return data === true;
     },
     async isActive(userId) {
       const { data, error } = await (await db()).from('profiles')
