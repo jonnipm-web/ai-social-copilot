@@ -210,6 +210,7 @@ Deno.test('MP-10 non-MODULE kinds are a closed, reviewed allowlist — a new fun
     .sort();
   assertEquals(nonModule, [
     'create-checkout-session:BILLING',
+    'entitlement-reconcile:ENTITLEMENT',
     'ive-agent-runner:RETIRED',
     'localize-content:PRESENTATION',
     'module-access:ENTITLEMENT',

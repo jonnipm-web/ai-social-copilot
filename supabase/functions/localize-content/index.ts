@@ -181,6 +181,21 @@ export async function handler(req: Request, deps?: LocalizationDeps, authClient?
       if (d.reserveOneSlot) {
         // Quota exhaustion mid-row: skip gracefully — do NOT overwrite any prior cache
         // entry with a failure record. Quota self-refills; re-attempt on next request.
+        //
+        // P2 RETRY SEMANTICS (Codex R11 P2, DEFERRED — documented per SUPERMACRO FASE C):
+        // If quota is exhausted AFTER earlier batches have already translated (multi-batch
+        // rows: rows with >9 000 chars of localizable content), the slots consumed by
+        // those earlier batches are lost with no translation saved. The full row must be
+        // re-attempted on the next request (rolling 24 h window). This is accepted because:
+        //   (a) multi-batch rows are rare in practice (>9 000 chars of content per row);
+        //   (b) the 300-slot daily cap is generous; losing 1-2 slots per exhaustion event
+        //       is not material to the user quota budget;
+        //   (c) the behavior is ATOMICALLY CONSISTENT — either a full row is saved or
+        //       nothing is, so the cache is never in a partially-translated state;
+        //   (d) retry is automatic on the next request.
+        // Fixing this properly requires either per-batch state tracking (save partial
+        // results) or upfront batch-count reservation (risks re-introducing R8 over-
+        // reservation). Both are larger changes than this feature warrants at this stage.
         if (!(await d.reserveOneSlot(userId))) return;
       } else if (freshBudget <= 0) {
         return; // graceful: row stays original this time

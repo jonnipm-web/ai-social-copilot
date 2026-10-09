@@ -203,6 +203,7 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "create-checkout-session": { "kind": "BILLING" },
     "impact-lab": { "kind": "MODULE", "moduleId": "impact" },
     "module-access": { "kind": "ENTITLEMENT" },
+    "entitlement-reconcile": { "kind": "ENTITLEMENT" },
     "stripe-webhook": { "kind": "PUBLIC_WEBHOOK" },
     "localize-content": { "kind": "PRESENTATION" },
     "ive-agent-runner": { "kind": "RETIRED" },
