@@ -99,15 +99,19 @@ export async function verifyStripeSignature(
   if (!signatureHeader) throw new Error('Missing Stripe-Signature header');
 
   let timestamp: string | undefined;
-  let v1: string | undefined;
+  // Collect ALL v1 signatures — Stripe sends multiple during endpoint-secret
+  // rotation (e.g. t=ts,v1=sig_old,v1=sig_new). Overwriting v1 on each
+  // iteration would reject valid events when the configured secret matches
+  // an earlier signature but not the final one (P2 Codex R4 fix).
+  const v1Sigs: string[] = [];
   for (const part of signatureHeader.split(',')) {
     const [k, v] = part.split('=');
     if (k === 't') timestamp = v;
     // Ignore v0 entirely -- it's a fake scheme Stripe includes only for
     // test-event convenience; trusting it would defeat verification.
-    if (k === 'v1') v1 = v;
+    if (k === 'v1' && v) v1Sigs.push(v);
   }
-  if (!timestamp || !v1) throw new Error('Malformed Stripe-Signature header');
+  if (!timestamp || v1Sigs.length === 0) throw new Error('Malformed Stripe-Signature header');
 
   const nowSeconds = Math.floor(Date.now() / 1000);
   const tsSeconds = Number(timestamp);
@@ -128,7 +132,7 @@ export async function verifyStripeSignature(
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 
-  if (!constantTimeEqual(expectedHex, v1)) {
+  if (!v1Sigs.some((sig) => constantTimeEqual(expectedHex, sig))) {
     throw new Error('Stripe webhook signature mismatch');
   }
 }
