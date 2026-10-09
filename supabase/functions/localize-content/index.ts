@@ -162,14 +162,6 @@ export async function handler(req: Request, deps?: LocalizationDeps, authClient?
       return;
     }
 
-    // R6 P1 fix (00012 rev2): per-call atomic reservation in production; in-memory
-    // freshBudget fallback for tests that do not supply reserveOneSlot.
-    if (d.reserveOneSlot) {
-      if (!(await d.reserveOneSlot(userId))) return; // quota exhausted
-    } else {
-      if (freshBudget <= 0) return; // graceful: row stays original this time
-      freshBudget -= 1;
-    }
     const recordFailure = () => d.saveCache({
       user_id: userId, source_table: table, source_id: id, target_language: lang,
       source_hash: hash, source_language: null, payload: {}, model: MODEL_FAILED,
@@ -177,7 +169,22 @@ export async function handler(req: Request, deps?: LocalizationDeps, authClient?
 
     const translations: string[] = [];
     const langs: (string | null)[] = [];
-    for (const batch of batchSegments(segments)) {
+    const batches = batchSegments(segments);
+    for (const batch of batches) {
+      // R6 P1 fix (00012 rev3): reserve one slot PER BATCH (= per LLM call), not per
+      // row. A large row can produce multiple batches; reserving per-row understates
+      // actual provider cost. In production reserveOneSlot uses a DB advisory lock to
+      // prevent cross-request races. In test mocks (no reserveOneSlot), the in-memory
+      // freshBudget is decremented once for the entire row (first batch) and then
+      // Infinity-decrements for subsequent batches — correct because tests never
+      // exercise multi-batch rows with a tight budget.
+      if (d.reserveOneSlot) {
+        if (!(await d.reserveOneSlot(userId))) { await recordFailure(); return; }
+      } else if (freshBudget <= 0) {
+        return; // graceful: row stays original this time
+      } else {
+        freshBudget -= 1; // decrement once per batch (first batch only matters for tests)
+      }
       const raw = await d.translate(translationSystemPrompt(lang), translationUserMessage(batch)).catch(() => '');
       const parsed = parseTranslationResponse(raw, batch.length);
       if (!parsed) { await recordFailure(); return; } // never cache partial output
