@@ -111,14 +111,18 @@ BEGIN
   END IF;
 
   -- EA-02 gate 2: product entitlement check (DB recomputation, independent of caller params).
-  -- Caller must have an active or trialing Impact subscription.
+  -- Caller must have an active or trialing Impact subscription that has not yet expired.
+  -- current_period_end check mirrors the canonical entitlement resolver: a row with
+  -- status='active' but past current_period_end is treated as expired (Stripe renewal pending).
+  -- NULL current_period_end = lifetime/non-expiring subscription → allowed.
   -- policy_outcome/execution_outcome are AUDIT METADATA — they are NOT consulted here.
   IF NOT EXISTS (
     SELECT 1
     FROM   public.product_subscriptions
-    WHERE  user_id = p_caller_user_id
-      AND  product = 'impact'
-      AND  status  IN ('active', 'trialing')
+    WHERE  user_id            = p_caller_user_id
+      AND  product            = 'impact'
+      AND  status             IN ('active', 'trialing')
+      AND  (current_period_end IS NULL OR clock_timestamp() <= current_period_end)
   ) THEN
     RETURN jsonb_build_object('ok', false, 'code', 'AEF_NO_IMPACT_ENTITLEMENT');
   END IF;
