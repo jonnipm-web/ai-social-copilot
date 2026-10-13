@@ -1,6 +1,6 @@
-# Production Promotion Bundle — FASE B
+# Production Promotion Bundle — FASE B (rev 2026-10-13)
 # IV-ECOSYSTEM-COMMERCIAL-RELEASE-SUPERMACRO-01
-# Gerado: 2026-10-09 | SHA base: 6bd4663
+# SHA base: 7fb2dd0 | atualizado de 6bd4663 (adição migration 00015 + correção SHAs 00013/00014)
 # Autoridade: Agente Martins + Paulo | PRODUCTION PROTECTION ACTIVE
 
 ---
@@ -12,7 +12,7 @@ Antes de iniciar qualquer passo:
 - [ ] Supabase Dashboard acessível (Owner)
 - [ ] Stripe Dashboard acessível em modo TEST (não ativar LIVE)
 - [ ] Edge Functions CLI (`supabase functions deploy`) disponível
-- [ ] Todos os commits presentes em origin/main (SHA atual: `6bd4663`)
+- [ ] Todos os commits presentes em origin/main (SHA atual: `7fb2dd0`)
 
 ---
 
@@ -77,7 +77,7 @@ SELECT public.try_reserve_localization_slot(
 **Depende do PASSO 1 (Vault secret criado)**
 ```sql
 -- Conteúdo: supabase/migrations/20261016000013_vault_reconciler_auth.sql
--- SHA-256: 45790306a672f99294e2e78ec3bf46a2110541de88b7e2914055aa45831a948e
+-- SHA-256: be3c5a03a7154d9693ecfc565ae46c76da50958a4e7ce6d4ceadef2880551dae
 ```
 Verificar:
 ```sql
@@ -92,7 +92,7 @@ WHERE routine_name = 'invoke_entitlement_reconciler';
 ### PASSO 6 — Aplicar migration 00014 (aef_hardening_ea02)
 ```sql
 -- Conteúdo: supabase/migrations/20261016000014_aef_hardening_ea02.sql
--- SHA-256: 8a7b61ab14f5eca845335519d307de46a4e7b91c971a4f21a81c22132d54e470
+-- SHA-256: b43f6a4bba834c5f88d21c19e42e8b33a108afbab0507965cdeb588a4b4fcc84
 ```
 Teste de smoke (verificar novos failure codes):
 ```sql
@@ -109,7 +109,30 @@ SELECT public.aef_submit_action(
 
 ---
 
-### PASSO 7 — Configurar env var ENTITLEMENT_RECONCILE_SECRET no Edge Function
+### PASSO 7 — Aplicar migration 00015 (security_definer_grant_hardening)
+**Independente — pode ser aplicada em qualquer ponto após PASSO 2**
+```sql
+-- Conteúdo: supabase/migrations/20261016000015_security_definer_grant_hardening.sql
+-- SHA-256: 6b64e9021a06c70248d487aefa8ccf02dce07e0cbea241ce5ed3c76a7b1b9380
+```
+Contexto: REVOKE EXECUTE from PUBLIC/anon/authenticated nas funções trigger-only
+(handle_new_user, validate_asset_id_ownership, validate_asset_parent_ownership,
+validate_asset_resource_ownership). Fecha a superfície REST /rpc/<name>. Idempotente.
+
+Verificar após aplicar:
+```sql
+SELECT has_function_privilege('anon', 'public.handle_new_user()', 'EXECUTE');
+-- expected: false
+
+SELECT has_function_privilege('authenticated', 'public.validate_asset_id_ownership()', 'EXECUTE');
+-- expected: false
+```
+⚠️ is_admin_user() e get_current_user_role() NÃO devem ser revogados — usados em RLS
+sem cláusula TO (quebra queries em todas as tabelas). Codex D validou esse escopo em 4 rodadas.
+
+---
+
+### PASSO 8 — Configurar env var ENTITLEMENT_RECONCILE_SECRET no Edge Function
 No Supabase Dashboard → Edge Functions → entitlement-reconcile → Environment Variables:
 ```
 ENTITLEMENT_RECONCILE_SECRET = <mesmo valor criado no PASSO 1>
@@ -118,7 +141,7 @@ ENTITLEMENT_RECONCILE_SECRET = <mesmo valor criado no PASSO 1>
 
 ---
 
-### PASSO 8 — Fazer deploy do Edge Function `localize-content`
+### PASSO 9 — Fazer deploy do Edge Function `localize-content`
 **Depende do PASSO 4 — RPC smoke test passou**
 ```bash
 supabase functions deploy localize-content --project-ref <project-ref>
@@ -135,8 +158,8 @@ curl -X POST https://<project>.supabase.co/functions/v1/localize-content \
 
 ---
 
-### PASSO 9 — Fazer deploy do Edge Function `entitlement-reconcile`
-**Depende do PASSO 7 — env var configurada**
+### PASSO 10 — Fazer deploy do Edge Function `entitlement-reconcile`
+**Depende do PASSO 8 — env var configurada**
 ```bash
 supabase functions deploy entitlement-reconcile --project-ref <project-ref>
 ```
@@ -150,7 +173,7 @@ curl -X POST https://<project>.supabase.co/functions/v1/entitlement-reconcile \
 
 ---
 
-### PASSO 10 — Remover GUC legado (após confirmar deploy OK)
+### PASSO 11 — Remover GUC legado (após confirmar deploy OK)
 **Opcional mas recomendado para eliminar o risco EA-01 completamente**
 No Supabase SQL Editor:
 ```sql
@@ -168,7 +191,7 @@ WHERE routine_definition ILIKE '%service_role_key%';
 
 ---
 
-### PASSO 11 — Atualizar pg_cron schedule (se já existia com service_role_key)
+### PASSO 12 — Atualizar pg_cron schedule (se já existia com service_role_key)
 Se o schedule do pg_cron estava passando o service_role_key como Bearer token:
 ```sql
 -- Verificar schedule atual:
@@ -181,14 +204,15 @@ SELECT * FROM cron.job WHERE jobname = 'invoke-entitlement-reconciler';
 
 ---
 
-### PASSO 12 — Atualizar migration_manifest.tsv com status APPLIED_PRODUCTION
+### PASSO 13 — Atualizar migration_manifest.tsv com status APPLIED_PRODUCTION
 Após confirmar todos os passos acima:
 ```tsv
-20261016000010_null_event_id_tiebreak_fix.sql    APPLIED_PRODUCTION
-20261016000011_reconciler_http_exception_guard.sql  APPLIED_PRODUCTION
-20261016000012_localization_quota_reservation.sql   APPLIED_PRODUCTION
-20261016000013_vault_reconciler_auth.sql             APPLIED_PRODUCTION
-20261016000014_aef_hardening_ea02.sql                APPLIED_PRODUCTION
+20261016000010_null_event_id_tiebreak_fix.sql                APPLIED_PRODUCTION
+20261016000011_reconciler_http_exception_guard.sql           APPLIED_PRODUCTION
+20261016000012_localization_quota_reservation.sql            APPLIED_PRODUCTION
+20261016000013_vault_reconciler_auth.sql                     APPLIED_PRODUCTION
+20261016000014_aef_hardening_ea02.sql                        APPLIED_PRODUCTION
+20261016000015_security_definer_grant_hardening.sql          APPLIED_PRODUCTION
 ```
 
 ---
@@ -208,6 +232,18 @@ Restaurar do backup da função `invoke_entitlement_reconciler` (conteúdo da mi
 ### Se migration 00014 causar problemas:
 Restaurar do backup da função `aef_submit_action` (conteúdo da migration 20261007000002).
 
+### Se migration 00015 causar problemas:
+Restaurar os GRANTs removidos:
+```sql
+GRANT EXECUTE ON FUNCTION public.handle_new_user() TO PUBLIC;
+GRANT EXECUTE ON FUNCTION public.validate_asset_id_ownership() TO PUBLIC;
+GRANT EXECUTE ON FUNCTION public.validate_asset_parent_ownership() TO PUBLIC;
+GRANT EXECUTE ON FUNCTION public.validate_asset_resource_ownership() TO PUBLIC;
+```
+⚠️ Isso reexpõe o surface REST dessas funções trigger. Aplicar rollback apenas se
+houver evidência de que o REVOKE quebrou alguma trigger de produção (improvável —
+PostgreSQL não verifica EXECUTE grants em invocações de trigger).
+
 ---
 
 ## Estado Final Esperado
@@ -218,9 +254,10 @@ Migration 00011: APPLIED_PRODUCTION — pg_net exception guard
 Migration 00012: APPLIED_PRODUCTION — quota reservation atômica
 Migration 00013: APPLIED_PRODUCTION — Vault credential para reconciler
 Migration 00014: APPLIED_PRODUCTION — AEF is_active + entitlement + current_period_end
+Migration 00015: APPLIED_PRODUCTION — SECURITY DEFINER trigger functions revoked (REST surface fechada)
 Edge Function localize-content: DEPLOYED (fail-closed, atomic quota)
 Edge Function entitlement-reconcile: DEPLOYED (aceita ENTITLEMENT_RECONCILE_SECRET)
-GUC app.service_role_key: REMOVED (após PASSO 10)
+GUC app.service_role_key: REMOVED (após PASSO 11)
 ```
 
 ---
