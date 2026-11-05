@@ -337,7 +337,13 @@ class _BrandTitle extends StatelessWidget {
               size: 14, color: AppColors.onAccent),
         ),
         const SizedBox(width: AppSpace.s2),
-        const Text(AppConstants.appName),
+        const Flexible(
+          child: Text(
+            AppConstants.appName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }
