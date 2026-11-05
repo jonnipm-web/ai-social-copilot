@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -224,7 +225,7 @@ class _HealthSideCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(briefing.healthEmoji, style: const TextStyle(fontSize: 20)),
+              IvEmojiIcon(briefing.healthEmoji, size: 32),
               const SizedBox(width: 8),
               Text(l10n.ecoBriefOverallHealth,
                   style: TextStyle(
@@ -294,7 +295,7 @@ class _Header extends StatelessWidget {
                         const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
                 const SizedBox(height: 8),
                 Text(
-                    '${briefing.healthEmoji}  ${l10n.ecoBriefOverallHealthValue(briefing.overallHealthScore)}',
+                    l10n.ecoBriefOverallHealthValue(briefing.overallHealthScore),
                     style: const TextStyle(
                         color: AppColors.ink,
                         fontSize: 15,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -761,7 +762,7 @@ class _ProjectCard extends ConsumerWidget {
                               fontSize: 13)),
                       const SizedBox(height: 2),
                       Text(
-                          '${score.recommendationEmoji} ${ecosystemVerdictLabel(score.recommendation, l10n)}  •  ROI R\$${score.totalRoi.toStringAsFixed(0)}',
+                          '${ecosystemVerdictLabel(score.recommendation, l10n)}  •  ROI R\$${score.totalRoi.toStringAsFixed(0)}',
                           style: const TextStyle(
                               color: AppColors.inkMuted, fontSize: 11)),
                     ],
@@ -979,7 +980,7 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                      '${s.recommendationEmoji} ${ecosystemVerdictLabel(s.recommendation, l10n)}',
+                      ecosystemVerdictLabel(s.recommendation, l10n),
                       style: TextStyle(
                           color: color,
                           fontSize: 12,

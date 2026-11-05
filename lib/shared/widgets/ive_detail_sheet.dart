@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'context_copilot_widget.dart' show showCopilotChat;
@@ -137,7 +138,7 @@ class IveDetailSheet extends ConsumerWidget {
 
   Widget _header(BuildContext context) => Row(
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 32)),
+          IvEmojiIcon(emoji, size: 44),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -212,7 +213,7 @@ class IveDetailSheet extends ConsumerWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(e.emoji, style: const TextStyle(fontSize: 18)),
+            IvEmojiIcon(e.emoji, size: 28),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -277,7 +278,7 @@ class IveDetailSheet extends ConsumerWidget {
 
   Widget _actionTile(BuildContext context, IveAction action) => ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        leading: Text(action.emoji, style: const TextStyle(fontSize: 20)),
+        leading: IvEmojiIcon(action.emoji, size: 32),
         title: Text(action.label,
             style: const TextStyle(color: AppColors.ink, fontSize: 13)),
         subtitle: action.description != null

@@ -14,6 +14,8 @@ import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/canonical_back_button.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
 import 'package:ai_social_copilot/core/theme/app_tokens.dart';
+import 'package:ai_social_copilot/shared/ui/iv_charts.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 
 class WebsiteAnalysisResultScreen extends ConsumerWidget {
   final String analysisId;
@@ -239,35 +241,31 @@ class _AnalysisContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // URL Header
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: accent.withOpacity(0.3)),
-            ),
+          IvCard(
+            highlight: true,
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpace.s4, vertical: AppSpace.s3),
             child: Row(
               children: [
-                Icon(Icons.language, color: accent, size: 18),
-                const SizedBox(width: 8),
+                IvIconTile(Icons.language_rounded, color: accent, size: 36),
+                const SizedBox(width: AppSpace.s3),
                 Expanded(
                   child: Text(
                     analysis.url,
                     style: const TextStyle(
                       color: AppColors.ink,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.copy,
-                      color: AppColors.ink.withOpacity(0.5), size: 18),
+                  icon: const Icon(Icons.copy_rounded,
+                      color: AppColors.inkMuted, size: 18),
+                  tooltip: MaterialLocalizations.of(context).copyButtonLabel,
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: analysis.url));
                   },
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
@@ -505,33 +503,39 @@ class _ScoreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: color.withOpacity(0.4)),
-      ),
+    return IvCard(
+      accent: color,
+      padding: const EdgeInsets.symmetric(
+          vertical: AppSpace.s3 + 2, horizontal: AppSpace.s2),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 22),
-          const SizedBox(height: 6),
-          Text(
-            score.toStringAsFixed(0),
-            style: TextStyle(
-              color: color,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
+          IvRingGauge(
+            value: score.toDouble(),
+            size: 54,
+            stroke: 5,
+            color: color,
+            semanticsLabel: '$label: ${score.toStringAsFixed(0)} / 100',
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              color: AppColors.ink.withOpacity(0.6),
-              fontSize: 10,
-            ),
-            textAlign: TextAlign.center,
+          const SizedBox(height: AppSpace.s2),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: AppColors.inkSubtle, size: 12),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.inkMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -348,7 +349,7 @@ class _AllocationItem extends StatelessWidget {
           Text(
               l10n.uxfEcoAllocationScoreLine(
                   '${item.score.ecosystemScore}',
-                  item.score.recommendationEmoji,
+                  '',
                   ecosystemVerdictLabel(item.score.recommendation, l10n)),
               style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
         ],

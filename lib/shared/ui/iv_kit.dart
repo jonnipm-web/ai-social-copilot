@@ -753,3 +753,69 @@ class IvGrid extends StatelessWidget {
     });
   }
 }
+
+// ── Emoji → vector icon ─────────────────────────────────────────────────────
+
+/// Legacy emoji glyphs still passed around as data (IVE evidence, verdicts)
+/// rendered as vector icons instead (ui-ux-pro-max: no emoji as icons).
+const Map<String, (IconData, Color)> _kEmojiIcons = {
+  '🎯': (Icons.gps_fixed_rounded, AppColors.accent),
+  '📋': (Icons.assignment_rounded, AppColors.info),
+  '💬': (Icons.chat_bubble_outline_rounded, AppColors.info),
+  '⚙': (Icons.tune_rounded, AppColors.inkMuted),
+  '📊': (Icons.bar_chart_rounded, AppColors.info),
+  '📈': (Icons.trending_up_rounded, AppColors.positive),
+  '📉': (Icons.trending_down_rounded, AppColors.negative),
+  '💡': (Icons.lightbulb_rounded, AppColors.gold),
+  '⚡': (Icons.bolt_rounded, AppColors.warning),
+  '🗑': (Icons.delete_outline_rounded, AppColors.negative),
+  '🔗': (Icons.link_rounded, AppColors.info),
+  '💰': (Icons.payments_rounded, AppColors.gold),
+  '🏃': (Icons.directions_run_rounded, AppColors.accent),
+  '⚠': (Icons.warning_amber_rounded, AppColors.warning),
+  '🚀': (Icons.rocket_launch_rounded, AppColors.accent),
+  '✅': (Icons.check_circle_rounded, AppColors.positive),
+  '🔍': (Icons.manage_search_rounded, AppColors.info),
+  '🧠': (Icons.psychology_rounded, AppColors.accent),
+  '⭐': (Icons.star_rounded, AppColors.gold),
+  '🔥': (Icons.local_fire_department_rounded, AppColors.warning),
+  '❌': (Icons.cancel_rounded, AppColors.negative),
+  '🏆': (Icons.emoji_events_rounded, AppColors.gold),
+  '🌱': (Icons.spa_rounded, AppColors.positive),
+  '🌳': (Icons.park_rounded, AppColors.positive),
+  '🔬': (Icons.biotech_rounded, AppColors.info),
+  '⏸': (Icons.pause_circle_rounded, AppColors.inkMuted),
+  '🔴': (Icons.circle, AppColors.negative),
+  '🟠': (Icons.circle, AppColors.warning),
+  '🟡': (Icons.circle, AppColors.warning),
+  '🟢': (Icons.circle, AppColors.positive),
+  '🔵': (Icons.circle, AppColors.info),
+  '📚': (Icons.menu_book_rounded, AppColors.info),
+  '🎓': (Icons.school_rounded, AppColors.accent),
+  '🤖': (Icons.smart_toy_rounded, AppColors.accent),
+  '⭕': (Icons.radio_button_unchecked_rounded, AppColors.inkMuted),
+  '📖': (Icons.auto_stories_rounded, AppColors.info),
+  '📝': (Icons.edit_note_rounded, AppColors.accent),
+};
+
+(IconData, Color)? ivEmojiIcon(String emoji) =>
+    _kEmojiIcons[emoji.replaceAll('️', '').trim()];
+
+/// Renders a legacy emoji as an [IvIconTile]; unknown glyphs fall back to
+/// a neutral dot icon rather than a font-dependent emoji.
+class IvEmojiIcon extends StatelessWidget {
+  const IvEmojiIcon(this.emoji, {super.key, this.size = 32});
+
+  final String emoji;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = ivEmojiIcon(emoji);
+    return IvIconTile(
+      m?.$1 ?? Icons.auto_awesome_rounded,
+      color: m?.$2 ?? AppColors.accent,
+      size: size,
+    );
+  }
+}

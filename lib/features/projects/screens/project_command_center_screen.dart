@@ -1492,7 +1492,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              Text(p.maturityEmoji, style: const TextStyle(fontSize: 26)),
+              IvEmojiIcon(p.maturityEmoji, size: 40),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

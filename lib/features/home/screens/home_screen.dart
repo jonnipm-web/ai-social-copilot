@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -690,7 +691,7 @@ class _ProjectRow extends StatelessWidget {
           border: Border.all(color: _kBorder),
         ),
         child: Row(children: [
-          Text(profile.maturityEmoji, style: const TextStyle(fontSize: 18)),
+          IvEmojiIcon(profile.maturityEmoji, size: 28),
           const SizedBox(width: 10),
           Expanded(
             child:
@@ -709,7 +710,7 @@ class _ProjectRow extends StatelessWidget {
                     style: TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
                 Text(
                   l10n.ctxHomeCoverage(
-                      profile.coverage.coverageEmoji, profile.coverage.score),
+                      '', profile.coverage.score),
                   style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
                 ),
               ]),
@@ -756,7 +757,7 @@ class _PersonaRow extends StatelessWidget {
         border: Border.all(color: _kBorder),
       ),
       child: Row(children: [
-        Text(profile.learningEmoji, style: const TextStyle(fontSize: 18)),
+        IvEmojiIcon(profile.learningEmoji, size: 28),
         const SizedBox(width: 10),
         Expanded(
           child:
