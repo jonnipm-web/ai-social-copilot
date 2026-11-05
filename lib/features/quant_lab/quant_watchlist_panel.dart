@@ -6,7 +6,6 @@
 // the prices from its own SYNTHETIC provider. The client computes nothing
 // (display rounding only) and offers no order/buy/sell/broker action.
 import 'package:flutter/material.dart';
-import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';

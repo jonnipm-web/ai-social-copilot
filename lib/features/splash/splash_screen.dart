@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 

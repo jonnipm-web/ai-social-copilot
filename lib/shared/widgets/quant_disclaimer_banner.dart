@@ -3,7 +3,6 @@
 // Every screen that displays Quant output MUST include this widget.
 // See docs/quant/QUANT_RESEARCH_ADVICE_BOUNDARY.md §5.
 import 'package:flutter/material.dart';
-import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 /// Inline disclaimer shown below every Quant analysis output.
 /// Tapping the ⓘ opens [QuantDisclaimerSheet].

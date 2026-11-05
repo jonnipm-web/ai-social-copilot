@@ -10,7 +10,6 @@
 // route_policy redirects non-admins), the screen re-checks admin fail-closed,
 // and the server enforces entitlement on every request regardless.
 import 'package:flutter/material.dart';
-import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';

@@ -4,7 +4,6 @@
 // product, or when the entitlement check fails due to a network/RPC error.
 // Query params: ?product=impact|quant|suite  and optional &state=unavailable.
 import 'package:flutter/material.dart';
-import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
