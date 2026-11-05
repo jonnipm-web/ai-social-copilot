@@ -18,15 +18,15 @@ import '../widgets/action_engine_execute_sheet.dart';
 import 'action_engine_screen.dart'
     show actionEngineStatusLabel, actionEngineTypeLabel;
 import '../../../shared/widgets/translated_content_notice.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
-const _kBg = Color(0xFF0F0F1A);
-const _kCard = Color(0xFF1A1A2E);
-const _kPrimary = Color(0xFF6C63FF);
-const _kGreen = Color(0xFF4CAF50);
-const _kOrange = Color(0xFFFF9800);
-const _kRed = Color(0xFFF44336);
-const _kCyan = Color(0xFF00BCD4);
+const _kCard = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGreen = AppColors.positive;
+const _kOrange = AppColors.warning;
+const _kRed = AppColors.negative;
+const _kCyan = AppColors.info;
 
 Color _statusColor(String s) {
   const m = {
@@ -36,7 +36,7 @@ Color _statusColor(String s) {
     'completed': _kGreen,
     'cancelled': _kRed,
   };
-  return m[s] ?? Colors.white38;
+  return m[s] ?? AppColors.inkSubtle;
 }
 
 Color _scoreColor(int s) {
@@ -59,13 +59,13 @@ class ActionDetailScreen extends ConsumerWidget {
     final itemAsync = ref.watch(actionQueueItemByIdProvider(itemId));
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon:
-              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+              const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeActionEngine),
@@ -73,7 +73,7 @@ class ActionDetailScreen extends ConsumerWidget {
         title: Text(
           l10n.actionDetailTitle,
           style: const TextStyle(
-              color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.w600),
         ),
         actions: [
           itemAsync.maybeWhen(
@@ -89,12 +89,12 @@ class ActionDetailScreen extends ConsumerWidget {
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
         error: (e, _) => Center(
           child: Text(l10n.commonError,
-              style: const TextStyle(color: Colors.white54)),
+              style: const TextStyle(color: AppColors.inkMuted)),
         ),
         data: (item) => item == null
             ? Center(
                 child: Text(l10n.actionDetailNotFound,
-                    style: const TextStyle(color: Colors.white54)))
+                    style: const TextStyle(color: AppColors.inkMuted)))
             : _DetailBody(item: item, ref: ref),
       ),
     );
@@ -112,7 +112,7 @@ class _StatusMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: Colors.white),
+      icon: const Icon(Icons.more_vert, color: AppColors.ink),
       color: _kCard,
       onSelected: (v) async {
         final notifier = ref.read(actionQueueNotifierProvider.notifier);
@@ -136,14 +136,14 @@ class _StatusMenu extends StatelessWidget {
               builder: (_) => AlertDialog(
                 backgroundColor: _kCard,
                 title: Text(l10n.actionEngineDeleteTitle,
-                    style: const TextStyle(color: Colors.white)),
+                    style: const TextStyle(color: AppColors.ink)),
                 content: Text(l10n.actionDetailDeleteBody(item.title),
-                    style: const TextStyle(color: Colors.white70)),
+                    style: const TextStyle(color: AppColors.inkMuted)),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(context, false),
                       child: Text(l10n.commonCancel,
-                          style: const TextStyle(color: Colors.white54))),
+                          style: const TextStyle(color: AppColors.inkMuted))),
                   TextButton(
                       onPressed: () => Navigator.pop(context, true),
                       child: Text(l10n.actionEngineDelete,
@@ -190,7 +190,7 @@ class _StatusMenu extends StatelessWidget {
           PopupMenuItem(
               value: 'cancel',
               child: Text(l10n.commonCancel,
-                  style: const TextStyle(color: Colors.white54))),
+                  style: const TextStyle(color: AppColors.inkMuted))),
         PopupMenuItem(
             value: 'delete',
             child: Text(l10n.actionEngineDelete,
@@ -261,7 +261,7 @@ class _DetailBody extends StatelessWidget {
             child: Text(
               item.description!,
               style: const TextStyle(
-                  color: Colors.white70, fontSize: 13, height: 1.5),
+                  color: AppColors.inkMuted, fontSize: 13, height: 1.5),
             ),
           ),
         ],
@@ -316,9 +316,9 @@ class _HeroHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Row(
         children: [
@@ -335,7 +335,7 @@ class _HeroHeader extends StatelessWidget {
                     Text(
                       '${item.priority}',
                       style: TextStyle(
-                          color: sc, fontSize: 18, fontWeight: FontWeight.bold),
+                          color: sc, fontSize: 18, fontWeight: FontWeight.w600),
                     ),
                     Text(AppLocalizations.of(context)!.uxActionPriorityShort,
                         style:
@@ -361,9 +361,9 @@ class _HeroHeader extends StatelessWidget {
                 Text(
                   item.title,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 15,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       height: 1.3),
                 ),
                 if (projectName != null) ...[
@@ -399,7 +399,7 @@ class _RingPainter extends CustomPainter {
     final c = Offset(size.width / 2, size.height / 2);
     final r = size.width / 2 - 6;
     final track = Paint()
-      ..color = Colors.white12
+      ..color = AppColors.line
       ..strokeWidth = 6
       ..style = PaintingStyle.stroke;
     final arc = Paint()
@@ -437,21 +437,21 @@ class _ScoreBreakdown extends StatelessWidget {
         (
           l10n.actionDetailScoreMarket,
           item.marketScore,
-          const Color(0xFF6C63FF)
+          AppColors.accent
         ),
       (
         l10n.actionDetailScoreRevenue,
         item.impactScore,
-        const Color(0xFF4CAF50)
+        AppColors.positive
       ),
-      (l10n.actionDetailScoreRoiFinal, item.roiScore, const Color(0xFFB44FE8)),
-      (l10n.actionEngineScoreEffort, item.effortScore, const Color(0xFFFF9800)),
-      (l10n.actionDetailScorePriority, item.priority, const Color(0xFF00BCD4)),
+      (l10n.actionDetailScoreRoiFinal, item.roiScore, AppColors.accent),
+      (l10n.actionEngineScoreEffort, item.effortScore, AppColors.warning),
+      (l10n.actionDetailScorePriority, item.priority, AppColors.info),
       if (fromLab && item.confidence > 0)
         (
           l10n.actionDetailScoreConfidence,
           item.confidence,
-          const Color(0xFFFFD700)
+          AppColors.gold
         ),
     ];
     return Column(
@@ -479,14 +479,14 @@ class _ScoreRow extends StatelessWidget {
           SizedBox(
             width: 60,
             child: Text(label,
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
           ),
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
               child: LinearProgressIndicator(
                 value: value / 100,
-                backgroundColor: Colors.white12,
+                backgroundColor: AppColors.line,
                 valueColor: AlwaysStoppedAnimation(color),
                 minHeight: 8,
               ),
@@ -498,7 +498,7 @@ class _ScoreRow extends StatelessWidget {
             child: Text('$value',
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                    color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+                    color: color, fontSize: 12, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -581,11 +581,11 @@ class _InfoRow extends StatelessWidget {
           Icon(icon, color: _kPrimary, size: 15),
           const SizedBox(width: 8),
           Text('$label: ',
-              style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
           Expanded(
             child: Text(value,
                 style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 12,
                     fontWeight: FontWeight.w500)),
           ),
@@ -612,7 +612,7 @@ class _SourcesList extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: _kPrimary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: _kPrimary.withOpacity(0.3)),
                 ),
                 child: Row(
@@ -642,7 +642,7 @@ class _RationaleCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kPrimary.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _kPrimary.withOpacity(0.2)),
       ),
       child: Row(
@@ -653,7 +653,7 @@ class _RationaleCard extends StatelessWidget {
           Expanded(
             child: Text(rationale,
                 style: const TextStyle(
-                    color: Colors.white70, fontSize: 13, height: 1.5)),
+                    color: AppColors.inkMuted, fontSize: 13, height: 1.5)),
           ),
         ],
       ),
@@ -691,14 +691,14 @@ class _PlanList extends StatelessWidget {
                       style: const TextStyle(
                           color: _kPrimary,
                           fontSize: 10,
-                          fontWeight: FontWeight.bold)),
+                          fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(e.value,
                     style: const TextStyle(
-                        color: Colors.white70, fontSize: 12, height: 1.4)),
+                        color: AppColors.inkMuted, fontSize: 12, height: 1.4)),
               ),
             ],
           ),
@@ -729,7 +729,7 @@ class _RisksList extends StatelessWidget {
                     Expanded(
                       child: Text(r,
                           style: const TextStyle(
-                              color: Colors.white70,
+                              color: AppColors.inkMuted,
                               fontSize: 12,
                               height: 1.4)),
                     ),
@@ -755,9 +755,9 @@ class _Section extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.ink.withOpacity(0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -768,9 +768,9 @@ class _Section extends StatelessWidget {
               const SizedBox(width: 8),
               Text(title,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 13,
-                      fontWeight: FontWeight.bold)),
+                      fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 12),
@@ -794,12 +794,12 @@ class _TypeBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: _kPrimary.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
         actionEngineTypeLabel(l10n, type).toUpperCase(),
         style: const TextStyle(
-            color: _kPrimary, fontSize: 9, fontWeight: FontWeight.bold),
+            color: _kPrimary, fontSize: 9, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -818,10 +818,10 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: c.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(actionEngineStatusLabel(l10n, status),
-          style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.bold)),
+          style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -885,7 +885,7 @@ class _StatusButtons extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: _kCyan.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(color: _kCyan.withOpacity(0.3)),
             ),
             child: Row(
@@ -895,7 +895,7 @@ class _StatusButtons extends StatelessWidget {
                 Expanded(
                   child: Text(
                     l10n.actionDetailReconciliationNeeded,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                   ),
                 ),
               ],
@@ -926,7 +926,7 @@ class _StatusButtons extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: _kGreen.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(color: _kGreen.withOpacity(0.3)),
             ),
             child: Row(
@@ -939,7 +939,7 @@ class _StatusButtons extends StatelessWidget {
                       ? l10n.actionDetailCompletedVerified
                       : l10n.actionDetailCompleted,
                   style: const TextStyle(
-                      color: _kGreen, fontWeight: FontWeight.bold),
+                      color: _kGreen, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -955,7 +955,7 @@ class _StatusButtons extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 14),
               minimumSize: const Size(double.infinity, 0),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(AppRadius.lg)),
             ),
             icon: const Icon(Icons.auto_awesome_rounded),
             label: Text(l10n.actionDetailAskIve),
@@ -1017,7 +1017,7 @@ class _Btn extends StatelessWidget {
             side: BorderSide(color: color),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
           ),
           icon: Icon(icon),
           label: Text(label),
@@ -1030,10 +1030,10 @@ class _Btn extends StatelessWidget {
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.ink,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
         ),
         icon: Icon(icon),
         label: Text(label),

@@ -21,6 +21,7 @@ import '../../providers/context_copilot_provider.dart';
 import '../../providers/diagnostic_session_provider.dart';
 import 'ai_execution_confirmation.dart';
 import 'ive_failure_messages.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // COMMERCIAL-EXPERIENCE-CLOSURE-16 — owner feedback (live physical/web QA,
 // both platforms): while the chat dialog/sheet is open, IveOverlay's own
@@ -198,13 +199,13 @@ class ContextCopilotButton extends ConsumerWidget {
     return FloatingActionButton(
       heroTag: 'copilot_$screenName',
       onPressed: () => _openCopilot(ctx, ref),
-      backgroundColor: const Color(0xFF6C63FF),
+      backgroundColor: AppColors.accent,
       tooltip: l10n.iveChatAskCta,
       // Functional trigger (opens the chat) -- exactly the case mission
       // Section 01.2 carves out as a legitimate use of chat iconography,
       // unlike the removed decorative bubble inside the sheet itself below.
       child:
-          const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 22),
+          const Icon(Icons.chat_bubble_rounded, color: AppColors.ink, size: 22),
     );
   }
 
@@ -463,8 +464,8 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1B2E),
-          borderRadius: BorderRadius.circular(20),
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withOpacity(0.5),
@@ -486,7 +487,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
       maxChildSize: 0.92,
       builder: (_, __) => Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF1E1B2E),
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: _body(showDragHandle: true),
@@ -505,7 +506,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
       children: [
         if (showDragHandle) _handle(),
         _header(state),
-        const Divider(color: Colors.white12, height: 1),
+        const Divider(color: AppColors.line, height: 1),
         Expanded(
           child: state.turns.isEmpty ? _empty() : _messages(state.turns),
         ),
@@ -516,7 +517,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Text(
               iveFailureMessage(AppLocalizations.of(context)!, state.failure!),
-              style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+              style: const TextStyle(color: AppColors.negative, fontSize: 12),
             ),
           )
         else if (state.error != null)
@@ -526,7 +527,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
               AppLocalizations.of(context)!.iveChatErrorPrefix(
                   extractErrorMessage(
                       state.error ?? '', AppLocalizations.of(context))),
-              style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+              style: const TextStyle(color: AppColors.negative, fontSize: 12),
             ),
           ),
         _input(state.loading),
@@ -540,7 +541,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
           width: 40,
           height: 4,
           decoration: BoxDecoration(
-            color: Colors.white24,
+            color: AppColors.inkSubtle,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -562,15 +563,15 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
             child: Text(
               'IVE',
               style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                  color: AppColors.ink,
+                  fontWeight: FontWeight.w600,
                   fontSize: 18),
             ),
           ),
           if (state.turns.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.delete_sweep_rounded, size: 20),
-              color: Colors.white38,
+              color: AppColors.inkSubtle,
               tooltip: l10n.iveChatClearHistory,
               onPressed: () => ref
                   .read(contextCopilotProvider(_conversationKey).notifier)
@@ -578,7 +579,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
             ),
           IconButton(
             icon: const Icon(Icons.close_rounded),
-            color: Colors.white38,
+            color: AppColors.inkSubtle,
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -630,14 +631,14 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                 Text(
                   l10n.iveChatAskCta,
                   style: const TextStyle(
-                      color: Colors.white70,
+                      color: AppColors.inkMuted,
                       fontSize: 16,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   _localizedScreenName(context, widget.screenName),
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
                 ),
                 const SizedBox(height: 20),
                 ..._suggestions(context).map((s) => _suggestionChip(s)),
@@ -683,11 +684,11 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
           margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 24),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFF6C63FF), width: 1),
-            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.accent, width: 1),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
           child: Text(text,
-              style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 13)),
+              style: const TextStyle(color: AppColors.accent, fontSize: 13)),
         ),
       );
 
@@ -720,16 +721,16 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                   onSubmitted: (_) => _send(),
                   enabled: !loading,
                   maxLines: null,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  style: const TextStyle(color: AppColors.ink, fontSize: 14),
                   decoration: InputDecoration(
                     hintText: AppLocalizations.of(context)!.iveChatHint,
-                    hintStyle: const TextStyle(color: Colors.white38),
+                    hintStyle: const TextStyle(color: AppColors.inkSubtle),
                     filled: true,
-                    fillColor: const Color(0xFF2A2740),
+                    fillColor: AppColors.line,
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 10),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       borderSide: BorderSide.none,
                     ),
                   ),
@@ -746,7 +747,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Color(0xFF6C63FF),
+                            color: AppColors.accent,
                           ),
                         ),
                       ),
@@ -754,9 +755,9 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                   : IconButton(
                       onPressed: _send,
                       icon: const Icon(Icons.send_rounded),
-                      color: const Color(0xFF6C63FF),
+                      color: AppColors.accent,
                       style: IconButton.styleFrom(
-                        backgroundColor: const Color(0xFF2A2740),
+                        backgroundColor: AppColors.line,
                       ),
                     ),
             ],
@@ -834,8 +835,8 @@ class _TurnBubble extends StatelessWidget {
           maxWidth: MediaQuery.of(ctx).size.width * 0.82,
         ),
         decoration: BoxDecoration(
-          color: isUser ? const Color(0xFF6C63FF) : const Color(0xFF2A2740),
-          borderRadius: BorderRadius.circular(14),
+          color: isUser ? AppColors.accent : AppColors.line,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -847,7 +848,7 @@ class _TurnBubble extends StatelessWidget {
                   ? AppLocalizations.of(ctx)!.iveCoreRequiresAef
                   : turn.content,
               style: const TextStyle(
-                  color: Colors.white, fontSize: 14, height: 1.4),
+                  color: AppColors.ink, fontSize: 14, height: 1.4),
             ),
             // IV-IVE-AEF-RUNTIME-INTEGRATION-01 — LAB only (--dart-define=AEF_RUNTIME_LAB=true):
             // IVE's suggestion becomes a governed proposal behind an explicit Human Gate.
@@ -866,7 +867,7 @@ class _TurnBubble extends StatelessWidget {
                 child: Text(
                   AppLocalizations.of(ctx)!.iveCoreDegradedContext,
                   style:
-                      const TextStyle(color: Colors.amberAccent, fontSize: 11),
+                      const TextStyle(color: AppColors.warning, fontSize: 11),
                 ),
               ),
             if (!isUser && (turn.sources.isNotEmpty || turn.confidence > 0))
@@ -891,10 +892,10 @@ class _TurnBubble extends StatelessWidget {
               _badge(
                   AppLocalizations.of(ctx)!
                       .ctxCopilotConfidenceBadge(turn.confidence),
-                  Colors.white24),
+                  AppColors.inkSubtle),
             ...turn.sources
                 .take(3)
-                .map((s) => _badge(s, const Color(0xFF3D3A5C))),
+                .map((s) => _badge(s, AppColors.line)),
           ],
         ),
       );
@@ -917,16 +918,16 @@ class _TurnBubble extends StatelessWidget {
     return [
       InkWell(
         onTap: () => onRouteTap!(route),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         child: Container(
           margin: const EdgeInsets.only(top: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFF6C63FF), width: 1),
-            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.accent, width: 1),
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           child: Text(label,
-              style: const TextStyle(color: Colors.white, fontSize: 12)),
+              style: const TextStyle(color: AppColors.ink, fontSize: 12)),
         ),
       ),
     ];
@@ -936,10 +937,10 @@ class _TurnBubble extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Text(text,
-            style: const TextStyle(color: Colors.white54, fontSize: 10)),
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 10)),
       );
 
   // COMMERCIAL-EXPERIENCE-CLOSURE-16 — now wired to `onActionTap`
@@ -949,26 +950,26 @@ class _TurnBubble extends StatelessWidget {
   Widget _actionChip(CopilotActionSuggestion action, VoidCallback? onTap) =>
       InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         child: Container(
           margin: const EdgeInsets.only(top: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFF6C63FF).withOpacity(0.25),
-            border: Border.all(color: const Color(0xFF6C63FF), width: 1),
-            borderRadius: BorderRadius.circular(10),
+            color: AppColors.accent.withOpacity(0.25),
+            border: Border.all(color: AppColors.accent, width: 1),
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.bolt_rounded,
-                  size: 14, color: Color(0xFF6C63FF)),
+                  size: 14, color: AppColors.accent),
               const SizedBox(width: 4),
               Flexible(
                 child: Text(
                   action.label,
                   style:
-                      const TextStyle(color: Color(0xFF6C63FF), fontSize: 12),
+                      const TextStyle(color: AppColors.accent, fontSize: 12),
                 ),
               ),
             ],

@@ -23,23 +23,23 @@ import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
 import '../../../shared/widgets/ive_detail_sheet.dart';
 import '../../../shared/widgets/ive_explain_button.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────
-const _kBg = Color(0xFF0A0A14);
-const _kCard = Color(0xFF12121E);
-const _kBorder = Color(0xFF1E1E30);
-const _kPrimary = Color(0xFF7C4DFF);
-const _kGold = Color(0xFFFFD700);
-const _kGreen = Color(0xFF00E676);
-const _kOrange = Color(0xFFFF9100);
-const _kRed = Color(0xFFFF1744);
-const _kCyan = Color(0xFF00E5FF);
+const _kCard = AppColors.ground;
+const _kBorder = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGold = AppColors.gold;
+const _kGreen = AppColors.positive;
+const _kOrange = AppColors.warning;
+const _kRed = AppColors.negative;
+const _kCyan = AppColors.info;
 
 Color _scoreColor(int s) {
   if (s >= 80) return _kGreen;
-  if (s >= 60) return const Color(0xFF00C853);
+  if (s >= 60) return AppColors.positive;
   if (s >= 40) return _kOrange;
-  if (s >= 20) return Colors.amber;
+  if (s >= 20) return AppColors.warning;
   return _kRed;
 }
 
@@ -94,27 +94,27 @@ class _ExecutiveDecisionCenterScreenState
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: Colors.transparent,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon:
-              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+              const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeDashboard),
         ),
         title: Text(l10n.ecoDecisionCenterTitle,
             style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold)),
-        iconTheme: const IconThemeData(color: Colors.white),
+                color: AppColors.ink, fontWeight: FontWeight.w600)),
+        iconTheme: const IconThemeData(color: AppColors.ink),
         bottom: TabBar(
           controller: _tab,
           indicatorColor: _kPrimary,
           labelColor: _kPrimary,
-          unselectedLabelColor: Colors.white38,
+          unselectedLabelColor: AppColors.inkSubtle,
           tabs: [
             Tab(text: l10n.ecoTabTop5),
             Tab(text: l10n.ecoTabEcosystem),
@@ -123,12 +123,12 @@ class _ExecutiveDecisionCenterScreenState
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.schedule_rounded, color: Colors.white54),
+            icon: const Icon(Icons.schedule_rounded, color: AppColors.inkMuted),
             tooltip: l10n.ecoResourceAllocationTitle,
             onPressed: () => context.push(AppConstants.routeEcosystemResources),
           ),
           IconButton(
-            icon: const Icon(Icons.summarize_rounded, color: Colors.white54),
+            icon: const Icon(Icons.summarize_rounded, color: AppColors.inkMuted),
             tooltip: l10n.ecoWeeklyBriefingTooltip,
             onPressed: () => context.push(AppConstants.routeEcosystemBriefing),
           ),
@@ -260,7 +260,7 @@ class _HealthBanner extends StatelessWidget {
             child: Center(
               child: Text('$health',
                   style: TextStyle(
-                      color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+                      color: color, fontWeight: FontWeight.w600, fontSize: 14)),
             ),
           ),
           const SizedBox(width: 12),
@@ -271,11 +271,11 @@ class _HealthBanner extends StatelessWidget {
                 Text(l10n.ecoHealthTitle,
                     style: TextStyle(
                         color: color,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         fontSize: 13)),
                 Text(_healthNarrative(health, l10n),
                     style: const TextStyle(
-                        color: Colors.white70, fontSize: 12, height: 1.35)),
+                        color: AppColors.inkMuted, fontSize: 12, height: 1.35)),
                 const SizedBox(height: 4),
                 IveExplainButton(
                   question: l10n.ecoIveAskHealth(health),
@@ -313,7 +313,7 @@ class _HealthBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(3),
           child: LinearProgressIndicator(
             value: value,
-            backgroundColor: Colors.white12,
+            backgroundColor: AppColors.line,
             valueColor: AlwaysStoppedAnimation(color),
           ),
         ),
@@ -342,7 +342,7 @@ class _Top5Tab extends ConsumerWidget {
           return Center(
               child: Text(l10n.ecoTop5Empty,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white54)));
+                  style: const TextStyle(color: AppColors.inkMuted)));
         }
         return ListView(
           padding: EdgeInsets.fromLTRB(
@@ -611,18 +611,18 @@ class _Top5Section extends StatelessWidget {
       children: [
         Text(title,
             style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+                color: AppColors.ink,
+                fontWeight: FontWeight.w600,
                 fontSize: 15)),
         const SizedBox(height: 2),
         Text(subtitle,
-            style: const TextStyle(color: Colors.white38, fontSize: 11)),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
         const SizedBox(height: 10),
         if (children.isEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 8),
             child: Text(AppLocalizations.of(context)!.ecoNoItemsYet,
-                style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12)),
           )
         else
           ...children,
@@ -726,7 +726,7 @@ class _ProjectCard extends ConsumerWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: _kCard,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Column(
@@ -745,7 +745,7 @@ class _ProjectCard extends ConsumerWidget {
                     child: Text('${score.ecosystemScore}',
                         style: TextStyle(
                             color: color,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             fontSize: 13)),
                   ),
                 ),
@@ -756,14 +756,14 @@ class _ProjectCard extends ConsumerWidget {
                     children: [
                       Text(score.project.name,
                           style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.ink,
                               fontWeight: FontWeight.w600,
                               fontSize: 13)),
                       const SizedBox(height: 2),
                       Text(
-                          '${score.recommendationEmoji} ${ecosystemVerdictLabel(score.recommendation, l10n)}  •  ROI R\$${score.totalRoi.toStringAsFixed(0)}',
+                          '${ecosystemVerdictLabel(score.recommendation, l10n)}  •  ROI R\$${score.totalRoi.toStringAsFixed(0)}',
                           style: const TextStyle(
-                              color: Colors.white54, fontSize: 11)),
+                              color: AppColors.inkMuted, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -772,13 +772,13 @@ class _ProjectCard extends ConsumerWidget {
                   children: [
                     Text(l10n.ecoShortMarket(score.marketScore),
                         style: const TextStyle(
-                            color: Colors.white38, fontSize: 10)),
+                            color: AppColors.inkSubtle, fontSize: 10)),
                     Text(l10n.ecoShortFit(score.strategicFit),
                         style: const TextStyle(
-                            color: Colors.white38, fontSize: 10)),
+                            color: AppColors.inkSubtle, fontSize: 10)),
                     Text(l10n.ecoShortExec(score.executionScore),
                         style: const TextStyle(
-                            color: Colors.white38, fontSize: 10)),
+                            color: AppColors.inkSubtle, fontSize: 10)),
                   ],
                 ),
               ],
@@ -830,7 +830,7 @@ class _SimpleCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: _kCard,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
               color: onTap != null ? color.withOpacity(0.25) : _kBorder),
         ),
@@ -840,11 +840,11 @@ class _SimpleCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Text('$score',
                   style: TextStyle(
-                      color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+                      color: color, fontSize: 11, fontWeight: FontWeight.w600)),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -853,30 +853,30 @@ class _SimpleCard extends StatelessWidget {
                 children: [
                   Text(title,
                       style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontSize: 12,
                           fontWeight: FontWeight.w500),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                   Text(subtitle,
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 10)),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
                 ],
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.white10,
-                borderRadius: BorderRadius.circular(4),
+                color: AppColors.line,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Text(badge,
-                  style: const TextStyle(color: Colors.white54, fontSize: 9)),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 9)),
             ),
             if (onTap != null) ...[
               const SizedBox(width: 4),
               const Icon(Icons.chevron_right_rounded,
-                  color: Colors.white24, size: 14),
+                  color: AppColors.inkSubtle, size: 14),
             ],
           ],
         ),
@@ -904,7 +904,7 @@ class _EcosystemTab extends StatelessWidget {
           return Center(
               child: Text(l10n.ecoEcosystemEmpty,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white54)));
+                  style: const TextStyle(color: AppColors.inkMuted)));
         }
         return ListView.separated(
           padding: EdgeInsets.fromLTRB(
@@ -939,14 +939,14 @@ class _EcosystemCardState extends State<_EcosystemCard> {
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Column(
         children: [
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
@@ -957,8 +957,8 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                       Expanded(
                         child: Text(s.project.name,
                             style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+                                color: AppColors.ink,
+                                fontWeight: FontWeight.w600,
                                 fontSize: 14)),
                       ),
                       Container(
@@ -966,20 +966,20 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: color.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           border: Border.all(color: color.withOpacity(0.5)),
                         ),
                         child: Text('${s.ecosystemScore}',
                             style: TextStyle(
                                 color: color,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                                 fontSize: 14)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                      '${s.recommendationEmoji} ${ecosystemVerdictLabel(s.recommendation, l10n)}',
+                      ecosystemVerdictLabel(s.recommendation, l10n),
                       style: TextStyle(
                           color: color,
                           fontSize: 12,
@@ -1008,10 +1008,10 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                           l10n.ecoCardFooter(s.actionCount, s.completionRate,
                               s.totalRoi.toStringAsFixed(0)),
                           style: const TextStyle(
-                              color: Colors.white38, fontSize: 10)),
+                              color: AppColors.inkSubtle, fontSize: 10)),
                       const Spacer(),
                       Icon(_expanded ? Icons.expand_less : Icons.expand_more,
-                          color: Colors.white38, size: 18),
+                          color: AppColors.inkSubtle, size: 18),
                     ],
                   ),
                 ],
@@ -1019,7 +1019,7 @@ class _EcosystemCardState extends State<_EcosystemCard> {
             ),
           ),
           if (_expanded) ...[
-            const Divider(color: Colors.white12, height: 1),
+            const Divider(color: AppColors.line, height: 1),
             Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
@@ -1036,7 +1036,7 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                           padding: const EdgeInsets.only(bottom: 2, left: 4),
                           child: Text('• $st',
                               style: const TextStyle(
-                                  color: Colors.white70, fontSize: 11)),
+                                  color: AppColors.inkMuted, fontSize: 11)),
                         )),
                     const SizedBox(height: 10),
                   ],
@@ -1051,7 +1051,7 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                           padding: const EdgeInsets.only(bottom: 2, left: 4),
                           child: Text('• $r',
                               style: const TextStyle(
-                                  color: Colors.white70, fontSize: 11)),
+                                  color: AppColors.inkMuted, fontSize: 11)),
                         )),
                     const SizedBox(height: 10),
                   ],
@@ -1066,7 +1066,7 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                           padding: const EdgeInsets.only(bottom: 2, left: 4),
                           child: Text('⚡ $q',
                               style: const TextStyle(
-                                  color: Colors.white70, fontSize: 11)),
+                                  color: AppColors.inkMuted, fontSize: 11)),
                         )),
                   ],
                 ],
@@ -1092,13 +1092,13 @@ class _ScoreRow extends StatelessWidget {
         SizedBox(
             width: 90,
             child: Text(label,
-                style: const TextStyle(color: Colors.white54, fontSize: 10))),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 10))),
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(2),
             child: LinearProgressIndicator(
               value: value / 100,
-              backgroundColor: Colors.white10,
+              backgroundColor: AppColors.line,
               valueColor: AlwaysStoppedAnimation(color),
               minHeight: 5,
             ),
@@ -1107,7 +1107,7 @@ class _ScoreRow extends StatelessWidget {
         const SizedBox(width: 6),
         Text('$value',
             style: TextStyle(
-                color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+                color: color, fontSize: 10, fontWeight: FontWeight.w600)),
       ],
     );
   }
@@ -1141,7 +1141,7 @@ class _RecsTab extends ConsumerWidget {
           return Center(
               child: Text(l10n.ecoRecsEmpty,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white54)));
+                  style: const TextStyle(color: AppColors.inkMuted)));
         }
 
         final validationMap = validationAsync.value ?? {};
@@ -1192,7 +1192,7 @@ class _ValidationGateCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kOrange.withOpacity(0.45)),
       ),
       child: Column(
@@ -1204,35 +1204,35 @@ class _ValidationGateCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: _kOrange.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Text(l10n.ecoBlockedBadge,
                     style: const TextStyle(
                         color: _kOrange,
                         fontSize: 10,
-                        fontWeight: FontWeight.bold)),
+                        fontWeight: FontWeight.w600)),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(recommendationTypeLabel(rec.type, l10n),
                     style:
-                        const TextStyle(color: Colors.white38, fontSize: 10)),
+                        const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(rec.title,
               style: const TextStyle(
-                  color: Colors.white38,
+                  color: AppColors.inkSubtle,
                   fontSize: 12,
                   decoration: TextDecoration.lineThrough,
-                  decorationColor: Colors.white38)),
+                  decorationColor: AppColors.inkSubtle)),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: _kOrange.withOpacity(0.07),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: _kOrange.withOpacity(0.2)),
             ),
             child: Column(
@@ -1253,7 +1253,7 @@ class _ValidationGateCard extends StatelessWidget {
                 _GateMetricRow(
                     label: l10n.ecoGateIntelligenceProfile,
                     value: validation.profileLabel(l10n)),
-                const Divider(color: Colors.white12, height: 16),
+                const Divider(color: AppColors.line, height: 16),
                 _GateMetricRow(
                     label: l10n.ecoGateDocuments,
                     value: '${validation.documentCount}'),
@@ -1267,16 +1267,16 @@ class _ValidationGateCard extends StatelessWidget {
                     label: l10n.ecoGateOpportunities,
                     value: '${validation.opportunityCount}'),
                 if (validation.blockReasons.isNotEmpty) ...[
-                  const Divider(color: Colors.white12, height: 16),
+                  const Divider(color: AppColors.line, height: 16),
                   Text(l10n.ecoGateBlockReasons,
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 10)),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
                   const SizedBox(height: 4),
                   ...validation.blockReasons.map((r) => Padding(
                         padding: const EdgeInsets.only(bottom: 2),
                         child: Text('• $r',
                             style: const TextStyle(
-                                color: Colors.white38, fontSize: 10)),
+                                color: AppColors.inkSubtle, fontSize: 10)),
                       )),
                 ],
               ],
@@ -1303,11 +1303,11 @@ class _GateMetricRow extends StatelessWidget {
           SizedBox(
             width: 118,
             child: Text(label,
-                style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
           ),
           Expanded(
             child: Text(value,
-                style: const TextStyle(color: Colors.white70, fontSize: 10)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 10)),
           ),
         ],
       ),
@@ -1334,7 +1334,7 @@ class _RecCard extends ConsumerWidget {
       case RecommendationType.quickWin:
         return _kGreen;
       case RecommendationType.waste:
-        return Colors.grey;
+        return AppColors.inkMuted;
     }
   }
 
@@ -1426,7 +1426,7 @@ class _RecCard extends ConsumerWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: _kCard,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border(left: BorderSide(color: _typeColor, width: 3)),
         ),
         child: Column(
@@ -1439,39 +1439,39 @@ class _RecCard extends ConsumerWidget {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: _typeColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(recommendationTypeLabel(rec.type, l10n),
                       style: TextStyle(
                           color: _typeColor,
                           fontSize: 10,
-                          fontWeight: FontWeight.bold)),
+                          fontWeight: FontWeight.w600)),
                 ),
                 const Spacer(),
                 Text(l10n.ecoConfidencePct(rec.confidence),
                     style:
-                        const TextStyle(color: Colors.white38, fontSize: 10)),
+                        const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
                 const SizedBox(width: 4),
                 const Icon(Icons.chevron_right_rounded,
-                    color: Colors.white24, size: 14),
+                    color: AppColors.inkSubtle, size: 14),
               ],
             ),
             const SizedBox(height: 8),
             Text(rec.title,
                 style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontWeight: FontWeight.w600,
                     fontSize: 13)),
             const SizedBox(height: 6),
             Text(rec.reason,
-                style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
             const SizedBox(height: 6),
-            const Divider(color: Colors.white12, height: 1),
+            const Divider(color: AppColors.line, height: 1),
             const SizedBox(height: 6),
             Text(l10n.ecoExpectedImpact(rec.expectedImpact),
-                style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
             Text(l10n.ecoDataPrefix(rec.dataUsed),
-                style: const TextStyle(color: Colors.white24, fontSize: 10)),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
           ],
         ),
       ),

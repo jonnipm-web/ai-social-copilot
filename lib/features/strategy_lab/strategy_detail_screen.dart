@@ -17,6 +17,7 @@ import 'widgets/experiment_history_section.dart';
 import 'widgets/plan_upgrade_banner.dart';
 import 'widgets/robustness_evidence_section.dart';
 import 'widgets/simulation_governance_section.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class StrategyDetailScreen extends ConsumerStatefulWidget {
   const StrategyDetailScreen({super.key, required this.strategyId});
@@ -570,7 +571,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                                 key: const Key(
                                     'strategyDetailUnsupportedParameter'),
                                 style: const TextStyle(
-                                    fontSize: 11, color: Colors.white54),
+                                    fontSize: 11, color: AppColors.inkMuted),
                               ),
                           ],
                         ],

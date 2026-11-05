@@ -7,6 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 
 import 'core/app_lifecycle/diagnostic_recovery_policy.dart';
 import 'core/app_lifecycle/profile_resume_policy.dart';
@@ -950,7 +951,8 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
         if (child == null) {
           IveForensicSnapshot.builderChildWasNull = true;
         }
-        return SafeArea(
+        return IvBackground(
+         child: SafeArea(
           top: false,
           left: false,
           right: false,
@@ -968,13 +970,14 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
                 // of a per-screen collision-avoidance hack.
                 NotificationListener<ScrollNotification>(
                   onNotification: ivePageScrollNotification,
-                  child: child!,
+                  child: IvAppFrame(child: child!),
                 ),
                 IveOverlay(navigatorKey: rootNavigatorKey),
                 IveIntroGate(navigatorKey: rootNavigatorKey),
               ],
             ),
           ),
+         ),
         );
       },
     );

@@ -427,7 +427,7 @@ class _MultiResult extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(s.label, style: const TextStyle(fontWeight: FontWeight.w700)),
+              Text(s.label, style: const TextStyle(fontWeight: FontWeight.w600)),
               kv(l.quantLabAlignedReturn, quantPct(s.alignedReturn)),
               kv(l.quantLabFreshness, s.freshnessState),
               kv(l.quantLabTrustLabel, '${s.trust} · ${s.providerId}'),

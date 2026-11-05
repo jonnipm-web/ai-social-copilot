@@ -12,6 +12,7 @@ import '../../../providers/knowledge_provider.dart';
 import '../../../providers/strategy_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 round-2 finding) — both
 // call sites below (the initial "Gerar Estratégia" button and "Regenerar
@@ -78,13 +79,13 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
     final strategyAsync = ref.watch(knowledgeStrategyProvider(itemId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F1A),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppColors.ink,
         title: Text(
           l10n.knowledgeStrategyTitle,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
       body: itemAsync.when(
@@ -93,12 +94,12 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
             child: Text(
                 l10n.knowledgeStrategyGenericError(
                     extractErrorMessage(e, l10n)),
-                style: const TextStyle(color: Colors.white70))),
+                style: const TextStyle(color: AppColors.inkMuted))),
         data: (item) {
           if (item == null) {
             return Center(
                 child: Text(l10n.knowledgeStrategyItemNotFound,
-                    style: const TextStyle(color: Colors.white70)));
+                    style: const TextStyle(color: AppColors.inkMuted)));
           }
           return analysisAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -106,7 +107,7 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
                 child: Text(
                     l10n.knowledgeStrategyGenericError(
                         extractErrorMessage(e, l10n)),
-                    style: const TextStyle(color: Colors.white70))),
+                    style: const TextStyle(color: AppColors.inkMuted))),
             data: (analysis) {
               if (analysis == null) {
                 return _NoAnalysis(item: item);
@@ -149,26 +150,26 @@ class _NoAnalysis extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.analytics_outlined,
-                size: 64, color: Color(0xFF6C63FF)),
+                size: 64, color: AppColors.accent),
             const SizedBox(height: 16),
             Text(
               l10n.knowledgeStrategyAnalysisRequiredTitle,
               style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.ink,
                   fontSize: 16,
-                  fontWeight: FontWeight.bold),
+                  fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
               l10n.knowledgeStrategyAnalysisRequiredBody,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 13),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C63FF),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.onAccent,
               ),
               icon: const Icon(Icons.arrow_back_rounded),
               label: Text(l10n.knowledgeStrategyBackAndAnalyze),
@@ -207,52 +208,52 @@ class _GeneratePrompt extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF6C63FF).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
+                color: AppColors.accent.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 border:
-                    Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+                    Border.all(color: AppColors.accent.withOpacity(0.3)),
               ),
               child: const Icon(Icons.rocket_launch_rounded,
-                  size: 48, color: Color(0xFF6C63FF)),
+                  size: 48, color: AppColors.accent),
             ),
             const SizedBox(height: 20),
             Text(
               l10n.knowledgeStrategyGenerateTitle,
               style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.ink,
                   fontSize: 18,
-                  fontWeight: FontWeight.bold),
+                  fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
               l10n.knowledgeStrategyGenerateBody,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                  color: Colors.white54, fontSize: 13, height: 1.5),
+                  color: AppColors.inkMuted, fontSize: 13, height: 1.5),
             ),
             if (error != null) ...[
               const SizedBox(height: 12),
               Text(
                 l10n.knowledgeStrategyGenericError(error!),
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFFF44336), fontSize: 12),
+                style: const TextStyle(color: AppColors.negative, fontSize: 12),
               ),
             ],
             const SizedBox(height: 24),
             if (isLoading) ...[
-              const CircularProgressIndicator(color: Color(0xFF6C63FF)),
+              const CircularProgressIndicator(color: AppColors.accent),
               const SizedBox(height: 12),
               Text(l10n.knowledgeStrategyGenerating,
-                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 13)),
             ] else
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6C63FF),
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.onAccent,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(AppRadius.lg)),
                 ),
                 icon: const Icon(Icons.rocket_launch_rounded),
                 label: Text(l10n.knowledgeStrategyGenerateButton,
@@ -300,24 +301,24 @@ class _StrategyContent extends ConsumerWidget {
         // Resumo estratégico
         if (strategy.strategicSummary.isNotEmpty) ...[
           _Section(l10n.knowledgeStrategySectionSummary,
-              Icons.summarize_rounded, const Color(0xFF6C63FF)),
-          _HighlightCard(strategy.strategicSummary, const Color(0xFF6C63FF)),
+              Icons.summarize_rounded, AppColors.accent),
+          _HighlightCard(strategy.strategicSummary, AppColors.accent),
           const SizedBox(height: 16),
         ],
 
         // Proposta de valor
         if (strategy.valueProposition.isNotEmpty) ...[
           _Section(l10n.knowledgeStrategySectionValueProp,
-              Icons.diamond_rounded, const Color(0xFFFFD700)),
-          _HighlightCard(strategy.valueProposition, const Color(0xFFFFD700)),
+              Icons.diamond_rounded, AppColors.gold),
+          _HighlightCard(strategy.valueProposition, AppColors.gold),
           const SizedBox(height: 16),
         ],
 
         // Posicionamento
         if (strategy.positioning.isNotEmpty) ...[
           _Section(l10n.knowledgeStrategySectionPositioning, Icons.flag_rounded,
-              const Color(0xFF00BCD4)),
-          _HighlightCard(strategy.positioning, const Color(0xFF00BCD4)),
+              AppColors.info),
+          _HighlightCard(strategy.positioning, AppColors.info),
           const SizedBox(height: 16),
         ],
 
@@ -327,7 +328,7 @@ class _StrategyContent extends ConsumerWidget {
         // Canais recomendados
         if (strategy.recommendedChannels.isNotEmpty) ...[
           _Section(l10n.knowledgeStrategySectionChannels,
-              Icons.broadcast_on_personal_rounded, const Color(0xFF4CAF50)),
+              Icons.broadcast_on_personal_rounded, AppColors.positive),
           const SizedBox(height: 8),
           ...strategy.recommendedChannels.map((ch) => _ChannelTile(ch)),
           const SizedBox(height: 16),
@@ -336,7 +337,7 @@ class _StrategyContent extends ConsumerWidget {
         // Funil
         if (strategy.funnel.isNotEmpty) ...[
           _Section(l10n.knowledgeStrategySectionFunnel,
-              Icons.filter_alt_rounded, const Color(0xFFFF9800)),
+              Icons.filter_alt_rounded, AppColors.warning),
           const SizedBox(height: 8),
           _FunnelCard(strategy.funnel, l10n),
           const SizedBox(height: 16),
@@ -345,7 +346,7 @@ class _StrategyContent extends ConsumerWidget {
         // Oportunidades comerciais
         if (strategy.commercialOpportunities.isNotEmpty) ...[
           _Section(l10n.knowledgeStrategySectionOpportunities,
-              Icons.monetization_on_rounded, const Color(0xFFFFD700)),
+              Icons.monetization_on_rounded, AppColors.gold),
           const SizedBox(height: 8),
           ...strategy.commercialOpportunities.map((op) => _OpportunityTile(op)),
           const SizedBox(height: 16),
@@ -354,26 +355,26 @@ class _StrategyContent extends ConsumerWidget {
         // Keywords prioritárias
         if (strategy.priorityKeywords.isNotEmpty) ...[
           _Section(l10n.knowledgeStrategySectionKeywords, Icons.key_rounded,
-              const Color(0xFF9C27B0)),
+              AppColors.accent),
           const SizedBox(height: 8),
-          _ChipRow(strategy.priorityKeywords, const Color(0xFF9C27B0)),
+          _ChipRow(strategy.priorityKeywords, AppColors.accent),
           const SizedBox(height: 16),
         ],
 
         // Quick wins
         if (strategy.quickWins.isNotEmpty) ...[
           _Section(l10n.knowledgeStrategySectionQuickWins, Icons.bolt_rounded,
-              const Color(0xFFFF5722)),
+              AppColors.warning),
           const SizedBox(height: 8),
           ...strategy.quickWins
-              .map((w) => _BulletItem(w, const Color(0xFFFF5722))),
+              .map((w) => _BulletItem(w, AppColors.warning)),
           const SizedBox(height: 16),
         ],
 
         // Plano de crescimento
         if (strategy.growthPlan.isNotEmpty) ...[
           _Section(l10n.knowledgeStrategySectionGrowthPlan,
-              Icons.trending_up_rounded, const Color(0xFF4CAF50)),
+              Icons.trending_up_rounded, AppColors.positive),
           const SizedBox(height: 8),
           _GrowthCard(strategy.growthPlan, l10n),
           const SizedBox(height: 16),
@@ -383,8 +384,8 @@ class _StrategyContent extends ConsumerWidget {
         const SizedBox(height: 8),
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.white54,
-            side: const BorderSide(color: Colors.white12),
+            foregroundColor: AppColors.inkMuted,
+            side: const BorderSide(color: AppColors.line),
             padding: const EdgeInsets.symmetric(vertical: 12),
           ),
           icon: const Icon(Icons.refresh_rounded, size: 16),
@@ -412,26 +413,26 @@ class _StrategyContent extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _Section(l10n.knowledgeStrategySectionAudience, Icons.people_rounded,
-            const Color(0xFFE91E63)),
+            AppColors.accent),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1A2E),
-            borderRadius: BorderRadius.circular(10),
+            color: AppColors.surface, gradient: kIvSurfaceGradient,
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (a['primary'] != null)
                 _AudienceRow(l10n.knowledgeStrategyAudiencePrimary,
-                    a['primary'].toString(), const Color(0xFFE91E63)),
+                    a['primary'].toString(), AppColors.accent),
               if (a['secondary'] != null)
                 _AudienceRow(l10n.knowledgeStrategyAudienceSecondary,
-                    a['secondary'].toString(), Colors.white54),
+                    a['secondary'].toString(), AppColors.inkMuted),
               if (a['age_range'] != null)
                 _AudienceRow(l10n.knowledgeStrategyAudienceAgeRange,
-                    a['age_range'].toString(), Colors.white38),
+                    a['age_range'].toString(), AppColors.inkSubtle),
             ],
           ),
         ),
@@ -453,17 +454,17 @@ class _StratHeader extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF6C63FF).withOpacity(0.3),
-            const Color(0xFF6C63FF).withOpacity(0.05),
+            AppColors.accent.withOpacity(0.3),
+            AppColors.accent.withOpacity(0.05),
           ],
         ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.accent.withOpacity(0.3)),
       ),
       child: Row(
         children: [
           const Icon(Icons.rocket_launch_rounded,
-              color: Color(0xFF6C63FF), size: 28),
+              color: AppColors.accent, size: 28),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -471,13 +472,13 @@ class _StratHeader extends StatelessWidget {
               children: [
                 Text(title,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 15,
-                        fontWeight: FontWeight.bold)),
+                        fontWeight: FontWeight.w600)),
                 if (niche != null)
                   Text(niche!,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 12)),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
               ],
             ),
           ),
@@ -504,7 +505,7 @@ class _Section extends StatelessWidget {
           style: TextStyle(
               color: color,
               fontSize: 13,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.3),
         ),
       ],
@@ -527,7 +528,7 @@ class _HighlightCard extends StatelessWidget {
             content:
                 Text(AppLocalizations.of(context)!.knowledgeStrategyCopied),
             duration: const Duration(seconds: 1),
-            backgroundColor: const Color(0xFF1A1A2E),
+            backgroundColor: AppColors.surface,
           ),
         );
       },
@@ -536,7 +537,7 @@ class _HighlightCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Row(
@@ -566,11 +567,11 @@ class _ChannelTile extends StatelessWidget {
     switch (aiLevel(p)) {
       case AiLevel.high:
       case AiLevel.critical:
-        return const Color(0xFF4CAF50);
+        return AppColors.positive;
       case AiLevel.medium:
-        return const Color(0xFFFF9800);
+        return AppColors.warning;
       default:
-        return Colors.white38;
+        return AppColors.inkSubtle;
     }
   }
 
@@ -585,8 +586,8 @@ class _ChannelTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(
         children: [
@@ -594,7 +595,7 @@ class _ChannelTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(color: color.withOpacity(0.4)),
             ),
             child: Text(
@@ -609,13 +610,13 @@ class _ChannelTile extends StatelessWidget {
               children: [
                 Text(channel,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 13,
                         fontWeight: FontWeight.w600)),
                 if (reason.isNotEmpty)
                   Text(reason,
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 11)),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
               ],
             ),
           ),
@@ -636,22 +637,22 @@ class _FunnelCard extends StatelessWidget {
       (
         l10n.knowledgeStrategyFunnelAwareness,
         funnel['awareness'],
-        const Color(0xFF6C63FF)
+        AppColors.accent
       ),
       (
         l10n.knowledgeStrategyFunnelConsideration,
         funnel['consideration'],
-        const Color(0xFF00BCD4)
+        AppColors.info
       ),
       (
         l10n.knowledgeStrategyFunnelConversion,
         funnel['conversion'],
-        const Color(0xFF4CAF50)
+        AppColors.positive
       ),
       (
         l10n.knowledgeStrategyFunnelRetention,
         funnel['retention'],
-        const Color(0xFFFFD700)
+        AppColors.gold
       ),
     ];
 
@@ -663,7 +664,7 @@ class _FunnelCard extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: s.$3.withOpacity(0.07),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: s.$3.withOpacity(0.25)),
                 ),
                 child: Row(
@@ -675,12 +676,12 @@ class _FunnelCard extends StatelessWidget {
                           style: TextStyle(
                               color: s.$3,
                               fontSize: 11,
-                              fontWeight: FontWeight.w700)),
+                              fontWeight: FontWeight.w600)),
                     ),
                     Expanded(
                       child: Text(s.$2.toString(),
                           style: const TextStyle(
-                              color: Colors.white60,
+                              color: AppColors.inkMuted,
                               fontSize: 12,
                               height: 1.4)),
                     ),
@@ -700,11 +701,11 @@ class _OpportunityTile extends StatelessWidget {
     switch (aiLevel(p)) {
       case AiLevel.high:
       case AiLevel.critical:
-        return const Color(0xFF4CAF50);
+        return AppColors.positive;
       case AiLevel.medium:
-        return const Color(0xFFFF9800);
+        return AppColors.warning;
       default:
-        return Colors.white38;
+        return AppColors.inkSubtle;
     }
   }
 
@@ -719,14 +720,14 @@ class _OpportunityTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.2)),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.gold.withOpacity(0.2)),
       ),
       child: Row(
         children: [
           const Icon(Icons.monetization_on_rounded,
-              color: Color(0xFFFFD700), size: 16),
+              color: AppColors.gold, size: 16),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -734,13 +735,13 @@ class _OpportunityTile extends StatelessWidget {
               children: [
                 Text(type,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 13,
                         fontWeight: FontWeight.w600)),
                 if (description.isNotEmpty)
                   Text(description,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 12)),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
               ],
             ),
           ),
@@ -749,7 +750,7 @@ class _OpportunityTile extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
               ),
               child: Text(
                   aiLevelLabel(potential, AppLocalizations.of(context)!),
@@ -781,7 +782,7 @@ class _ChipRow extends StatelessWidget {
                       content: Text(AppLocalizations.of(context)!
                           .knowledgeStrategyCopiedKeyword(kw)),
                       duration: const Duration(seconds: 1),
-                      backgroundColor: const Color(0xFF1A1A2E),
+                      backgroundColor: AppColors.surface,
                     ),
                   );
                 },
@@ -790,7 +791,7 @@ class _ChipRow extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(color: color.withOpacity(0.35)),
                   ),
                   child: Text(kw,
@@ -824,7 +825,7 @@ class _BulletItem extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(text,
-                style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 13)),
           ),
         ],
       ),
@@ -858,8 +859,8 @@ class _GrowthCard extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: 6),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A2E),
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.surface, gradient: kIvSurfaceGradient,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child: Row(
                     children: [
@@ -867,14 +868,14 @@ class _GrowthCard extends StatelessWidget {
                         width: 45,
                         child: Text(m.$1,
                             style: const TextStyle(
-                                color: Color(0xFF4CAF50),
+                                color: AppColors.positive,
                                 fontSize: 11,
-                                fontWeight: FontWeight.w700)),
+                                fontWeight: FontWeight.w600)),
                       ),
                       Expanded(
                         child: Text(m.$2.toString(),
                             style: const TextStyle(
-                                color: Colors.white70, fontSize: 12)),
+                                color: AppColors.inkMuted, fontSize: 12)),
                       ),
                     ],
                   ),
@@ -883,9 +884,9 @@ class _GrowthCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(l10n.knowledgeStrategyKpisLabel,
               style: const TextStyle(
-                  color: Color(0xFF4CAF50),
+                  color: AppColors.positive,
                   fontSize: 11,
-                  fontWeight: FontWeight.w700)),
+                  fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           Wrap(
             spacing: 6,
@@ -895,14 +896,14 @@ class _GrowthCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.positive.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
                         border: Border.all(
-                            color: const Color(0xFF4CAF50).withOpacity(0.3)),
+                            color: AppColors.positive.withOpacity(0.3)),
                       ),
                       child: Text(k,
                           style: const TextStyle(
-                              color: Color(0xFF4CAF50), fontSize: 11)),
+                              color: AppColors.positive, fontSize: 11)),
                     ))
                 .toList(),
           ),
@@ -933,7 +934,7 @@ class _AudienceRow extends StatelessWidget {
           ),
           Expanded(
             child: Text(value,
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
           ),
         ],
       ),

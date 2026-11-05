@@ -91,7 +91,7 @@ class _QuantScreenState extends ConsumerState<QuantScreen> {
                       Text(
                         'Market Analytics',
                         style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold),
+                            fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 6),
                       Text(

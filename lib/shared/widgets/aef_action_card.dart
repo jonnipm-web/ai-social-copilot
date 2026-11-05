@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/aef_runtime.dart';
 import '../../data/services/aef_runtime_service.dart';
 import '../../l10n/app_localizations.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 — LAB Human Gate card.
 ///
@@ -164,17 +165,17 @@ class _AefActionCardState extends State<AefActionCard> {
     return switch (_phase) {
       AefPhase.succeeded when r != null && r.isCompleted => (
           Icons.check_circle,
-          Colors.greenAccent
+          AppColors.positive
         ),
-      AefPhase.unknownOutcome => (Icons.help, Colors.amberAccent),
-      AefPhase.failed => (Icons.error, Colors.redAccent),
+      AefPhase.unknownOutcome => (Icons.help, AppColors.warning),
+      AefPhase.failed => (Icons.error, AppColors.negative),
       AefPhase.denied ||
       AefPhase.rejected ||
       AefPhase.expired ||
       AefPhase.cancelled ||
       AefPhase.invalidated =>
-        (Icons.block, Colors.white70),
-      _ => (Icons.hourglass_top, Colors.lightBlueAccent),
+        (Icons.block, AppColors.inkMuted),
+      _ => (Icons.hourglass_top, AppColors.info),
     };
   }
 
@@ -204,22 +205,22 @@ class _AefActionCardState extends State<AefActionCard> {
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-          color: const Color(0xFF1E1C2E),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white24)),
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.inkSubtle)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(widget.title ?? l.aefLabTitle,
               style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.w600)),
+                  color: AppColors.ink, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
           Text('${l.aefLabActionLabel}: $actionLabel',
-              style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
           Text(l.aefLabRisk,
-              style: const TextStyle(color: Colors.orangeAccent, fontSize: 12)),
+              style: const TextStyle(color: AppColors.warning, fontSize: 12)),
           Text(consequence,
-              style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
           const SizedBox(height: 8),
           for (final f in _fields)
             Padding(
@@ -261,7 +262,7 @@ class _AefActionCardState extends State<AefActionCard> {
           ),
           if (_result?.receiptId != null && _result!.isCompleted)
             Text(l.aefLabReceipt(_result!.receiptId!),
-                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
           const SizedBox(height: 8),
           if (_phase == AefPhase.proposed)
             ElevatedButton(
@@ -274,8 +275,8 @@ class _AefActionCardState extends State<AefActionCard> {
               ElevatedButton.icon(
                 key: const Key('aef-approve'),
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
-                    foregroundColor: Colors.white),
+                    backgroundColor: AppColors.positive,
+                    foregroundColor: AppColors.ground),
                 icon: const Icon(Icons.check),
                 onPressed: _busy ? null : () => _decide(true),
                 label: Text(l.aefLabApprove),
@@ -283,8 +284,8 @@ class _AefActionCardState extends State<AefActionCard> {
               OutlinedButton.icon(
                 key: const Key('aef-reject'),
                 style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.redAccent,
-                    side: const BorderSide(color: Colors.redAccent)),
+                    foregroundColor: AppColors.negative,
+                    side: const BorderSide(color: AppColors.negative)),
                 icon: const Icon(Icons.close),
                 onPressed: _busy ? null : () => _decide(false),
                 label: Text(l.aefLabReject),

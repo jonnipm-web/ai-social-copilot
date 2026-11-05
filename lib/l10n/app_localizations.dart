@@ -12648,6 +12648,30 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'A IVE pode resumir evidências existentes, mas não pode inventar, pressupor ou verificar evidências por conta própria.'**
   String get impactIveCannotInvent;
+
+  /// No description provided for @dashScoreChartTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Score por análise'**
+  String get dashScoreChartTitle;
+
+  /// No description provided for @dashModulesTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Módulos'**
+  String get dashModulesTitle;
+
+  /// No description provided for @dashOverviewTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Visão geral'**
+  String get dashOverviewTitle;
+
+  /// No description provided for @dashQuotaTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Uso de IA'**
+  String get dashQuotaTitle;
 }
 
 class _AppLocalizationsDelegate

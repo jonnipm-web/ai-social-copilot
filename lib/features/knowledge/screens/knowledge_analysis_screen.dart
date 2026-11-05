@@ -18,6 +18,7 @@ import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/context_copilot_widget.dart'
     show showCopilotChat, IveInlineAskPresence;
 import '../../../shared/widgets/translated_content_notice.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 round-2 finding) — both
 // call sites below (the AppBar "Re-analisar" icon and _NoAnalysis's
@@ -85,13 +86,13 @@ class _KnowledgeAnalysisScreenState
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(itemId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F1A),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppColors.ink,
         title: Text(
           l10n.knowledgeAnalysisTitle,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         actions: [
           itemAsync.maybeWhen(
@@ -128,13 +129,13 @@ class _KnowledgeAnalysisScreenState
         error: (e, _) => Center(
           child: Text(
               l10n.knowledgeStrategyGenericError(extractErrorMessage(e, l10n)),
-              style: const TextStyle(color: Colors.white70)),
+              style: const TextStyle(color: AppColors.inkMuted)),
         ),
         data: (item) {
           if (item == null) {
             return Center(
               child: Text(l10n.knowledgeStrategyItemNotFound,
-                  style: const TextStyle(color: Colors.white70)),
+                  style: const TextStyle(color: AppColors.inkMuted)),
             );
           }
           return analysisAsync.when(
@@ -174,13 +175,13 @@ class _NoAnalysis extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.analytics_outlined,
-                size: 64, color: Color(0xFF6C63FF)),
+                size: 64, color: AppColors.accent),
             const SizedBox(height: 16),
             if (error != null) ...[
               Text(
                 l10n.knowledgeStrategyGenericError(error!),
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFFF44336), fontSize: 13),
+                style: const TextStyle(color: AppColors.negative, fontSize: 13),
               ),
               const SizedBox(height: 12),
             ],
@@ -188,14 +189,14 @@ class _NoAnalysis extends ConsumerWidget {
               isLoading
                   ? l10n.knowledgeAnalysisLoadingLabel
                   : l10n.knowledgeAnalysisNotYetLabel,
-              style: const TextStyle(color: Colors.white70, fontSize: 15),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 15),
             ),
             const SizedBox(height: 24),
             if (!isLoading)
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6C63FF),
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.onAccent,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
@@ -263,13 +264,13 @@ class _AnalysisContent extends StatelessWidget {
               const SizedBox(height: 8),
               if (analysis.keywordsPrimary.isNotEmpty)
                 _ChipSection(l10n.knowledgeAnalysisKeywordsPrimary,
-                    analysis.keywordsPrimary, const Color(0xFF6C63FF)),
+                    analysis.keywordsPrimary, AppColors.accent),
               if (analysis.keywordsSecondary.isNotEmpty)
                 _ChipSection(l10n.knowledgeAnalysisKeywordsSecondary,
-                    analysis.keywordsSecondary, const Color(0xFF00BCD4)),
+                    analysis.keywordsSecondary, AppColors.info),
               if (analysis.keywordsLongtail.isNotEmpty)
                 _ChipSection(l10n.knowledgeAnalysisKeywordsLongtail,
-                    analysis.keywordsLongtail, const Color(0xFF4CAF50)),
+                    analysis.keywordsLongtail, AppColors.positive),
               const SizedBox(height: 8),
 
               if (analysis.audiencePainPoints.isNotEmpty) ...[
@@ -277,25 +278,25 @@ class _AnalysisContent extends StatelessWidget {
                 _ListCards(
                     analysis.audiencePainPoints,
                     Icons.sentiment_dissatisfied_rounded,
-                    const Color(0xFFF44336)),
+                    AppColors.negative),
                 const SizedBox(height: 12),
               ],
               if (analysis.audienceDesires.isNotEmpty) ...[
                 _SectionTitle(l10n.knowledgeAnalysisSectionAudienceDesires),
                 _ListCards(analysis.audienceDesires, Icons.favorite_rounded,
-                    const Color(0xFFE91E63)),
+                    AppColors.accent),
                 const SizedBox(height: 12),
               ],
 
               if (analysis.contentPillars.isNotEmpty) ...[
                 _SectionTitle(l10n.knowledgeAnalysisSectionContentPillars),
                 _ChipSection(
-                    '', analysis.contentPillars, const Color(0xFFFF9800)),
+                    '', analysis.contentPillars, AppColors.warning),
                 const SizedBox(height: 8),
               ],
               if (analysis.topics.isNotEmpty) ...[
                 _SectionTitle(l10n.knowledgeAnalysisSectionTopics),
-                _ChipSection('', analysis.topics, const Color(0xFF9C27B0)),
+                _ChipSection('', analysis.topics, AppColors.accent),
                 const SizedBox(height: 8),
               ],
 
@@ -304,63 +305,63 @@ class _AnalysisContent extends StatelessWidget {
                 _CollapsibleSection(
                   title: l10n.knowledgeAnalysisSectionPostIdeas,
                   icon: Icons.chat_bubble_outline_rounded,
-                  color: const Color(0xFF00BCD4),
+                  color: AppColors.info,
                   child: _ListCards(
                       analysis.postIdeas,
                       Icons.chat_bubble_outline_rounded,
-                      const Color(0xFF00BCD4)),
+                      AppColors.info),
                 ),
               if (analysis.campaignIdeas.isNotEmpty)
                 _CollapsibleSection(
                   title: l10n.knowledgeAnalysisSectionCampaignIdeas,
                   icon: Icons.campaign_rounded,
-                  color: const Color(0xFFFF9800),
+                  color: AppColors.warning,
                   child: _ListCards(analysis.campaignIdeas,
-                      Icons.campaign_rounded, const Color(0xFFFF9800)),
+                      Icons.campaign_rounded, AppColors.warning),
                 ),
               if (analysis.articleIdeas.isNotEmpty)
                 _CollapsibleSection(
                   title: l10n.knowledgeAnalysisSectionArticleIdeas,
                   icon: Icons.article_rounded,
-                  color: const Color(0xFF4CAF50),
+                  color: AppColors.positive,
                   child: _ListCards(analysis.articleIdeas,
-                      Icons.article_rounded, const Color(0xFF4CAF50)),
+                      Icons.article_rounded, AppColors.positive),
                 ),
               if (analysis.commercialAngles.isNotEmpty)
                 _CollapsibleSection(
                   title: l10n.knowledgeAnalysisSectionCommercialAngles,
                   icon: Icons.monetization_on_rounded,
-                  color: const Color(0xFFFFD700),
+                  color: AppColors.gold,
                   child: _ListCards(analysis.commercialAngles,
-                      Icons.monetization_on_rounded, const Color(0xFFFFD700)),
+                      Icons.monetization_on_rounded, AppColors.gold),
                 ),
               if (analysis.ctas.isNotEmpty)
                 _CollapsibleSection(
                   title: l10n.knowledgeAnalysisSectionCtas,
                   icon: Icons.ads_click_rounded,
-                  color: const Color(0xFFFFD700),
+                  color: AppColors.gold,
                   child:
-                      _ChipSection('', analysis.ctas, const Color(0xFFFFD700)),
+                      _ChipSection('', analysis.ctas, AppColors.gold),
                 ),
 
               if (analysis.seoOpportunities.isNotEmpty) ...[
                 _SectionTitle(l10n.knowledgeAnalysisSectionSeoOpportunities),
                 _ListCards(analysis.seoOpportunities, Icons.search_rounded,
-                    const Color(0xFF4CAF50)),
+                    AppColors.positive),
                 const SizedBox(height: 12),
               ],
               if (analysis.adsenseOpportunities.isNotEmpty) ...[
                 _SectionTitle(
                     l10n.knowledgeAnalysisSectionAdsenseOpportunities),
                 _ListCards(analysis.adsenseOpportunities,
-                    Icons.attach_money_rounded, const Color(0xFF8BC34A)),
+                    Icons.attach_money_rounded, AppColors.positive),
                 const SizedBox(height: 12),
               ],
               if (analysis.amazonKdpOpportunities.isNotEmpty) ...[
                 _SectionTitle(
                     l10n.knowledgeAnalysisSectionAmazonKdpOpportunities),
                 _ListCards(analysis.amazonKdpOpportunities, Icons.book_rounded,
-                    const Color(0xFFFF5722)),
+                    AppColors.warning),
                 const SizedBox(height: 12),
               ],
 
@@ -391,8 +392,8 @@ class _AnalysisContent extends StatelessWidget {
         Container(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           decoration: const BoxDecoration(
-            color: Color(0xFF0F0F1A),
-            border: Border(top: BorderSide(color: Color(0xFF1A1A2E))),
+            color: AppColors.ground,
+            border: Border(top: BorderSide(color: AppColors.surface)),
           ),
           child: _ActionButtons(item: item, analysis: analysis),
         ),
@@ -423,7 +424,7 @@ class _ActionButtons extends ConsumerWidget {
         _ActionChip(
           icon: Icons.rocket_launch_rounded,
           label: l10n.uxKnowledgeActionGenerateStrategy,
-          color: const Color(0xFF6C63FF),
+          color: AppColors.accent,
           onTap: () => context.push(
             AppConstants.routeKnowledgeStrategy.replaceFirst(':id', item.id),
           ),
@@ -431,7 +432,7 @@ class _ActionButtons extends ConsumerWidget {
         _ActionChip(
           icon: Icons.campaign_rounded,
           label: l10n.uxKnowledgeActionCreateCampaign,
-          color: const Color(0xFF00BCD4),
+          color: AppColors.info,
           onTap: () => context.push(
             AppConstants.routeCampaignNew,
             extra: item.id,
@@ -440,14 +441,14 @@ class _ActionButtons extends ConsumerWidget {
         _ActionChip(
           icon: Icons.person_pin_rounded,
           label: l10n.uxKnowledgeActionTrainPersona,
-          color: const Color(0xFFFF9800),
+          color: AppColors.warning,
           onTap: () => _trainPersona(context, ref, personas),
         ),
         IveInlineAskPresence(
           child: _ActionChip(
             icon: Icons.psychology_rounded,
             label: l10n.uxKnowledgeActionAskIve,
-            color: const Color(0xFF6C63FF),
+            color: AppColors.accent,
             onTap: () {
               final ctx =
                   ref.read(iveContextDataProvider(item.projectId)).valueOrNull;
@@ -531,19 +532,19 @@ class _ActionButtons extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setState) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A2E),
+          backgroundColor: AppColors.surface,
           title: Text(l10n.uxKnowledgeActionTrainPersona,
-              style: const TextStyle(color: Colors.white)),
+              style: const TextStyle(color: AppColors.ink)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: personas
                 .map((p) => RadioListTile<String>(
                       title: Text(p.name,
-                          style: const TextStyle(color: Colors.white70)),
+                          style: const TextStyle(color: AppColors.inkMuted)),
                       value: p.id as String,
                       groupValue: selectedPersonaId,
                       onChanged: (v) => setState(() => selectedPersonaId = v),
-                      activeColor: const Color(0xFF6C63FF),
+                      activeColor: AppColors.accent,
                     ))
                 .toList(),
           ),
@@ -576,7 +577,7 @@ class _ActionButtons extends ConsumerWidget {
                       }
                     },
               style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6C63FF)),
+                  backgroundColor: AppColors.accent),
               child: Text(l10n.uxKnowledgeTrain),
             ),
           ],
@@ -607,7 +608,7 @@ class _ActionChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: color.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: color.withOpacity(0.4)),
         ),
         child: Row(
@@ -632,9 +633,9 @@ class _OpportunityScoreCard extends StatelessWidget {
   final int score;
 
   Color get _color {
-    if (score >= 80) return const Color(0xFF4CAF50);
-    if (score >= 60) return const Color(0xFFFF9800);
-    return const Color(0xFFF44336);
+    if (score >= 80) return AppColors.positive;
+    if (score >= 60) return AppColors.warning;
+    return AppColors.negative;
   }
 
   String _label(AppLocalizations l10n) {
@@ -654,7 +655,7 @@ class _OpportunityScoreCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _color.withOpacity(0.4)),
       ),
       child: Row(
@@ -671,7 +672,7 @@ class _OpportunityScoreCard extends StatelessWidget {
               child: Text(
                 '$score',
                 style: TextStyle(
-                    color: _color, fontSize: 22, fontWeight: FontWeight.bold),
+                    color: _color, fontSize: 22, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -683,9 +684,9 @@ class _OpportunityScoreCard extends StatelessWidget {
                 const Text(
                   'Opportunity Score',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 Text(_label(AppLocalizations.of(context)!),
@@ -696,7 +697,7 @@ class _OpportunityScoreCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 LinearProgressIndicator(
                   value: score / 100,
-                  backgroundColor: Colors.white12,
+                  backgroundColor: AppColors.line,
                   valueColor: AlwaysStoppedAnimation<Color>(_color),
                   minHeight: 4,
                   borderRadius: BorderRadius.circular(2),
@@ -719,12 +720,12 @@ class _HotmartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const color = Color(0xFF6C63FF);
+    const color = AppColors.accent;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: color.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(
@@ -736,16 +737,16 @@ class _HotmartCard extends StatelessWidget {
               const SizedBox(width: 8),
               const Text('Hotmart',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.w700)),
+                      fontWeight: FontWeight.w600)),
               const Spacer(),
               if (score > 0) _ScoreBadge(score, color),
             ],
           ),
           if (data.isNotEmpty) ...[
             const SizedBox(height: 10),
-            const Divider(color: Colors.white12, height: 1),
+            const Divider(color: AppColors.line, height: 1),
             const SizedBox(height: 10),
             ...{
               AppLocalizations.of(context)!.uxKnowledgeFieldProduct:
@@ -777,12 +778,12 @@ class _ShopifyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const color = Color(0xFF00BCD4);
+    const color = AppColors.info;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: color.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(
@@ -794,16 +795,16 @@ class _ShopifyCard extends StatelessWidget {
               const SizedBox(width: 8),
               const Text('Shopify',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.w700)),
+                      fontWeight: FontWeight.w600)),
               const Spacer(),
               if (score > 0) _ScoreBadge(score, color),
             ],
           ),
           if (data.isNotEmpty) ...[
             const SizedBox(height: 10),
-            const Divider(color: Colors.white12, height: 1),
+            const Divider(color: AppColors.line, height: 1),
             const SizedBox(height: 10),
             ...{
               AppLocalizations.of(context)!.uxKnowledgeFieldProduct:
@@ -827,7 +828,7 @@ class _ShopifyCard extends StatelessWidget {
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: color.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
                             border: Border.all(color: color.withOpacity(0.3)),
                           ),
                           child: Text(c.toString(),
@@ -854,13 +855,13 @@ class _ScoreBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Text(
         '$score/100',
         style:
-            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -882,13 +883,13 @@ class _DataRow extends StatelessWidget {
             width: 65,
             child: Text('$label:',
                 style: const TextStyle(
-                    color: Colors.white38,
+                    color: AppColors.inkSubtle,
                     fontSize: 11,
                     fontWeight: FontWeight.w600)),
           ),
           Expanded(
             child: Text(value,
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
           ),
         ],
       ),
@@ -910,19 +911,19 @@ class _ItemHeader extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF6C63FF).withOpacity(0.3),
-            const Color(0xFF6C63FF).withOpacity(0.05),
+            AppColors.accent.withOpacity(0.3),
+            AppColors.accent.withOpacity(0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.accent.withOpacity(0.3)),
       ),
       child: Row(
         children: [
           const Icon(Icons.auto_stories_rounded,
-              color: Color(0xFF6C63FF), size: 28),
+              color: AppColors.accent, size: 28),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -931,15 +932,15 @@ class _ItemHeader extends StatelessWidget {
                 Text(
                   item.title,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 if (item.niche != null)
                   Text(item.niche!,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 12)),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
               ],
             ),
           ),
@@ -961,9 +962,9 @@ class _SectionTitle extends StatelessWidget {
       child: Text(
         title,
         style: const TextStyle(
-          color: Colors.white,
+          color: AppColors.ink,
           fontSize: 14,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
           letterSpacing: 0.3,
         ),
       ),
@@ -999,7 +1000,7 @@ class _CollapsibleSectionState extends State<_CollapsibleSection> {
       children: [
         InkWell(
           onTap: () => setState(() => _expanded = !_expanded),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
@@ -1020,7 +1021,7 @@ class _CollapsibleSectionState extends State<_CollapsibleSection> {
                   _expanded
                       ? Icons.expand_less_rounded
                       : Icons.expand_more_rounded,
-                  color: Colors.white38,
+                  color: AppColors.inkSubtle,
                   size: 18,
                 ),
               ],
@@ -1049,29 +1050,29 @@ class _SummaryCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(summary,
               style: const TextStyle(
-                  color: Colors.white70, fontSize: 13, height: 1.5)),
+                  color: AppColors.inkMuted, fontSize: 13, height: 1.5)),
           const SizedBox(height: 10),
-          const Divider(color: Color(0xFF2A2A3E), height: 1),
+          const Divider(color: AppColors.surfaceRaised, height: 1),
           const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Icon(Icons.lightbulb_outline_rounded,
-                  size: 13, color: Color(0xFFFFD700)),
+                  size: 13, color: AppColors.gold),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   l10n.knowledgeAnalysisSummaryHint,
                   style: const TextStyle(
-                      color: Colors.white38, fontSize: 11, height: 1.4),
+                      color: AppColors.inkSubtle, fontSize: 11, height: 1.4),
                 ),
               ),
             ],
@@ -1090,15 +1091,15 @@ class _ScoreGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scores = [
-      _ScoreData('SEO', analysis.scoreSeo, const Color(0xFF4CAF50),
+      _ScoreData('SEO', analysis.scoreSeo, AppColors.positive,
           Icons.search_rounded),
-      _ScoreData('AdSense', analysis.scoreAdsense, const Color(0xFF8BC34A),
+      _ScoreData('AdSense', analysis.scoreAdsense, AppColors.positive,
           Icons.attach_money_rounded),
-      _ScoreData('Amazon KDP', analysis.scoreAmazonKdp, const Color(0xFFFF5722),
+      _ScoreData('Amazon KDP', analysis.scoreAmazonKdp, AppColors.warning,
           Icons.book_rounded),
       _ScoreData('LinkedIn', analysis.scoreLinkedin, const Color(0xFF0077B5),
           Icons.business_rounded),
-      _ScoreData('Social', analysis.scoreSocial, const Color(0xFFE91E63),
+      _ScoreData('Social', analysis.scoreSocial, AppColors.accent,
           Icons.people_rounded),
     ];
 
@@ -1124,9 +1125,9 @@ class _ScoreCard extends StatelessWidget {
   final _ScoreData data;
 
   Color get _barColor {
-    if (data.score >= 70) return const Color(0xFF4CAF50);
-    if (data.score >= 40) return const Color(0xFFFF9800);
-    return const Color(0xFFF44336);
+    if (data.score >= 70) return AppColors.positive;
+    if (data.score >= 40) return AppColors.warning;
+    return AppColors.negative;
   }
 
   @override
@@ -1135,8 +1136,8 @@ class _ScoreCard extends StatelessWidget {
       width: 120,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: data.color.withOpacity(0.3)),
       ),
       child: Column(
@@ -1148,16 +1149,16 @@ class _ScoreCard extends StatelessWidget {
             style: TextStyle(
               color: _barColor,
               fontSize: 22,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
             ),
           ),
           Text(data.label,
-              style: const TextStyle(color: Colors.white54, fontSize: 11),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 11),
               textAlign: TextAlign.center),
           const SizedBox(height: 6),
           LinearProgressIndicator(
             value: data.score / 100,
-            backgroundColor: Colors.white12,
+            backgroundColor: AppColors.line,
             valueColor: AlwaysStoppedAnimation<Color>(_barColor),
             minHeight: 4,
             borderRadius: BorderRadius.circular(2),
@@ -1200,7 +1201,7 @@ class _ChipSection extends StatelessWidget {
                         content: Text(AppLocalizations.of(context)!
                             .knowledgeAnalysisCopiedKeyword(kw)),
                         duration: const Duration(seconds: 1),
-                        backgroundColor: const Color(0xFF1A1A2E),
+                        backgroundColor: AppColors.surface,
                       ),
                     );
                   },
@@ -1209,7 +1210,7 @@ class _ChipSection extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(color: color.withOpacity(0.35)),
                     ),
                     child: Text(kw,
@@ -1245,7 +1246,7 @@ class _ListCards extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.07),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(color: color.withOpacity(0.25)),
               ),
               child: Row(
@@ -1255,7 +1256,7 @@ class _ListCards extends StatelessWidget {
                   Expanded(
                     child: Text(item,
                         style: const TextStyle(
-                            color: Colors.white70, fontSize: 13)),
+                            color: AppColors.inkMuted, fontSize: 13)),
                   ),
                   GestureDetector(
                     onTap: () {
@@ -1265,12 +1266,12 @@ class _ListCards extends StatelessWidget {
                           content: Text(AppLocalizations.of(context)!
                               .knowledgeAnalysisCopied),
                           duration: const Duration(seconds: 1),
-                          backgroundColor: const Color(0xFF1A1A2E),
+                          backgroundColor: AppColors.surface,
                         ),
                       );
                     },
                     child: const Icon(Icons.copy_rounded,
-                        color: Colors.white24, size: 15),
+                        color: AppColors.inkSubtle, size: 15),
                   ),
                 ],
               ),
@@ -1331,20 +1332,20 @@ class _ChannelDetailState extends State<_ChannelDetail> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Column(
         children: [
           ListTile(
             title: Text(widget.label,
                 style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 14,
                     fontWeight: FontWeight.w600)),
             trailing: Icon(
               _expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
-              color: Colors.white38,
+              color: AppColors.inkSubtle,
             ),
             onTap: () => setState(() => _expanded = !_expanded),
           ),
@@ -1357,25 +1358,25 @@ class _ChannelDetailState extends State<_ChannelDetail> {
                   if (strengths.isNotEmpty) ...[
                     _SubLabel(
                         AppLocalizations.of(context)!.uxKnowledgeStrengths,
-                        const Color(0xFF4CAF50)),
+                        AppColors.positive),
                     ...strengths
-                        .map((s) => _DetailItem(s, const Color(0xFF4CAF50))),
+                        .map((s) => _DetailItem(s, AppColors.positive)),
                     const SizedBox(height: 6),
                   ],
                   if (weaknesses.isNotEmpty) ...[
                     _SubLabel(
                         AppLocalizations.of(context)!.uxKnowledgeWeaknesses,
-                        const Color(0xFFF44336)),
+                        AppColors.negative),
                     ...weaknesses
-                        .map((s) => _DetailItem(s, const Color(0xFFF44336))),
+                        .map((s) => _DetailItem(s, AppColors.negative)),
                     const SizedBox(height: 6),
                   ],
                   if (improvements.isNotEmpty) ...[
                     _SubLabel(
                         AppLocalizations.of(context)!.uxKnowledgeImprovements,
-                        const Color(0xFF6C63FF)),
+                        AppColors.accent),
                     ...improvements
-                        .map((s) => _DetailItem(s, const Color(0xFF6C63FF))),
+                        .map((s) => _DetailItem(s, AppColors.accent)),
                   ],
                 ],
               ),
@@ -1403,7 +1404,7 @@ class _SubLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(text,
           style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w700)),
+              color: color, fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -1428,7 +1429,7 @@ class _DetailItem extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(text,
-                style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
           ),
         ],
       ),

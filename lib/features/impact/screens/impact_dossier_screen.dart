@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/breakpoints.dart';
@@ -417,7 +418,7 @@ class ImpactClaimTile extends StatelessWidget {
         button: true,
         label: '${t.impactClaimDetail} ${claim.ref}',
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
             builder: (_) => ImpactClaimScreen(dossier: dossier, claim: claim),
           )),

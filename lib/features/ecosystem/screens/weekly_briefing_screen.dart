@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,16 +13,16 @@ import '../../../providers/market_analysis_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
-const _kBg = Color(0xFF0A0A14);
-const _kCard = Color(0xFF12121E);
-const _kBorder = Color(0xFF1E1E30);
-const _kPrimary = Color(0xFF7C4DFF);
-const _kGreen = Color(0xFF00E676);
-const _kOrange = Color(0xFFFF9100);
-const _kRed = Color(0xFFFF1744);
-const _kGold = Color(0xFFFFD700);
-const _kCyan = Color(0xFF00E5FF);
+const _kCard = AppColors.ground;
+const _kBorder = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGreen = AppColors.positive;
+const _kOrange = AppColors.warning;
+const _kRed = AppColors.negative;
+const _kGold = AppColors.gold;
+const _kCyan = AppColors.info;
 
 // ════════════════════════════════════════════════════════════════════════════
 // Weekly Executive Briefing Screen — Módulo 7
@@ -35,24 +36,24 @@ class WeeklyBriefingScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: Colors.transparent,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon:
-              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+              const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeEcosystem),
         ),
         title: Text(l10n.ecoWeeklyBriefingTitle,
             style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold)),
+                color: AppColors.ink, fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white54),
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.inkMuted),
             onPressed: () {
               ref.invalidate(projectsProvider);
               ref.invalidate(opportunityLabProvider);
@@ -215,8 +216,8 @@ class _HealthSideCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF12121E),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.ground,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: hc.withOpacity(0.35)),
       ),
       child: Column(
@@ -224,23 +225,23 @@ class _HealthSideCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(briefing.healthEmoji, style: const TextStyle(fontSize: 20)),
+              IvEmojiIcon(briefing.healthEmoji, size: 32),
               const SizedBox(width: 8),
               Text(l10n.ecoBriefOverallHealth,
                   style: TextStyle(
-                      color: hc, fontSize: 13, fontWeight: FontWeight.bold)),
+                      color: hc, fontSize: 13, fontWeight: FontWeight.w600)),
               const Spacer(),
               Text('${briefing.overallHealthScore}/100',
                   style: TextStyle(
-                      color: hc, fontSize: 22, fontWeight: FontWeight.bold)),
+                      color: hc, fontSize: 22, fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 10),
           LinearProgressIndicator(
             value: briefing.overallHealthScore / 100,
-            backgroundColor: Colors.white12,
+            backgroundColor: AppColors.line,
             valueColor: AlwaysStoppedAnimation(hc),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             minHeight: 6,
           ),
           if (briefing.overallHealthScore < 50) ...[
@@ -248,7 +249,7 @@ class _HealthSideCard extends StatelessWidget {
             Text(
               l10n.ecoBriefLowScoreHint,
               style: const TextStyle(
-                  color: Colors.orange, fontSize: 11, height: 1.4),
+                  color: AppColors.warning, fontSize: 11, height: 1.4),
             ),
           ],
         ],
@@ -269,11 +270,11 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1A0E40), Color(0xFF0A0A14)],
+          colors: [AppColors.surface, AppColors.ground],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kPrimary.withOpacity(0.4)),
       ),
       child: Row(
@@ -285,20 +286,20 @@ class _Header extends StatelessWidget {
                 Text(l10n.ecoBriefHeaderLabel,
                     style: const TextStyle(
                         color: _kPrimary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         fontSize: 11,
                         letterSpacing: 1.5)),
                 const SizedBox(height: 4),
                 Text(l10n.ecoBriefWeekOf(dateStr),
                     style:
-                        const TextStyle(color: Colors.white54, fontSize: 12)),
+                        const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
                 const SizedBox(height: 8),
                 Text(
-                    '${briefing.healthEmoji}  ${l10n.ecoBriefOverallHealthValue(briefing.overallHealthScore)}',
+                    l10n.ecoBriefOverallHealthValue(briefing.overallHealthScore),
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 15,
-                        fontWeight: FontWeight.bold)),
+                        fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -311,14 +312,14 @@ class _Header extends StatelessWidget {
                 CircularProgressIndicator(
                   value: briefing.overallHealthScore / 100,
                   strokeWidth: 6,
-                  backgroundColor: Colors.white10,
+                  backgroundColor: AppColors.line,
                   valueColor: AlwaysStoppedAnimation(
                       _healthColor(briefing.overallHealthScore)),
                 ),
                 Text('${briefing.overallHealthScore}',
                     style: TextStyle(
                       color: _healthColor(briefing.overallHealthScore),
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 18,
                     )),
               ],
@@ -346,7 +347,7 @@ class _SummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _kBorder),
       ),
       child: Column(
@@ -354,14 +355,14 @@ class _SummaryCard extends StatelessWidget {
         children: [
           Text(AppLocalizations.of(context)!.ecoBriefExecutiveSummary,
               style: const TextStyle(
-                  color: Colors.white54,
+                  color: AppColors.inkMuted,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5)),
           const SizedBox(height: 6),
           Text(text,
               style: const TextStyle(
-                  color: Colors.white, fontSize: 13, height: 1.5)),
+                  color: AppColors.ink, fontSize: 13, height: 1.5)),
         ],
       ),
     );
@@ -382,7 +383,7 @@ class _Section extends StatelessWidget {
       children: [
         Text(title,
             style: TextStyle(
-                color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+                color: color, fontWeight: FontWeight.w600, fontSize: 14)),
         const SizedBox(height: 8),
         if (items.isEmpty)
           Padding(
@@ -409,7 +410,7 @@ class _BriefingRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border(left: BorderSide(color: color, width: 3)),
       ),
       child: Column(
@@ -417,13 +418,13 @@ class _BriefingRow extends StatelessWidget {
         children: [
           Text(item.title,
               style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.ink,
                   fontSize: 12,
                   fontWeight: FontWeight.w500)),
           if (item.detail.isNotEmpty) ...[
             const SizedBox(height: 2),
             Text(item.detail,
-                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
           ],
         ],
       ),
@@ -449,7 +450,7 @@ class _DataOriginCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _kBorder),
       ),
       child: Column(
@@ -464,14 +465,14 @@ class _DataOriginCard extends StatelessWidget {
                 style: const TextStyle(
                   color: _kPrimary,
                   fontSize: 10,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   letterSpacing: 1.2,
                 ),
               ),
               const Spacer(),
               Text(
                 l10n.ecoBriefGeneratedAt('$d/$mo/$y', '$h:$m'),
-                style: const TextStyle(color: Colors.white38, fontSize: 10),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
               ),
             ],
           ),
@@ -511,7 +512,7 @@ class _DataOriginCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               l10n.ecoBriefIncludedProjects,
-              style: const TextStyle(color: Colors.white38, fontSize: 10),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
             ),
             const SizedBox(height: 6),
             Wrap(
@@ -523,14 +524,14 @@ class _DataOriginCard extends StatelessWidget {
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: _kPrimary.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           border:
                               Border.all(color: _kPrimary.withOpacity(0.25)),
                         ),
                         child: Text(
                           name,
                           style: const TextStyle(
-                              color: Colors.white70, fontSize: 10),
+                              color: AppColors.inkMuted, fontSize: 10),
                         ),
                       ))
                   .toList(),
@@ -556,7 +557,7 @@ class _CountChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: color.withOpacity(0.07),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: color.withOpacity(0.2)),
         ),
         child: Column(
@@ -566,13 +567,13 @@ class _CountChip extends StatelessWidget {
               style: TextStyle(
                 color: color,
                 fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 1),
             Text(
               label,
-              style: const TextStyle(color: Colors.white38, fontSize: 9),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 9),
               textAlign: TextAlign.center,
             ),
           ],

@@ -20,17 +20,19 @@ import '../../../providers/roi_metric_provider.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 import '../../../shared/widgets/translated_content_notice.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
+import 'package:ai_social_copilot/shared/ui/iv_charts.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg = Color(0xFF0F0F1A);
-const _kCard = Color(0xFF1A1A2E);
-const _kPrimary = Color(0xFF6C63FF);
-const _kGreen = Color(0xFF4CAF50);
-const _kOrange = Color(0xFFFF9800);
-const _kRed = Color(0xFFF44336);
-const _kGold = Color(0xFFFFD700);
-const _kCyan = Color(0xFF00BCD4);
-const _kPink = Color(0xFFE91E63);
+const _kCard = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGreen = AppColors.positive;
+const _kOrange = AppColors.warning;
+const _kRed = AppColors.negative;
+const _kGold = AppColors.gold;
+const _kCyan = AppColors.info;
+const _kPink = AppColors.accent;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 Color _scoreColor(int score) {
@@ -153,13 +155,13 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
         ref.watch(contentClusterByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon:
-              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+              const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeMarketIntelligence),
@@ -167,7 +169,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
         title: Text(
           l10n.miHubAppBarTitle,
           style: const TextStyle(
-              color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.w600),
         ),
         actions: [
           // IVE-EXPERIENCE-V1-06 (Section 20) — first (and only, per mission
@@ -181,7 +183,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
           if (analysisAsync.valueOrNull != null)
             IconButton(
               icon:
-                  const Icon(Icons.auto_awesome_rounded, color: Colors.white54),
+                  const Icon(Icons.auto_awesome_rounded, color: AppColors.inkMuted),
               tooltip: l10n.miHubCompareWithIveTooltip,
               onPressed: () {
                 final analysis = analysisAsync.value!;
@@ -208,7 +210,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
               },
             ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white54),
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.inkMuted),
             tooltip: l10n.miHubReloadTooltip,
             onPressed: () {
               setState(() => _roiSaved = false);
@@ -226,8 +228,16 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
         ],
       ),
       body: analysisAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: _kPrimary)),
+        loading: () => ListView(
+          padding: const EdgeInsets.all(AppSpace.s4),
+          children: const [
+            IvSkeleton(height: 260),
+            SizedBox(height: AppSpace.s3),
+            IvSkeleton(height: 120),
+            SizedBox(height: AppSpace.s3),
+            IvSkeleton(height: 180),
+          ],
+        ),
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -238,7 +248,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                 const SizedBox(height: 16),
                 Text(
                   l10n.miHubLoadError(extractErrorMessage(e, l10n)),
-                  style: const TextStyle(color: Colors.white54),
+                  style: const TextStyle(color: AppColors.inkMuted),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -258,9 +268,12 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
 
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-            child: Column(
+            child: Center(
+             child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1080),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+              children: _staggered([
                 TranslatedContentNotice(localizedFrom: analysis.localizedFrom),
                 // M1 — Executive Score Card
                 _ExecScoreCard(analysis: analysis),
@@ -347,7 +360,9 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                   isSaved: _roiSaved,
                   onSave: () => _saveToRoi(analysis, opps, plan),
                 ),
-              ],
+              ]),
+            ),
+            ),
             ),
           );
         },
@@ -359,6 +374,15 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
 // ════════════════════════════════════════════════════════════════════════════
 // M1 — Executive Score Card
 // ════════════════════════════════════════════════════════════════════════════
+/// Wraps every non-spacer child in a staggered fade/rise entrance.
+List<Widget> _staggered(List<Widget> children) {
+  var i = 0;
+  return [
+    for (final c in children)
+      c is SizedBox ? c : FadeSlideIn(index: i++, child: c),
+  ];
+}
+
 class _ExecScoreCard extends StatelessWidget {
   const _ExecScoreCard({required this.analysis});
   final MarketAnalysis analysis;
@@ -383,191 +407,151 @@ class _ExecScoreCard extends StatelessWidget {
     final score = analysis.opportunityScore;
     final color = _scoreColor(score);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [_kCard, color.withOpacity(0.10)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(color: color.withOpacity(0.45), width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final subScores = [
+      _ScoreBar(label: l10n.miHubScoreSeo, score: analysis.scoreSeo),
+      _ScoreBar(
+          label: l10n.miHubScoreMonetization,
+          score: analysis.scoreMonetization),
+      _ScoreBar(
+          label: l10n.miHubScoreCompetition, score: analysis.scoreCompetition),
+      _ScoreBar(label: l10n.miHubScoreGrowth, score: analysis.scoreGrowth),
+    ];
+
+    return IvCard(
+      highlight: true,
+      accent: AppColors.accent,
+      padding: const EdgeInsets.all(AppSpace.s6),
+      child: LayoutBuilder(builder: (context, c) {
+        final wide = c.maxWidth >= 720;
+        final ringSize = wide ? 148.0 : 112.0;
+
+        final ring = IvRingGauge(
+          value: score.toDouble(),
+          size: ringSize,
+          stroke: wide ? 11 : 9,
+          color: color,
+          semanticsLabel: '$score / 100',
+          center: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.analytics_rounded, color: color, size: 18),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  l10n.miHubOpportunityScoreLabel,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 11,
-                    letterSpacing: 1.4,
-                    fontWeight: FontWeight.w700,
-                  ),
+              IvCountUp(
+                value: score,
+                style: TextStyle(
+                  fontSize: ringSize * 0.3,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.ink,
+                  height: 1,
+                  letterSpacing: -1,
                 ),
               ),
-              const Spacer(),
-              if (analysis.niche != null)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 130),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: _kPrimary.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: _kPrimary.withOpacity(0.35)),
-                    ),
-                    child: Text(
-                      analysis.niche!,
-                      style: const TextStyle(
-                          color: _kPrimary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
+              const SizedBox(height: 2),
+              const Text('/100',
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.inkSubtle,
+                      fontWeight: FontWeight.w500)),
             ],
           ),
-          const SizedBox(height: 14),
-          // COMMERCIAL-V1-UX-RECONCILIATION (mobile overflow fix) — a fixed
-          // horizontal Row(score, Spacer, context column) overflowed by
-          // ~136px at a 390px viewport (confirmed by
-          // test/features/market_intelligence/market_intelligence_scroll_test.dart's
-          // RenderFlex assertion in debug/test mode; silently clipped
-          // content in release since Flutter strips that assert there).
-          // LayoutBuilder switches to a stacked Column below a breakpoint
-          // instead of forcing the same horizontal layout into less
-          // width — the score also shrinks so it never dominates a narrow
-          // card on its own.
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 380;
-              final scoreRow = Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$score',
-                    style: TextStyle(
-                      fontSize: isNarrow ? 48 : 68,
-                      fontWeight: FontWeight.w900,
-                      color: color,
-                      height: 1,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      '/100',
-                      style: TextStyle(
-                        fontSize: isNarrow ? 16 : 20,
-                        fontWeight: FontWeight.w300,
-                        color: color.withOpacity(0.55),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-              final contextColumn = Column(
-                crossAxisAlignment: isNarrow
-                    ? CrossAxisAlignment.start
-                    : CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
+        );
+
+        final info = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IvEyebrow(l10n.miHubOpportunityScoreLabel),
+            const SizedBox(height: AppSpace.s2),
+            Text(
+              analysis.niche ?? analysis.input,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.ink,
+                fontSize: wide ? 24 : 20,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.3,
+                height: 1.2,
+              ),
+            ),
+            const SizedBox(height: AppSpace.s2),
+            Wrap(
+              spacing: AppSpace.s2,
+              runSpacing: AppSpace.s2,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                IvBadge(_rec(l10n), color: color, icon: Icons.flag_rounded),
+                if (analysis.niche != null)
                   ConstrainedBox(
-                    constraints: BoxConstraints(
-                        maxWidth: isNarrow ? double.infinity : 140),
+                    constraints: const BoxConstraints(maxWidth: 320),
                     child: Text(
                       analysis.input,
-                      style: const TextStyle(
-                          color: Colors.white60,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                      textAlign: isNarrow ? TextAlign.start : TextAlign.end,
+                      style: const TextStyle(
+                          color: AppColors.inkSubtle, fontSize: 13),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _rec(l10n),
-                      style: TextStyle(
-                          color: color,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
-              );
-
-              if (isNarrow) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    scoreRow,
-                    const SizedBox(height: 10),
-                    contextColumn,
-                  ],
-                );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  scoreRow,
-                  const Spacer(),
-                  contextColumn,
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              _ScoreBar(label: l10n.miHubScoreSeo, score: analysis.scoreSeo),
-              const SizedBox(width: 8),
-              _ScoreBar(
-                  label: l10n.miHubScoreMonetization,
-                  score: analysis.scoreMonetization),
-              const SizedBox(width: 8),
-              _ScoreBar(
-                  label: l10n.miHubScoreCompetition,
-                  score: analysis.scoreCompetition),
-              const SizedBox(width: 8),
-              _ScoreBar(
-                  label: l10n.miHubScoreGrowth, score: analysis.scoreGrowth),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.04),
-              borderRadius: BorderRadius.circular(8),
+              ],
             ),
-            child: Text(
+            const SizedBox(height: AppSpace.s4),
+            Text(
               _desc(l10n),
               style: const TextStyle(
-                  color: Colors.white70, fontSize: 13, height: 1.5),
+                  color: AppColors.inkMuted, fontSize: 14, height: 1.55),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+
+        final scoresRow = Row(
+          children: [
+            for (var i = 0; i < subScores.length; i++) ...[
+              if (i > 0)
+                Container(
+                    width: 1,
+                    height: 56,
+                    color: AppColors.line,
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: AppSpace.s2)),
+              subScores[i],
+            ],
+          ],
+        );
+
+        if (wide) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  ring,
+                  const SizedBox(width: AppSpace.s8),
+                  Expanded(child: info),
+                ],
+              ),
+              const SizedBox(height: AppSpace.s6),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: AppSpace.s4),
+                decoration: BoxDecoration(
+                  color: AppColors.ground.withOpacity(0.35),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: scoresRow,
+              ),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: ring),
+            const SizedBox(height: AppSpace.s4),
+            info,
+            const SizedBox(height: AppSpace.s4),
+            scoresRow,
+          ],
+        );
+      }),
     );
   }
 }
@@ -583,22 +567,21 @@ class _ScoreBar extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Text('$score',
-              style: TextStyle(
-                  color: c, fontSize: 13, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: score / 100,
-              backgroundColor: Colors.white.withOpacity(0.08),
-              valueColor: AlwaysStoppedAnimation<Color>(c),
-              minHeight: 5,
-            ),
+          IvRingGauge(
+            value: score.toDouble(),
+            size: 50,
+            stroke: 5,
+            color: c,
+            semanticsLabel: '$label: $score / 100',
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(label,
-              style: const TextStyle(color: Colors.white38, fontSize: 9),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  color: AppColors.inkMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500),
               textAlign: TextAlign.center),
         ],
       ),
@@ -606,9 +589,6 @@ class _ScoreBar extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// M2 — Revenue Potential Card
-// ════════════════════════════════════════════════════════════════════════════
 class _RevenuePotentialCard extends StatelessWidget {
   const _RevenuePotentialCard({required this.analysis, this.plan});
   final MarketAnalysis analysis;
@@ -626,8 +606,8 @@ class _RevenuePotentialCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kCyan.withOpacity(0.3)),
       ),
       child: Column(
@@ -641,7 +621,7 @@ class _RevenuePotentialCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubRevenuePotentialTitle,
                   style: const TextStyle(
-                      color: Colors.white70,
+                      color: AppColors.inkMuted,
                       fontSize: 12,
                       fontWeight: FontWeight.w600),
                 ),
@@ -651,12 +631,12 @@ class _RevenuePotentialCard extends StatelessWidget {
           const SizedBox(height: 14),
           if (!hasData) ...[
             const Icon(Icons.bar_chart_rounded,
-                color: Colors.white24, size: 28),
+                color: AppColors.inkSubtle, size: 28),
             const SizedBox(height: 6),
             Text(
               l10n.miHubRevenueNoDataHint,
               style: const TextStyle(
-                  color: Colors.white38, fontSize: 11, height: 1.4),
+                  color: AppColors.inkSubtle, fontSize: 11, height: 1.4),
             ),
           ] else ...[
             Text(
@@ -667,7 +647,7 @@ class _RevenuePotentialCard extends StatelessWidget {
               style: const TextStyle(
                   color: _kCyan,
                   fontSize: 14,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   height: 1.2),
             ),
             if (plan != null) ...[
@@ -722,8 +702,8 @@ class _InvestmentCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.35)),
       ),
       child: Column(
@@ -732,7 +712,7 @@ class _InvestmentCard extends StatelessWidget {
           Text(
             l10n.miHubInvestmentTitle,
             style: const TextStyle(
-                color: Colors.white70,
+                color: AppColors.inkMuted,
                 fontSize: 12,
                 fontWeight: FontWeight.w600),
           ),
@@ -744,7 +724,7 @@ class _InvestmentCard extends StatelessWidget {
               Text(
                 aiInvestmentRecommendationLabel(rec, l10n),
                 style: TextStyle(
-                    color: color, fontSize: 22, fontWeight: FontWeight.w900),
+                    color: color, fontSize: 22, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -756,7 +736,7 @@ class _InvestmentCard extends StatelessWidget {
             Text(
               just,
               style: const TextStyle(
-                  color: Colors.white54, fontSize: 11, height: 1.5),
+                  color: AppColors.inkMuted, fontSize: 11, height: 1.5),
               maxLines: 6,
               overflow: TextOverflow.ellipsis,
             ),
@@ -790,8 +770,8 @@ class _PriorityActionsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kPrimary.withOpacity(0.25)),
       ),
       child: Column(
@@ -806,9 +786,9 @@ class _PriorityActionsCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubNextActionsTitle,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -841,7 +821,7 @@ class _PriorityActionsCard extends StatelessWidget {
                       style: const TextStyle(
                           color: _kPrimary,
                           fontSize: 12,
-                          fontWeight: FontWeight.bold),
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -852,7 +832,7 @@ class _PriorityActionsCard extends StatelessWidget {
                         Text(
                           name,
                           style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.ink,
                               fontSize: 13,
                               fontWeight: FontWeight.w500),
                         ),
@@ -868,7 +848,7 @@ class _PriorityActionsCard extends StatelessWidget {
                             _Badge(
                                 l10n.miHubBadgeEffort(
                                     aiLevelLabel(effort, l10n)),
-                                Colors.white38),
+                                AppColors.inkSubtle),
                             if (roi.isNotEmpty)
                               _Badge(l10n.miHubBadgeRoi(roi), _kCyan),
                           ],
@@ -909,9 +889,9 @@ class _CompetitorRankingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -924,9 +904,9 @@ class _CompetitorRankingCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubCompetitorsTitle,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(
@@ -964,7 +944,7 @@ class _CompetitorRankingCard extends StatelessWidget {
                 Expanded(flex: 2, child: _TH(l10n.miHubThScore)),
               ],
             ),
-            const Divider(color: Colors.white12, height: 14),
+            const Divider(color: AppColors.line, height: 14),
             ...top.asMap().entries.map((e) {
               final idx = e.key;
               final c = e.value;
@@ -984,15 +964,15 @@ class _CompetitorRankingCard extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: idx == 0
                                   ? _kGold.withOpacity(0.2)
-                                  : Colors.white.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(4),
+                                  : AppColors.ink.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
                             ),
                             child: Text(
                               '${idx + 1}',
                               style: TextStyle(
-                                color: idx == 0 ? _kGold : Colors.white38,
+                                color: idx == 0 ? _kGold : AppColors.inkSubtle,
                                 fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -1003,7 +983,7 @@ class _CompetitorRankingCard extends StatelessWidget {
                                 Text(
                                   c.name,
                                   style: const TextStyle(
-                                      color: Colors.white,
+                                      color: AppColors.ink,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500),
                                   overflow: TextOverflow.ellipsis,
@@ -1012,7 +992,7 @@ class _CompetitorRankingCard extends StatelessWidget {
                                   Text(
                                     c.url,
                                     style: const TextStyle(
-                                        color: Colors.white38, fontSize: 10),
+                                        color: AppColors.inkSubtle, fontSize: 10),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                               ],
@@ -1040,7 +1020,7 @@ class _CompetitorRankingCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
             ),
           ],
@@ -1072,9 +1052,9 @@ class _GapSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1087,9 +1067,9 @@ class _GapSummaryCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubGapSummaryTitle,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(
@@ -1134,7 +1114,7 @@ class _GapSummaryCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: _kGold.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Text(
                 l10n.miHubGapTotal(gap!.totalGaps),
@@ -1182,14 +1162,14 @@ class _GapRow extends StatelessWidget {
                           horizontal: 6, vertical: 1),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: Text(
                         '${items.length}',
                         style: TextStyle(
                             color: color,
                             fontSize: 10,
-                            fontWeight: FontWeight.bold),
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
@@ -1200,7 +1180,7 @@ class _GapRow extends StatelessWidget {
                     child: Text(
                       items.first,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 11),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 11),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1237,9 +1217,9 @@ class _OpportunitiesCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1252,9 +1232,9 @@ class _OpportunitiesCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubOpportunitiesTitle,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(
@@ -1290,9 +1270,8 @@ class _OpportunitiesCard extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.04),
-                    borderRadius: BorderRadius.circular(10),
+                  decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(color: _kGold.withOpacity(0.15)),
                   ),
                   child: Column(
@@ -1304,7 +1283,7 @@ class _OpportunitiesCard extends StatelessWidget {
                             child: Text(
                               o.title,
                               style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.ink,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600),
                             ),
@@ -1314,13 +1293,13 @@ class _OpportunitiesCard extends StatelessWidget {
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: c.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
                             child: Text('${o.opportunityScore}',
                                 style: TextStyle(
                                     color: c,
                                     fontSize: 13,
-                                    fontWeight: FontWeight.bold)),
+                                    fontWeight: FontWeight.w600)),
                           ),
                         ],
                       ),
@@ -1329,7 +1308,7 @@ class _OpportunitiesCard extends StatelessWidget {
                         Text(
                           o.description,
                           style: const TextStyle(
-                              color: Colors.white54, fontSize: 11),
+                              color: AppColors.inkMuted, fontSize: 11),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1345,7 +1324,7 @@ class _OpportunitiesCard extends StatelessWidget {
                             _Badge(
                                 l10n.miHubOppEffortBadge(
                                     aiLevelLabel(o.effort, l10n)),
-                                Colors.white38),
+                                AppColors.inkSubtle),
                           _Badge(
                             l10n.miHubOppRevenueBadge(
                                 _scoreLabel(l10n, o.monetizationScore)),
@@ -1395,9 +1374,9 @@ class _NicheSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1410,9 +1389,9 @@ class _NicheSummaryCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubNichesSummaryTitle,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(
@@ -1444,9 +1423,8 @@ class _NicheSummaryCard extends StatelessWidget {
           else ...[
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(10),
+              decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(color: _kCyan.withOpacity(0.15)),
               ),
               child: Row(
@@ -1457,7 +1435,7 @@ class _NicheSummaryCard extends StatelessWidget {
                       children: [
                         Text(best.name,
                             style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.ink,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600),
                             maxLines: 1,
@@ -1465,7 +1443,7 @@ class _NicheSummaryCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(l10n.miHubNichesBestCandidateLabel,
                             style: const TextStyle(
-                                color: Colors.white38, fontSize: 11)),
+                                color: AppColors.inkSubtle, fontSize: 11)),
                       ],
                     ),
                   ),
@@ -1477,7 +1455,7 @@ class _NicheSummaryCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               l10n.miHubNichesCount(niches.length),
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
             ),
           ],
         ],
@@ -1509,9 +1487,9 @@ class _ContentClusterSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1525,9 +1503,9 @@ class _ContentClusterSummaryCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubClusterSummaryTitle,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(
@@ -1560,7 +1538,7 @@ class _ContentClusterSummaryCard extends StatelessWidget {
             Text(
               cluster!.mainKeyword,
               style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.ink,
                   fontSize: 13,
                   fontWeight: FontWeight.w600),
               maxLines: 1,
@@ -1610,9 +1588,9 @@ class _RevenuePlannerSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1625,9 +1603,9 @@ class _RevenuePlannerSummaryCard extends StatelessWidget {
                 child: Text(
                   l10n.miHubRevenuePlannerSummaryTitle,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(
@@ -1661,7 +1639,7 @@ class _RevenuePlannerSummaryCard extends StatelessWidget {
               l10n.miHubRevenuePlannerMonthly(
                   _formatBRL(plan!.monthlyModerate)),
               style: const TextStyle(
-                  color: _kPink, fontSize: 14, fontWeight: FontWeight.bold),
+                  color: _kPink, fontSize: 14, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -1722,8 +1700,8 @@ class _RoiIntegrationCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kGreen.withOpacity(0.3)),
       ),
       child: Column(
@@ -1736,9 +1714,9 @@ class _RoiIntegrationCard extends StatelessWidget {
               Text(
                 l10n.miHubRoiTrackerTitle,
                 style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 14,
-                    fontWeight: FontWeight.bold),
+                    fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -1768,7 +1746,7 @@ class _RoiIntegrationCard extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: _kGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(color: _kGreen.withOpacity(0.3)),
               ),
               child: Row(
@@ -1796,7 +1774,7 @@ class _RoiIntegrationCard extends StatelessWidget {
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2, color: AppColors.ink),
                       )
                     : const Icon(Icons.add_chart_rounded, size: 18),
                 label: Text(
@@ -1806,11 +1784,11 @@ class _RoiIntegrationCard extends StatelessWidget {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kGreen,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.ink,
                   disabledBackgroundColor: _kGreen.withOpacity(0.4),
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(AppRadius.md)),
                 ),
               ),
             ),
@@ -1837,18 +1815,18 @@ class _InfoRow2 extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 13, color: Colors.white38),
+        Icon(icon, size: 13, color: AppColors.inkSubtle),
         const SizedBox(width: 4),
         Flexible(
           child: Text('$label: ',
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white38, fontSize: 11)),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
         ),
         Flexible(
           child: Text(value,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                  color: Colors.white70,
+                  color: AppColors.inkMuted,
                   fontSize: 11,
                   fontWeight: FontWeight.w600)),
         ),
@@ -1865,7 +1843,7 @@ class _TH extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(text,
         style: const TextStyle(
-            color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w600));
+            color: AppColors.inkSubtle, fontSize: 10, fontWeight: FontWeight.w600));
   }
 }
 
@@ -1894,7 +1872,7 @@ class _Badge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(label,
@@ -1922,10 +1900,10 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
         children: [
-          Icon(icon, color: Colors.white24, size: 32),
+          Icon(icon, color: AppColors.inkSubtle, size: 32),
           const SizedBox(height: 8),
           Text(message,
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
               textAlign: TextAlign.center),
           const SizedBox(height: 10),
           TextButton(
@@ -1951,11 +1929,11 @@ class _RoiStat extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(color: Colors.white38, fontSize: 10)),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
         const SizedBox(height: 2),
         Text(value,
             style: TextStyle(
-                color: color, fontSize: 14, fontWeight: FontWeight.bold)),
+                color: color, fontSize: 14, fontWeight: FontWeight.w600)),
       ],
     );
   }

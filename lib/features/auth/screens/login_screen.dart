@@ -10,6 +10,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/loading_button.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -115,7 +116,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     AppConstants.appName,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -125,7 +126,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
-                        ?.copyWith(color: Colors.white54),
+                        ?.copyWith(color: AppColors.inkMuted),
                   ),
                   const SizedBox(height: 40),
                   // GATE-17-FINAL-CLOSURE (Section 11, text-scale physical
@@ -144,7 +145,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 14),
-                      side: const BorderSide(color: Colors.white24),
+                      side: const BorderSide(color: AppColors.inkSubtle),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -171,7 +172,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      const Expanded(child: Divider(color: Colors.white12)),
+                      const Expanded(child: Divider(color: AppColors.line)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
@@ -179,10 +180,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
-                              ?.copyWith(color: Colors.white38),
+                              ?.copyWith(color: AppColors.inkSubtle),
                         ),
                       ),
-                      const Expanded(child: Divider(color: Colors.white12)),
+                      const Expanded(child: Divider(color: AppColors.line)),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -208,7 +209,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         _obscurePassword
                             ? Icons.visibility_off
                             : Icons.visibility,
-                        color: Colors.white38,
+                        color: AppColors.inkSubtle,
                       ),
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),

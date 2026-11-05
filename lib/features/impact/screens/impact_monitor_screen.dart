@@ -7,6 +7,7 @@ import '../data/impact_lab_api.dart';
 import '../domain/dossier_models.dart';
 import '../providers/impact_providers.dart';
 import '../widgets/impact_widgets.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 /// IV-IMPACT-MACRO-08 Phase 10 — Monitor vertical.
 ///
@@ -107,7 +108,7 @@ class _ImpactMonitorScreenState extends ConsumerState<ImpactMonitorScreen> {
           // Re-check button
           FilledButton.icon(
             icon:      _rechecking
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.ink))
                 : const Icon(Icons.refresh),
             label:     Text(t.impactMonitorRecheck),
             onPressed: _rechecking ? null : _recheck,
@@ -194,7 +195,7 @@ class _VerificationHistory extends StatelessWidget {
         leading:  const Icon(Icons.check_circle_outline, size: 18),
         title:    Text(e.status, style: Theme.of(context).textTheme.bodySmall),
         subtitle: Text('${e.ref} · ${e.evaluatedAt}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkMuted)),
       )).toList(),
     );
   }

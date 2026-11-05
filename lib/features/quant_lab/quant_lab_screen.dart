@@ -396,7 +396,7 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
         Row(children: [
           Icon(_freshIcon(a.freshnessState), semanticLabel: a.freshnessState),
           const SizedBox(width: 8),
-          Expanded(child: Text(a.freshnessState, style: const TextStyle(fontWeight: FontWeight.w700))),
+          Expanded(child: Text(a.freshnessState, style: const TextStyle(fontWeight: FontWeight.w600))),
         ]),
         if (a.freshnessAsOf != null) kv(l.quantLabAsOf, a.freshnessAsOf!),
         kv(
@@ -421,7 +421,7 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
             child: ExpansionTile(
               tilePadding: EdgeInsets.zero,
               title: Text('${m.id}${m.window != null ? ' (${m.window})' : ''}'),
-              trailing: Text(m.display(a.currency), style: const TextStyle(fontWeight: FontWeight.w700)),
+              trailing: Text(m.display(a.currency), style: const TextStyle(fontWeight: FontWeight.w600)),
               children: [kv(l.quantLabFormula, m.formulaId), kv(l.quantLabObservations, '${m.observations}')],
             ),
           ),

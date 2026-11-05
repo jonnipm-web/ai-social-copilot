@@ -21,22 +21,22 @@ import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../data/models/knowledge_coverage.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // R16: internal debug hub stays in Portuguese (not a commercial surface).
 final AppLocalizations _dbgL10n = lookupAppLocalizations(const Locale('pt'));
 
 // ─── Palette ───────────────────────────────────────────────────────────────
-const _kBg = Color(0xFF080810);
-const _kCard = Color(0xFF0E0E1C);
-const _kBorder = Color(0xFF1A1A2E);
-const _kPrimary = Color(0xFF7C4DFF);
-const _kGreen = Color(0xFF00E676);
-const _kOrange = Color(0xFFFF9100);
-const _kRed = Color(0xFFFF1744);
-const _kCyan = Color(0xFF00E5FF);
-const _kGold = Color(0xFFFFD700);
+const _kCard = AppColors.ground;
+const _kBorder = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGreen = AppColors.positive;
+const _kOrange = AppColors.warning;
+const _kRed = AppColors.negative;
+const _kCyan = AppColors.info;
+const _kGold = AppColors.gold;
 const _kMono =
-    TextStyle(fontFamily: 'monospace', fontSize: 11, color: Color(0xFF9E9EBF));
+    TextStyle(fontFamily: 'monospace', fontSize: 11, color: AppColors.inkMuted);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Intelligence Debug Hub
@@ -90,7 +90,7 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
         appBar: AppBar(title: Text(t.uxAdminAccessDeniedTitle)),
         body: Center(
           child: Text(t.uxAdminAccessDeniedBody,
-              style: const TextStyle(color: Colors.white54)),
+              style: const TextStyle(color: AppColors.inkMuted)),
         ),
       );
     }
@@ -98,26 +98,26 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
     return DefaultTabController(
       length: _tabs.length,
       child: Scaffold(
-        backgroundColor: _kBg,
+        backgroundColor: Colors.transparent,
         drawer: const AppDrawer(),
         appBar: AppBar(
-          backgroundColor: _kBg,
+          backgroundColor: Colors.transparent,
           elevation: 0,
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
               Text('Intelligence Debug Center',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                      color: AppColors.ink,
+                      fontWeight: FontWeight.w600,
                       fontSize: 15)),
               Text('Observabilidade · Rastreabilidade · Auditoria',
-                  style: TextStyle(color: Colors.white38, fontSize: 10)),
+                  style: TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
             ],
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: Colors.white38),
+              icon: const Icon(Icons.refresh_rounded, color: AppColors.inkSubtle),
               tooltip: 'Atualizar tudo',
               onPressed: () {
                 ref.invalidate(scoreBreakdownsProvider);
@@ -133,7 +133,7 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
             isScrollable: true,
             tabAlignment: TabAlignment.start,
             labelColor: _kPrimary,
-            unselectedLabelColor: Colors.white38,
+            unselectedLabelColor: AppColors.inkSubtle,
             indicatorColor: _kPrimary,
             labelStyle:
                 const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
@@ -641,17 +641,17 @@ class _ScoresTab extends ConsumerWidget {
             Text('${c.rawValue}/100',
                 style: TextStyle(
                     color: c.hasData ? _kCyan : _kOrange,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     fontSize: 12)),
           ]),
           Text(c.formula, style: _kMono),
           const SizedBox(height: 4),
           Text(c.explanation,
-              style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
           const SizedBox(height: 4),
           ...c.dataSources.map((s) => Text('  › $s', style: _kMono)),
           if (!c.hasData)
-            const Text('  ⚠ Sem dados suficientes para este componente',
+            const Text('Sem dados suficientes para este componente',
                 style: TextStyle(color: _kOrange, fontSize: 11)),
         ],
       ),
@@ -769,7 +769,7 @@ class _GraphTab extends ConsumerWidget {
                 const Padding(
                   padding: EdgeInsets.only(top: 8),
                   child: Text(
-                      '⚠ Projeto sem conexões detectadas no grafo de conhecimento.',
+                      'Projeto sem conexões detectadas no grafo de conhecimento.',
                       style: TextStyle(color: _kOrange, fontSize: 11)),
                 ),
             ],
@@ -1072,7 +1072,7 @@ class _HealthTab extends ConsumerWidget {
       child: Row(children: [
         Expanded(
             child: Text(label,
-                style: const TextStyle(color: Colors.white54, fontSize: 11))),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 11))),
         Text('$value/$max',
             style: TextStyle(
                 color: color, fontSize: 11, fontWeight: FontWeight.w600)),
@@ -1081,7 +1081,7 @@ class _HealthTab extends ConsumerWidget {
           width: 60,
           child: LinearProgressIndicator(
             value: pct.clamp(0, 1),
-            backgroundColor: Colors.white10,
+            backgroundColor: AppColors.line,
             valueColor: AlwaysStoppedAnimation(color),
           ),
         ),
@@ -1109,7 +1109,7 @@ class _TestsTab extends ConsumerWidget {
           CircularProgressIndicator(color: _kPrimary),
           SizedBox(height: 12),
           Text('Executando testes de validação...',
-              style: TextStyle(color: Colors.white38)),
+              style: TextStyle(color: AppColors.inkSubtle)),
         ]),
       );
     }
@@ -1133,7 +1133,7 @@ class _TestsTab extends ConsumerWidget {
           ref: ref,
         ),
         const SizedBox(height: 16),
-        const Divider(color: Color(0xFF1A1A2E), height: 1),
+        const Divider(color: AppColors.surface, height: 1),
         const SizedBox(height: 12),
         // Summary header
         _TestSummaryCard(report: report),
@@ -1170,8 +1170,8 @@ class _BootstrapEngineCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0E0E1C),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.ground,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kOrange.withOpacity(0.4)),
       ),
       child: Column(
@@ -1186,7 +1186,7 @@ class _BootstrapEngineCard extends StatelessWidget {
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: _kOrange.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child:
                       const Icon(Icons.bolt_rounded, color: _kOrange, size: 18),
@@ -1198,13 +1198,13 @@ class _BootstrapEngineCard extends StatelessWidget {
                     children: [
                       Text('Knowledge → Action Engine',
                           style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                              color: AppColors.ink,
+                              fontWeight: FontWeight.w600,
                               fontSize: 13)),
                       Text(
                           'Converte documentos em oportunidades, ações e roadmap',
                           style:
-                              TextStyle(color: Colors.white38, fontSize: 10)),
+                              TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
                     ],
                   ),
                 ),
@@ -1219,7 +1219,7 @@ class _BootstrapEngineCard extends StatelessWidget {
             loading: () => const Padding(
               padding: EdgeInsets.symmetric(horizontal: 14),
               child: Text('Verificando projetos...',
-                  style: TextStyle(color: Colors.white38, fontSize: 11)),
+                  style: TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
             ),
             error: (_, __) => const SizedBox.shrink(),
             data: (projects) {
@@ -1262,14 +1262,14 @@ class _BootstrapEngineCard extends StatelessWidget {
                         ? bootstrapState.currentProject /
                             bootstrapState.totalProjects
                         : null,
-                    backgroundColor: Colors.white10,
+                    backgroundColor: AppColors.line,
                     valueColor: const AlwaysStoppedAnimation(_kOrange),
                     minHeight: 3,
                   ),
                   const SizedBox(height: 6),
                   Text(bootstrapState.progressLabel,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 10)),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 10)),
                 ],
               ),
             ),
@@ -1280,7 +1280,7 @@ class _BootstrapEngineCard extends StatelessWidget {
             const SizedBox(height: 10),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 14),
-              child: Divider(color: Colors.white12, height: 1),
+              child: Divider(color: AppColors.line, height: 1),
             ),
             const SizedBox(height: 8),
             Padding(
@@ -1290,7 +1290,7 @@ class _BootstrapEngineCard extends StatelessWidget {
                 children: [
                   const Text('Resultado do Bootstrap',
                       style: TextStyle(
-                          color: Colors.white54,
+                          color: AppColors.inkMuted,
                           fontWeight: FontWeight.w600,
                           fontSize: 10)),
                   const SizedBox(height: 6),
@@ -1307,7 +1307,7 @@ class _BootstrapEngineCard extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 3),
                         child: Text('  ${r.projectName}: ${r.summary}',
                             style: TextStyle(
-                                color: r.success ? Colors.white54 : _kRed,
+                                color: r.success ? AppColors.inkMuted : _kRed,
                                 fontSize: 10)),
                       )),
                 ],
@@ -1374,7 +1374,7 @@ class _BootstrapEngineCard extends StatelessWidget {
                         : '▶ Executar Knowledge → Action Engine'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      isRunning ? Colors.white10 : _kOrange.withOpacity(0.2),
+                      isRunning ? AppColors.line : _kOrange.withOpacity(0.2),
                   foregroundColor: _kOrange,
                   side: BorderSide(color: _kOrange.withOpacity(0.4)),
                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1396,11 +1396,11 @@ class _BootstrapEngineCard extends StatelessWidget {
             SizedBox(
               width: 140,
               child: Text(label,
-                  style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
             ),
             Text(value,
                 style: const TextStyle(
-                    color: Colors.white70,
+                    color: AppColors.inkMuted,
                     fontSize: 10,
                     fontWeight: FontWeight.w600)),
           ],
@@ -1438,12 +1438,12 @@ class _DebugCardState extends State<_DebugCard> {
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _kBorder),
       ),
       child: Column(children: [
         InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           onTap: () => setState(() => _expanded = !_expanded),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -1456,20 +1456,20 @@ class _DebugCardState extends State<_DebugCard> {
                     children: [
                       Text(widget.title,
                           style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.ink,
                               fontWeight: FontWeight.w600,
                               fontSize: 13)),
                       const SizedBox(height: 2),
                       Text(widget.subtitle,
                           style: const TextStyle(
-                              color: Colors.white38, fontSize: 11)),
+                              color: AppColors.inkSubtle, fontSize: 11)),
                     ]),
               ),
               Icon(
                   _expanded
                       ? Icons.keyboard_arrow_up
                       : Icons.keyboard_arrow_down,
-                  color: Colors.white38,
+                  color: AppColors.inkSubtle,
                   size: 18),
             ]),
           ),
@@ -1480,7 +1480,7 @@ class _DebugCardState extends State<_DebugCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Divider(color: Colors.white12, height: 12),
+                const Divider(color: AppColors.line, height: 12),
                 ...widget.children,
               ],
             ),
@@ -1494,7 +1494,7 @@ class _Divider extends StatelessWidget {
   const _Divider();
   @override
   Widget build(BuildContext context) =>
-      const Divider(color: Colors.white12, height: 20);
+      const Divider(color: AppColors.line, height: 20);
 }
 
 class _HealthGauge extends StatelessWidget {
@@ -1516,7 +1516,7 @@ class _HealthGauge extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Row(children: [
@@ -1527,11 +1527,11 @@ class _HealthGauge extends StatelessWidget {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(label,
               style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.w600)),
+                  color: AppColors.ink, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
           LinearProgressIndicator(
             value: value / 100,
-            backgroundColor: Colors.white10,
+            backgroundColor: AppColors.line,
             valueColor: AlwaysStoppedAnimation(color),
             minHeight: 6,
             borderRadius: BorderRadius.circular(3),
@@ -1540,7 +1540,7 @@ class _HealthGauge extends StatelessWidget {
         const SizedBox(width: 14),
         Text('$value',
             style: TextStyle(
-                color: color, fontWeight: FontWeight.bold, fontSize: 24)),
+                color: color, fontWeight: FontWeight.w600, fontSize: 24)),
       ]),
     );
   }
@@ -1563,7 +1563,7 @@ class _TestResultCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border(left: BorderSide(color: color, width: 3)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1575,23 +1575,23 @@ class _TestResultCard extends StatelessWidget {
           Expanded(
               child: Text(test.name,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontWeight: FontWeight.w600,
                       fontSize: 13))),
           Text('${test.passed}/${test.total}',
               style: TextStyle(
-                  color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+                  color: color, fontSize: 12, fontWeight: FontWeight.w600)),
         ]),
         const SizedBox(height: 4),
         Text(test.description,
-            style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
         if (test.failedItems.isNotEmpty) ...[
           const SizedBox(height: 8),
           ...test.failedItems.take(5).map((item) =>
               Text('  › $item', style: _kMono.copyWith(color: _kOrange))),
           if (test.failedItems.length > 5)
             Text('  ... e mais ${test.failedItems.length - 5}',
-                style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
         ],
         if (test.suggestion != null &&
             test.status != ValidationStatus.pass) ...[
@@ -1621,7 +1621,7 @@ class _TestSummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1638,7 +1638,7 @@ class _TestSummaryCard extends StatelessWidget {
               child: Text(report.overallLabel,
                   style: TextStyle(
                       color: color,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 16))),
           Text('${report.passedTests}/${report.tests.length} testes passaram',
               style: TextStyle(color: color, fontSize: 12)),
@@ -1646,7 +1646,7 @@ class _TestSummaryCard extends StatelessWidget {
         const SizedBox(height: 10),
         LinearProgressIndicator(
           value: report.healthRatio,
-          backgroundColor: Colors.white10,
+          backgroundColor: AppColors.line,
           valueColor: AlwaysStoppedAnimation(color),
           minHeight: 5,
           borderRadius: BorderRadius.circular(3),
@@ -1665,7 +1665,7 @@ class _TestSummaryCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Text(label,
@@ -1684,7 +1684,7 @@ class _FinalReportCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kBorder),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1695,32 +1695,32 @@ class _FinalReportCard extends StatelessWidget {
         _reportRow('Ativos encontrados', '${report.assetsFound}'),
         _reportRow('Ativos órfãos', '${report.orphanAssets}',
             warn: report.orphanAssets > 0),
-        const Divider(color: Colors.white12, height: 16),
+        const Divider(color: AppColors.line, height: 16),
         _reportRow('Personas auditadas', '${report.personasAudited}'),
         _reportRow(
             'Personas com aprendizado real', '${report.personasWithLearning}'),
         _reportRow(
             'Personas sem aprendizado', '${report.personasWithoutLearning}',
             warn: report.personasWithoutLearning > 0),
-        const Divider(color: Colors.white12, height: 16),
+        const Divider(color: AppColors.line, height: 16),
         _reportRow('Oportunidades auditadas', '${report.opportunitiesAudited}'),
         _reportRow(
             'Recomendações auditadas', '${report.recommendationsAudited}'),
         _reportRow('Scores auditados', '${report.scoresAudited}'),
         _reportRow('Scores inválidos', '${report.invalidScores}',
             warn: report.invalidScores > 0),
-        const Divider(color: Colors.white12, height: 16),
+        const Divider(color: AppColors.line, height: 16),
         _reportRow('Regras quebradas', '${report.brokenRules}',
             warn: report.brokenRules > 0),
         _reportRow('Problemas encontrados', '${report.problemsFound}',
             warn: report.problemsFound > 0),
-        const Divider(color: Colors.white12, height: 16),
+        const Divider(color: AppColors.line, height: 16),
         _reportRow('Inteligência (health score)',
             '${report.intelligenceScoreBefore}/100'),
         const SizedBox(height: 8),
         Text(
             'Relatório gerado em ${report.runAt.toIso8601String().substring(0, 19).replaceAll("T", " ")}',
-            style: const TextStyle(color: Colors.white24, fontSize: 10)),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
       ]),
     );
   }
@@ -1731,10 +1731,10 @@ class _FinalReportCard extends StatelessWidget {
       child: Row(children: [
         Expanded(
             child: Text(label,
-                style: const TextStyle(color: Colors.white54, fontSize: 12))),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12))),
         Text(value,
             style: TextStyle(
-                color: warn ? _kOrange : Colors.white,
+                color: warn ? _kOrange : AppColors.ink,
                 fontSize: 12,
                 fontWeight: FontWeight.w600)),
       ]),
@@ -1750,9 +1750,9 @@ Widget _sectionHeader(String text) => Padding(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 10),
       child: Text(text,
           style: const TextStyle(
-              color: Colors.white54,
+              color: AppColors.inkMuted,
               fontSize: 11,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.5)),
     );
 
@@ -1762,7 +1762,7 @@ Widget _sectionLabel(String text) => Padding(
           style: const TextStyle(
               color: _kCyan,
               fontSize: 10,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.8)),
     );
 
@@ -1777,9 +1777,9 @@ Widget _debugRow(String label, String value, {bool highlight = false}) =>
         Expanded(
           child: Text(value,
               style: TextStyle(
-                  color: highlight ? _kGold : Colors.white70,
+                  color: highlight ? _kGold : AppColors.inkMuted,
                   fontSize: 11,
-                  fontWeight: highlight ? FontWeight.bold : FontWeight.normal)),
+                  fontWeight: highlight ? FontWeight.w600 : FontWeight.normal)),
         ),
       ]),
     );
@@ -1789,7 +1789,7 @@ Widget _monoText(String text) => Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.black38,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: _kBorder),
       ),
       child: Text(text, style: _kMono.copyWith(height: 1.6)),
@@ -1800,17 +1800,17 @@ Widget _graphNodeRow(String type, String name, String id) => Row(children: [
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
           color: _kPrimary.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(color: _kPrimary.withOpacity(0.3)),
         ),
         child: Text(type,
             style: const TextStyle(
-                color: _kPrimary, fontSize: 10, fontWeight: FontWeight.bold)),
+                color: _kPrimary, fontSize: 10, fontWeight: FontWeight.w600)),
       ),
       const SizedBox(width: 8),
       Expanded(
           child: Text(name,
-              style: const TextStyle(color: Colors.white, fontSize: 12))),
+              style: const TextStyle(color: AppColors.ink, fontSize: 12))),
       Text(id.substring(0, 8), style: _kMono),
     ]);
 
@@ -1818,15 +1818,15 @@ Widget _empty(String msg, String hint) => Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.search_off_rounded, color: Colors.white24, size: 48),
+          const Icon(Icons.search_off_rounded, color: AppColors.inkSubtle, size: 48),
           const SizedBox(height: 12),
           Text(msg,
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
               textAlign: TextAlign.center),
           if (hint.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(hint,
-                style: const TextStyle(color: Colors.white24, fontSize: 12),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
                 textAlign: TextAlign.center),
           ],
         ]),

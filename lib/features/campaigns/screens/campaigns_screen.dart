@@ -8,6 +8,7 @@ import '../../../data/models/campaign.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/campaign_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class CampaignsScreen extends ConsumerWidget {
   const CampaignsScreen({super.key});
@@ -18,7 +19,7 @@ class CampaignsScreen extends ConsumerWidget {
     final campaignsAsync = ref.watch(campaignsProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: Colors.transparent,
       drawer: const AppDrawer(),
       appBar: AppBar(
         leading: IconButton(
@@ -31,11 +32,11 @@ class CampaignsScreen extends ConsumerWidget {
             }
           },
         ),
-        backgroundColor: const Color(0xFF0F0F1A),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppColors.ink,
         title: Text(
           l10n.campaignsTitle,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         actions: [
           IconButton(
@@ -49,7 +50,7 @@ class CampaignsScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Text(l10n.commonError,
-              style: const TextStyle(color: Colors.white70)),
+              style: const TextStyle(color: AppColors.inkMuted)),
         ),
         data: (campaigns) => campaigns.isEmpty
             ? _EmptyState(
@@ -75,26 +76,26 @@ class _EmptyState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.campaign_rounded,
-                size: 72, color: Color(0xFF00BCD4)),
+                size: 72, color: AppColors.info),
             const SizedBox(height: 16),
             Text(
               l10n.campaignsEmpty,
               style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.ink,
                   fontSize: 20,
-                  fontWeight: FontWeight.bold),
+                  fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
               l10n.campaignsEmptyHint,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00BCD4),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.info,
+                foregroundColor: AppColors.ground,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
@@ -133,15 +134,15 @@ class _CampaignCard extends ConsumerWidget {
       case 'venda hotmart':
       case 'venda shopify':
       case 'venda amazon':
-        return const Color(0xFF4CAF50);
+        return AppColors.positive;
       case 'lançamento':
-        return const Color(0xFFFF9800);
+        return AppColors.warning;
       case 'leads':
-        return const Color(0xFF6C63FF);
+        return AppColors.accent;
       case 'autoridade':
-        return const Color(0xFFFFD700);
+        return AppColors.gold;
       default:
-        return const Color(0xFF00BCD4);
+        return AppColors.info;
     }
   }
 
@@ -151,11 +152,11 @@ class _CampaignCard extends ConsumerWidget {
     final color = _objColor(campaign.objective);
 
     return Card(
-      color: const Color(0xFF1A1A2E),
+      color: AppColors.surface,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         onTap: () => context.push(
           AppConstants.routeCampaignDetail.replaceFirst(':id', campaign.id),
         ),
@@ -172,7 +173,7 @@ class _CampaignCard extends ConsumerWidget {
                     child: Text(
                       campaign.title,
                       style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontSize: 15,
                           fontWeight: FontWeight.w600),
                     ),
@@ -182,7 +183,7 @@ class _CampaignCard extends ConsumerWidget {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(color: color.withOpacity(0.4)),
                     ),
                     child: Text(
@@ -199,7 +200,7 @@ class _CampaignCard extends ConsumerWidget {
                 Text(
                   campaign.campaignJson['tagline'].toString(),
                   style: const TextStyle(
-                      color: Colors.white38,
+                      color: AppColors.inkSubtle,
                       fontSize: 12,
                       fontStyle: FontStyle.italic),
                 ),
@@ -208,18 +209,18 @@ class _CampaignCard extends ConsumerWidget {
               Row(
                 children: [
                   const Icon(Icons.calendar_today_rounded,
-                      color: Colors.white24, size: 12),
+                      color: AppColors.inkSubtle, size: 12),
                   const SizedBox(width: 4),
                   Text(l10n.campaignsDurationDays(campaign.durationDays),
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 11)),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
                   const SizedBox(width: 12),
                   const Icon(Icons.broadcast_on_personal_rounded,
-                      color: Colors.white24, size: 12),
+                      color: AppColors.inkSubtle, size: 12),
                   const SizedBox(width: 4),
                   Text(
                     campaign.channels.take(3).join(', '),
-                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                    style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
                     overflow: TextOverflow.ellipsis,
                   ),
                   const Spacer(),
@@ -228,25 +229,25 @@ class _CampaignCard extends ConsumerWidget {
                       final ok = await showDialog<bool>(
                         context: context,
                         builder: (_) => AlertDialog(
-                          backgroundColor: const Color(0xFF1A1A2E),
+                          backgroundColor: AppColors.surface,
                           title: Text(l10n.campaignsDeleteTitle,
-                              style: const TextStyle(color: Colors.white)),
+                              style: const TextStyle(color: AppColors.ink)),
                           content: Text(
                             l10n.campaignsDeleteConfirm(campaign.title),
-                            style: const TextStyle(color: Colors.white70),
+                            style: const TextStyle(color: AppColors.inkMuted),
                           ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
                               child: Text(l10n.commonCancel,
                                   style:
-                                      const TextStyle(color: Colors.white54)),
+                                      const TextStyle(color: AppColors.inkMuted)),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(context, true),
                               child: Text(l10n.commonDelete,
                                   style: const TextStyle(
-                                      color: Color(0xFFF44336))),
+                                      color: AppColors.negative)),
                             ),
                           ],
                         ),
@@ -259,7 +260,7 @@ class _CampaignCard extends ConsumerWidget {
                       }
                     },
                     child: const Icon(Icons.delete_rounded,
-                        color: Colors.white24, size: 18),
+                        color: AppColors.inkSubtle, size: 18),
                   ),
                 ],
               ),

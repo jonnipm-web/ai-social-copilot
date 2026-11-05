@@ -7,6 +7,7 @@ import '../../../data/services/aef_runtime_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../shared/widgets/aef_action_card.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — Action Engine's governed
 /// "execute" flow. Reuses the SAME Human Gate card the IVE chat surface
@@ -54,13 +55,13 @@ class ActionEngineExecuteSheet extends ConsumerWidget {
             children: [
               Text(item.title,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 16,
                       fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Text(
                 l.actionEngineExecuteSheetIntro,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
               ),
               AefActionCard(
                 intent: IveActionIntentData(

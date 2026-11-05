@@ -9,6 +9,9 @@ import '../../data/models/profile.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import 'package:ai_social_copilot/core/theme/app_motion.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 
 /// IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 — navegação comercial dirigida
 /// pelo Module Registry (lib/core/modules/module_registry.dart), não mais
@@ -56,7 +59,10 @@ class AppDrawer extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Drawer(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.horizontal(right: Radius.circular(AppRadius.lg)),
+      ),
       child: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => _DrawerContent(profile: null),
@@ -92,58 +98,86 @@ class _DrawerContent extends ConsumerWidget {
           // Cabeçalho
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(
+                AppSpace.s4, AppSpace.s6, AppSpace.s4, AppSpace.s4),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              gradient: RadialGradient(
+                center: const Alignment(-1.0, -1.2),
+                radius: 1.6,
                 colors: [
-                  const Color(0xFF6C63FF),
-                  const Color(0xFF6C63FF).withOpacity(0.6),
+                  AppColors.accent.withOpacity(0.20),
+                  AppColors.surface.withOpacity(0.0),
                 ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+              ),
+              border: const Border(
+                bottom: BorderSide(color: AppColors.line),
               ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.auto_awesome, color: Colors.white, size: 32),
-                const SizedBox(height: 8),
-                Text(
-                  AppConstants.appName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [AppColors.accent, AppColors.info],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accent.withOpacity(0.35),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
+                      child: const Icon(Icons.insights_rounded,
+                          color: AppColors.onAccent, size: 20),
+                    ),
+                    const SizedBox(width: AppSpace.s3),
+                    Expanded(
                       child: Text(
-                        profile?.roleLabel ?? 'Free',
+                        AppConstants.appName,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
+                          color: AppColors.ink,
+                          fontSize: 17,
                           fontWeight: FontWeight.w600,
+                          letterSpacing: -0.2,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  profile?.email ?? '',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 12,
-                  ),
+                const SizedBox(height: AppSpace.s4),
+                Row(
+                  children: [
+                    IvBadge(
+                      profile?.roleLabel ?? 'Free',
+                      color: isPro || isPremium
+                          ? AppColors.gold
+                          : AppColors.inkMuted,
+                      icon: isPro || isPremium
+                          ? Icons.workspace_premium_rounded
+                          : Icons.person_outline_rounded,
+                    ),
+                    const SizedBox(width: AppSpace.s2),
+                    Expanded(
+                      child: Text(
+                        profile?.email ?? '',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.inkSubtle,
+                          fontSize: AppType.caption,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -154,7 +188,7 @@ class _DrawerContent extends ConsumerWidget {
             child: Scrollbar(
               thumbVisibility: true,
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: AppSpace.s2),
                 children: [
                   for (final module in visibleModules)
                     _NavItem(
@@ -172,7 +206,7 @@ class _DrawerContent extends ConsumerWidget {
           // não serem ocultos quando há muitos módulos — WEB-007).
           // push:true mantém o comportamento corrigido da CLOSURE-16 §27/35:
           // estas telas empilham sobre o stack existente em vez de substituir.
-          const Divider(color: Colors.white12, height: 1),
+          const Divider(color: AppColors.line, height: 1),
           _NavItem(
             icon: Icons.workspace_premium_rounded,
             label: t.navUpgrade,
@@ -202,7 +236,7 @@ class _DrawerContent extends ConsumerWidget {
             push: true,
           ),
           if (isAdmin) ...[
-            const Divider(color: Colors.white12, height: 1),
+            const Divider(color: AppColors.line, height: 1),
             _NavItem(
               icon: Icons.admin_panel_settings_rounded,
               label: t.navAdminPanel,
@@ -214,13 +248,13 @@ class _DrawerContent extends ConsumerWidget {
           ],
 
           // Sair
-          const Divider(color: Colors.white12, height: 1),
+          const Divider(color: AppColors.line, height: 1),
           ListTile(
             leading: const Icon(Icons.logout_rounded,
-                color: Colors.white54, size: 20),
+                color: AppColors.inkMuted, size: 20),
             title: Text(
               t.authSignOut,
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
             ),
             onTap: () async {
               Navigator.of(context).pop();
@@ -314,25 +348,44 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isSelected = current == route;
     final color = isAdmin
-        ? const Color(0xFFFFD700)
+        ? AppColors.gold
         : isSelected
-            ? const Color(0xFF6C63FF)
-            : Colors.white70;
+            ? AppColors.accent
+            : AppColors.inkMuted;
 
-    return ListTile(
-      leading: Icon(icon, color: color, size: 20),
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.s2, vertical: 1),
+      child: ListTile(
+      leading: AnimatedContainer(
+        duration: AppMotion.short,
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.sm + 2),
+          color: isSelected
+              ? AppColors.accent.withOpacity(0.18)
+              : Colors.transparent,
+        ),
+        child: Icon(icon, color: color, size: 19),
+      ),
       title: Text(
         label,
         style: TextStyle(
-          color: color,
+          color: isSelected ? AppColors.ink : color,
           fontSize: 14,
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
         ),
       ),
       selected: isSelected,
-      selectedTileColor: const Color(0xFF6C63FF).withOpacity(0.15),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      selectedTileColor: AppColors.accent.withOpacity(0.08),
+      hoverColor: AppColors.ink.withOpacity(0.04),
+      dense: true,
+      horizontalTitleGap: AppSpace.s3,
+      minLeadingWidth: 32,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.s2),
       onTap: () {
         Navigator.of(context).pop();
         if (push) {
@@ -354,6 +407,7 @@ class _NavItem extends StatelessWidget {
           context.go(route);
         }
       },
+    ),
     );
   }
 }

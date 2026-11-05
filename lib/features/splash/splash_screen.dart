@@ -41,7 +41,7 @@ class _SplashScreenState extends State<SplashScreen> {
             Text(
               AppConstants.appName,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     letterSpacing: -0.5,
                   ),
             ),

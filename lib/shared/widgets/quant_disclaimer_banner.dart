@@ -57,7 +57,7 @@ class QuantDisclaimerSheet extends StatelessWidget {
           children: [
             Text('About This Analysis',
                 style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             Text(
               'InsightValues Quant calculates mathematical properties of '

@@ -16,6 +16,7 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../widgets/insight_card.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class IveAnalysisScreen extends ConsumerStatefulWidget {
   const IveAnalysisScreen({super.key, required this.projectId});
@@ -137,7 +138,7 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(t.insightSaved),
-        backgroundColor: const Color(0xFF6BCB77),
+        backgroundColor: AppColors.positive,
         duration: const Duration(seconds: 2),
       ));
     } else {
@@ -146,7 +147,7 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content:
             Text(isQuota ? t.insightQuotaExceeded : t.insightAddToActionsError),
-        backgroundColor: Colors.red,
+        backgroundColor: AppColors.negative,
         duration: const Duration(seconds: 3),
       ));
     }
@@ -161,13 +162,13 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
     if (action != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(t.insightAddedToActions),
-        backgroundColor: const Color(0xFF6C63FF),
+        backgroundColor: AppColors.accent,
         duration: const Duration(seconds: 2),
       ));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(t.insightAddToActionsError),
-        backgroundColor: Colors.red,
+        backgroundColor: AppColors.negative,
         duration: const Duration(seconds: 2),
       ));
     }
@@ -201,23 +202,23 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
         widget.projectId;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F1A),
+        backgroundColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeHome),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: AppColors.ink),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(t.insightTitle,
-                style: const TextStyle(color: Colors.white, fontSize: 16)),
+                style: const TextStyle(color: AppColors.ink, fontSize: 16)),
             Text(projectName,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                 overflow: TextOverflow.ellipsis),
           ],
         ),
@@ -228,16 +229,16 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Color(0xFF6C63FF)))
-                : const Icon(Icons.refresh_rounded, color: Color(0xFF6C63FF)),
+                        strokeWidth: 2, color: AppColors.accent))
+                : const Icon(Icons.refresh_rounded, color: AppColors.accent),
             onPressed: insightState.loading ? null : _refresh,
           ),
         ],
       ),
       drawer: const AppDrawer(),
       body: RefreshIndicator(
-        color: const Color(0xFF6C63FF),
-        backgroundColor: const Color(0xFF1A1A2E),
+        color: AppColors.accent,
+        backgroundColor: AppColors.surface,
         onRefresh: _refresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -307,7 +308,7 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
-                  child: CircularProgressIndicator(color: Color(0xFF6C63FF)),
+                  child: CircularProgressIndicator(color: AppColors.accent),
                 ),
               ),
             if (!insightState.loading &&
@@ -325,20 +326,20 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
     final result = await showDialog<bool>(
       context: ctx,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text('Confirmar', style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.surface,
+        title: const Text('Confirmar', style: TextStyle(color: AppColors.ink)),
         content: Text(t.insightDeleteConfirm,
-            style: const TextStyle(color: Colors.white70)),
+            style: const TextStyle(color: AppColors.inkMuted)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(t.insightCancel,
-                style: const TextStyle(color: Colors.white54)),
+                style: const TextStyle(color: AppColors.inkMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Excluir',
-                style: TextStyle(color: Color(0xFFFF6B6B))),
+                style: TextStyle(color: AppColors.negative)),
           ),
         ],
       ),
@@ -363,12 +364,12 @@ class _QuotaBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = blocked ? const Color(0xFFFF6B6B) : const Color(0xFFFFD93D);
+    final color = blocked ? AppColors.negative : AppColors.warning;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(children: [
@@ -389,9 +390,9 @@ class _QuotaBadge extends StatelessWidget {
             onTap: () => context.push(AppConstants.routeUpgrade),
             child: Text(t.insightUpgradeCta,
                 style: const TextStyle(
-                    color: Color(0xFF6C63FF),
+                    color: AppColors.accent,
                     fontSize: 11,
-                    fontWeight: FontWeight.bold)),
+                    fontWeight: FontWeight.w600)),
           ),
       ]),
     );
@@ -420,12 +421,12 @@ class _InputCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
           color: blocked
-              ? const Color(0xFFFF6B6B).withValues(alpha: 0.3)
-              : const Color(0xFF6C63FF).withValues(alpha: 0.3),
+              ? AppColors.negative.withValues(alpha: 0.3)
+              : AppColors.accent.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -434,7 +435,7 @@ class _InputCard extends StatelessWidget {
           Row(children: [
             Icon(
               Icons.psychology_alt_rounded,
-              color: blocked ? Colors.white24 : const Color(0xFF6C63FF),
+              color: blocked ? AppColors.inkSubtle : AppColors.accent,
               size: 18,
             ),
             const SizedBox(width: 8),
@@ -442,7 +443,7 @@ class _InputCard extends StatelessWidget {
               child: Text(
                 t.insightSubtitle,
                 style: TextStyle(
-                  color: blocked ? Colors.white24 : Colors.white70,
+                  color: blocked ? AppColors.inkSubtle : AppColors.inkMuted,
                   fontSize: 13,
                 ),
               ),
@@ -453,30 +454,30 @@ class _InputCard extends StatelessWidget {
             controller: ctrl,
             focusNode: focus,
             enabled: !disabled,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            style: const TextStyle(color: AppColors.ink, fontSize: 14),
             maxLines: 3,
             minLines: 2,
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => onSend(),
             decoration: InputDecoration(
               hintText: blocked ? t.insightQuotaExceeded : t.insightAskHint,
-              hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+              hintStyle: const TextStyle(color: AppColors.inkSubtle, fontSize: 13),
               filled: true,
-              fillColor: const Color(0xFF0F0F1A),
+              fillColor: AppColors.ground,
               contentPadding: const EdgeInsets.all(12),
               border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF333355)),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide: const BorderSide(color: AppColors.line),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF6C63FF)),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide: const BorderSide(color: AppColors.accent),
               ),
               disabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF222235)),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide: const BorderSide(color: AppColors.surfaceRaised),
               ),
             ),
           ),
@@ -487,20 +488,20 @@ class _InputCard extends StatelessWidget {
               onPressed: disabled ? null : onSend,
               style: ElevatedButton.styleFrom(
                 backgroundColor:
-                    blocked ? const Color(0xFF6C63FF) : const Color(0xFF6C63FF),
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(0xFF333355),
-                disabledForegroundColor: Colors.white38,
+                    blocked ? AppColors.accent : AppColors.accent,
+                foregroundColor: AppColors.ink,
+                disabledBackgroundColor: AppColors.line,
+                disabledForegroundColor: AppColors.inkSubtle,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
               icon: loading
                   ? const SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
+                          strokeWidth: 2, color: AppColors.ink))
                   : Icon(
                       blocked ? Icons.lock_rounded : Icons.send_rounded,
                       size: 16,
@@ -524,21 +525,21 @@ class _ThinkingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border:
-            Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.2)),
+            Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
       ),
       child: Row(children: [
         const SizedBox(
           width: 18,
           height: 18,
           child: CircularProgressIndicator(
-              strokeWidth: 2, color: Color(0xFF6C63FF)),
+              strokeWidth: 2, color: AppColors.accent),
         ),
         const SizedBox(width: 12),
         Text(t.insightThinking,
-            style: const TextStyle(color: Colors.white54, fontSize: 13)),
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 13)),
       ]),
     );
   }
@@ -561,13 +562,13 @@ class _SaveButton extends StatelessWidget {
       child: ElevatedButton.icon(
         onPressed: saved ? null : onSave,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF6BCB77),
+          backgroundColor: AppColors.positive,
           foregroundColor: Colors.black,
           disabledBackgroundColor:
-              const Color(0xFF6BCB77).withValues(alpha: 0.4),
+              AppColors.positive.withValues(alpha: 0.4),
           disabledForegroundColor: Colors.black38,
           padding: const EdgeInsets.symmetric(vertical: 10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
         ),
         icon: Icon(saved ? Icons.check_rounded : Icons.save_alt_rounded,
             size: 16),
@@ -587,23 +588,23 @@ class _ErrorCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF2A1A1A),
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.negativeSoft,
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border:
-            Border.all(color: const Color(0xFFFF6B6B).withValues(alpha: 0.4)),
+            Border.all(color: AppColors.negative.withValues(alpha: 0.4)),
       ),
       child: Row(children: [
         const Icon(Icons.error_outline_rounded,
-            color: Color(0xFFFF6B6B), size: 18),
+            color: AppColors.negative, size: 18),
         const SizedBox(width: 10),
         Expanded(
           child: Text(t.insightError,
-              style: const TextStyle(color: Color(0xFFFF6B6B), fontSize: 13)),
+              style: const TextStyle(color: AppColors.negative, fontSize: 13)),
         ),
         TextButton(
           onPressed: onRetry,
           child: Text(t.insightRetry,
-              style: const TextStyle(color: Color(0xFF6C63FF))),
+              style: const TextStyle(color: AppColors.accent)),
         ),
       ]),
     );
@@ -620,19 +621,19 @@ class _HistoryHeader extends StatelessWidget {
     return Row(children: [
       Text(t.insightRecent,
           style: const TextStyle(
-              color: Colors.white54,
+              color: AppColors.inkMuted,
               fontSize: 12,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.5)),
       const SizedBox(width: 8),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(8),
+          color: AppColors.accent.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Text(t.insightNOf(count),
-            style: const TextStyle(color: Color(0xFFAB83FF), fontSize: 11)),
+            style: const TextStyle(color: AppColors.accent, fontSize: 11)),
       ),
     ]);
   }
@@ -648,14 +649,14 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 32),
       child: Column(children: [
         const Icon(Icons.lightbulb_outline_rounded,
-            color: Colors.white24, size: 48),
+            color: AppColors.inkSubtle, size: 48),
         const SizedBox(height: 12),
         Text(t.insightEmpty,
-            style: const TextStyle(color: Colors.white38, fontSize: 14),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 14),
             textAlign: TextAlign.center),
         const SizedBox(height: 6),
         Text(t.insightEmptyPrompt,
-            style: const TextStyle(color: Colors.white24, fontSize: 12),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
             textAlign: TextAlign.center),
       ]),
     );

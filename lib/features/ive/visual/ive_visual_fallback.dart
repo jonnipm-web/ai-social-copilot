@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'ive_avatar_state.dart';
 import 'ive_status_ring.dart';
 import 'ive_visual_config.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Commercial Fallback ───────────────────────────────────────────────────────
 // IVE-AVATAR-COMMERCIAL-FALLBACK-04 — this is the COMMERCIAL Avatar while the
@@ -121,7 +122,7 @@ class _IveVisualFallbackState extends State<IveVisualFallback>
                             'RIVE ASSET PENDING',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: Color(0xFFFFB020),
+                              color: AppColors.warning,
                               fontSize: 6.5,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.4,
@@ -150,7 +151,7 @@ class _Placeholder extends StatelessWidget {
   Widget build(BuildContext context) {
     final config = IveVisualStateConfig.forState(state);
     return Container(
-      color: const Color(0xFF0A0B1A),
+      color: AppColors.ground,
       child: Center(
         child: Icon(
           Icons.person_rounded,

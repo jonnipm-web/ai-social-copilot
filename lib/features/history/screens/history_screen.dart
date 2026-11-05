@@ -7,6 +7,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/models/post_generation.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/post_provider.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class HistoryScreen extends ConsumerWidget {
   const HistoryScreen({super.key});
@@ -43,12 +44,12 @@ class HistoryScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(Icons.wifi_off_rounded,
-                        size: 48, color: Colors.white24),
+                        size: 48, color: AppColors.inkSubtle),
                     const SizedBox(height: 16),
                     Text(
                       l10n.uxHistoryLoadError,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white70),
+                      style: const TextStyle(color: AppColors.inkMuted),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton.icon(
@@ -71,13 +72,13 @@ class HistoryScreen extends ConsumerWidget {
                         const Icon(
                           Icons.auto_awesome_outlined,
                           size: 64,
-                          color: Colors.white12,
+                          color: AppColors.line,
                         ),
                         const SizedBox(height: 20),
                         Text(
                           l10n.uxHistoryEmptyTitle,
                           style: const TextStyle(
-                            color: Colors.white70,
+                            color: AppColors.inkMuted,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -87,7 +88,7 @@ class HistoryScreen extends ConsumerWidget {
                           l10n.uxHistoryEmptyBody,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            color: Colors.white38,
+                            color: AppColors.inkSubtle,
                             fontSize: 13,
                             height: 1.5,
                           ),
@@ -120,13 +121,13 @@ class HistoryScreen extends ConsumerWidget {
       itemCount: 5,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (_, __) => Shimmer.fromColors(
-        baseColor: const Color(0xFF1A1A2E),
-        highlightColor: const Color(0xFF2A2A4E),
+        baseColor: AppColors.surface,
+        highlightColor: AppColors.line,
         child: Container(
           height: 90,
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1A2E),
-            borderRadius: BorderRadius.circular(16),
+            color: AppColors.surface, gradient: kIvSurfaceGradient,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
         ),
       ),
@@ -143,7 +144,7 @@ class _HistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         onTap: () => context.push('/history/${item.id}'),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -180,7 +181,7 @@ class _HistoryCard extends StatelessWidget {
                     _formatDateTime(item.createdAt),
                     style: const TextStyle(
                       fontSize: 11,
-                      color: Colors.white38,
+                      color: AppColors.inkSubtle,
                     ),
                   ),
                 ],
@@ -212,12 +213,12 @@ class _ScoreBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.white10,
-        borderRadius: BorderRadius.circular(6),
+        color: AppColors.line,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
         '$label ${value.toStringAsFixed(0)}',
-        style: const TextStyle(fontSize: 11, color: Colors.white60),
+        style: const TextStyle(fontSize: 11, color: AppColors.inkMuted),
       ),
     );
   }

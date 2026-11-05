@@ -6,6 +6,7 @@ import '../../data/models/copilot_context_data.dart';
 import '../../data/models/ive_interaction_request.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/ive_context_provider.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 /// Botão "Explicar com IVE" — qualquer componente pode adicionar.
 ///
@@ -55,7 +56,7 @@ class IveExplainButton extends ConsumerWidget {
             Text(
               label ?? AppLocalizations.of(context)!.ctxIveExplainCompact,
               style: const TextStyle(
-                color: Color(0xFF9B8FFF),
+                color: AppColors.accent,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
@@ -67,11 +68,11 @@ class IveExplainButton extends ConsumerWidget {
 
     return TextButton.icon(
       style: TextButton.styleFrom(
-        foregroundColor: const Color(0xFF9B8FFF),
+        foregroundColor: AppColors.accent,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: Color(0xFF6C63FF), width: 0.8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          side: const BorderSide(color: AppColors.accent, width: 0.8),
         ),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,

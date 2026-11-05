@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -55,7 +56,7 @@ class ImpactChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: scheme.outlineVariant),
         ),
         child: Row(
@@ -94,7 +95,7 @@ class ImpactSection extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         side: BorderSide(
           color: emphasis
               ? theme.colorScheme.secondary

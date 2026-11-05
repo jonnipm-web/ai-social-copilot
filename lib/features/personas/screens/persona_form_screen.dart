@@ -6,6 +6,7 @@ import '../../../data/models/persona.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class PersonaFormScreen extends ConsumerStatefulWidget {
   const PersonaFormScreen({super.key, this.personaId});
@@ -112,7 +113,7 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
           SnackBar(
               content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix(
                   extractErrorMessage(e, AppLocalizations.of(context)!))),
-              backgroundColor: Colors.red),
+              backgroundColor: AppColors.negative),
         );
       }
     } finally {
@@ -195,19 +196,19 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
               SwitchListTile(
                 title: Text(
                   l10n.personaFormGlobalTitle,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  style: const TextStyle(color: AppColors.ink, fontSize: 14),
                 ),
                 subtitle: Text(
                   l10n.personaFormGlobalSubtitle,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                 ),
                 value: _isGlobal,
                 onChanged: (v) => setState(() => _isGlobal = v),
-                activeColor: const Color(0xFFFFD700),
-                tileColor: Colors.white.withOpacity(0.05),
+                activeColor: AppColors.gold,
+                tileColor: AppColors.ink.withOpacity(0.05),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  side: const BorderSide(color: Colors.white12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  side: const BorderSide(color: AppColors.line),
                 ),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -216,11 +217,11 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
               ElevatedButton(
                 onPressed: _loading ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6C63FF),
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.onAccent,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                 ),
                 child: _loading
@@ -229,7 +230,7 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: AppColors.ink,
                         ),
                       )
                     : Text(
@@ -237,7 +238,7 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
                             ? l10n.personaFormSaveChanges
                             : l10n.personaFormCreate,
                         style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.bold),
+                            fontSize: 15, fontWeight: FontWeight.w600),
                       ),
               ),
             ],
@@ -269,25 +270,25 @@ class _Field extends StatelessWidget {
       controller: controller,
       maxLines: maxLines,
       validator: validator,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: AppColors.ink),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-        hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+        labelStyle: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
+        hintStyle: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: AppColors.ink.withOpacity(0.05),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.white12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.line),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.white12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF6C63FF)),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.accent),
         ),
       ),
     );

@@ -69,7 +69,7 @@ class ProductUpgradeScreen extends StatelessWidget {
               Text(
                 productName,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                     ),
               ),
               const SizedBox(height: 12),
