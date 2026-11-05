@@ -36,7 +36,7 @@ class CampaignsScreen extends ConsumerWidget {
         foregroundColor: AppColors.ink,
         title: Text(
           l10n.campaignsTitle,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         actions: [
           IconButton(
@@ -83,7 +83,7 @@ class _EmptyState extends StatelessWidget {
               style: const TextStyle(
                   color: AppColors.ink,
                   fontSize: 20,
-                  fontWeight: FontWeight.bold),
+                  fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -154,9 +154,9 @@ class _CampaignCard extends ConsumerWidget {
     return Card(
       color: AppColors.surface,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         onTap: () => context.push(
           AppConstants.routeCampaignDetail.replaceFirst(':id', campaign.id),
         ),
@@ -183,7 +183,7 @@ class _CampaignCard extends ConsumerWidget {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(color: color.withOpacity(0.4)),
                     ),
                     child: Text(

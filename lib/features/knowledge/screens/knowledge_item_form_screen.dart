@@ -228,7 +228,7 @@ class _KnowledgeItemFormScreenState
         foregroundColor: AppColors.ink,
         title: Text(
           _isEdit ? l10n.knowledgeFormEditTitle : l10n.knowledgeFormNewTitle,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
       body: SingleChildScrollView(
@@ -346,7 +346,7 @@ class _KnowledgeItemFormScreenState
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppColors.accent.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(
                         color: AppColors.accent.withOpacity(0.3)),
                   ),
@@ -418,7 +418,7 @@ class _KnowledgeItemFormScreenState
                   filled: true,
                   fillColor: AppColors.surface,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     borderSide: BorderSide.none,
                   ),
                 ),
@@ -449,7 +449,7 @@ class _KnowledgeItemFormScreenState
                     foregroundColor: AppColors.onAccent,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(AppRadius.lg)),
                   ),
                   icon: _loading
                       ? const SizedBox(
@@ -522,7 +522,7 @@ class _Field extends StatelessWidget {
         filled: true,
         fillColor: AppColors.surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: BorderSide.none,
         ),
         errorStyle: const TextStyle(color: AppColors.negative),
@@ -557,8 +557,8 @@ class _FileImportSection extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(10),
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -582,7 +582,7 @@ class _FileImportSection extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.positive.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: AppColors.positive.withOpacity(0.4)),
         ),
         child: Row(
@@ -627,8 +627,8 @@ class _FileImportSection extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.surface, gradient: kIvSurfaceGradient,
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(
                   color: AppColors.accent.withOpacity(0.3),
                   style: BorderStyle.solid),
@@ -659,7 +659,7 @@ class _FileImportSection extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: AppColors.warning.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppRadius.md),
             border:
                 Border.all(color: AppColors.warning.withOpacity(0.25)),
           ),
@@ -776,7 +776,7 @@ class _DriveImportSection extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.positive.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: AppColors.positive.withOpacity(0.4)),
         ),
         child: Row(
@@ -817,8 +817,8 @@ class _DriveImportSection extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(10),
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: AppColors.accent.withOpacity(0.3)),
         ),
         child: Column(
@@ -875,7 +875,7 @@ class _ProjectSelector extends ConsumerWidget {
             filled: true,
             fillColor: AppColors.surface,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               borderSide: BorderSide.none,
             ),
           ),
@@ -927,7 +927,7 @@ class _SourceTypeButton extends StatelessWidget {
           color: selected
               ? AppColors.accent.withOpacity(0.2)
               : AppColors.surface,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
             color: selected ? AppColors.accent : AppColors.line,
           ),

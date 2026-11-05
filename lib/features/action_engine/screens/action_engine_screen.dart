@@ -56,7 +56,6 @@ String actionEngineTypeLabel(AppLocalizations l10n, String type) {
 }
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg = AppColors.ground;
 const _kCard = AppColors.surface;
 const _kPrimary = AppColors.accent;
 const _kGreen = AppColors.positive;
@@ -104,7 +103,7 @@ class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
         title: Text(
           l10n.navActionEngine,
           style: const TextStyle(
-              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.bold),
+              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
       drawer: const AppDrawer(),
@@ -139,7 +138,7 @@ class _FeatureGated extends StatelessWidget {
                 style: const TextStyle(
                     color: AppColors.ink,
                     fontSize: 22,
-                    fontWeight: FontWeight.bold)),
+                    fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             Text(
               l10n.actionEngineComingSoonBody,
@@ -152,7 +151,7 @@ class _FeatureGated extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: _kGold.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 border: Border.all(color: _kGold.withOpacity(0.25)),
               ),
               child: Column(
@@ -299,14 +298,14 @@ class _SummaryChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: color.withOpacity(0.25)),
         ),
         child: Column(
           children: [
             Text(value,
                 style: TextStyle(
-                    color: color, fontSize: 20, fontWeight: FontWeight.bold)),
+                    color: color, fontSize: 20, fontWeight: FontWeight.w600)),
             const SizedBox(height: 2),
             Text(label,
                 style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
@@ -335,7 +334,7 @@ class _SectionHeader extends StatelessWidget {
               color: color,
               fontSize: 11,
               letterSpacing: 1.2,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(width: 8),
@@ -343,12 +342,12 @@ class _SectionHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
               color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Text(
               '$count',
               style: TextStyle(
-                  color: color, fontSize: 10, fontWeight: FontWeight.bold),
+                  color: color, fontSize: 10, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -422,7 +421,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
             onPressed: () => Navigator.of(context).pop(true),
             child: Text(l10n.actionEngineDelete,
                 style:
-                    const TextStyle(color: _kRed, fontWeight: FontWeight.bold)),
+                    const TextStyle(color: _kRed, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -463,8 +462,8 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(14),
+          color: _kCard, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: AppColors.ink.withOpacity(0.07)),
         ),
         child: Column(
@@ -497,14 +496,14 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                         const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                     decoration: BoxDecoration(
                       color: _statusColor(item.status).withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text(
                       actionEngineStatusLabel(l10n, item.status),
                       style: TextStyle(
                           color: _statusColor(item.status),
                           fontSize: 9,
-                          fontWeight: FontWeight.bold),
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                 const SizedBox(width: 4),
@@ -611,9 +610,8 @@ class _ScoreBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.ink.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(4),
+      decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
         '$label: $value',
@@ -637,7 +635,7 @@ class _ActionBtn extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           color: color.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(color: color.withOpacity(0.4)),
         ),
         child: Text(label,
@@ -705,7 +703,7 @@ class _Chip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
             color: selected ? _kPrimary : _kCard,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
               color: selected ? _kPrimary : AppColors.ink.withOpacity(0.12),
             ),
@@ -741,7 +739,7 @@ class _EmptyQueue extends StatelessWidget {
             style: const TextStyle(
                 color: AppColors.inkMuted,
                 fontSize: 16,
-                fontWeight: FontWeight.bold),
+                fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           Text(

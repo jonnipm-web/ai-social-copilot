@@ -464,8 +464,8 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withOpacity(0.5),
@@ -487,7 +487,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
       maxChildSize: 0.92,
       builder: (_, __) => Container(
         decoration: const BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: _body(showDragHandle: true),
@@ -564,7 +564,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
               'IVE',
               style: TextStyle(
                   color: AppColors.ink,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   fontSize: 18),
             ),
           ),
@@ -633,7 +633,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                   style: const TextStyle(
                       color: AppColors.inkMuted,
                       fontSize: 16,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -685,7 +685,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             border: Border.all(color: AppColors.accent, width: 1),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
           child: Text(text,
               style: const TextStyle(color: AppColors.accent, fontSize: 13)),
@@ -730,7 +730,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 10),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       borderSide: BorderSide.none,
                     ),
                   ),
@@ -836,7 +836,7 @@ class _TurnBubble extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: isUser ? AppColors.accent : AppColors.line,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -918,13 +918,13 @@ class _TurnBubble extends StatelessWidget {
     return [
       InkWell(
         onTap: () => onRouteTap!(route),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         child: Container(
           margin: const EdgeInsets.only(top: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             border: Border.all(color: AppColors.accent, width: 1),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           child: Text(label,
               style: const TextStyle(color: AppColors.ink, fontSize: 12)),
@@ -937,7 +937,7 @@ class _TurnBubble extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Text(text,
             style: const TextStyle(color: AppColors.inkMuted, fontSize: 10)),
@@ -950,14 +950,14 @@ class _TurnBubble extends StatelessWidget {
   Widget _actionChip(CopilotActionSuggestion action, VoidCallback? onTap) =>
       InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         child: Container(
           margin: const EdgeInsets.only(top: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: AppColors.accent.withOpacity(0.25),
             border: Border.all(color: AppColors.accent, width: 1),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

@@ -278,7 +278,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 15,
-                      fontWeight: FontWeight.bold)),
+                      fontWeight: FontWeight.w600)),
             ),
             asyncMetrics.when(
               loading: () => const Center(
@@ -328,8 +328,8 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.warning.withOpacity(0.3)),
       ),
       child: Column(
@@ -337,7 +337,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
         children: [
           Text(l10n.roiTrackerNewRecord,
               style: const TextStyle(
-                  color: AppColors.warning, fontWeight: FontWeight.bold)),
+                  color: AppColors.warning, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
 
           // Metric type
@@ -359,7 +359,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                     color: isSelected
                         ? color.withOpacity(0.15)
                         : AppColors.ground,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(
                         color: isSelected ? color : AppColors.line),
                   ),
@@ -374,7 +374,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                             color: isSelected ? color : AppColors.inkMuted,
                             fontSize: 12,
                             fontWeight: isSelected
-                                ? FontWeight.bold
+                                ? FontWeight.w600
                                 : FontWeight.normal,
                           )),
                     ],
@@ -412,9 +412,9 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 10),
                             border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8)),
+                                borderRadius: BorderRadius.circular(AppRadius.md)),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                               borderSide:
                                   const BorderSide(color: AppColors.line),
                             ),
@@ -453,13 +453,13 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 borderSide: const BorderSide(color: AppColors.line),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 borderSide: const BorderSide(color: AppColors.warning),
               ),
             ),
@@ -478,13 +478,13 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 borderSide: const BorderSide(color: AppColors.line),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 borderSide: const BorderSide(color: AppColors.warning),
               ),
             ),
@@ -518,7 +518,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                           child: CircularProgressIndicator(
                               color: Colors.black, strokeWidth: 2))
                       : Text(l10n.commonSave,
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -568,7 +568,7 @@ class _SummarySection extends StatelessWidget {
         gradient: const LinearGradient(
           colors: [AppColors.surface, AppColors.surface],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.warning.withOpacity(0.2)),
       ),
       child: Column(
@@ -581,7 +581,7 @@ class _SummarySection extends StatelessWidget {
               const SizedBox(width: 8),
               Text(l10n.roiTrackerSummaryTitle,
                   style: const TextStyle(
-                      color: AppColors.warning, fontWeight: FontWeight.bold)),
+                      color: AppColors.warning, fontWeight: FontWeight.w600)),
               const Spacer(),
               if ((summary['investment'] ?? 0) > 0)
                 Container(
@@ -591,7 +591,7 @@ class _SummarySection extends StatelessWidget {
                     color: _roi >= 0
                         ? AppColors.positive.withOpacity(0.1)
                         : AppColors.negative.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(
                       color: _roi >= 0
                           ? AppColors.positive
@@ -604,7 +604,7 @@ class _SummarySection extends StatelessWidget {
                       color: _roi >= 0
                           ? AppColors.positive
                           : AppColors.negative,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 13,
                     ),
                   ),
@@ -622,7 +622,7 @@ class _SummarySection extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: c.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: c.withOpacity(0.2)),
                 ),
                 child: Column(
@@ -632,7 +632,7 @@ class _SummarySection extends StatelessWidget {
                     Text(_fmt(e.value),
                         style: TextStyle(
                             color: c,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             fontSize: 13)),
                     Text(label(e.key),
                         style: const TextStyle(
@@ -675,8 +675,8 @@ class _MetricCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: color.withOpacity(0.15)),
       ),
       child: Row(
@@ -686,7 +686,7 @@ class _MetricCard extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Icon(icon, color: color, size: 20),
           ),
@@ -699,7 +699,7 @@ class _MetricCard extends StatelessWidget {
                     style: TextStyle(
                         color: color,
                         fontSize: 12,
-                        fontWeight: FontWeight.bold)),
+                        fontWeight: FontWeight.w600)),
                 if (metric.notes != null && metric.notes!.isNotEmpty)
                   Text(metric.notes!,
                       style:
@@ -712,7 +712,7 @@ class _MetricCard extends StatelessWidget {
           Text(_fmt(metric.metricValue),
               style: const TextStyle(
                   color: AppColors.ink,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   fontSize: 15)),
           const SizedBox(width: 8),
           GestureDetector(
@@ -759,8 +759,8 @@ class _ExecutiveDashboardSection extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.positive.withOpacity(0.3)),
       ),
       child: Column(
@@ -776,7 +776,7 @@ class _ExecutiveDashboardSection extends StatelessWidget {
                 style: const TextStyle(
                     color: AppColors.ink,
                     fontSize: 14,
-                    fontWeight: FontWeight.bold),
+                    fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -859,7 +859,7 @@ class _ExecStat extends StatelessWidget {
         children: [
           Text(value,
               style: TextStyle(
-                  color: color, fontSize: 16, fontWeight: FontWeight.bold)),
+                  color: color, fontSize: 16, fontWeight: FontWeight.w600)),
           Text(label,
               style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
         ],

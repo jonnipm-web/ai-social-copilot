@@ -44,7 +44,7 @@ class PlanUpgradeBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
         border: Border.all(color: color.withOpacity(0.5)),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(
         children: [
@@ -57,7 +57,7 @@ class PlanUpgradeBanner extends StatelessWidget {
                 Text(l.planUpgradeBannerTitle(required),
                     style: TextStyle(
                         fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                         color: color)),
                 Text(l.planUpgradeBannerBody(current, required),
                     style: TextStyle(fontSize: 12, color: color)),
@@ -71,7 +71,7 @@ class PlanUpgradeBanner extends StatelessWidget {
             style: TextButton.styleFrom(
                 foregroundColor: color,
                 textStyle:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
             child: Text(l.planUpgradeBannerCta),
           ),
         ],

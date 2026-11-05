@@ -36,9 +36,8 @@ class TranslatedContentNotice extends ConsumerWidget {
       padding: padding ?? const EdgeInsets.only(bottom: 12),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.ink.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(8),
+        decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: AppColors.line),
         ),
         child: Row(

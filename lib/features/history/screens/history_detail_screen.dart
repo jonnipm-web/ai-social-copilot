@@ -88,9 +88,8 @@ class HistoryDetailScreen extends ConsumerWidget {
                 // Cabeçalho: texto original + data
                 Container(
                   padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.ink.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(12),
+                  decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(color: AppColors.line),
                   ),
                   child: Column(
@@ -198,8 +197,8 @@ class HistoryDetailScreen extends ConsumerWidget {
             child: Container(
               height: 120,
               decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
+                color: AppColors.surface, gradient: kIvSurfaceGradient,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
               ),
             ),
           ),

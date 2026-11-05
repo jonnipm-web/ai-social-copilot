@@ -123,7 +123,7 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppColors.negative.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(color: AppColors.negative.withOpacity(0.3)),
               ),
               child: Text(_error!,
@@ -218,8 +218,8 @@ class _NicheCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _levelColor.withOpacity(0.2)),
       ),
       child: Column(
@@ -240,7 +240,7 @@ class _NicheCard extends StatelessWidget {
                       style: TextStyle(
                           color: _levelColor,
                           fontSize: 11,
-                          fontWeight: FontWeight.bold)),
+                          fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 10),
@@ -251,7 +251,7 @@ class _NicheCard extends StatelessWidget {
                     Text(niche.name,
                         style: const TextStyle(
                             color: AppColors.ink,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             fontSize: 14)),
                     Text(_levelLabel(l10n),
                         style: TextStyle(color: _levelColor, fontSize: 11)),
@@ -265,7 +265,7 @@ class _NicheCard extends StatelessWidget {
                       style: const TextStyle(
                           color: AppColors.ink,
                           fontSize: 20,
-                          fontWeight: FontWeight.bold)),
+                          fontWeight: FontWeight.w600)),
                   Text(l10n.miNicheScoreLabel,
                       style:
                           const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
@@ -323,7 +323,7 @@ class _NicheCard extends StatelessWidget {
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: _levelColor.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
                         border: Border.all(color: _levelColor.withOpacity(0.3)),
                       ),
                       child: Text(k,
@@ -359,12 +359,12 @@ class _MiniBar extends StatelessWidget {
                   style: const TextStyle(color: AppColors.inkMuted, fontSize: 10)),
               Text('$value',
                   style: TextStyle(
-                      color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+                      color: color, fontSize: 10, fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 3),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             child: LinearProgressIndicator(
               value: value / 100,
               backgroundColor: color.withOpacity(0.1),

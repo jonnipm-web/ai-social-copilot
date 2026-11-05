@@ -274,11 +274,11 @@ class _ContentCard extends StatelessWidget {
       color: AppColors.ink.withOpacity(0.05),
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         side: const BorderSide(color: AppColors.line),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         onTap: () => context.push(
           AppConstants.routeContentEdit.replaceAll(':id', item.id),
         ),
@@ -294,7 +294,7 @@ class _ContentCard extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: typeColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                       border: Border.all(color: typeColor.withOpacity(0.3)),
                     ),
                     child: Text(
@@ -313,7 +313,7 @@ class _ContentCard extends StatelessWidget {
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: AppColors.accent.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                         border: Border.all(
                             color: AppColors.accent.withOpacity(0.25)),
                       ),

@@ -253,7 +253,7 @@ class _MarketIntelligenceScreenState
                   gradient: const LinearGradient(
                     colors: [AppColors.surface, AppColors.surface],
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                   border: Border.all(
                       color: AppColors.info.withOpacity(0.3)),
                 ),
@@ -271,7 +271,7 @@ class _MarketIntelligenceScreenState
                             style: const TextStyle(
                               color: AppColors.ink,
                               fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -318,12 +318,12 @@ class _MarketIntelligenceScreenState
                         filled: true,
                         fillColor: AppColors.surface,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           borderSide:
                               const BorderSide(color: AppColors.line),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           borderSide:
                               const BorderSide(color: AppColors.line),
                         ),
@@ -368,7 +368,7 @@ class _MarketIntelligenceScreenState
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: AppColors.accent.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(
                         color: AppColors.accent.withOpacity(0.3)),
                   ),
@@ -435,15 +435,15 @@ class _MarketIntelligenceScreenState
                   filled: true,
                   fillColor: AppColors.surface,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     borderSide: const BorderSide(color: AppColors.line),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     borderSide: const BorderSide(color: AppColors.line),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     borderSide: const BorderSide(color: AppColors.info),
                   ),
                   prefixIcon:
@@ -469,13 +469,13 @@ class _MarketIntelligenceScreenState
                   label: Text(
                     busy ? t.miRootAnalyzing : t.miRootAnalyzeCta,
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15),
+                        fontWeight: FontWeight.w600, fontSize: 15),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.info,
                     foregroundColor: Colors.black,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(AppRadius.lg)),
                   ),
                 ),
               ),
@@ -486,7 +486,7 @@ class _MarketIntelligenceScreenState
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppColors.negative.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(color: AppColors.negative.withOpacity(0.3)),
                   ),
                   child: Column(
@@ -524,7 +524,7 @@ class _MarketIntelligenceScreenState
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 16,
-                      fontWeight: FontWeight.bold)),
+                      fontWeight: FontWeight.w600)),
               const SizedBox(height: 12),
               analyses.when(
                 loading: () => const Center(
@@ -570,7 +570,7 @@ class _TypeChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.info : AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
             color:
                 isSelected ? AppColors.info : AppColors.line,
@@ -581,7 +581,7 @@ class _TypeChip extends StatelessWidget {
           style: TextStyle(
             color: isSelected ? Colors.black : AppColors.inkMuted,
             fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
       ),
@@ -604,8 +604,8 @@ class _AnalysisCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: AppColors.line),
         ),
         child: Row(
@@ -615,14 +615,14 @@ class _AnalysisCard extends StatelessWidget {
               height: 44,
               decoration: BoxDecoration(
                 color: AppColors.info.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Center(
                 child: Text(
                   '${analysis.opportunityScore}',
                   style: const TextStyle(
                     color: AppColors.info,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     fontSize: 16,
                   ),
                 ),

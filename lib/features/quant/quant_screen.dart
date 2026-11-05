@@ -10,6 +10,7 @@
 //   - Any numeric output not sourced from the deterministic quant engine
 // See: docs/quant/QUANT_RESEARCH_ADVICE_BOUNDARY.md
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -91,7 +92,7 @@ class _QuantScreenState extends ConsumerState<QuantScreen> {
                       Text(
                         'Market Analytics',
                         style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold),
+                            fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 6),
                       Text(

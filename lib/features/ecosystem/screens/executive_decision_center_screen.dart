@@ -26,7 +26,6 @@ import '../../../shared/widgets/ive_explain_button.dart';
 import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────
-const _kBg = AppColors.ground;
 const _kCard = AppColors.ground;
 const _kBorder = AppColors.surface;
 const _kPrimary = AppColors.accent;
@@ -109,7 +108,7 @@ class _ExecutiveDecisionCenterScreenState
         ),
         title: Text(l10n.ecoDecisionCenterTitle,
             style: const TextStyle(
-                color: AppColors.ink, fontWeight: FontWeight.bold)),
+                color: AppColors.ink, fontWeight: FontWeight.w600)),
         iconTheme: const IconThemeData(color: AppColors.ink),
         bottom: TabBar(
           controller: _tab,
@@ -261,7 +260,7 @@ class _HealthBanner extends StatelessWidget {
             child: Center(
               child: Text('$health',
                   style: TextStyle(
-                      color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+                      color: color, fontWeight: FontWeight.w600, fontSize: 14)),
             ),
           ),
           const SizedBox(width: 12),
@@ -272,7 +271,7 @@ class _HealthBanner extends StatelessWidget {
                 Text(l10n.ecoHealthTitle,
                     style: TextStyle(
                         color: color,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         fontSize: 13)),
                 Text(_healthNarrative(health, l10n),
                     style: const TextStyle(
@@ -613,7 +612,7 @@ class _Top5Section extends StatelessWidget {
         Text(title,
             style: const TextStyle(
                 color: AppColors.ink,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
                 fontSize: 15)),
         const SizedBox(height: 2),
         Text(subtitle,
@@ -727,7 +726,7 @@ class _ProjectCard extends ConsumerWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: _kCard,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Column(
@@ -746,7 +745,7 @@ class _ProjectCard extends ConsumerWidget {
                     child: Text('${score.ecosystemScore}',
                         style: TextStyle(
                             color: color,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             fontSize: 13)),
                   ),
                 ),
@@ -831,7 +830,7 @@ class _SimpleCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: _kCard,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
               color: onTap != null ? color.withOpacity(0.25) : _kBorder),
         ),
@@ -841,11 +840,11 @@ class _SimpleCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Text('$score',
                   style: TextStyle(
-                      color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+                      color: color, fontSize: 11, fontWeight: FontWeight.w600)),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -869,7 +868,7 @@ class _SimpleCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: AppColors.line,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Text(badge,
                   style: const TextStyle(color: AppColors.inkMuted, fontSize: 9)),
@@ -940,14 +939,14 @@ class _EcosystemCardState extends State<_EcosystemCard> {
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Column(
         children: [
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
@@ -959,7 +958,7 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                         child: Text(s.project.name,
                             style: const TextStyle(
                                 color: AppColors.ink,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                                 fontSize: 14)),
                       ),
                       Container(
@@ -967,13 +966,13 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: color.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           border: Border.all(color: color.withOpacity(0.5)),
                         ),
                         child: Text('${s.ecosystemScore}',
                             style: TextStyle(
                                 color: color,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                                 fontSize: 14)),
                       ),
                     ],
@@ -1108,7 +1107,7 @@ class _ScoreRow extends StatelessWidget {
         const SizedBox(width: 6),
         Text('$value',
             style: TextStyle(
-                color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+                color: color, fontSize: 10, fontWeight: FontWeight.w600)),
       ],
     );
   }
@@ -1193,7 +1192,7 @@ class _ValidationGateCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kOrange.withOpacity(0.45)),
       ),
       child: Column(
@@ -1205,13 +1204,13 @@ class _ValidationGateCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: _kOrange.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Text(l10n.ecoBlockedBadge,
                     style: const TextStyle(
                         color: _kOrange,
                         fontSize: 10,
-                        fontWeight: FontWeight.bold)),
+                        fontWeight: FontWeight.w600)),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -1233,7 +1232,7 @@ class _ValidationGateCard extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: _kOrange.withOpacity(0.07),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: _kOrange.withOpacity(0.2)),
             ),
             child: Column(
@@ -1427,7 +1426,7 @@ class _RecCard extends ConsumerWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: _kCard,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border(left: BorderSide(color: _typeColor, width: 3)),
         ),
         child: Column(
@@ -1440,13 +1439,13 @@ class _RecCard extends ConsumerWidget {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: _typeColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(recommendationTypeLabel(rec.type, l10n),
                       style: TextStyle(
                           color: _typeColor,
                           fontSize: 10,
-                          fontWeight: FontWeight.bold)),
+                          fontWeight: FontWeight.w600)),
                 ),
                 const Spacer(),
                 Text(l10n.ecoConfidencePct(rec.confidence),

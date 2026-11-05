@@ -82,7 +82,7 @@ class HomeScreen extends ConsumerWidget {
             const Text('InsightValues',
                 style: TextStyle(
                     color: AppColors.ink,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     fontSize: 16)),
             Text(l10n.ctxHomeCommandCenter,
                 style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
@@ -171,7 +171,7 @@ class _ExecutiveCommandCard extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kPrimary.withOpacity(0.4)),
       ),
       child: Column(
@@ -183,7 +183,7 @@ class _ExecutiveCommandCard extends ConsumerWidget {
             Text(l10n.ctxHomeExecCommandCenter,
                 style: const TextStyle(
                     color: _kPrimary,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     fontSize: 12,
                     letterSpacing: 0.8)),
             const Spacer(),
@@ -347,7 +347,7 @@ class _NextBestActionCard extends ConsumerWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: _kGold.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: _kGold.withOpacity(0.3)),
             ),
             child: Column(
@@ -359,7 +359,7 @@ class _NextBestActionCard extends ConsumerWidget {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: _kGold.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text(recommendationTypeLabel(top.type, l10n),
                         style: const TextStyle(color: _kGold, fontSize: 10)),
@@ -373,7 +373,7 @@ class _NextBestActionCard extends ConsumerWidget {
                 Text(top.title,
                     style: const TextStyle(
                         color: AppColors.ink,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         fontSize: 14)),
                 const SizedBox(height: 4),
                 Text(top.reason,
@@ -530,7 +530,7 @@ class _OsCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kBorder),
       ),
       child: Column(
@@ -542,7 +542,7 @@ class _OsCard extends StatelessWidget {
             Text(title,
                 style: TextStyle(
                     color: iconColor,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     fontSize: 12,
                     letterSpacing: 0.5)),
             const Spacer(),
@@ -578,12 +578,12 @@ class _HealthBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: _color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: _color.withOpacity(0.4)),
       ),
       child: Text(AppLocalizations.of(context)!.ctxHomeHealth(health),
           style: TextStyle(
-              color: _color, fontSize: 10, fontWeight: FontWeight.bold)),
+              color: _color, fontSize: 10, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -606,7 +606,7 @@ class _MetricChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: color.withOpacity(0.25)),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -615,7 +615,7 @@ class _MetricChip extends StatelessWidget {
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(value,
               style: TextStyle(
-                  color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+                  color: color, fontWeight: FontWeight.w600, fontSize: 13)),
           Text(label,
               style: const TextStyle(color: AppColors.inkSubtle, fontSize: 9)),
         ]),
@@ -641,7 +641,7 @@ class _QuickAction extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: _kPrimary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppRadius.md),
             border: Border.all(color: _kPrimary.withOpacity(0.2)),
           ),
           child: Column(children: [
@@ -686,7 +686,7 @@ class _ProjectRow extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: _kBg,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: _kBorder),
         ),
         child: Row(children: [
@@ -698,7 +698,7 @@ class _ProjectRow extends StatelessWidget {
               Text(profile.project.name,
                   style: const TextStyle(
                       color: AppColors.ink,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 13)),
               const SizedBox(height: 2),
               Row(children: [
@@ -728,7 +728,7 @@ class _ProjectRow extends StatelessWidget {
               Text('$ecosystemScore',
                   style: TextStyle(
                       color: _scoreColor,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 16)),
               Text(recommendation,
                   style: TextStyle(color: _scoreColor, fontSize: 9)),
@@ -752,7 +752,7 @@ class _PersonaRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: _kBg,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _kBorder),
       ),
       child: Row(children: [
@@ -778,7 +778,7 @@ class _PersonaRow extends StatelessWidget {
           Text('${profile.learningScore}%',
               style: TextStyle(
                   color: profile.learningScore >= 40 ? _kCyan : AppColors.inkSubtle,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   fontSize: 14)),
           Text(profile.learningLabel(l10n),
               style: const TextStyle(color: AppColors.inkSubtle, fontSize: 9)),
@@ -799,7 +799,7 @@ class _ConnectionRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: _kGreen.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border:
             Border(left: BorderSide(color: _kGreen.withOpacity(0.4), width: 2)),
       ),
@@ -824,7 +824,7 @@ class _StatPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [

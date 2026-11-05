@@ -3,6 +3,7 @@
 // Every screen that displays Quant output MUST include this widget.
 // See docs/quant/QUANT_RESEARCH_ADVICE_BOUNDARY.md §5.
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 /// Inline disclaimer shown below every Quant analysis output.
 /// Tapping the ⓘ opens [QuantDisclaimerSheet].
@@ -57,7 +58,7 @@ class QuantDisclaimerSheet extends StatelessWidget {
           children: [
             Text('About This Analysis',
                 style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             Text(
               'InsightValues Quant calculates mathematical properties of '

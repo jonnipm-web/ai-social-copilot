@@ -80,3 +80,11 @@ class AppType {
 
   static const tabular = [FontFeature.tabularFigures()];
 }
+
+/// Card surface: a faint top-left light that fades into [AppColors.surface].
+/// Used by every hand-built card decoration so surfaces read as one system.
+const kIvSurfaceGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0xFF161B21), AppColors.surface],
+);

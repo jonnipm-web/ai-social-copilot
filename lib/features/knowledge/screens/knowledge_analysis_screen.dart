@@ -92,7 +92,7 @@ class _KnowledgeAnalysisScreenState
         foregroundColor: AppColors.ink,
         title: Text(
           l10n.knowledgeAnalysisTitle,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         actions: [
           itemAsync.maybeWhen(
@@ -608,7 +608,7 @@ class _ActionChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: color.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: color.withOpacity(0.4)),
         ),
         child: Row(
@@ -655,7 +655,7 @@ class _OpportunityScoreCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _color.withOpacity(0.4)),
       ),
       child: Row(
@@ -672,7 +672,7 @@ class _OpportunityScoreCard extends StatelessWidget {
               child: Text(
                 '$score',
                 style: TextStyle(
-                    color: _color, fontSize: 22, fontWeight: FontWeight.bold),
+                    color: _color, fontSize: 22, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -686,7 +686,7 @@ class _OpportunityScoreCard extends StatelessWidget {
                   style: TextStyle(
                       color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 Text(_label(AppLocalizations.of(context)!),
@@ -725,7 +725,7 @@ class _HotmartCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: color.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(
@@ -739,7 +739,7 @@ class _HotmartCard extends StatelessWidget {
                   style: TextStyle(
                       color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.w700)),
+                      fontWeight: FontWeight.w600)),
               const Spacer(),
               if (score > 0) _ScoreBadge(score, color),
             ],
@@ -783,7 +783,7 @@ class _ShopifyCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: color.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(
@@ -797,7 +797,7 @@ class _ShopifyCard extends StatelessWidget {
                   style: TextStyle(
                       color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.w700)),
+                      fontWeight: FontWeight.w600)),
               const Spacer(),
               if (score > 0) _ScoreBadge(score, color),
             ],
@@ -828,7 +828,7 @@ class _ShopifyCard extends StatelessWidget {
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: color.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
                             border: Border.all(color: color.withOpacity(0.3)),
                           ),
                           child: Text(c.toString(),
@@ -855,13 +855,13 @@ class _ScoreBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Text(
         '$score/100',
         style:
-            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -917,7 +917,7 @@ class _ItemHeader extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.accent.withOpacity(0.3)),
       ),
       child: Row(
@@ -934,7 +934,7 @@ class _ItemHeader extends StatelessWidget {
                   style: const TextStyle(
                     color: AppColors.ink,
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 if (item.niche != null)
@@ -964,7 +964,7 @@ class _SectionTitle extends StatelessWidget {
         style: const TextStyle(
           color: AppColors.ink,
           fontSize: 14,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
           letterSpacing: 0.3,
         ),
       ),
@@ -1000,7 +1000,7 @@ class _CollapsibleSectionState extends State<_CollapsibleSection> {
       children: [
         InkWell(
           onTap: () => setState(() => _expanded = !_expanded),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
@@ -1050,8 +1050,8 @@ class _SummaryCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1136,8 +1136,8 @@ class _ScoreCard extends StatelessWidget {
       width: 120,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: data.color.withOpacity(0.3)),
       ),
       child: Column(
@@ -1149,7 +1149,7 @@ class _ScoreCard extends StatelessWidget {
             style: TextStyle(
               color: _barColor,
               fontSize: 22,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
             ),
           ),
           Text(data.label,
@@ -1210,7 +1210,7 @@ class _ChipSection extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(color: color.withOpacity(0.35)),
                     ),
                     child: Text(kw,
@@ -1246,7 +1246,7 @@ class _ListCards extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.07),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(color: color.withOpacity(0.25)),
               ),
               child: Row(
@@ -1332,8 +1332,8 @@ class _ChannelDetailState extends State<_ChannelDetail> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Column(
         children: [
@@ -1404,7 +1404,7 @@ class _SubLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(text,
           style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w700)),
+              color: color, fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 }

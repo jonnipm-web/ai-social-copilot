@@ -174,8 +174,8 @@ class _UsageBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.line),
       ),
       child: Column(
@@ -199,7 +199,7 @@ class _UsageBanner extends StatelessWidget {
                     ? '${quota.used} / 99.999'
                     : '${quota.used} / ${quota.limit}',
                 style: const TextStyle(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.ink,
                 ),
               ),
@@ -207,7 +207,7 @@ class _UsageBanner extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             child: LinearProgressIndicator(
               value: quota.fractionUsed,
               minHeight: 8,
@@ -276,8 +276,8 @@ class _PlanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
           color: isHighlighted ? _primary : AppColors.line,
           width: isHighlighted ? 2 : 1,
@@ -308,7 +308,7 @@ class _PlanCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.ink,
                   letterSpacing: 0.5,
                 ),
@@ -325,7 +325,7 @@ class _PlanCard extends StatelessWidget {
                       title,
                       style: const TextStyle(
                         fontSize: 20,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     if (isHighlighted) ...[
@@ -346,7 +346,7 @@ class _PlanCard extends StatelessWidget {
                       price,
                       style: const TextStyle(
                         fontSize: 32,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     if (period.isNotEmpty)
@@ -443,7 +443,7 @@ class _FaqSection extends StatelessWidget {
           style: Theme.of(context)
               .textTheme
               .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700),
+              ?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
         ...items.map((item) => _FaqTile(item: item)),

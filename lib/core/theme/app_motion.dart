@@ -43,12 +43,6 @@ class IvFadeThroughPageTransitionsBuilder extends PageTransitionsBuilder {
   const IvFadeThroughPageTransitionsBuilder();
 
   @override
-  Duration get transitionDuration => AppMotion.page;
-
-  @override
-  Duration get reverseTransitionDuration => AppMotion.page;
-
-  @override
   Widget buildTransitions<T>(
     PageRoute<T> route,
     BuildContext context,

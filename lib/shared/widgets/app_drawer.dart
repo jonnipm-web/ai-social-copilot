@@ -147,7 +147,7 @@ class _DrawerContent extends ConsumerWidget {
                         style: const TextStyle(
                           color: AppColors.ink,
                           fontSize: 17,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                           letterSpacing: -0.2,
                         ),
                       ),

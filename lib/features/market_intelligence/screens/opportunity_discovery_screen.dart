@@ -128,7 +128,7 @@ class _OpportunityDiscoveryScreenState
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppColors.negative.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(color: AppColors.negative.withOpacity(0.3)),
               ),
               child: Text(_error!,
@@ -208,8 +208,8 @@ class _OpportunityCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _scoreColor.withOpacity(0.2)),
       ),
       child: Column(
@@ -221,7 +221,7 @@ class _OpportunityCard extends StatelessWidget {
                 child: Text(opportunity.title,
                     style: const TextStyle(
                         color: AppColors.ink,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         fontSize: 14)),
               ),
               const SizedBox(width: 8),
@@ -230,14 +230,14 @@ class _OpportunityCard extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: _scoreColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                   border: Border.all(color: _scoreColor),
                 ),
                 child: Text(
                   '${opportunity.opportunityScore}',
                   style: TextStyle(
                       color: _scoreColor,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 14),
                 ),
               ),
@@ -315,7 +315,7 @@ class _MiniScore extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(

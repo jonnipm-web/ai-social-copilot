@@ -21,9 +21,10 @@ import '../../../shared/widgets/context_copilot_widget.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 import '../../../shared/widgets/translated_content_notice.dart';
 import 'package:ai_social_copilot/core/theme/app_tokens.dart';
+import 'package:ai_social_copilot/shared/ui/iv_charts.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg = AppColors.ground;
 const _kCard = AppColors.surface;
 const _kPrimary = AppColors.accent;
 const _kGreen = AppColors.positive;
@@ -168,7 +169,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
         title: Text(
           l10n.miHubAppBarTitle,
           style: const TextStyle(
-              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.bold),
+              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.w600),
         ),
         actions: [
           // IVE-EXPERIENCE-V1-06 (Section 20) — first (and only, per mission
@@ -227,8 +228,16 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
         ],
       ),
       body: analysisAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: _kPrimary)),
+        loading: () => ListView(
+          padding: const EdgeInsets.all(AppSpace.s4),
+          children: const [
+            IvSkeleton(height: 260),
+            SizedBox(height: AppSpace.s3),
+            IvSkeleton(height: 120),
+            SizedBox(height: AppSpace.s3),
+            IvSkeleton(height: 180),
+          ],
+        ),
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -261,7 +270,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+              children: _staggered([
                 TranslatedContentNotice(localizedFrom: analysis.localizedFrom),
                 // M1 — Executive Score Card
                 _ExecScoreCard(analysis: analysis),
@@ -348,7 +357,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                   isSaved: _roiSaved,
                   onSave: () => _saveToRoi(analysis, opps, plan),
                 ),
-              ],
+              ]),
             ),
           );
         },
@@ -360,6 +369,15 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
 // ════════════════════════════════════════════════════════════════════════════
 // M1 — Executive Score Card
 // ════════════════════════════════════════════════════════════════════════════
+/// Wraps every non-spacer child in a staggered fade/rise entrance.
+List<Widget> _staggered(List<Widget> children) {
+  var i = 0;
+  return [
+    for (final c in children)
+      c is SizedBox ? c : FadeSlideIn(index: i++, child: c),
+  ];
+}
+
 class _ExecScoreCard extends StatelessWidget {
   const _ExecScoreCard({required this.analysis});
   final MarketAnalysis analysis;
@@ -387,7 +405,7 @@ class _ExecScoreCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         gradient: LinearGradient(
           colors: [_kCard, color.withOpacity(0.10)],
           begin: Alignment.topLeft,
@@ -410,7 +428,7 @@ class _ExecScoreCard extends StatelessWidget {
                     color: AppColors.inkMuted,
                     fontSize: 11,
                     letterSpacing: 1.4,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -423,7 +441,7 @@ class _ExecScoreCard extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: _kPrimary.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(color: _kPrimary.withOpacity(0.35)),
                     ),
                     child: Text(
@@ -452,31 +470,36 @@ class _ExecScoreCard extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final isNarrow = constraints.maxWidth < 380;
-              final scoreRow = Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$score',
-                    style: TextStyle(
-                      fontSize: isNarrow ? 48 : 68,
-                      fontWeight: FontWeight.w900,
-                      color: color,
-                      height: 1,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      '/100',
+              final ringSize = isNarrow ? 104.0 : 128.0;
+              final scoreRow = IvRingGauge(
+                value: score.toDouble(),
+                size: ringSize,
+                stroke: isNarrow ? 9 : 11,
+                color: color,
+                semanticsLabel: '$score / 100',
+                center: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IvCountUp(
+                      value: score,
                       style: TextStyle(
-                        fontSize: isNarrow ? 16 : 20,
-                        fontWeight: FontWeight.w300,
-                        color: color.withOpacity(0.55),
+                        fontSize: ringSize * 0.32,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.ink,
+                        height: 1,
+                        letterSpacing: -1,
                       ),
                     ),
-                  ),
-                ],
+                    Text(
+                      '/100',
+                      style: TextStyle(
+                        fontSize: ringSize * 0.11,
+                        color: AppColors.inkSubtle,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               );
               final contextColumn = Column(
                 crossAxisAlignment: isNarrow
@@ -504,14 +527,14 @@ class _ExecScoreCard extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                     ),
                     child: Text(
                       _rec(l10n),
                       style: TextStyle(
                           color: color,
                           fontSize: 11,
-                          fontWeight: FontWeight.w700),
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -557,9 +580,8 @@ class _ExecScoreCard extends StatelessWidget {
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.ink.withOpacity(0.04),
-              borderRadius: BorderRadius.circular(8),
+            decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Text(
               _desc(l10n),
@@ -584,22 +606,21 @@ class _ScoreBar extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Text('$score',
-              style: TextStyle(
-                  color: c, fontSize: 13, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: score / 100,
-              backgroundColor: AppColors.ink.withOpacity(0.08),
-              valueColor: AlwaysStoppedAnimation<Color>(c),
-              minHeight: 5,
-            ),
+          IvRingGauge(
+            value: score.toDouble(),
+            size: 50,
+            stroke: 5,
+            color: c,
+            semanticsLabel: '$label: $score / 100',
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(label,
-              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 9),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  color: AppColors.inkMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500),
               textAlign: TextAlign.center),
         ],
       ),
@@ -607,9 +628,6 @@ class _ScoreBar extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// M2 — Revenue Potential Card
-// ════════════════════════════════════════════════════════════════════════════
 class _RevenuePotentialCard extends StatelessWidget {
   const _RevenuePotentialCard({required this.analysis, this.plan});
   final MarketAnalysis analysis;
@@ -627,8 +645,8 @@ class _RevenuePotentialCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kCyan.withOpacity(0.3)),
       ),
       child: Column(
@@ -668,7 +686,7 @@ class _RevenuePotentialCard extends StatelessWidget {
               style: const TextStyle(
                   color: _kCyan,
                   fontSize: 14,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   height: 1.2),
             ),
             if (plan != null) ...[
@@ -723,8 +741,8 @@ class _InvestmentCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.35)),
       ),
       child: Column(
@@ -745,7 +763,7 @@ class _InvestmentCard extends StatelessWidget {
               Text(
                 aiInvestmentRecommendationLabel(rec, l10n),
                 style: TextStyle(
-                    color: color, fontSize: 22, fontWeight: FontWeight.w900),
+                    color: color, fontSize: 22, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -791,8 +809,8 @@ class _PriorityActionsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kPrimary.withOpacity(0.25)),
       ),
       child: Column(
@@ -809,7 +827,7 @@ class _PriorityActionsCard extends StatelessWidget {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -842,7 +860,7 @@ class _PriorityActionsCard extends StatelessWidget {
                       style: const TextStyle(
                           color: _kPrimary,
                           fontSize: 12,
-                          fontWeight: FontWeight.bold),
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -910,8 +928,8 @@ class _CompetitorRankingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
@@ -927,7 +945,7 @@ class _CompetitorRankingCard extends StatelessWidget {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(
@@ -986,14 +1004,14 @@ class _CompetitorRankingCard extends StatelessWidget {
                               color: idx == 0
                                   ? _kGold.withOpacity(0.2)
                                   : AppColors.ink.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
                             ),
                             child: Text(
                               '${idx + 1}',
                               style: TextStyle(
                                 color: idx == 0 ? _kGold : AppColors.inkSubtle,
                                 fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -1041,7 +1059,7 @@ class _CompetitorRankingCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
             ),
           ],
@@ -1073,8 +1091,8 @@ class _GapSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
@@ -1090,7 +1108,7 @@ class _GapSummaryCard extends StatelessWidget {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(
@@ -1135,7 +1153,7 @@ class _GapSummaryCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: _kGold.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Text(
                 l10n.miHubGapTotal(gap!.totalGaps),
@@ -1183,14 +1201,14 @@ class _GapRow extends StatelessWidget {
                           horizontal: 6, vertical: 1),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: Text(
                         '${items.length}',
                         style: TextStyle(
                             color: color,
                             fontSize: 10,
-                            fontWeight: FontWeight.bold),
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
@@ -1238,8 +1256,8 @@ class _OpportunitiesCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
@@ -1255,7 +1273,7 @@ class _OpportunitiesCard extends StatelessWidget {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(
@@ -1291,9 +1309,8 @@ class _OpportunitiesCard extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.ink.withOpacity(0.04),
-                    borderRadius: BorderRadius.circular(10),
+                  decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(color: _kGold.withOpacity(0.15)),
                   ),
                   child: Column(
@@ -1315,13 +1332,13 @@ class _OpportunitiesCard extends StatelessWidget {
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: c.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
                             child: Text('${o.opportunityScore}',
                                 style: TextStyle(
                                     color: c,
                                     fontSize: 13,
-                                    fontWeight: FontWeight.bold)),
+                                    fontWeight: FontWeight.w600)),
                           ),
                         ],
                       ),
@@ -1396,8 +1413,8 @@ class _NicheSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
@@ -1413,7 +1430,7 @@ class _NicheSummaryCard extends StatelessWidget {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(
@@ -1445,9 +1462,8 @@ class _NicheSummaryCard extends StatelessWidget {
           else ...[
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.ink.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(10),
+              decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(color: _kCyan.withOpacity(0.15)),
               ),
               child: Row(
@@ -1510,8 +1526,8 @@ class _ContentClusterSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
@@ -1528,7 +1544,7 @@ class _ContentClusterSummaryCard extends StatelessWidget {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(
@@ -1611,8 +1627,8 @@ class _RevenuePlannerSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
@@ -1628,7 +1644,7 @@ class _RevenuePlannerSummaryCard extends StatelessWidget {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(
@@ -1662,7 +1678,7 @@ class _RevenuePlannerSummaryCard extends StatelessWidget {
               l10n.miHubRevenuePlannerMonthly(
                   _formatBRL(plan!.monthlyModerate)),
               style: const TextStyle(
-                  color: _kPink, fontSize: 14, fontWeight: FontWeight.bold),
+                  color: _kPink, fontSize: 14, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -1723,8 +1739,8 @@ class _RoiIntegrationCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kGreen.withOpacity(0.3)),
       ),
       child: Column(
@@ -1739,7 +1755,7 @@ class _RoiIntegrationCard extends StatelessWidget {
                 style: const TextStyle(
                     color: AppColors.ink,
                     fontSize: 14,
-                    fontWeight: FontWeight.bold),
+                    fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -1769,7 +1785,7 @@ class _RoiIntegrationCard extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: _kGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(color: _kGreen.withOpacity(0.3)),
               ),
               child: Row(
@@ -1811,7 +1827,7 @@ class _RoiIntegrationCard extends StatelessWidget {
                   disabledBackgroundColor: _kGreen.withOpacity(0.4),
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(AppRadius.md)),
                 ),
               ),
             ),
@@ -1895,7 +1911,7 @@ class _Badge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(label,
@@ -1956,7 +1972,7 @@ class _RoiStat extends StatelessWidget {
         const SizedBox(height: 2),
         Text(value,
             style: TextStyle(
-                color: color, fontSize: 14, fontWeight: FontWeight.bold)),
+                color: color, fontSize: 14, fontWeight: FontWeight.w600)),
       ],
     );
   }

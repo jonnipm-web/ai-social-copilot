@@ -182,7 +182,7 @@ class _ContentGenerationScreenState
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
         border: Border.all(color: color.withOpacity(0.5)),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(
         children: [
@@ -207,7 +207,7 @@ class _ContentGenerationScreenState
               foregroundColor: color,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               textStyle:
-                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
             child: Text(
                 isFull ? l10n.improvePostUpgradeCta : l10n.improvePostSeePlans),

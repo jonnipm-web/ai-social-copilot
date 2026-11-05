@@ -30,7 +30,7 @@ class AboutScreen extends StatelessWidget {
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
           Text(t.aboutTagline, style: const TextStyle(color: AppColors.inkMuted)),

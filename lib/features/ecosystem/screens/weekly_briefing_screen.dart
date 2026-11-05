@@ -14,7 +14,6 @@ import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
-const _kBg = AppColors.ground;
 const _kCard = AppColors.ground;
 const _kBorder = AppColors.surface;
 const _kPrimary = AppColors.accent;
@@ -50,7 +49,7 @@ class WeeklyBriefingScreen extends ConsumerWidget {
         ),
         title: Text(l10n.ecoWeeklyBriefingTitle,
             style: const TextStyle(
-                color: AppColors.ink, fontWeight: FontWeight.bold)),
+                color: AppColors.ink, fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: AppColors.inkMuted),
@@ -217,7 +216,7 @@ class _HealthSideCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.ground,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: hc.withOpacity(0.35)),
       ),
       child: Column(
@@ -229,11 +228,11 @@ class _HealthSideCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(l10n.ecoBriefOverallHealth,
                   style: TextStyle(
-                      color: hc, fontSize: 13, fontWeight: FontWeight.bold)),
+                      color: hc, fontSize: 13, fontWeight: FontWeight.w600)),
               const Spacer(),
               Text('${briefing.overallHealthScore}/100',
                   style: TextStyle(
-                      color: hc, fontSize: 22, fontWeight: FontWeight.bold)),
+                      color: hc, fontSize: 22, fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 10),
@@ -241,7 +240,7 @@ class _HealthSideCard extends StatelessWidget {
             value: briefing.overallHealthScore / 100,
             backgroundColor: AppColors.line,
             valueColor: AlwaysStoppedAnimation(hc),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             minHeight: 6,
           ),
           if (briefing.overallHealthScore < 50) ...[
@@ -274,7 +273,7 @@ class _Header extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kPrimary.withOpacity(0.4)),
       ),
       child: Row(
@@ -286,7 +285,7 @@ class _Header extends StatelessWidget {
                 Text(l10n.ecoBriefHeaderLabel,
                     style: const TextStyle(
                         color: _kPrimary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         fontSize: 11,
                         letterSpacing: 1.5)),
                 const SizedBox(height: 4),
@@ -299,7 +298,7 @@ class _Header extends StatelessWidget {
                     style: const TextStyle(
                         color: AppColors.ink,
                         fontSize: 15,
-                        fontWeight: FontWeight.bold)),
+                        fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -319,7 +318,7 @@ class _Header extends StatelessWidget {
                 Text('${briefing.overallHealthScore}',
                     style: TextStyle(
                       color: _healthColor(briefing.overallHealthScore),
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 18,
                     )),
               ],
@@ -347,7 +346,7 @@ class _SummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _kBorder),
       ),
       child: Column(
@@ -383,7 +382,7 @@ class _Section extends StatelessWidget {
       children: [
         Text(title,
             style: TextStyle(
-                color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+                color: color, fontWeight: FontWeight.w600, fontSize: 14)),
         const SizedBox(height: 8),
         if (items.isEmpty)
           Padding(
@@ -410,7 +409,7 @@ class _BriefingRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border(left: BorderSide(color: color, width: 3)),
       ),
       child: Column(
@@ -450,7 +449,7 @@ class _DataOriginCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _kBorder),
       ),
       child: Column(
@@ -465,7 +464,7 @@ class _DataOriginCard extends StatelessWidget {
                 style: const TextStyle(
                   color: _kPrimary,
                   fontSize: 10,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   letterSpacing: 1.2,
                 ),
               ),
@@ -524,7 +523,7 @@ class _DataOriginCard extends StatelessWidget {
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: _kPrimary.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           border:
                               Border.all(color: _kPrimary.withOpacity(0.25)),
                         ),
@@ -557,7 +556,7 @@ class _CountChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: color.withOpacity(0.07),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: color.withOpacity(0.2)),
         ),
         child: Column(
@@ -567,7 +566,7 @@ class _CountChip extends StatelessWidget {
               style: TextStyle(
                 color: color,
                 fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 1),

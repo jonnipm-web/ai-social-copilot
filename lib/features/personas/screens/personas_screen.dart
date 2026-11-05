@@ -119,7 +119,7 @@ class _SectionHeader extends StatelessWidget {
           style: TextStyle(
             color: color,
             fontSize: 12,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
             letterSpacing: 1,
           ),
         ),
@@ -144,7 +144,7 @@ class _PersonaCard extends ConsumerWidget {
       color: AppColors.ink.withOpacity(0.05),
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         side: BorderSide(
           color: persona.isGlobal
               ? AppColors.gold.withOpacity(0.3)
@@ -159,7 +159,7 @@ class _PersonaCard extends ConsumerWidget {
             persona.name.isNotEmpty ? persona.name[0].toUpperCase() : '?',
             style: const TextStyle(
               color: AppColors.accent,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),

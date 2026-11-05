@@ -85,7 +85,7 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
         foregroundColor: AppColors.ink,
         title: Text(
           l10n.knowledgeStrategyTitle,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
       body: itemAsync.when(
@@ -157,7 +157,7 @@ class _NoAnalysis extends StatelessWidget {
               style: const TextStyle(
                   color: AppColors.ink,
                   fontSize: 16,
-                  fontWeight: FontWeight.bold),
+                  fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -209,7 +209,7 @@ class _GeneratePrompt extends ConsumerWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppColors.accent.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 border:
                     Border.all(color: AppColors.accent.withOpacity(0.3)),
               ),
@@ -222,7 +222,7 @@ class _GeneratePrompt extends ConsumerWidget {
               style: const TextStyle(
                   color: AppColors.ink,
                   fontSize: 18,
-                  fontWeight: FontWeight.bold),
+                  fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -253,7 +253,7 @@ class _GeneratePrompt extends ConsumerWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(AppRadius.lg)),
                 ),
                 icon: const Icon(Icons.rocket_launch_rounded),
                 label: Text(l10n.knowledgeStrategyGenerateButton,
@@ -418,8 +418,8 @@ class _StrategyContent extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(10),
+            color: AppColors.surface, gradient: kIvSurfaceGradient,
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -458,7 +458,7 @@ class _StratHeader extends StatelessWidget {
             AppColors.accent.withOpacity(0.05),
           ],
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.accent.withOpacity(0.3)),
       ),
       child: Row(
@@ -474,7 +474,7 @@ class _StratHeader extends StatelessWidget {
                     style: const TextStyle(
                         color: AppColors.ink,
                         fontSize: 15,
-                        fontWeight: FontWeight.bold)),
+                        fontWeight: FontWeight.w600)),
                 if (niche != null)
                   Text(niche!,
                       style:
@@ -505,7 +505,7 @@ class _Section extends StatelessWidget {
           style: TextStyle(
               color: color,
               fontSize: 13,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.3),
         ),
       ],
@@ -537,7 +537,7 @@ class _HighlightCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Row(
@@ -586,8 +586,8 @@ class _ChannelTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(
         children: [
@@ -595,7 +595,7 @@ class _ChannelTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(color: color.withOpacity(0.4)),
             ),
             child: Text(
@@ -664,7 +664,7 @@ class _FunnelCard extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: s.$3.withOpacity(0.07),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: s.$3.withOpacity(0.25)),
                 ),
                 child: Row(
@@ -676,7 +676,7 @@ class _FunnelCard extends StatelessWidget {
                           style: TextStyle(
                               color: s.$3,
                               fontSize: 11,
-                              fontWeight: FontWeight.w700)),
+                              fontWeight: FontWeight.w600)),
                     ),
                     Expanded(
                       child: Text(s.$2.toString(),
@@ -720,8 +720,8 @@ class _OpportunityTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.gold.withOpacity(0.2)),
       ),
       child: Row(
@@ -750,7 +750,7 @@ class _OpportunityTile extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
               ),
               child: Text(
                   aiLevelLabel(potential, AppLocalizations.of(context)!),
@@ -791,7 +791,7 @@ class _ChipRow extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(color: color.withOpacity(0.35)),
                   ),
                   child: Text(kw,
@@ -859,8 +859,8 @@ class _GrowthCard extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: 6),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.surface, gradient: kIvSurfaceGradient,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child: Row(
                     children: [
@@ -870,7 +870,7 @@ class _GrowthCard extends StatelessWidget {
                             style: const TextStyle(
                                 color: AppColors.positive,
                                 fontSize: 11,
-                                fontWeight: FontWeight.w700)),
+                                fontWeight: FontWeight.w600)),
                       ),
                       Expanded(
                         child: Text(m.$2.toString(),
@@ -886,7 +886,7 @@ class _GrowthCard extends StatelessWidget {
               style: const TextStyle(
                   color: AppColors.positive,
                   fontSize: 11,
-                  fontWeight: FontWeight.w700)),
+                  fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           Wrap(
             spacing: 6,
@@ -897,7 +897,7 @@ class _GrowthCard extends StatelessWidget {
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: AppColors.positive.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
                         border: Border.all(
                             color: AppColors.positive.withOpacity(0.3)),
                       ),

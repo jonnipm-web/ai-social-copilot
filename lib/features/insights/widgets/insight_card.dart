@@ -26,7 +26,7 @@ class InsightCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: elevated ? AppColors.surface : AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
           color: AppColors.accent.withValues(alpha: 0.3),
         ),
@@ -56,7 +56,7 @@ class InsightCard extends StatelessWidget {
                     item.title,
                     style: const TextStyle(
                       color: AppColors.ink,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
                   ),
@@ -162,7 +162,7 @@ class _ConfidenceBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: _color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _color.withValues(alpha: 0.4)),
       ),
       child: Text(
@@ -170,7 +170,7 @@ class _ConfidenceBadge extends StatelessWidget {
         style: TextStyle(
           color: _color,
           fontSize: 11,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -201,7 +201,7 @@ class _SourcesRow extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColors.accent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(s,
                       style: const TextStyle(

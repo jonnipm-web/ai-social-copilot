@@ -11,7 +11,6 @@ import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
-const _kBg = AppColors.ground;
 const _kCard = AppColors.ground;
 const _kBorder = AppColors.surface;
 const _kPrimary = AppColors.accent;
@@ -61,7 +60,7 @@ class _ResourceAllocationScreenState
         ),
         title: Text(l10n.ecoResourceAllocationTitle,
             style: const TextStyle(
-                color: AppColors.ink, fontWeight: FontWeight.bold)),
+                color: AppColors.ink, fontWeight: FontWeight.w600)),
       ),
       body: SafeArea(
         top: false,
@@ -149,14 +148,14 @@ class _ModeChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: active ? _kPrimary : _kCard,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: active ? _kPrimary : _kBorder),
         ),
         child: Text(label,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: active ? AppColors.ink : AppColors.inkMuted,
-              fontWeight: active ? FontWeight.bold : FontWeight.normal,
+              fontWeight: active ? FontWeight.w600 : FontWeight.normal,
               fontSize: 13,
             )),
       ),
@@ -183,7 +182,7 @@ class _BudgetSelector extends StatelessWidget {
         Text(AppLocalizations.of(context)!.ecoAllocBudgetQuestion,
             style: const TextStyle(
                 color: AppColors.ink,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
                 fontSize: 14)),
         const SizedBox(height: 10),
         Wrap(
@@ -200,13 +199,13 @@ class _BudgetSelector extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: active ? _kGold.withOpacity(0.2) : _kCard,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: active ? _kGold : _kBorder),
                 ),
                 child: Text(display,
                     style: TextStyle(
                       color: active ? _kGold : AppColors.inkMuted,
-                      fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.normal,
                       fontSize: 14,
                     )),
               ),
@@ -239,7 +238,7 @@ class _AllocationResult extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(color: _kPrimary.withOpacity(0.4)),
           ),
           child: Column(
@@ -253,7 +252,7 @@ class _AllocationResult extends StatelessWidget {
                   Text(l10n.ecoAllocExecutiveRecommendation,
                       style: const TextStyle(
                           color: _kGold,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                           fontSize: 13)),
                 ],
               ),
@@ -273,7 +272,7 @@ class _AllocationResult extends StatelessWidget {
           Text(l10n.ecoAllocDistribution(alloc.totalBudget.round(), label),
               style: const TextStyle(
                   color: AppColors.ink,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   fontSize: 14)),
           const SizedBox(height: 12),
           ...alloc.items.map((item) =>
@@ -309,7 +308,7 @@ class _AllocationItem extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(
@@ -321,12 +320,12 @@ class _AllocationItem extends StatelessWidget {
                 child: Text(item.score.project.name,
                     style: const TextStyle(
                         color: AppColors.ink,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         fontSize: 13)),
               ),
               Text(alloc,
                   style: TextStyle(
-                      color: color, fontWeight: FontWeight.bold, fontSize: 15)),
+                      color: color, fontWeight: FontWeight.w600, fontSize: 15)),
               const SizedBox(width: 6),
               Text('${item.percentage.round()}%',
                   style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),

@@ -19,7 +19,6 @@ import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg = AppColors.ground;
 const _kCard = AppColors.surface;
 const _kPrimary = AppColors.accent;
 const _kGreen = AppColors.positive;
@@ -86,7 +85,7 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
         title: const Text(
           'Opportunity Lab',
           style: TextStyle(
-              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.bold),
+              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
       drawer: const AppDrawer(),
@@ -128,7 +127,7 @@ class _FeatureGated extends StatelessWidget {
               style: TextStyle(
                   color: AppColors.ink,
                   fontSize: 22,
-                  fontWeight: FontWeight.bold),
+                  fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
             Text(
@@ -142,7 +141,7 @@ class _FeatureGated extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: _kGold.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 border: Border.all(color: _kGold.withOpacity(0.25)),
               ),
               child: Column(
@@ -370,8 +369,8 @@ class _LabItemCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(16),
+          color: _kCard, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: AppColors.ink.withOpacity(0.07)),
         ),
         child: Column(
@@ -384,7 +383,7 @@ class _LabItemCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: _kPrimary.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(
                     opportunityTypeLabel(
@@ -393,7 +392,7 @@ class _LabItemCard extends StatelessWidget {
                     style: const TextStyle(
                         color: _kPrimary,
                         fontSize: 9,
-                        fontWeight: FontWeight.bold),
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -414,13 +413,13 @@ class _LabItemCard extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: c.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text('$score',
                         style: TextStyle(
                             color: c,
                             fontSize: 13,
-                            fontWeight: FontWeight.bold)),
+                            fontWeight: FontWeight.w600)),
                   ),
                 ],
               ],
@@ -457,7 +456,7 @@ class _LabItemCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: _statusColor(item.status).withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(
                     opportunityStatusLabel(item.status, l10n),
@@ -527,7 +526,7 @@ class _EmptyLab extends StatelessWidget {
               style: const TextStyle(
                   color: AppColors.inkMuted,
                   fontSize: 18,
-                  fontWeight: FontWeight.bold),
+                  fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
             Text(
@@ -547,7 +546,7 @@ class _EmptyLab extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(AppRadius.lg)),
               ),
             ),
           ],
@@ -613,7 +612,7 @@ class _Chip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
             color: selected ? _kPrimary : _kCard,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
               color: selected ? _kPrimary : AppColors.ink.withOpacity(0.12),
             ),
@@ -776,9 +775,8 @@ class _AddOpportunityDialogState extends ConsumerState<_AddOpportunityDialog> {
     if (widget.projectId == null) {
       return Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.ink.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(10),
+        decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Text(
           l10n.oppKnowledgeSelectProjectFirst,

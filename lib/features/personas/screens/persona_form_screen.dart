@@ -207,7 +207,7 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
                 activeColor: AppColors.gold,
                 tileColor: AppColors.ink.withOpacity(0.05),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   side: const BorderSide(color: AppColors.line),
                 ),
                 contentPadding:
@@ -221,7 +221,7 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
                   foregroundColor: AppColors.onAccent,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                 ),
                 child: _loading
@@ -238,7 +238,7 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
                             ? l10n.personaFormSaveChanges
                             : l10n.personaFormCreate,
                         style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.bold),
+                            fontSize: 15, fontWeight: FontWeight.w600),
                       ),
               ),
             ],
@@ -279,15 +279,15 @@ class _Field extends StatelessWidget {
         filled: true,
         fillColor: AppColors.ink.withOpacity(0.05),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.line),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.accent),
         ),
       ),

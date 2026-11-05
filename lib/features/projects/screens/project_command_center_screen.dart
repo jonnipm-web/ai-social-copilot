@@ -1139,7 +1139,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
       maxChildSize: 0.95,
       builder: (_, ctrl) => Container(
         decoration: const BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: ListView(
@@ -1166,7 +1166,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   child: Text(project.name,
                       style: const TextStyle(
                           color: AppColors.ink,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                           fontSize: 18)),
                 ),
                 if (s != null)
@@ -1176,7 +1176,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                           style: TextStyle(
                               color: _ecoScoreColor(s.ecosystemScore),
                               fontSize: 28,
-                              fontWeight: FontWeight.bold)),
+                              fontWeight: FontWeight.w600)),
                       Text(t.projectCommandEcoScoreLabel,
                           style: const TextStyle(
                               color: AppColors.inkSubtle, fontSize: 10)),
@@ -1220,7 +1220,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppColors.accent.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(
                       color: AppColors.accent.withOpacity(0.3)),
                 ),
@@ -1232,7 +1232,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                       child: Text(ecosystemVerdictLabel(s.recommendation, t),
                           style: const TextStyle(
                               color: AppColors.accent,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                               fontSize: 14)),
                     ),
                   ],
@@ -1486,7 +1486,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: AppColors.accent.withOpacity(0.07),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppRadius.md),
             border:
                 Border.all(color: AppColors.accent.withOpacity(0.25)),
           ),
@@ -1502,7 +1502,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                       t.projectCommandMaturityLabel(p.maturityLabel(t)),
                       style: const TextStyle(
                         color: AppColors.accent,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         fontSize: 13,
                       ),
                     ),
@@ -1555,7 +1555,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: AppColors.info.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(
                             color: AppColors.info.withOpacity(0.3)),
                       ),
@@ -1608,7 +1608,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
               side: const BorderSide(color: AppColors.accent),
               padding: const EdgeInsets.symmetric(vertical: 10),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                  borderRadius: BorderRadius.circular(AppRadius.md)),
             ),
             icon: const Text('🧠', style: TextStyle(fontSize: 14)),
             label: Text(t.projectCommandAskIveAboutProfile,
@@ -1713,8 +1713,8 @@ class _ProjectDetailSheet extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(10),
+                color: AppColors.surface, gradient: kIvSurfaceGradient,
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(color: AppColors.line),
               ),
               child: Column(
@@ -1921,7 +1921,7 @@ class _ResourceAllocationSectionState
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: AppColors.info.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(
                     color: AppColors.info.withOpacity(0.25)),
               ),
@@ -1946,7 +1946,7 @@ class _ResourceAllocationSectionState
                         style: const TextStyle(
                             color: AppColors.warning,
                             fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             letterSpacing: 0.5)),
                 ],
               ),
@@ -1969,11 +1969,11 @@ class _ResourceAllocationSectionState
                       errorText: hoursError,
                       isDense: true,
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         borderSide: const BorderSide(color: AppColors.inkSubtle),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         borderSide: const BorderSide(color: AppColors.accent),
                       ),
                     ),
@@ -1998,11 +1998,11 @@ class _ResourceAllocationSectionState
                       errorText: budgetError,
                       isDense: true,
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         borderSide: const BorderSide(color: AppColors.inkSubtle),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         borderSide: const BorderSide(color: AppColors.accent),
                       ),
                     ),
@@ -2110,7 +2110,7 @@ class _ResourceAllocationSectionState
                   side: const BorderSide(color: AppColors.info),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(AppRadius.md)),
                 ),
                 icon: const Text('🧠', style: TextStyle(fontSize: 14)),
                 label: Text(t.projectCommandAnalyzeResourcesWithIve,
@@ -2270,7 +2270,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
       expand: false,
       builder: (context, ctrl) => Container(
         decoration: const BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: ListView(
@@ -2286,7 +2286,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
                       style: const TextStyle(
                           color: AppColors.ink,
                           fontSize: 18,
-                          fontWeight: FontWeight.bold)),
+                          fontWeight: FontWeight.w600)),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close, color: AppColors.inkMuted),
@@ -2440,7 +2440,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
             fillColor:
                 enabled ? AppColors.line : AppColors.surfaceRaised,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               borderSide: BorderSide.none,
             ),
             contentPadding:
@@ -2478,7 +2478,7 @@ class _ScoreRow extends StatelessWidget {
           ),
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
               child: LinearProgressIndicator(
                 value: value / 100,
                 backgroundColor: AppColors.line,
@@ -2493,7 +2493,7 @@ class _ScoreRow extends StatelessWidget {
             child: Text('$value',
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                    color: _color, fontSize: 12, fontWeight: FontWeight.bold)),
+                    color: _color, fontSize: 12, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -2516,14 +2516,14 @@ class _MetricTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         color: color.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
         children: [
           Text(value,
               style: TextStyle(
-                  color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+                  color: color, fontWeight: FontWeight.w600, fontSize: 14)),
           const SizedBox(height: 2),
           Text(label,
               style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
@@ -2558,7 +2558,7 @@ class _SheetButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         side: BorderSide(color: color.withOpacity(0.4)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
       ),
     );
   }

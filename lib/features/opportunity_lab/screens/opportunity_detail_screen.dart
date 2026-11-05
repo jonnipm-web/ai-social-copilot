@@ -24,7 +24,6 @@ import '../../../shared/widgets/translated_content_notice.dart';
 import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
-const _kBg = AppColors.ground;
 const _kCard = AppColors.surface;
 const _kPrimary = AppColors.accent;
 const _kGreen = AppColors.positive;
@@ -66,7 +65,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
         title: Text(
           l10n.opportunityDetailTitle,
           style: const TextStyle(
-              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.bold),
+              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.w600),
         ),
         actions: [
           itemAsync.maybeWhen(
@@ -328,8 +327,8 @@ class _HeroHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Row(
@@ -344,7 +343,7 @@ class _HeroHeader extends StatelessWidget {
                 child: Text(
                   '$score',
                   style: TextStyle(
-                      color: scoreC, fontSize: 20, fontWeight: FontWeight.bold),
+                      color: scoreC, fontSize: 20, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -367,7 +366,7 @@ class _HeroHeader extends StatelessWidget {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       height: 1.3),
                 ),
                 if (item.description.isNotEmpty) ...[
@@ -493,7 +492,7 @@ class _ScoreRow extends StatelessWidget {
           ),
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
               child: LinearProgressIndicator(
                 value: value / 100,
                 backgroundColor: AppColors.line,
@@ -509,7 +508,7 @@ class _ScoreRow extends StatelessWidget {
               '$value',
               textAlign: TextAlign.right,
               style: TextStyle(
-                  color: color, fontSize: 12, fontWeight: FontWeight.bold),
+                  color: color, fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -621,7 +620,7 @@ class _SourcesList extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: _kPrimary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: _kPrimary.withOpacity(0.3)),
                 ),
                 child: Row(
@@ -651,7 +650,7 @@ class _RationaleCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kPrimary.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _kPrimary.withOpacity(0.2)),
       ),
       child: Row(
@@ -692,7 +691,7 @@ class _ConfidenceMeter extends StatelessWidget {
       children: [
         Expanded(
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             child: LinearProgressIndicator(
               value: value / 100,
               backgroundColor: AppColors.line,
@@ -704,7 +703,7 @@ class _ConfidenceMeter extends StatelessWidget {
         const SizedBox(width: 12),
         Text('$value% $label',
             style: TextStyle(
-                color: color, fontSize: 13, fontWeight: FontWeight.bold)),
+                color: color, fontSize: 13, fontWeight: FontWeight.w600)),
       ],
     );
   }
@@ -775,7 +774,7 @@ class _ActionStepsList extends StatelessWidget {
                     style: const TextStyle(
                         color: _kPrimary,
                         fontSize: 10,
-                        fontWeight: FontWeight.bold),
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -810,8 +809,8 @@ class _Section extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(14),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.06)),
       ),
       child: Column(
@@ -825,7 +824,7 @@ class _Section extends StatelessWidget {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 13,
-                      fontWeight: FontWeight.bold)),
+                      fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 12),
@@ -848,12 +847,12 @@ class _TypeBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: _kPrimary.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
         opportunityTypeLabel(type, AppLocalizations.of(context)!).toUpperCase(),
         style: const TextStyle(
-            color: _kPrimary, fontSize: 9, fontWeight: FontWeight.bold),
+            color: _kPrimary, fontSize: 9, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -880,11 +879,11 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: c.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
         opportunityStatusLabel(status, AppLocalizations.of(context)!),
-        style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.bold),
+        style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -911,7 +910,7 @@ class _ActionButtons extends StatelessWidget {
                 foregroundColor: AppColors.ink,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(AppRadius.lg)),
               ),
               icon: const Icon(Icons.bolt_rounded),
               label: Text(l10n.opportunityDetailApproveCreateActionButton),
@@ -962,7 +961,7 @@ class _ActionButtons extends StatelessWidget {
                 foregroundColor: AppColors.ink,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(AppRadius.lg)),
               ),
               icon: const Icon(Icons.bolt_rounded),
               label: Text(l10n.opportunityDetailSendToActionEngine),
@@ -1019,7 +1018,7 @@ class _ActionButtons extends StatelessWidget {
                 side: const BorderSide(color: _kPrimary),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(AppRadius.lg)),
               ),
               icon: const Icon(Icons.auto_awesome_rounded),
               label: Text(l10n.opportunityDetailAskIveButton),
@@ -1080,8 +1079,8 @@ class _LinkedKnowledgeSection extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1105,9 +1104,8 @@ class _LinkedKnowledgeSection extends ConsumerWidget {
               return Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.ink.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(8),
+                decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: AppColors.line),
                 ),
                 child: Text(

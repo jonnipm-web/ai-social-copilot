@@ -19,7 +19,7 @@ class ScoreChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: _color().withOpacity(0.15),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _color().withOpacity(0.4)),
       ),
       child: Column(
@@ -28,7 +28,7 @@ class ScoreChip extends StatelessWidget {
             score.toStringAsFixed(1),
             style: TextStyle(
               color: _color(),
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               fontSize: 20,
             ),
           ),

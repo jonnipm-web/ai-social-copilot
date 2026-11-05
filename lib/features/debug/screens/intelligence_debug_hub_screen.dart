@@ -27,7 +27,6 @@ import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 final AppLocalizations _dbgL10n = lookupAppLocalizations(const Locale('pt'));
 
 // ─── Palette ───────────────────────────────────────────────────────────────
-const _kBg = AppColors.ground;
 const _kCard = AppColors.ground;
 const _kBorder = AppColors.surface;
 const _kPrimary = AppColors.accent;
@@ -110,7 +109,7 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
               Text('Intelligence Debug Center',
                   style: TextStyle(
                       color: AppColors.ink,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 15)),
               Text('Observabilidade · Rastreabilidade · Auditoria',
                   style: TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
@@ -642,7 +641,7 @@ class _ScoresTab extends ConsumerWidget {
             Text('${c.rawValue}/100',
                 style: TextStyle(
                     color: c.hasData ? _kCyan : _kOrange,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     fontSize: 12)),
           ]),
           Text(c.formula, style: _kMono),
@@ -1172,7 +1171,7 @@ class _BootstrapEngineCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.ground,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kOrange.withOpacity(0.4)),
       ),
       child: Column(
@@ -1187,7 +1186,7 @@ class _BootstrapEngineCard extends StatelessWidget {
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: _kOrange.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child:
                       const Icon(Icons.bolt_rounded, color: _kOrange, size: 18),
@@ -1200,7 +1199,7 @@ class _BootstrapEngineCard extends StatelessWidget {
                       Text('Knowledge → Action Engine',
                           style: TextStyle(
                               color: AppColors.ink,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                               fontSize: 13)),
                       Text(
                           'Converte documentos em oportunidades, ações e roadmap',
@@ -1439,12 +1438,12 @@ class _DebugCardState extends State<_DebugCard> {
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _kBorder),
       ),
       child: Column(children: [
         InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           onTap: () => setState(() => _expanded = !_expanded),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -1517,7 +1516,7 @@ class _HealthGauge extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Row(children: [
@@ -1541,7 +1540,7 @@ class _HealthGauge extends StatelessWidget {
         const SizedBox(width: 14),
         Text('$value',
             style: TextStyle(
-                color: color, fontWeight: FontWeight.bold, fontSize: 24)),
+                color: color, fontWeight: FontWeight.w600, fontSize: 24)),
       ]),
     );
   }
@@ -1564,7 +1563,7 @@ class _TestResultCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border(left: BorderSide(color: color, width: 3)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1581,7 +1580,7 @@ class _TestResultCard extends StatelessWidget {
                       fontSize: 13))),
           Text('${test.passed}/${test.total}',
               style: TextStyle(
-                  color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+                  color: color, fontSize: 12, fontWeight: FontWeight.w600)),
         ]),
         const SizedBox(height: 4),
         Text(test.description,
@@ -1622,7 +1621,7 @@ class _TestSummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1639,7 +1638,7 @@ class _TestSummaryCard extends StatelessWidget {
               child: Text(report.overallLabel,
                   style: TextStyle(
                       color: color,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 16))),
           Text('${report.passedTests}/${report.tests.length} testes passaram',
               style: TextStyle(color: color, fontSize: 12)),
@@ -1666,7 +1665,7 @@ class _TestSummaryCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Text(label,
@@ -1685,7 +1684,7 @@ class _FinalReportCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kBorder),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1753,7 +1752,7 @@ Widget _sectionHeader(String text) => Padding(
           style: const TextStyle(
               color: AppColors.inkMuted,
               fontSize: 11,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.5)),
     );
 
@@ -1763,7 +1762,7 @@ Widget _sectionLabel(String text) => Padding(
           style: const TextStyle(
               color: _kCyan,
               fontSize: 10,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.8)),
     );
 
@@ -1780,7 +1779,7 @@ Widget _debugRow(String label, String value, {bool highlight = false}) =>
               style: TextStyle(
                   color: highlight ? _kGold : AppColors.inkMuted,
                   fontSize: 11,
-                  fontWeight: highlight ? FontWeight.bold : FontWeight.normal)),
+                  fontWeight: highlight ? FontWeight.w600 : FontWeight.normal)),
         ),
       ]),
     );
@@ -1790,7 +1789,7 @@ Widget _monoText(String text) => Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.black38,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: _kBorder),
       ),
       child: Text(text, style: _kMono.copyWith(height: 1.6)),
@@ -1801,12 +1800,12 @@ Widget _graphNodeRow(String type, String name, String id) => Row(children: [
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
           color: _kPrimary.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(color: _kPrimary.withOpacity(0.3)),
         ),
         child: Text(type,
             style: const TextStyle(
-                color: _kPrimary, fontSize: 10, fontWeight: FontWeight.bold)),
+                color: _kPrimary, fontSize: 10, fontWeight: FontWeight.w600)),
       ),
       const SizedBox(width: 8),
       Expanded(

@@ -302,7 +302,7 @@ class _OverviewTab extends ConsumerWidget {
           Text(
             l10n.uxAdminUserDistribution,
             style: const TextStyle(
-                color: AppColors.ink, fontWeight: FontWeight.bold, fontSize: 16),
+                color: AppColors.ink, fontWeight: FontWeight.w600, fontSize: 16),
           ),
           const SizedBox(height: 16),
           ...['admin', 'premium', 'pro', 'beta_tester', 'free'].map((role) {
@@ -322,7 +322,7 @@ class _OverviewTab extends ConsumerWidget {
             style: const TextStyle(
               color: AppColors.ink,
               fontSize: 36,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -366,7 +366,7 @@ class _RoleBar extends StatelessWidget {
         ),
         Expanded(
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             child: LinearProgressIndicator(
               value: pct,
               backgroundColor: AppColors.line,
@@ -493,13 +493,13 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: _color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _color.withOpacity(0.4)),
       ),
       child: Text(
         isEnglish ? status.labelEn : status.labelPt,
         style:
-            TextStyle(color: _color, fontSize: 10, fontWeight: FontWeight.w700),
+            TextStyle(color: _color, fontSize: 10, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -544,7 +544,7 @@ class AdminModuleDetailSheet extends StatelessWidget {
                     style: const TextStyle(
                         color: AppColors.ink,
                         fontSize: 18,
-                        fontWeight: FontWeight.w700),
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
                 _StatusBadge(status: module.status, isEnglish: isEnglish),

@@ -7,7 +7,6 @@ import '../../../providers/persona_training_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
-const _bgColor = AppColors.ground;
 const _primaryColor = AppColors.accent;
 const _cardColor = AppColors.surface;
 const _surfaceColor = AppColors.surface;
@@ -35,7 +34,7 @@ class PersonaTrainingScreen extends ConsumerWidget {
           l10n.personaTrainingTitle(personaName),
           style: const TextStyle(
             color: AppColors.ink,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
             fontSize: 18,
           ),
         ),
@@ -137,7 +136,7 @@ class _TrainingContent extends StatelessWidget {
           l10n.personaTrainingHistoryTitle,
           style: const TextStyle(
             color: AppColors.ink,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
             fontSize: 16,
           ),
         ),
@@ -177,7 +176,7 @@ class _SummaryCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _primaryColor.withOpacity(0.4), width: 1.5),
         boxShadow: [
           BoxShadow(
@@ -197,7 +196,7 @@ class _SummaryCard extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: _primaryColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: const Icon(Icons.psychology,
                     color: _primaryColor, size: 22),
@@ -207,7 +206,7 @@ class _SummaryCard extends StatelessWidget {
                 l10n.personaTrainingSummaryTitle,
                 style: const TextStyle(
                   color: AppColors.ink,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   fontSize: 16,
                 ),
               ),
@@ -324,7 +323,7 @@ class _ToneProfileDisplay extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
             color: _primaryColor.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(color: _primaryColor.withOpacity(0.3)),
           ),
           child: Text(
@@ -358,7 +357,7 @@ class _ChipWrap extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 border: Border.all(color: color.withOpacity(0.4)),
               ),
               child: Text(
@@ -402,11 +401,11 @@ class _TrainingItemCard extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
         title: Text(
           l10n.personaTrainingDeleteTitle,
           style:
-              const TextStyle(color: AppColors.ink, fontWeight: FontWeight.bold),
+              const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
         ),
         content: Text(
           l10n.personaTrainingDeleteBody,
@@ -446,7 +445,7 @@ class _TrainingItemCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: AppColors.negative.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: AppColors.negative.withOpacity(0.4)),
         ),
         alignment: Alignment.centerRight,
@@ -461,8 +460,8 @@ class _TrainingItemCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: _surfaceColor,
-          borderRadius: BorderRadius.circular(14),
+          color: _surfaceColor, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
             color: _primaryColor.withOpacity(0.25),
             width: 1,
@@ -480,7 +479,7 @@ class _TrainingItemCard extends StatelessWidget {
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: _primaryColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     child: const Icon(
                       Icons.article_outlined,
@@ -543,7 +542,7 @@ class _TrainingItemCard extends StatelessWidget {
                           horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
                         color: _primaryColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
                         border:
                             Border.all(color: _primaryColor.withOpacity(0.4)),
                       ),
@@ -579,7 +578,7 @@ class _TrainingItemCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.accent.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
                             border: Border.all(
                               color: AppColors.accent.withOpacity(0.35),
                             ),
@@ -647,7 +646,7 @@ class _EmptyState extends StatelessWidget {
               l10n.personaTrainingEmptyTitle,
               style: const TextStyle(
                 color: AppColors.ink,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
                 fontSize: 18,
               ),
               textAlign: TextAlign.center,

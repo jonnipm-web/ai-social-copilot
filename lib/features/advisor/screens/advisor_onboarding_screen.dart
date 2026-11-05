@@ -65,7 +65,6 @@ String advisorStyleDescription(String style, AppLocalizations l10n) {
 }
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg = AppColors.ground;
 const _kCard = AppColors.surface;
 const _kPrimary = AppColors.accent;
 const _kGold = AppColors.gold;
@@ -141,7 +140,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
                             height: 8,
                             decoration: BoxDecoration(
                               color: i <= _step ? _kPrimary : AppColors.line,
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
                             ),
                           ),
                         )),
@@ -202,7 +201,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
                 side: const BorderSide(color: AppColors.inkSubtle),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(AppRadius.lg)),
               ),
               child: Text(l10n.commonBack),
             ),
@@ -226,7 +225,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
               disabledBackgroundColor: _kPrimary.withOpacity(0.4),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(AppRadius.lg)),
             ),
             child: _saving
                 ? const SizedBox(
@@ -237,7 +236,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
                   )
                 : Text(_step < 2 ? l10n.uxAdvisorNext : l10n.uxAdvisorActivate,
                     style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.bold)),
+                        fontSize: 15, fontWeight: FontWeight.w600)),
           ),
         ),
       ],
@@ -278,7 +277,7 @@ class _StepName extends StatelessWidget {
           style: const TextStyle(
               color: AppColors.ink,
               fontSize: 24,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               height: 1.3),
         ),
         const SizedBox(height: 8),
@@ -301,7 +300,7 @@ class _StepName extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: isSelected ? _kPrimary.withOpacity(0.2) : _kCard,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                   border: Border.all(
                     color: isSelected ? _kPrimary : AppColors.line,
                     width: isSelected ? 2 : 1,
@@ -318,7 +317,7 @@ class _StepName extends StatelessWidget {
                           color: isSelected ? _kPrimary : AppColors.inkMuted,
                           fontSize: 16,
                           fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
                         )),
                   ],
                 ),
@@ -330,8 +329,8 @@ class _StepName extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: _kCard,
-            borderRadius: BorderRadius.circular(12),
+            color: _kCard, gradient: kIvSurfaceGradient,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
               color: useCustom ? _kGold : AppColors.line,
               width: useCustom ? 2 : 1,
@@ -381,7 +380,7 @@ class _StepRole extends StatelessWidget {
           style: const TextStyle(
               color: AppColors.ink,
               fontSize: 24,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               height: 1.3),
         ),
         const SizedBox(height: 8),
@@ -402,7 +401,7 @@ class _StepRole extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: isSelected ? _kPrimary.withOpacity(0.15) : _kCard,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(
                         color: isSelected ? _kPrimary : AppColors.line,
                         width: isSelected ? 2 : 1,
@@ -422,7 +421,7 @@ class _StepRole extends StatelessWidget {
                             color: isSelected ? _kPrimary : AppColors.inkMuted,
                             fontSize: 15,
                             fontWeight: isSelected
-                                ? FontWeight.bold
+                                ? FontWeight.w600
                                 : FontWeight.normal,
                           ),
                         ),
@@ -466,7 +465,7 @@ class _StepStyle extends StatelessWidget {
           style: const TextStyle(
               color: AppColors.ink,
               fontSize: 24,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               height: 1.3),
         ),
         const SizedBox(height: 8),
@@ -487,7 +486,7 @@ class _StepStyle extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: isSelected ? _kGold.withOpacity(0.1) : _kCard,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(
                         color: isSelected ? _kGold : AppColors.line,
                         width: isSelected ? 2 : 1,
@@ -503,7 +502,7 @@ class _StepStyle extends StatelessWidget {
                               style: TextStyle(
                                 color: isSelected ? _kGold : AppColors.ink,
                                 fontSize: 15,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                             if (isSelected) ...[

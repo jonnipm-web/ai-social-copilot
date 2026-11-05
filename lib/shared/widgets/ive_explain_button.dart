@@ -71,7 +71,7 @@ class IveExplainButton extends ConsumerWidget {
         foregroundColor: AppColors.accent,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           side: const BorderSide(color: AppColors.accent, width: 0.8),
         ),
         minimumSize: Size.zero,

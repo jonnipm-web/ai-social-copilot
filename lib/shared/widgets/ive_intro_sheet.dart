@@ -97,7 +97,7 @@ class _IveIntroSheetContent extends StatelessWidget {
         expand: false,
         builder: (_, scrollCtrl) => Container(
           decoration: const BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.surface, gradient: kIvSurfaceGradient,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
@@ -131,7 +131,7 @@ class _IveIntroSheetContent extends StatelessWidget {
                         style:
                             Theme.of(context).textTheme.headlineSmall?.copyWith(
                                   color: AppColors.ink,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w600,
                                 ),
                         textAlign: TextAlign.center,
                       ),
@@ -174,7 +174,7 @@ class _IveIntroSheetContent extends StatelessWidget {
                         child: Text(
                           l10n.ivIntroContinueButton,
                           style: const TextStyle(
-                              color: AppColors.onAccent, fontWeight: FontWeight.bold),
+                              color: AppColors.onAccent, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),

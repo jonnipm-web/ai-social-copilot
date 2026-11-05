@@ -148,14 +148,14 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                         filled: true,
                         fillColor: AppColors.surface,
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(AppRadius.lg)),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           borderSide:
                               const BorderSide(color: AppColors.line),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           borderSide:
                               const BorderSide(color: AppColors.info),
                         ),
@@ -188,7 +188,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                           backgroundColor: AppColors.info,
                           foregroundColor: Colors.black,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(AppRadius.lg)),
                         ),
                       ),
                     ),
@@ -206,7 +206,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                       style: const TextStyle(
                           color: AppColors.ink,
                           fontSize: 20,
-                          fontWeight: FontWeight.bold),
+                          fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 16),
 
@@ -248,15 +248,15 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                           style: const TextStyle(
                               color: AppColors.ink,
                               fontSize: 15,
-                              fontWeight: FontWeight.bold)),
+                              fontWeight: FontWeight.w600)),
                       const SizedBox(height: 10),
                       ...plan.revenueSources.map(
                         (s) => Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(10),
+                            color: AppColors.surface, gradient: kIvSurfaceGradient,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
                             border: Border.all(color: AppColors.line),
                           ),
                           child: Row(
@@ -287,7 +287,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                                 Text('${s['percentage']}%',
                                     style: const TextStyle(
                                         color: AppColors.warning,
-                                        fontWeight: FontWeight.bold)),
+                                        fontWeight: FontWeight.w600)),
                             ],
                           ),
                         ),
@@ -301,15 +301,15 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                           style: const TextStyle(
                               color: AppColors.ink,
                               fontSize: 15,
-                              fontWeight: FontWeight.bold)),
+                              fontWeight: FontWeight.w600)),
                       const SizedBox(height: 10),
                       ...plan.milestones.asMap().entries.map(
                             (e) => Container(
                               margin: const EdgeInsets.only(bottom: 8),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(10),
+                                color: AppColors.surface, gradient: kIvSurfaceGradient,
+                                borderRadius: BorderRadius.circular(AppRadius.md),
                                 border: Border.all(
                                     color: AppColors.info
                                         .withOpacity(0.2)),
@@ -329,7 +329,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                                           style: const TextStyle(
                                               color: AppColors.info,
                                               fontSize: 12,
-                                              fontWeight: FontWeight.bold)),
+                                              fontWeight: FontWeight.w600)),
                                     ),
                                   ),
                                   const SizedBox(width: 10),
@@ -368,7 +368,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                           style: const TextStyle(
                               color: AppColors.inkMuted,
                               fontSize: 13,
-                              fontWeight: FontWeight.bold)),
+                              fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
                       ...plan.assumptions.map(
                         (a) => Padding(
@@ -421,7 +421,7 @@ class _ScenarioCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Row(
@@ -431,7 +431,7 @@ class _ScenarioCard extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Icon(icon, color: color, size: 22),
           ),
@@ -443,7 +443,7 @@ class _ScenarioCard extends StatelessWidget {
                 Text(label,
                     style: TextStyle(
                         color: color,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         fontSize: 14)),
                 Text(l10n.miRevenueMonthlyLabel(fmt(monthly)),
                     style: const TextStyle(color: AppColors.ink, fontSize: 13)),
@@ -458,7 +458,7 @@ class _ScenarioCard extends StatelessWidget {
                       TextStyle(color: color.withOpacity(0.7), fontSize: 11)),
               Text(fmt(annual),
                   style: TextStyle(
-                      color: color, fontWeight: FontWeight.bold, fontSize: 16)),
+                      color: color, fontWeight: FontWeight.w600, fontSize: 16)),
             ],
           ),
         ],

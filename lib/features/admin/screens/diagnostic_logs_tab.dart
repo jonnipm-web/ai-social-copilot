@@ -85,8 +85,8 @@ class _DiagnosticControlsCardState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
           color: session.isActive ? _kGreen.withOpacity(0.5) : AppColors.line,
         ),
@@ -108,7 +108,7 @@ class _DiagnosticControlsCardState
                 session.isActive ? l10n.uxDiagActive : l10n.uxDiagInactive,
                 style: TextStyle(
                   color: session.isActive ? _kGreen : AppColors.inkMuted,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   fontSize: 13,
                   letterSpacing: 0.5,
                 ),
@@ -232,7 +232,7 @@ class _SessionListSection extends ConsumerWidget {
             Text(l10n.uxDiagSessionsTitle,
                 style: const TextStyle(
                     color: AppColors.inkMuted,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     fontSize: 13)),
             IconButton(
               icon: const Icon(Icons.refresh_rounded,
@@ -533,8 +533,8 @@ class _EventTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(8),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border(left: BorderSide(color: _severityColor, width: 3)),
       ),
       child: Column(
@@ -546,7 +546,7 @@ class _EventTile extends StatelessWidget {
                   style: TextStyle(
                       color: _severityColor,
                       fontSize: 10,
-                      fontWeight: FontWeight.bold)),
+                      fontWeight: FontWeight.w600)),
               const SizedBox(width: 6),
               Text(event['category'] as String? ?? '',
                   style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),

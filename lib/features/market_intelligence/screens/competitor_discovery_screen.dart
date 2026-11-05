@@ -130,7 +130,7 @@ class _CompetitorDiscoveryScreenState
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppColors.negative.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(color: AppColors.negative.withOpacity(0.3)),
               ),
               child: Text(_error!,
@@ -213,8 +213,8 @@ class _CompetitorCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _typeColor.withOpacity(0.2)),
       ),
       child: Column(
@@ -229,7 +229,7 @@ class _CompetitorCard extends StatelessWidget {
                     Text(competitor.name,
                         style: const TextStyle(
                             color: AppColors.ink,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             fontSize: 15)),
                     const SizedBox(height: 2),
                     Text(competitor.url,
@@ -244,7 +244,7 @@ class _CompetitorCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: _typeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                   border: Border.all(color: _typeColor.withOpacity(0.4)),
                 ),
                 child: Text(
@@ -252,7 +252,7 @@ class _CompetitorCard extends StatelessWidget {
                   style: TextStyle(
                       color: _typeColor,
                       fontSize: 10,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -358,7 +358,7 @@ class _ScoreItem extends StatelessWidget {
       children: [
         Text('$value',
             style: TextStyle(
-                color: color, fontWeight: FontWeight.bold, fontSize: 16)),
+                color: color, fontWeight: FontWeight.w600, fontSize: 16)),
         Text(label,
             style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
       ],

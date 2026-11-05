@@ -137,7 +137,7 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppColors.negative.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(color: AppColors.negative.withOpacity(0.3)),
               ),
               child: Text(_error!,
@@ -223,8 +223,8 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(10),
+                              color: AppColors.surface, gradient: kIvSurfaceGradient,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                               border:
                                   Border.all(color: AppColors.line),
                             ),
@@ -238,7 +238,7 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
                                   l10n.miGapTotalIdentified(gap.totalGaps),
                                   style: const TextStyle(
                                     color: AppColors.warning,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
@@ -274,8 +274,8 @@ class _GapSection extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
@@ -290,7 +290,7 @@ class _GapSection extends StatelessWidget {
                 Text(title,
                     style: TextStyle(
                         color: color,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         fontSize: 14)),
                 const Spacer(),
                 Container(
@@ -298,13 +298,13 @@ class _GapSection extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                   ),
                   child: Text('${items.length}',
                       style: TextStyle(
                           color: color,
                           fontSize: 12,
-                          fontWeight: FontWeight.bold)),
+                          fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -329,7 +329,7 @@ class _GapSection extends StatelessWidget {
                               style: TextStyle(
                                   color: color,
                                   fontSize: 10,
-                                  fontWeight: FontWeight.bold)),
+                                  fontWeight: FontWeight.w600)),
                         ),
                       ),
                       const SizedBox(width: 10),

@@ -142,14 +142,14 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                         filled: true,
                         fillColor: AppColors.surface,
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(AppRadius.lg)),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           borderSide:
                               const BorderSide(color: AppColors.line),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           borderSide:
                               const BorderSide(color: AppColors.accent),
                         ),
@@ -182,7 +182,7 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                           backgroundColor: AppColors.accent,
                           foregroundColor: AppColors.onAccent,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(AppRadius.lg)),
                         ),
                       ),
                     ),
@@ -197,8 +197,8 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.surface, gradient: kIvSurfaceGradient,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
                         border: Border.all(
                             color: AppColors.accent.withOpacity(0.3)),
                       ),
@@ -211,7 +211,7 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                               l10n.miClusterKeywordDisplay(cluster.mainKeyword),
                               style: const TextStyle(
                                   color: AppColors.ink,
-                                  fontWeight: FontWeight.bold)),
+                                  fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
@@ -261,15 +261,15 @@ class _ClusterSection extends StatelessWidget {
       children: [
         Text(title,
             style: TextStyle(
-                color: color, fontSize: 14, fontWeight: FontWeight.bold)),
+                color: color, fontSize: 14, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         ...items.map(
           (item) => Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.surface, gradient: kIvSurfaceGradient,
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: color.withOpacity(0.15)),
             ),
             child: Column(
@@ -313,15 +313,15 @@ class _ArticleSection extends StatelessWidget {
             style: const TextStyle(
                 color: AppColors.positive,
                 fontSize: 14,
-                fontWeight: FontWeight.bold)),
+                fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         ...articles.asMap().entries.map(
               (e) => Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.surface, gradient: kIvSurfaceGradient,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(
                       color: AppColors.positive.withOpacity(0.15)),
                 ),
@@ -340,7 +340,7 @@ class _ArticleSection extends StatelessWidget {
                             style: const TextStyle(
                                 color: AppColors.positive,
                                 fontSize: 10,
-                                fontWeight: FontWeight.bold)),
+                                fontWeight: FontWeight.w600)),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -387,15 +387,15 @@ class _RoadmapSection extends StatelessWidget {
             style: const TextStyle(
                 color: AppColors.warning,
                 fontSize: 14,
-                fontWeight: FontWeight.bold)),
+                fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         ...roadmap.map(
           (item) => Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.surface, gradient: kIvSurfaceGradient,
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border:
                   Border.all(color: AppColors.warning.withOpacity(0.15)),
             ),
@@ -407,7 +407,7 @@ class _RoadmapSection extends StatelessWidget {
                       style: const TextStyle(
                           color: AppColors.warning,
                           fontSize: 12,
-                          fontWeight: FontWeight.bold)),
+                          fontWeight: FontWeight.w600)),
                 if (item['focus'] != null)
                   Text(item['focus'].toString(),
                       style:

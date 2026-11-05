@@ -205,8 +205,8 @@ class _AefActionCardState extends State<AefActionCard> {
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: AppColors.inkSubtle)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

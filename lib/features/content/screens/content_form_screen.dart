@@ -205,7 +205,7 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
                   foregroundColor: AppColors.onAccent,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                 ),
                 child: _loading
@@ -222,7 +222,7 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
                             ? l10n.uxContentFormSaveChanges
                             : l10n.uxContentFormAddToLibrary,
                         style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.bold),
+                            fontSize: 15, fontWeight: FontWeight.w600),
                       ),
               ),
             ],
@@ -263,15 +263,15 @@ class _Field extends StatelessWidget {
         filled: true,
         fillColor: AppColors.ink.withOpacity(0.05),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.line),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.accent),
         ),
       ),

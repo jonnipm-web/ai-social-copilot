@@ -369,7 +369,7 @@ class _QuotaBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(children: [
@@ -392,7 +392,7 @@ class _QuotaBadge extends StatelessWidget {
                 style: const TextStyle(
                     color: AppColors.accent,
                     fontSize: 11,
-                    fontWeight: FontWeight.bold)),
+                    fontWeight: FontWeight.w600)),
           ),
       ]),
     );
@@ -421,8 +421,8 @@ class _InputCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
           color: blocked
               ? AppColors.negative.withValues(alpha: 0.3)
@@ -466,17 +466,17 @@ class _InputCard extends StatelessWidget {
               fillColor: AppColors.ground,
               contentPadding: const EdgeInsets.all(12),
               border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 borderSide: const BorderSide(color: AppColors.line),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 borderSide: const BorderSide(color: AppColors.accent),
               ),
               disabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 borderSide: const BorderSide(color: AppColors.surfaceRaised),
               ),
             ),
@@ -494,7 +494,7 @@ class _InputCard extends StatelessWidget {
                 disabledForegroundColor: AppColors.inkSubtle,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
               icon: loading
                   ? const SizedBox(
@@ -525,8 +525,8 @@ class _ThinkingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border:
             Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
       ),
@@ -568,7 +568,7 @@ class _SaveButton extends StatelessWidget {
               AppColors.positive.withValues(alpha: 0.4),
           disabledForegroundColor: Colors.black38,
           padding: const EdgeInsets.symmetric(vertical: 10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
         ),
         icon: Icon(saved ? Icons.check_rounded : Icons.save_alt_rounded,
             size: 16),
@@ -589,7 +589,7 @@ class _ErrorCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.negativeSoft,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border:
             Border.all(color: AppColors.negative.withValues(alpha: 0.4)),
       ),
@@ -623,14 +623,14 @@ class _HistoryHeader extends StatelessWidget {
           style: const TextStyle(
               color: AppColors.inkMuted,
               fontSize: 12,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.5)),
       const SizedBox(width: 8),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
           color: AppColors.accent.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Text(t.insightNOf(count),
             style: const TextStyle(color: AppColors.accent, fontSize: 11)),

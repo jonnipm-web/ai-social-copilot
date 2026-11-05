@@ -181,7 +181,7 @@ class IvBarList extends StatelessWidget {
                     tween: Tween(
                         begin: 0,
                         end: top <= 0
-                            ? 0
+                            ? 0.0
                             : (data[i].value / top).clamp(0.0, 1.0)),
                     duration: reduced
                         ? Duration.zero
@@ -381,7 +381,7 @@ class IvStepProgress extends StatelessWidget {
             if (i > 0) const SizedBox(width: AppSpace.s1),
             Expanded(
               child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: i < done ? 1 : 0),
+                tween: Tween<double>(begin: 0, end: i < done ? 1.0 : 0.0),
                 duration: reduced
                     ? Duration.zero
                     : AppMotion.medium + AppMotion.stagger * 2 * i,

@@ -85,7 +85,7 @@ class IveDetailSheet extends ConsumerWidget {
       maxChildSize: 0.92,
       builder: (_, ctrl) => Container(
         decoration: const BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -145,7 +145,7 @@ class IveDetailSheet extends ConsumerWidget {
               style: const TextStyle(
                 color: AppColors.ink,
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -159,8 +159,8 @@ class IveDetailSheet extends ConsumerWidget {
   Widget _explanation(AppLocalizations l10n) => Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: AppColors.accent.withOpacity(0.3)),
         ),
         child: Column(
@@ -173,7 +173,7 @@ class IveDetailSheet extends ConsumerWidget {
                 l10n.ctxIveDetailExplanation,
                 style: const TextStyle(
                     color: AppColors.accent,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     fontSize: 13),
               ),
             ]),
@@ -195,7 +195,7 @@ class IveDetailSheet extends ConsumerWidget {
             style: const TextStyle(
                 color: AppColors.inkMuted,
                 fontSize: 13,
-                fontWeight: FontWeight.bold),
+                fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           ...evidence.map((e) => _evidenceCard(e)),
@@ -207,7 +207,7 @@ class IveDetailSheet extends ConsumerWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.ground,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,7 +268,7 @@ class IveDetailSheet extends ConsumerWidget {
             style: const TextStyle(
                 color: AppColors.inkMuted,
                 fontSize: 13,
-                fontWeight: FontWeight.bold),
+                fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           ...suggestedActions.map((a) => _actionTile(context, a)),
@@ -313,7 +313,7 @@ class IveDetailSheet extends ConsumerWidget {
             side: const BorderSide(color: AppColors.accent),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
           ),
           icon: const Text('💬', style: TextStyle(fontSize: 16)),
           label: Text(l10n.iveChatAskLabel),

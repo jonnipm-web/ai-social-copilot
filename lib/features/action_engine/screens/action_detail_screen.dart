@@ -21,7 +21,6 @@ import '../../../shared/widgets/translated_content_notice.dart';
 import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
-const _kBg = AppColors.ground;
 const _kCard = AppColors.surface;
 const _kPrimary = AppColors.accent;
 const _kGreen = AppColors.positive;
@@ -74,7 +73,7 @@ class ActionDetailScreen extends ConsumerWidget {
         title: Text(
           l10n.actionDetailTitle,
           style: const TextStyle(
-              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.bold),
+              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.w600),
         ),
         actions: [
           itemAsync.maybeWhen(
@@ -317,8 +316,8 @@ class _HeroHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Row(
@@ -336,7 +335,7 @@ class _HeroHeader extends StatelessWidget {
                     Text(
                       '${item.priority}',
                       style: TextStyle(
-                          color: sc, fontSize: 18, fontWeight: FontWeight.bold),
+                          color: sc, fontSize: 18, fontWeight: FontWeight.w600),
                     ),
                     Text(AppLocalizations.of(context)!.uxActionPriorityShort,
                         style:
@@ -364,7 +363,7 @@ class _HeroHeader extends StatelessWidget {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 15,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       height: 1.3),
                 ),
                 if (projectName != null) ...[
@@ -484,7 +483,7 @@ class _ScoreRow extends StatelessWidget {
           ),
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
               child: LinearProgressIndicator(
                 value: value / 100,
                 backgroundColor: AppColors.line,
@@ -499,7 +498,7 @@ class _ScoreRow extends StatelessWidget {
             child: Text('$value',
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                    color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+                    color: color, fontSize: 12, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -613,7 +612,7 @@ class _SourcesList extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: _kPrimary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: _kPrimary.withOpacity(0.3)),
                 ),
                 child: Row(
@@ -643,7 +642,7 @@ class _RationaleCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kPrimary.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _kPrimary.withOpacity(0.2)),
       ),
       child: Row(
@@ -692,7 +691,7 @@ class _PlanList extends StatelessWidget {
                       style: const TextStyle(
                           color: _kPrimary,
                           fontSize: 10,
-                          fontWeight: FontWeight.bold)),
+                          fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 10),
@@ -756,8 +755,8 @@ class _Section extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(14),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.06)),
       ),
       child: Column(
@@ -771,7 +770,7 @@ class _Section extends StatelessWidget {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 13,
-                      fontWeight: FontWeight.bold)),
+                      fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 12),
@@ -795,12 +794,12 @@ class _TypeBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: _kPrimary.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
         actionEngineTypeLabel(l10n, type).toUpperCase(),
         style: const TextStyle(
-            color: _kPrimary, fontSize: 9, fontWeight: FontWeight.bold),
+            color: _kPrimary, fontSize: 9, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -819,10 +818,10 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: c.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(actionEngineStatusLabel(l10n, status),
-          style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.bold)),
+          style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -886,7 +885,7 @@ class _StatusButtons extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: _kCyan.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(color: _kCyan.withOpacity(0.3)),
             ),
             child: Row(
@@ -927,7 +926,7 @@ class _StatusButtons extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: _kGreen.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(color: _kGreen.withOpacity(0.3)),
             ),
             child: Row(
@@ -940,7 +939,7 @@ class _StatusButtons extends StatelessWidget {
                       ? l10n.actionDetailCompletedVerified
                       : l10n.actionDetailCompleted,
                   style: const TextStyle(
-                      color: _kGreen, fontWeight: FontWeight.bold),
+                      color: _kGreen, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -956,7 +955,7 @@ class _StatusButtons extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 14),
               minimumSize: const Size(double.infinity, 0),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(AppRadius.lg)),
             ),
             icon: const Icon(Icons.auto_awesome_rounded),
             label: Text(l10n.actionDetailAskIve),
@@ -1018,7 +1017,7 @@ class _Btn extends StatelessWidget {
             side: BorderSide(color: color),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
           ),
           icon: Icon(icon),
           label: Text(label),
@@ -1034,7 +1033,7 @@ class _Btn extends StatelessWidget {
           foregroundColor: AppColors.ink,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
         ),
         icon: Icon(icon),
         label: Text(label),

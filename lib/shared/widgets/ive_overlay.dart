@@ -866,7 +866,7 @@ class _IveBubble extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.surface, gradient: kIvSurfaceGradient,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(14),
               topRight: Radius.circular(14),
@@ -1010,7 +1010,7 @@ class _IssueActionChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: _color.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(color: _color.withOpacity(0.4)),
         ),
         child: Text(

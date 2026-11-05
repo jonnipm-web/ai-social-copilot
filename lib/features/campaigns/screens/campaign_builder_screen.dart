@@ -76,7 +76,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
         foregroundColor: AppColors.ink,
         title: Text(
           l10n.campaignBuilderTitle,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
       body: itemAsync.when(
@@ -150,7 +150,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: AppColors.accent.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               border:
                   Border.all(color: AppColors.accent.withOpacity(0.3)),
             ),
@@ -191,7 +191,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
                     color: sel
                         ? AppColors.accent.withOpacity(0.2)
                         : AppColors.surface,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(
                       color: sel ? AppColors.accent : AppColors.line,
                     ),
@@ -227,7 +227,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
                       color: sel
                           ? AppColors.accent.withOpacity(0.2)
                           : AppColors.surface,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                       border: Border.all(
                         color: sel ? AppColors.accent : AppColors.line,
                       ),
@@ -274,7 +274,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
                     color: sel
                         ? AppColors.info.withOpacity(0.15)
                         : AppColors.surface,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(
                       color: sel ? AppColors.info : AppColors.line,
                     ),
@@ -312,7 +312,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
                 foregroundColor: AppColors.onAccent,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(AppRadius.lg)),
               ),
               icon: _generating
                   ? const SizedBox(

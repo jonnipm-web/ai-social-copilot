@@ -81,7 +81,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
         title: Text(
           l10n.performanceTitle,
           style:
-              const TextStyle(color: AppColors.ink, fontWeight: FontWeight.bold),
+              const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
         ),
         iconTheme: const IconThemeData(color: AppColors.ink),
         elevation: 0,
@@ -262,7 +262,7 @@ class _MetricCard extends StatelessWidget {
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
           color: AppColors.negative.withOpacity(0.85),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: const Icon(Icons.delete, color: AppColors.ink),
       ),
@@ -276,7 +276,7 @@ class _MetricCard extends StatelessWidget {
           color: _cardColor,
           margin: const EdgeInsets.only(bottom: 12),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -288,7 +288,7 @@ class _MetricCard extends StatelessWidget {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: _primaryColor.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: Icon(
                         _platformIcon(metric.platform),
@@ -305,7 +305,7 @@ class _MetricCard extends StatelessWidget {
                             metric.platform,
                             style: const TextStyle(
                               color: AppColors.ink,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                               fontSize: 15,
                             ),
                           ),
@@ -322,13 +322,13 @@ class _MetricCard extends StatelessWidget {
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: scoreColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
                       ),
                       child: Text(
                         '${score.toStringAsFixed(1)}',
                         style: TextStyle(
                           color: scoreColor,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
                       ),
@@ -366,7 +366,7 @@ class _MetricCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                         child: LinearProgressIndicator(
                           value: score / 100,
                           backgroundColor: AppColors.line,
@@ -381,7 +381,7 @@ class _MetricCard extends StatelessWidget {
                       style: TextStyle(
                           color: scoreColor,
                           fontSize: 11,
-                          fontWeight: FontWeight.bold),
+                          fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -458,9 +458,8 @@ class _MetricChip extends StatelessWidget {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        decoration: BoxDecoration(
-          color: AppColors.ink.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(8),
+        decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Column(
           children: [
@@ -468,7 +467,7 @@ class _MetricChip extends StatelessWidget {
               value,
               style: const TextStyle(
                 color: AppColors.ink,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
                 fontSize: 12,
               ),
             ),
@@ -592,7 +591,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
 
     return Container(
       decoration: const BoxDecoration(
-        color: _cardColor,
+        color: _cardColor, gradient: kIvSurfaceGradient,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + bottomInset),
@@ -618,7 +617,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                 style: const TextStyle(
                   color: AppColors.ink,
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 16),
@@ -689,7 +688,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                     backgroundColor: _primaryColor,
                     foregroundColor: AppColors.ink,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                     ),
                   ),
                   onPressed: _saving ? null : _submit,
@@ -705,7 +704,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                       : Text(
                           l10n.commonSave,
                           style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
+                              fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                 ),
               ),
@@ -752,11 +751,11 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
       filled: true,
       fillColor: AppColors.ink.withOpacity(0.06),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         borderSide: const BorderSide(color: _primaryColor, width: 1.5),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

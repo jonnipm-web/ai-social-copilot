@@ -26,7 +26,7 @@ class CampaignDetailScreen extends ConsumerWidget {
         foregroundColor: AppColors.ink,
         title: Text(
           l10n.campaignDetailTitle,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
       body: campaignAsync.when(
@@ -126,7 +126,7 @@ class _CampaignContent extends StatelessWidget {
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: AppColors.positive.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
                         border: Border.all(
                             color: AppColors.positive.withOpacity(0.3)),
                       ),
@@ -168,7 +168,7 @@ class _Header extends StatelessWidget {
             AppColors.info.withOpacity(0.05),
           ],
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.info.withOpacity(0.3)),
       ),
       child: Column(
@@ -185,7 +185,7 @@ class _Header extends StatelessWidget {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 16,
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -230,7 +230,7 @@ class _Tag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Text(label,
@@ -253,7 +253,7 @@ class _SectionTitle extends StatelessWidget {
         style: const TextStyle(
           color: AppColors.ink,
           fontSize: 14,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -270,8 +270,8 @@ class _Card extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: child,
     );
@@ -349,8 +349,8 @@ class _CalendarEntry extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: color.withOpacity(0.25)),
       ),
       child: Padding(
@@ -365,7 +365,7 @@ class _CalendarEntry extends StatelessWidget {
                   height: 36,
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(color: color.withOpacity(0.4)),
                   ),
                   child: Center(
@@ -373,7 +373,7 @@ class _CalendarEntry extends StatelessWidget {
                         style: TextStyle(
                             color: color,
                             fontSize: 11,
-                            fontWeight: FontWeight.bold)),
+                            fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -488,8 +488,8 @@ class _EmailEntry extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.warning.withOpacity(0.25)),
       ),
       child: Row(
@@ -499,13 +499,13 @@ class _EmailEntry extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: AppColors.warning.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             child: Text('D$day',
                 style: const TextStyle(
                     color: AppColors.warning,
                     fontSize: 10,
-                    fontWeight: FontWeight.bold)),
+                    fontWeight: FontWeight.w600)),
           ),
           const SizedBox(width: 10),
           Expanded(

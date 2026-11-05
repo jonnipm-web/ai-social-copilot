@@ -6,6 +6,7 @@
 // the prices from its own SYNTHETIC provider. The client computes nothing
 // (display rounding only) and offers no order/buy/sell/broker action.
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -427,7 +428,7 @@ class _MultiResult extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(s.label, style: const TextStyle(fontWeight: FontWeight.w700)),
+              Text(s.label, style: const TextStyle(fontWeight: FontWeight.w600)),
               kv(l.quantLabAlignedReturn, quantPct(s.alignedReturn)),
               kv(l.quantLabFreshness, s.freshnessState),
               kv(l.quantLabTrustLabel, '${s.trust} · ${s.providerId}'),

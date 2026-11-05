@@ -176,7 +176,7 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
                   style: const TextStyle(
                     color: AppColors.ink,
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -243,7 +243,7 @@ class _AnalysisContent extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: cardColor,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: accent.withOpacity(0.3)),
             ),
             child: Row(
@@ -509,7 +509,7 @@ class _ScoreCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Column(
@@ -521,7 +521,7 @@ class _ScoreCard extends StatelessWidget {
             style: TextStyle(
               color: color,
               fontSize: 20,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 2),
@@ -578,14 +578,14 @@ class _ExpandableSectionState extends State<_ExpandableSection> {
     return Container(
       decoration: BoxDecoration(
         color: widget.cardColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.08)),
       ),
       child: Column(
         children: [
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Row(
@@ -649,7 +649,7 @@ class _DiagnosticContent extends StatelessWidget {
             analysis.title!,
             style: const TextStyle(
               color: AppColors.ink,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               fontSize: 15,
             ),
           ),
@@ -686,7 +686,7 @@ class _DiagnosticContent extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.accent.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(
                         color: AppColors.accent.withOpacity(0.4),
                       ),
@@ -732,7 +732,7 @@ class _BulletList extends StatelessWidget {
                 style: TextStyle(
                   color: color,
                   fontSize: 14,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               Expanded(
@@ -781,7 +781,7 @@ class _NumberedList extends StatelessWidget {
                   style: const TextStyle(
                     color: AppColors.accent,
                     fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -941,7 +941,7 @@ class _PolicyIndicator extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
         decoration: BoxDecoration(
           color: (hasIt ? AppColors.positive : AppColors.negative).withOpacity(0.15),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
             color: (hasIt ? AppColors.positive : AppColors.negative).withOpacity(0.4),
           ),
@@ -1072,12 +1072,12 @@ class _ActionButton extends StatelessWidget {
     final effectiveColor = isDisabled ? AppColors.inkSubtle : color;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: effectiveColor.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: effectiveColor.withOpacity(0.25)),
         ),
         child: Column(

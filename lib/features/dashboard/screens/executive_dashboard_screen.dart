@@ -23,7 +23,6 @@ import '../../../shared/widgets/context_copilot_widget.dart'
 import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg = AppColors.ground;
 const _kCard = AppColors.surface;
 const _kPrimary = AppColors.accent;
 const _kGreen = AppColors.positive;
@@ -95,7 +94,7 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
                 style: TextStyle(
                     color: AppColors.ink,
                     fontSize: 16,
-                    fontWeight: FontWeight.bold)),
+                    fontWeight: FontWeight.w600)),
             Text(l10n.ctxExecSubtitle,
                 style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
           ],
@@ -479,8 +478,8 @@ class _ExecModule extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: _kCard,
-            borderRadius: BorderRadius.circular(14),
+            color: _kCard, gradient: kIvSurfaceGradient,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(color: color.withOpacity(0.25)),
           ),
           child: Column(
@@ -495,7 +494,7 @@ class _ExecModule extends StatelessWidget {
                         style: TextStyle(
                             color: color,
                             fontSize: 13,
-                            fontWeight: FontWeight.bold)),
+                            fontWeight: FontWeight.w600)),
                   ),
                   Icon(Icons.arrow_forward_ios_rounded,
                       color: color.withOpacity(0.5), size: 12),
@@ -534,7 +533,7 @@ class _ExecModule extends StatelessWidget {
                                 style: TextStyle(
                                     color: color,
                                     fontSize: 12,
-                                    fontWeight: FontWeight.bold)),
+                                    fontWeight: FontWeight.w600)),
                           ],
                         ),
                       );
@@ -548,7 +547,7 @@ class _ExecModule extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Text(cta,
                     style: TextStyle(
@@ -583,8 +582,8 @@ class _SidebarKpiCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(14),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
@@ -609,7 +608,7 @@ class _SidebarKpiCard extends StatelessWidget {
                         style: TextStyle(
                             color: item.color,
                             fontSize: 13,
-                            fontWeight: FontWeight.bold)),
+                            fontWeight: FontWeight.w600)),
                   ],
                 ),
               )),
@@ -653,8 +652,8 @@ class _QuickNavCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(14),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
@@ -707,8 +706,8 @@ class _PendingActionsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
@@ -723,7 +722,7 @@ class _PendingActionsCard extends StatelessWidget {
                     style: const TextStyle(
                         color: AppColors.ink,
                         fontSize: 14,
-                        fontWeight: FontWeight.bold)),
+                        fontWeight: FontWeight.w600)),
               ),
               TextButton(
                 onPressed: () => context.push(AppConstants.routeActionEngine),
@@ -864,7 +863,7 @@ class _ModuleGrid extends StatelessWidget {
                       color: active
                           ? color.withOpacity(0.08)
                           : AppColors.ink.withOpacity(0.02),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(
                           color: active
                               ? color.withOpacity(0.25)
@@ -1011,8 +1010,8 @@ class _ExecutiveRecommendations extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kGold.withOpacity(0.25)),
       ),
       child: Column(
@@ -1026,7 +1025,7 @@ class _ExecutiveRecommendations extends StatelessWidget {
                   style: const TextStyle(
                       color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold)),
+                      fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 12),
@@ -1066,7 +1065,7 @@ class _ExecutiveRecommendations extends StatelessWidget {
                         style: TextStyle(
                             color: r.color,
                             fontSize: 10,
-                            fontWeight: FontWeight.bold)),
+                            fontWeight: FontWeight.w600)),
                   ],
                 ),
               )),

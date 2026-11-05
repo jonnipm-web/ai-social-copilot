@@ -160,7 +160,7 @@ class _CalendarCard extends StatelessWidget {
       color: AppColors.ink.withOpacity(0.05),
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         side: BorderSide(color: statusColor.withOpacity(0.3)),
       ),
       child: Padding(
@@ -175,7 +175,7 @@ class _CalendarCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(color: statusColor.withOpacity(0.4)),
                   ),
                   child: Text(
@@ -192,9 +192,8 @@ class _CalendarCard extends StatelessWidget {
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.ink.withOpacity(0.07),
-                      borderRadius: BorderRadius.circular(6),
+                    decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text(
                       item.platform!,
@@ -398,7 +397,7 @@ class _CreateCalendarItemSheetState extends State<_CreateCalendarItemSheet> {
             l10n.calendarNewPostSheetTitle,
             style: const TextStyle(
               color: AppColors.ink,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               fontSize: 16,
             ),
           ),
@@ -486,11 +485,11 @@ class _CreateCalendarItemSheetState extends State<_CreateCalendarItemSheet> {
               foregroundColor: AppColors.onAccent,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
             ),
             child: Text(l10n.calendarAddButton,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+                style: const TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -504,11 +503,11 @@ class _CreateCalendarItemSheetState extends State<_CreateCalendarItemSheet> {
       filled: true,
       fillColor: AppColors.ink.withOpacity(0.05),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         borderSide: const BorderSide(color: AppColors.line),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         borderSide: const BorderSide(color: AppColors.line),
       ),
     );
@@ -540,15 +539,15 @@ class _SheetField extends StatelessWidget {
         filled: true,
         fillColor: AppColors.ink.withOpacity(0.05),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.line),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.accent),
         ),
       ),

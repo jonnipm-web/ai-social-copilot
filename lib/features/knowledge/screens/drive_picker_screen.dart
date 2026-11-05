@@ -32,7 +32,6 @@ void _logDrive(
   );
 }
 
-const _kBg = AppColors.ground;
 const _kCard = AppColors.surface;
 const _kPrimary = AppColors.accent;
 const _kGreen = AppColors.positive;
@@ -220,7 +219,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
             foregroundColor: AppColors.ink,
             title: Text(
               l10n.uxDriveImportTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             actions: [
               if (_signedIn)
@@ -272,8 +271,8 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: _kCard,
-                borderRadius: BorderRadius.circular(20),
+                color: _kCard, gradient: kIvSurfaceGradient,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 border: Border.all(color: _kPrimary.withOpacity(0.3)),
               ),
               child: Column(
@@ -286,7 +285,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                     style: const TextStyle(
                         color: AppColors.ink,
                         fontSize: 18,
-                        fontWeight: FontWeight.bold),
+                        fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -322,7 +321,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                         foregroundColor: AppColors.onAccent,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(AppRadius.lg)),
                       ),
                     ),
                   ),
@@ -379,7 +378,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                   filled: true,
                   fillColor: _kCard,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     borderSide: BorderSide.none,
                   ),
                 ),
@@ -450,8 +449,8 @@ class _FileTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(12),
+          color: _kCard, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: AppColors.ink.withOpacity(0.07)),
         ),
         child: Row(

@@ -72,7 +72,7 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
         foregroundColor: AppColors.ink,
         title: Text(
           l10n.knowledgeVaultTitle,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         actions: [
           IconButton(
@@ -250,7 +250,7 @@ class _EmptyState extends StatelessWidget {
               style: const TextStyle(
                   color: AppColors.ink,
                   fontSize: 20,
-                  fontWeight: FontWeight.bold),
+                  fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -347,7 +347,7 @@ class _ProjectPickerSheet extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: const BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
@@ -371,7 +371,7 @@ class _ProjectPickerSheet extends ConsumerWidget {
             style: const TextStyle(
               color: AppColors.ink,
               fontSize: 15,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -463,7 +463,7 @@ class _ProjectTile extends StatelessWidget {
           color: selected
               ? AppColors.accent.withOpacity(0.15)
               : AppColors.ground,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
             color: selected ? AppColors.accent : AppColors.line,
           ),
@@ -567,9 +567,9 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
     return Card(
       color: AppColors.surface,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         onTap: item.status == 'analyzed'
             ? () => context.push(
                   AppConstants.routeKnowledgeAnalysis
@@ -860,7 +860,7 @@ class _StatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Text(
@@ -897,7 +897,7 @@ class _ActionButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: color.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: color.withOpacity(0.4)),
         ),
         child: Row(
