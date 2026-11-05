@@ -7279,4 +7279,16 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get impactIveCannotInvent =>
       'A IVE pode resumir evidências existentes, mas não pode inventar, pressupor ou verificar evidências por conta própria.';
+
+  @override
+  String get dashScoreChartTitle => 'Score por análise';
+
+  @override
+  String get dashModulesTitle => 'Módulos';
+
+  @override
+  String get dashOverviewTitle => 'Visão geral';
+
+  @override
+  String get dashQuotaTitle => 'Uso de IA';
 }

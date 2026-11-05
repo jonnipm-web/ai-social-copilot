@@ -65,7 +65,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
     final metricsAsync = ref.watch(performanceMetricsProvider);
 
     return Scaffold(
-      backgroundColor: _bgColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
@@ -77,7 +77,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
             }
           },
         ),
-        backgroundColor: _cardColor,
+        backgroundColor: Colors.transparent,
         title: Text(
           l10n.performanceTitle,
           style:

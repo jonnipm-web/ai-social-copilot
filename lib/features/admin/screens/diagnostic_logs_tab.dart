@@ -349,7 +349,7 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(l10n.uxDiagSessionShort(sessionId.substring(0, 8)),
             style: const TextStyle(fontSize: 14)),

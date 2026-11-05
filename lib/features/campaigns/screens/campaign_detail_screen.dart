@@ -20,9 +20,9 @@ class CampaignDetailScreen extends ConsumerWidget {
     final campaignAsync = ref.watch(campaignByIdProvider(campaignId));
 
     return Scaffold(
-      backgroundColor: AppColors.ground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         foregroundColor: AppColors.ink,
         title: Text(
           l10n.campaignDetailTitle,

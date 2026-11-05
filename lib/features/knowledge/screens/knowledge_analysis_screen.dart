@@ -86,9 +86,9 @@ class _KnowledgeAnalysisScreenState
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(itemId));
 
     return Scaffold(
-      backgroundColor: AppColors.ground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         foregroundColor: AppColors.ink,
         title: Text(
           l10n.knowledgeAnalysisTitle,

@@ -2582,5 +2582,9 @@
   "impactIveBoundaryFact": "FATO (verificado pelo servidor)",
   "impactIveInference": "INFERÊNCIA (derivada dos fatos — não verificada independentemente)",
   "impactIveHypothesis": "HIPÓTESE (não verificada)",
-  "impactIveCannotInvent": "A IVE pode resumir evidências existentes, mas não pode inventar, pressupor ou verificar evidências por conta própria."
+  "impactIveCannotInvent": "A IVE pode resumir evidências existentes, mas não pode inventar, pressupor ou verificar evidências por conta própria.",
+  "dashScoreChartTitle": "Score por análise",
+  "dashModulesTitle": "Módulos",
+  "dashOverviewTitle": "Visão geral",
+  "dashQuotaTitle": "Uso de IA"
 }

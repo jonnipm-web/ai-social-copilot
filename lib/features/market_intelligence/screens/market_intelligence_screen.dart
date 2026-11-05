@@ -226,7 +226,7 @@ class _MarketIntelligenceScreenState
     final busy = state is AsyncLoading || _exec.isBusy;
 
     return Scaffold(
-      backgroundColor: AppColors.ground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         // IVE-COMMERCIAL-EXPERIENCE-14 (Phase B, Section 13) — replaces
         // this screen's own hand-rolled canPop()/go() with the shared
@@ -234,7 +234,7 @@ class _MarketIntelligenceScreenState
         // (routeHome) this inline version already used.
         leading:
             const CanonicalBackButton(fallbackRoute: AppConstants.routeHome),
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         title: Text(t.navMarketIntelligence,
             style: const TextStyle(color: AppColors.ink)),
         iconTheme: const IconThemeData(color: AppColors.ink),

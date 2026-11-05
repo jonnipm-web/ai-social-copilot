@@ -37,10 +37,10 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Colors.transparent,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        backgroundColor: _cardColor,
+        backgroundColor: Colors.transparent,
         title: Text(
           l10n.websiteResultTitle,
           style: const TextStyle(color: AppColors.ink),

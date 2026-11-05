@@ -29,7 +29,7 @@ class PersonaTrainingScreen extends ConsumerWidget {
     final trainingAsync = ref.watch(personaTrainingProvider(personaId));
 
     return Scaffold(
-      backgroundColor: _bgColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(
           l10n.personaTrainingTitle(personaName),
@@ -39,7 +39,7 @@ class PersonaTrainingScreen extends ConsumerWidget {
             fontSize: 18,
           ),
         ),
-        backgroundColor: _cardColor,
+        backgroundColor: Colors.transparent,
         iconTheme: const IconThemeData(color: AppColors.ink),
         elevation: 0,
       ),

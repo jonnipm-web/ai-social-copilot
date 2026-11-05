@@ -90,9 +90,9 @@ class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
         ref.watch(featureFlagProvider(FeatureFlag.actionEngineEnabled));
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon:

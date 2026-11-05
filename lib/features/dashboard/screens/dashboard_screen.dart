@@ -20,7 +20,10 @@ import '../../../providers/project_provider.dart';
 import '../../../providers/quota_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/ive_exclusion_region.dart';
+import 'package:ai_social_copilot/core/theme/app_motion.dart';
 import 'package:ai_social_copilot/core/theme/app_tokens.dart';
+import 'package:ai_social_copilot/shared/ui/iv_charts.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -54,32 +57,20 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(AppConstants.appName),
+        title: const _BrandTitle(),
       ),
       drawer: const AppDrawer(),
       body: profileAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _DashboardSkeleton(),
         error: (e, _) => Center(child: Text(l10n.commonError)),
         data: (profile) {
           final isAdmin = profile?.isAdmin ?? false;
           final isPro = profile?.isPro ?? false;
 
-          // COMMERCIAL-V1-UX-RECONCILIATION — Personas/Biblioteca/
-          // Calendário/Campanhas/Performance were commercialEnabled:false
-          // ("not released to anyone") when Remediation-06S wrote the note
-          // this replaces. "Tranche 2: launch Growth Intelligence
-          // commercially at Pro tier" (module_registry.dart) flipped all 5
-          // to commercialEnabled:true / minimumPlan:pro — they are real,
-          // released, Pro-gated modules now, not unreleased ones. onTap
-          // still routes through isModuleActionable (commercialEnabled
-          // only, never minimumPlan — see route_policy.dart's own doc
-          // comment on isModuleActionable) so a tap always produces a real
-          // navigation; the route guard itself sends a Free user to
-          // /upgrade. The UX gap this mission section closes is different:
-          // a Free user previously had to tap-and-get-redirected to
-          // discover a card was Pro-gated at all. _ProShortcutCard below
-          // shows the PRO badge, one-line benefit, and access state BEFORE
-          // the tap.
+          // COMMERCIAL-V1-UX-RECONCILIATION — Pro-gated modules route through
+          // isModuleActionable (commercialEnabled only); the route guard
+          // itself sends a Free user to /upgrade. _ModuleTile shows the PRO
+          // badge, benefit and access state BEFORE the tap.
           VoidCallback shortcutTap(String moduleId, String route) {
             if (isModuleActionable(moduleId, isAdmin: isAdmin)) {
               return () => context.go(route);
@@ -90,225 +81,227 @@ class DashboardScreen extends ConsumerWidget {
                 );
           }
 
+          final projects = projectsAsync.valueOrNull ?? const <Project>[];
+          final analyses =
+              analysesAsync.valueOrNull ?? const <MarketAnalysis>[];
+          final pending =
+              pendingAsync.valueOrNull ?? const <ActionQueueItem>[];
+          final hasProAccess = isPro || isAdmin;
+
+          final topAnalyses = [...analyses]
+            ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
+
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(
+                AppSpace.s4, AppSpace.s2, AppSpace.s4, AppSpace.s12),
             child: Center(
               child: ConstrainedBox(
                 constraints:
                     const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                child: IvStagger(
+                  gap: AppSpace.s4,
                   children: [
-                    // Boas-vindas
-                    Text(
-                      l10n.dashWelcome,
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: AppColors.ink,
-                                fontWeight: FontWeight.bold,
-                              ),
+                    // ── Hero ────────────────────────────────────────────
+                    _Hero(
+                      title: l10n.dashWelcome,
+                      planLabel:
+                          l10n.dashPlanLabel(profile?.roleLabel ?? 'Free'),
+                      isPro: hasProAccess,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.dashPlanLabel(profile?.roleLabel ?? 'Free'),
-                      style:
-                          const TextStyle(color: AppColors.inkMuted, fontSize: 14),
-                    ),
-                    const SizedBox(height: 24),
 
-                    // Card de uso mensal
+                    // ── Primary action ──────────────────────────────────
+                    IvPrimaryAction(
+                      icon: Icons.auto_fix_high_rounded,
+                      label: l10n.dashImproveWithAi,
+                      subtitle: l10n.dashImproveWithAiSubtitle,
+                      onTap: () => context.go(AppConstants.routeGenerate),
+                    ),
+
+                    // ── Quota ───────────────────────────────────────────
                     usageAsync.when(
-                      loading: () => const SizedBox.shrink(),
+                      loading: () => const IvSkeleton(height: 96),
                       error: (_, __) => const SizedBox.shrink(),
                       data: (quota) => _UsageCard(
                           used: quota.used, limit: quota.limit, l10n: l10n),
                     ),
-                    const SizedBox(height: 16),
 
-                    // COMMERCIAL-V1-UX-RECONCILIATION (R6) — INFORMATION
-                    // (portfolio KPIs) -> INTERPRETATION/PRIORITY (executive
-                    // recommendations) -> PRIORITY (pending actions), all
-                    // ahead of the ACTION buttons below, per the owner's
-                    // explicit ordering rule. Ported from the orphaned
-                    // ExecutiveDashboardScreen's _SidebarKpiCard/
-                    // _ExecutiveRecommendations/_PendingActionsCard (same
-                    // providers, same no-fabricated-data guards), not
-                    // reactivating that screen.
-                    if (projectsAsync.valueOrNull?.isNotEmpty ?? false) ...[
+                    // ── Portfolio KPIs (INFORMATION) ────────────────────
+                    if (projects.isNotEmpty)
                       _PortfolioSummaryRow(
-                        activeProjects: (projectsAsync.valueOrNull ?? const [])
+                        activeProjects: projects
                             .where((p) =>
                                 p.status == 'active' || p.status == 'executing')
                             .length,
-                        analysesCount: analysesAsync.valueOrNull?.length ?? 0,
-                        avgScore: _avgOpportunityScore(
-                            analysesAsync.valueOrNull ?? const []),
+                        analysesCount: analyses.length,
+                        avgScore: _avgOpportunityScore(analyses),
                         l10n: l10n,
                       ),
-                      const SizedBox(height: 16),
-                    ],
-                    _ExecutiveRecommendationsCard(
-                      projects: projectsAsync.valueOrNull ?? const [],
-                      analyses: analysesAsync.valueOrNull ?? const [],
-                      pending: pendingAsync.valueOrNull ?? const [],
-                      l10n: l10n,
-                    ),
-                    const SizedBox(height: 16),
-                    _DashboardPendingActionsCard(
-                      pending: pendingAsync.valueOrNull ?? const [],
-                      l10n: l10n,
-                    ),
-                    const SizedBox(height: 16),
 
-                    // Ação principal
-                    _ActionButton(
-                      icon: Icons.auto_fix_high_rounded,
-                      label: l10n.dashImproveWithAi,
-                      subtitle: l10n.dashImproveWithAiSubtitle,
-                      color: AppColors.accent,
-                      onTap: () => context.go(AppConstants.routeGenerate),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Grid de atalhos
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ProShortcutCard(
-                            icon: Icons.person_pin_rounded,
-                            label: l10n.dashShortcutPersonas,
-                            benefit: l10n.dashProBenefitPersonas,
-                            hasAccess: isPro || isAdmin,
-                            l10n: l10n,
-                            onTap: shortcutTap(
-                                'personas', AppConstants.routePersonas),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _ProShortcutCard(
-                            icon: Icons.library_books_rounded,
-                            label: l10n.dashShortcutLibrary,
-                            benefit: l10n.dashProBenefitLibrary,
-                            hasAccess: isPro || isAdmin,
-                            l10n: l10n,
-                            onTap: shortcutTap(
-                                'content-library', AppConstants.routeContent),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ProShortcutCard(
-                            icon: Icons.calendar_month_rounded,
-                            label: l10n.dashShortcutCalendar,
-                            benefit: l10n.dashProBenefitCalendar,
-                            hasAccess: isPro || isAdmin,
-                            l10n: l10n,
-                            onTap: shortcutTap(
-                                'calendar', AppConstants.routeCalendar),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _ShortcutCard(
-                            icon: Icons.history_rounded,
-                            label: l10n.dashShortcutHistory,
-                            onTap: () =>
-                                context.push(AppConstants.routeHistory),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ShortcutCard(
-                            icon: Icons.auto_stories_rounded,
-                            label: l10n.dashShortcutVault,
-                            onTap: () =>
-                                context.go(AppConstants.routeKnowledge),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          // GATE-17-FINAL-CLOSURE (IVE Adaptive Resting
-                          // Placement) — physically reproduced collision:
-                          // the floating IVE avatar's fixed resting corner
-                          // sat on top of this card. Reports its geometry
-                          // so the placement engine steers clear; renders
-                          // unchanged otherwise (ive_exclusion_region.dart).
-                          child: IveExclusionRegion(
-                            child: _ProShortcutCard(
-                              icon: Icons.campaign_rounded,
-                              label: l10n.dashShortcutCampaigns,
-                              benefit: l10n.dashProBenefitCampaigns,
-                              hasAccess: isPro || isAdmin,
-                              l10n: l10n,
-                              onTap: shortcutTap(
-                                  'campaigns', AppConstants.routeCampaigns),
+                    // ── Score chart (real analyses only; a ranking needs 2+) ─
+                    if (topAnalyses.length >= 2)
+                      IvCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            IvSectionHeader(
+                              title: l10n.dashScoreChartTitle,
+                              icon: Icons.insights_rounded,
+                              iconColor: AppColors.info,
                             ),
-                          ),
+                            const SizedBox(height: AppSpace.s4),
+                            IvBarList(
+                              max: 100,
+                              data: [
+                                for (final a in topAnalyses.take(6))
+                                  IvBarDatum(a.niche ?? a.input,
+                                      a.opportunityScore.toDouble()),
+                              ],
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
+
+                    // ── Recommendations (INTERPRETATION + PRIORITY) ─────
+                    _ExecutiveRecommendationsCard(
+                      projects: projects,
+                      analyses: analyses,
+                      pending: pending,
+                      l10n: l10n,
                     ),
-                    const SizedBox(height: 12),
-                    Row(
+
+                    // ── Pending actions (PRIORITY → ACTION) ─────────────
+                    _DashboardPendingActionsCard(
+                      pending: pending,
+                      l10n: l10n,
+                    ),
+
+                    // ── Modules ─────────────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpace.s2),
+                      child: IvEyebrow(l10n.dashModulesTitle),
+                    ),
+                    IvGrid(
+                      minTileWidth: 150,
                       children: [
-                        Expanded(
-                          child: _ShortcutCard(
-                            icon: Icons.language_rounded,
-                            label: l10n.dashShortcutWebsiteAnalyzer,
-                            onTap: () =>
-                                context.go(AppConstants.routeWebsiteAnalyzer),
-                          ),
+                        _ModuleTile(
+                          icon: Icons.groups_2_rounded,
+                          color: AppColors.accent,
+                          label: l10n.dashShortcutPersonas,
+                          benefit: l10n.dashProBenefitPersonas,
+                          pro: true,
+                          hasAccess: hasProAccess,
+                          l10n: l10n,
+                          onTap: shortcutTap(
+                              'personas', AppConstants.routePersonas),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _ProShortcutCard(
-                            icon: Icons.bar_chart_rounded,
-                            label: l10n.dashShortcutPerformance,
-                            benefit: l10n.dashProBenefitPerformance,
-                            hasAccess: isPro || isAdmin,
+                        _ModuleTile(
+                          icon: Icons.perm_media_rounded,
+                          color: AppColors.info,
+                          label: l10n.dashShortcutLibrary,
+                          benefit: l10n.dashProBenefitLibrary,
+                          pro: true,
+                          hasAccess: hasProAccess,
+                          l10n: l10n,
+                          onTap: shortcutTap(
+                              'content-library', AppConstants.routeContent),
+                        ),
+                        _ModuleTile(
+                          icon: Icons.calendar_month_rounded,
+                          color: AppColors.warning,
+                          label: l10n.dashShortcutCalendar,
+                          benefit: l10n.dashProBenefitCalendar,
+                          pro: true,
+                          hasAccess: hasProAccess,
+                          l10n: l10n,
+                          onTap: shortcutTap(
+                              'calendar', AppConstants.routeCalendar),
+                        ),
+                        _ModuleTile(
+                          icon: Icons.history_rounded,
+                          color: AppColors.inkMuted,
+                          label: l10n.dashShortcutHistory,
+                          onTap: () => context.push(AppConstants.routeHistory),
+                        ),
+                        _ModuleTile(
+                          icon: Icons.auto_stories_rounded,
+                          color: AppColors.accent,
+                          label: l10n.dashShortcutVault,
+                          onTap: () => context.go(AppConstants.routeKnowledge),
+                        ),
+                        // GATE-17-FINAL-CLOSURE — reports its geometry so the
+                        // floating IVE avatar's resting corner steers clear.
+                        IveExclusionRegion(
+                          child: _ModuleTile(
+                            icon: Icons.campaign_rounded,
+                            color: AppColors.positive,
+                            label: l10n.dashShortcutCampaigns,
+                            benefit: l10n.dashProBenefitCampaigns,
+                            pro: true,
+                            hasAccess: hasProAccess,
                             l10n: l10n,
                             onTap: shortcutTap(
-                                'performance', AppConstants.routePerformance),
+                                'campaigns', AppConstants.routeCampaigns),
                           ),
+                        ),
+                        _ModuleTile(
+                          icon: Icons.language_rounded,
+                          color: AppColors.info,
+                          label: l10n.dashShortcutWebsiteAnalyzer,
+                          onTap: () =>
+                              context.go(AppConstants.routeWebsiteAnalyzer),
+                        ),
+                        _ModuleTile(
+                          icon: Icons.insights_rounded,
+                          color: AppColors.accent,
+                          label: l10n.dashShortcutPerformance,
+                          benefit: l10n.dashProBenefitPerformance,
+                          pro: true,
+                          hasAccess: hasProAccess,
+                          l10n: l10n,
+                          onTap: shortcutTap(
+                              'performance', AppConstants.routePerformance),
                         ),
                       ],
                     ),
 
-                    // Painel Admin
+                    // ── Admin ───────────────────────────────────────────
                     if (isAdmin) ...[
-                      const SizedBox(height: 24),
-                      const Divider(color: AppColors.line),
-                      const SizedBox(height: 12),
-                      Text(
-                        l10n.dashAdminSectionTitle,
-                        style: const TextStyle(
-                          color: AppColors.gold,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.5,
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppSpace.s4),
+                        child: IvEyebrow(l10n.dashAdminSectionTitle,
+                            color: AppColors.gold),
+                      ),
+                      _AdminStats(ref: ref, l10n: l10n),
+                      IvCard(
+                        accent: AppColors.gold,
+                        onTap: () => context.go(AppConstants.routeAdmin),
+                        child: Row(
+                          children: [
+                            const IvIconTile(
+                                Icons.admin_panel_settings_rounded,
+                                color: AppColors.gold),
+                            const SizedBox(width: AppSpace.s3),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(l10n.dashAdminPanelButton,
+                                      style: const TextStyle(
+                                          color: AppColors.ink,
+                                          fontWeight: FontWeight.w600)),
+                                  Text(l10n.dashAdminPanelSubtitle,
+                                      style: const TextStyle(
+                                          color: AppColors.inkMuted,
+                                          fontSize: AppType.caption)),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded,
+                                color: AppColors.inkSubtle),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      _AdminStats(ref: ref, l10n: l10n),
-                      const SizedBox(height: 12),
-                      _ActionButton(
-                        icon: Icons.admin_panel_settings_rounded,
-                        label: l10n.dashAdminPanelButton,
-                        subtitle: l10n.dashAdminPanelSubtitle,
-                        color: AppColors.gold,
-                        onTap: () => context.go(AppConstants.routeAdmin),
-                      ),
                     ],
-
-                    const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -320,6 +313,115 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
+// ── App bar brand ───────────────────────────────────────────────────────────
+class _BrandTitle extends StatelessWidget {
+  const _BrandTitle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.accent, AppColors.info],
+            ),
+          ),
+          child: const Icon(Icons.insights_rounded,
+              size: 14, color: AppColors.onAccent),
+        ),
+        const SizedBox(width: AppSpace.s2),
+        const Text(AppConstants.appName),
+      ],
+    );
+  }
+}
+
+// ── Hero ────────────────────────────────────────────────────────────────────
+class _Hero extends StatelessWidget {
+  const _Hero({
+    required this.title,
+    required this.planLabel,
+    required this.isPro,
+  });
+
+  final String title;
+  final String planLabel;
+  final bool isPro;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpace.s2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ShaderMask(
+            shaderCallback: (r) => const LinearGradient(
+              colors: [AppColors.ink, Color(0xFFB8C4CF)],
+            ).createShader(r),
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 26,
+                height: 1.2,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.4,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpace.s2),
+          IvBadge(
+            planLabel,
+            color: isPro ? AppColors.gold : AppColors.inkMuted,
+            icon: isPro
+                ? Icons.workspace_premium_rounded
+                : Icons.person_outline_rounded,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Loading skeleton ────────────────────────────────────────────────────────
+class _DashboardSkeleton extends StatelessWidget {
+  const _DashboardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpace.s4),
+      child: Center(
+        child: ConstrainedBox(
+          constraints:
+              const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              IvSkeleton(height: 56, radius: AppRadius.md),
+              SizedBox(height: AppSpace.s4),
+              IvSkeleton(height: 76),
+              SizedBox(height: AppSpace.s4),
+              IvSkeleton(height: 96),
+              SizedBox(height: AppSpace.s4),
+              IvSkeleton(height: 160),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Quota ───────────────────────────────────────────────────────────────────
 class _UsageCard extends StatelessWidget {
   const _UsageCard(
       {required this.used, required this.limit, required this.l10n});
@@ -332,65 +434,78 @@ class _UsageCard extends StatelessWidget {
     final remaining = (limit - used).clamp(0, limit);
     final pct = limit > 0 ? used / limit : 0.0;
     final isFull = remaining <= 0;
+    final color = isFull
+        ? AppColors.negative
+        : pct > 0.8
+            ? AppColors.warning
+            : AppColors.accent;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.ink.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return IvCard(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(
-                isFull ? Icons.lock_outline_rounded : Icons.bolt_rounded,
-                color: isFull ? AppColors.negative : AppColors.accent,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              // COMMERCIAL-EXPERIENCE-CLOSURE-16R (mission Section 03/09)
-              // — sweep for the same class of defect as the 3 owner-
-              // reported ones: this Text's content is dynamic ("$remaining
-              // de $limit gerações restantes") with no Expanded/Flexible,
-              // sharing a Row with a trailing Spacer + "este mês" -- at a
-              // real narrow width this can overflow exactly like Knowledge
-              // Vault's cards did. Expanded + ellipsis keeps the fixed-size
-              // trailing label always visible and readable instead.
-              Expanded(
-                child: Text(
+          IvRingGauge(
+            value: used.toDouble(),
+            max: limit <= 0 ? 1 : limit.toDouble(),
+            color: color,
+            size: 58,
+            stroke: 6,
+            semanticsLabel: '$used / $limit',
+            center: Icon(
+              isFull ? Icons.lock_outline_rounded : Icons.bolt_rounded,
+              color: color,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: AppSpace.s4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: IvEyebrow(l10n.dashQuotaTitle)),
+                    Text(
+                      l10n.dashUsageThisMonth,
+                      style: const TextStyle(
+                          color: AppColors.inkSubtle,
+                          fontSize: AppType.caption),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // COMMERCIAL-EXPERIENCE-CLOSURE-16R — dynamic text, ellipsis
+                // keeps it readable at narrow widths.
+                Text(
                   isFull
                       ? l10n.dashUsageLimitReached
                       : l10n.dashUsageRemaining(
                           remaining.toString(), limit.toString()),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: isFull ? AppColors.negative : AppColors.ink,
                     fontWeight: FontWeight.w600,
+                    fontSize: 14,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                l10n.dashUsageThisMonth,
-                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: pct.clamp(0.0, 1.0),
-              backgroundColor: AppColors.line,
-              color: isFull
-                  ? AppColors.negative
-                  : pct > 0.8
-                      ? AppColors.warning
-                      : AppColors.accent,
-              minHeight: 6,
+                const SizedBox(height: AppSpace.s2),
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: pct.clamp(0.0, 1.0)),
+                  duration: AppMotion.reduced(context)
+                      ? Duration.zero
+                      : AppMotion.chart,
+                  curve: AppMotion.emphasized,
+                  builder: (context, v, _) => ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: v,
+                      backgroundColor: AppColors.line,
+                      color: color,
+                      minHeight: 5,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -399,236 +514,90 @@ class _UsageCard extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.subtitle,
-    required this.color,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final String subtitle;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: color.withOpacity(0.15),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.4)),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style:
-                          const TextStyle(color: AppColors.inkMuted, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded, color: color),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ShortcutCard extends StatelessWidget {
-  const _ShortcutCard({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    const color = AppColors.inkMuted;
-
-    return Material(
-      color: AppColors.ink.withOpacity(0.05),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.line),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: color,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
+// ── Module tile ─────────────────────────────────────────────────────────────
 // COMMERCIAL-V1-UX-RECONCILIATION (Section A) — INFORMATION FIRST for a
-// released Pro-gated module: name, one-line benefit, a PRO badge and the
-// user's actual access state are all visible BEFORE the tap, instead of
-// the tap being the only way to discover a card is Pro-gated. `onTap`
-// still goes through the caller's `shortcutTap` (routes through
-// isModuleActionable + the route guard), so a Free user tapping still
-// lands on /upgrade exactly as before — this only changes what's
-// communicated before that tap, never the authorization path itself.
-class _ProShortcutCard extends StatelessWidget {
-  const _ProShortcutCard({
+// Pro-gated module: name, benefit, PRO badge and access state visible
+// BEFORE the tap. onTap still goes through shortcutTap + the route guard.
+class _ModuleTile extends StatelessWidget {
+  const _ModuleTile({
     required this.icon,
+    required this.color,
     required this.label,
-    required this.benefit,
-    required this.hasAccess,
-    required this.l10n,
     required this.onTap,
+    this.benefit,
+    this.pro = false,
+    this.hasAccess = true,
+    this.l10n,
   });
 
   final IconData icon;
+  final Color color;
   final String label;
-  final String benefit;
+  final String? benefit;
+  final bool pro;
   final bool hasAccess;
-  final AppLocalizations l10n;
+  final AppLocalizations? l10n;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    const proColor = AppColors.gold;
-    final color = hasAccess ? AppColors.inkMuted : AppColors.inkMuted;
-
-    return Material(
-      color: AppColors.ink.withOpacity(0.05),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: hasAccess ? AppColors.line : proColor.withOpacity(0.25),
+    final locked = pro && !hasAccess;
+    return IvCard(
+      onTap: onTap,
+      accent: locked ? AppColors.gold : color,
+      padding: const EdgeInsets.all(AppSpace.s3 + 2),
+      child: SizedBox(
+        height: 108,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IvIconTile(icon, color: locked ? AppColors.inkMuted : color,
+                    size: 36),
+                const Spacer(),
+                if (pro && l10n != null)
+                  IvBadge(
+                    l10n!.dashProBadge,
+                    color: hasAccess ? AppColors.positive : AppColors.gold,
+                    icon: hasAccess
+                        ? Icons.check_rounded
+                        : Icons.lock_outline_rounded,
+                  ),
+              ],
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, color: color, size: 24),
-                  const Spacer(),
-                  if (!hasAccess)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: proColor.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: proColor.withOpacity(0.4)),
-                      ),
-                      child: Text(
-                        l10n.dashProBadge,
-                        style: const TextStyle(
-                          color: proColor,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                    ),
-                ],
+            const Spacer(),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.ink,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(height: 8),
+            ),
+            if (benefit != null) ...[
+              const SizedBox(height: 2),
               Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                benefit,
-                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10.5),
+                benefit!,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(
-                    hasAccess
-                        ? Icons.check_circle_rounded
-                        : Icons.lock_outline_rounded,
-                    color: hasAccess ? AppColors.positive : proColor,
-                    size: 11,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      hasAccess ? l10n.dashProIncluded : l10n.dashProUpgradeCta,
-                      style: TextStyle(
-                        color: hasAccess ? AppColors.positive : proColor,
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+                style: const TextStyle(
+                    color: AppColors.inkSubtle,
+                    fontSize: AppType.caption,
+                    height: 1.3),
               ),
             ],
-          ),
+          ],
         ),
       ),
     );
   }
 }
 
+// ── Admin stats ─────────────────────────────────────────────────────────────
 class _AdminStats extends ConsumerWidget {
   const _AdminStats({required this.ref, required this.l10n});
   final WidgetRef ref;
@@ -642,143 +611,45 @@ class _AdminStats extends ConsumerWidget {
     final knowledgeAsync = ref.watch(knowledgeItemsProvider);
     final campaignsAsync = ref.watch(campaignsProvider);
 
-    return Column(
+    Widget stat(String label, int? value, IconData icon) => IvStatCard(
+          label: label,
+          value: value ?? 0,
+          valueText: value == null ? '—' : null,
+          icon: icon,
+          color: AppColors.gold,
+        );
+
+    return IvGrid(
+      minTileWidth: 150,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _StatTile(
-                label: l10n.dashAdminStatUsers,
-                value: usersAsync.valueOrNull?.length.toString() ?? '—',
-                icon: Icons.people_rounded,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _StatTile(
-                label: l10n.dashAdminStatPersonas,
-                value: personasAsync.valueOrNull?.length.toString() ?? '—',
-                icon: Icons.person_pin_rounded,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _StatTile(
-                label: l10n.dashAdminStatContent,
-                value: contentAsync.valueOrNull?.length.toString() ?? '—',
-                icon: Icons.library_books_rounded,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _StatTile(
-                label: l10n.dashAdminStatSites,
-                value: '—',
-                icon: Icons.language_rounded,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(child: const SizedBox()),
-            const SizedBox(width: 8),
-            Expanded(child: const SizedBox()),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _StatTile(
-                label: l10n.dashAdminStatVault,
-                value: knowledgeAsync.valueOrNull?.length.toString() ?? '—',
-                icon: Icons.auto_stories_rounded,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _StatTile(
-                label: l10n.dashAdminStatCampaigns,
-                value: campaignsAsync.valueOrNull?.length.toString() ?? '—',
-                icon: Icons.campaign_rounded,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _StatTile(
-                label: l10n.dashAdminStatAnalyzed,
-                value: knowledgeAsync.valueOrNull
-                        ?.where((i) => i.status == 'analyzed')
-                        .length
-                        .toString() ??
-                    '—',
-                icon: Icons.analytics_rounded,
-              ),
-            ),
-          ],
-        ),
+        stat(l10n.dashAdminStatUsers, usersAsync.valueOrNull?.length,
+            Icons.people_rounded),
+        stat(l10n.dashAdminStatPersonas, personasAsync.valueOrNull?.length,
+            Icons.groups_2_rounded),
+        stat(l10n.dashAdminStatContent, contentAsync.valueOrNull?.length,
+            Icons.perm_media_rounded),
+        stat(l10n.dashAdminStatVault, knowledgeAsync.valueOrNull?.length,
+            Icons.auto_stories_rounded),
+        stat(l10n.dashAdminStatCampaigns, campaignsAsync.valueOrNull?.length,
+            Icons.campaign_rounded),
+        stat(
+            l10n.dashAdminStatAnalyzed,
+            knowledgeAsync.valueOrNull
+                ?.where((i) => i.status == 'analyzed')
+                .length,
+            Icons.analytics_rounded),
       ],
     );
   }
 }
 
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
-  final String label;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.gold.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.gold.withOpacity(0.2)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppColors.gold, size: 20),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.gold,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-          Text(
-            label,
-            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// COMMERCIAL-V1-UX-RECONCILIATION (R6) — helper functions ported
-// unchanged from the orphaned ExecutiveDashboardScreen's own
-// _DashboardBody._avgScore.
+// COMMERCIAL-V1-UX-RECONCILIATION (R6) — helper ported unchanged from the
+// orphaned ExecutiveDashboardScreen's _DashboardBody._avgScore.
 int _avgOpportunityScore(List<MarketAnalysis> analyses) {
   if (analyses.isEmpty) return 0;
   final sum =
       analyses.map((a) => a.opportunityScore).fold<int>(0, (s, v) => s + v);
   return (sum / analyses.length).round();
-}
-
-Color _execScoreColor(int score) {
-  if (score >= 80) return AppColors.positive;
-  if (score >= 60) return AppColors.warning;
-  return AppColors.negative;
 }
 
 // ── R6: Portfolio summary (INFORMATION) ─────────────────────────────────────
@@ -797,49 +668,45 @@ class _PortfolioSummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget stat(String value, String label, Color color) => Expanded(
-          child: Column(
-            children: [
-              Text(value,
-                  style: TextStyle(
-                      color: color, fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 2),
-              Text(label,
-                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
-                  textAlign: TextAlign.center),
-            ],
-          ),
-        );
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-      decoration: BoxDecoration(
-        color: AppColors.ink.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Row(
-        children: [
-          stat('$activeProjects', l10n.dashPortfolioActiveProjects,
-              AppColors.accent),
-          stat('$analysesCount', l10n.dashPortfolioAnalyses,
-              AppColors.info),
-          stat(
-            avgScore > 0 ? '$avgScore' : '—',
-            l10n.dashPortfolioAvgScore,
-            avgScore > 0 ? _execScoreColor(avgScore) : AppColors.inkSubtle,
-          ),
-        ],
-      ),
+    return IvGrid(
+      minTileWidth: 150,
+      maxColumns: 3,
+      children: [
+        IvStatCard(
+          label: l10n.dashPortfolioActiveProjects,
+          value: activeProjects,
+          icon: Icons.rocket_launch_rounded,
+          color: AppColors.accent,
+        ),
+        IvStatCard(
+          label: l10n.dashPortfolioAnalyses,
+          value: analysesCount,
+          icon: Icons.analytics_rounded,
+          color: AppColors.info,
+        ),
+        IvStatCard(
+          label: l10n.dashPortfolioAvgScore,
+          value: avgScore,
+          valueText: avgScore > 0 ? null : '—',
+          icon: Icons.speed_rounded,
+          color: avgScore > 0 ? ivScoreColor(avgScore) : AppColors.inkSubtle,
+          trailing: avgScore > 0
+              ? IvRingGauge(
+                  value: avgScore.toDouble(),
+                  size: 44,
+                  stroke: 5,
+                  center: const SizedBox.shrink(),
+                )
+              : null,
+        ),
+      ],
     );
   }
 }
 
 // ── R6: Executive recommendations (INTERPRETATION + PRIORITY) ──────────────
-// Ported from ExecutiveDashboardScreen's _ExecutiveRecommendations: every
-// entry is conditioned on real data (empty projects/analyses, real pending
-// count, real top-scored analysis, real zero-revenue check) -- R8 "no
-// fabricated intelligence" by construction, not an added guard.
+// Every entry is conditioned on real data -- R8 "no fabricated
+// intelligence" by construction.
 class _ExecutiveRecommendationsCard extends StatelessWidget {
   const _ExecutiveRecommendationsCard({
     required this.projects,
@@ -891,66 +758,50 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
 
     if (recs.isEmpty) return const SizedBox.shrink();
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.ink.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gold.withOpacity(0.25)),
-      ),
+    return IvCard(
+      highlight: true,
+      accent: AppColors.gold,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.lightbulb_rounded,
-                  color: AppColors.gold, size: 18),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(l10n.dashRecommendationsTitle,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: AppColors.ink,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold)),
-              ),
-            ],
+          IvSectionHeader(
+            title: l10n.dashRecommendationsTitle,
+            icon: Icons.lightbulb_rounded,
+            iconColor: AppColors.gold,
           ),
-          const SizedBox(height: 12),
-          ...recs.take(4).map((r) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                          color: r.color.withOpacity(0.12),
-                          shape: BoxShape.circle),
-                      child: Icon(r.icon, color: r.color, size: 16),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(r.title,
-                              style: const TextStyle(
-                                  color: AppColors.ink,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 2),
-                          Text(r.body,
-                              style: const TextStyle(
-                                  color: AppColors.inkMuted,
-                                  fontSize: 11,
-                                  height: 1.4)),
-                        ],
-                      ),
-                    ),
-                  ],
+          const SizedBox(height: AppSpace.s4),
+          for (var i = 0; i < recs.take(4).length; i++) ...[
+            if (i > 0)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpace.s3),
+                child: Divider(height: 1),
+              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IvIconTile(recs[i].icon, color: recs[i].color, size: 34),
+                const SizedBox(width: AppSpace.s3),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(recs[i].title,
+                          style: const TextStyle(
+                              color: AppColors.ink,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 2),
+                      Text(recs[i].body,
+                          style: const TextStyle(
+                              color: AppColors.inkMuted,
+                              fontSize: AppType.label,
+                              height: 1.45)),
+                    ],
+                  ),
                 ),
-              )),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -974,74 +825,73 @@ class _DashboardPendingActionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.ink.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.line),
-      ),
+    return IvCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.bolt_rounded,
-                  color: AppColors.warning, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(l10n.dashPendingActionsTitle,
-                    style: const TextStyle(
-                        color: AppColors.ink,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold)),
-              ),
-              TextButton(
-                onPressed: () => context.push(AppConstants.routeActionEngine),
-                style: TextButton.styleFrom(
-                    minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(horizontal: 8)),
-                child: Text(l10n.dashPendingActionsViewAll,
-                    style: const TextStyle(
-                        color: AppColors.accent, fontSize: 12)),
-              ),
-            ],
+          IvSectionHeader(
+            title: l10n.dashPendingActionsTitle,
+            icon: Icons.bolt_rounded,
+            iconColor: AppColors.warning,
+            actionLabel: l10n.dashPendingActionsViewAll,
+            onAction: () => context.push(AppConstants.routeActionEngine),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpace.s3),
           if (pending.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                l10n.dashPendingActionsEmpty,
-                style: const TextStyle(
-                    color: AppColors.inkSubtle, fontSize: 12, height: 1.5),
-              ),
+            Row(
+              children: [
+                const Icon(Icons.check_circle_outline_rounded,
+                    size: 18, color: AppColors.inkSubtle),
+                const SizedBox(width: AppSpace.s2),
+                Expanded(
+                  child: Text(
+                    l10n.dashPendingActionsEmpty,
+                    style: const TextStyle(
+                        color: AppColors.inkSubtle,
+                        fontSize: AppType.label,
+                        height: 1.5),
+                  ),
+                ),
+              ],
             )
           else
-            ...pending.take(5).map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                            color: AppColors.warning, shape: BoxShape.circle),
+            for (final item in pending.take(5))
+              Container(
+                margin: const EdgeInsets.only(top: AppSpace.s2),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpace.s3, vertical: AppSpace.s3),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceRaised.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: AppColors.warning,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                              color: AppColors.warning.withOpacity(0.5),
+                              blurRadius: 6),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(item.title,
-                            style: const TextStyle(
-                                color: AppColors.inkMuted, fontSize: 13),
-                            overflow: TextOverflow.ellipsis),
-                      ),
-                      if (item.roiScore > 0)
-                        Text('ROI: ${item.roiScore}',
-                            style: const TextStyle(
-                                color: AppColors.gold, fontSize: 10)),
-                    ],
-                  ),
-                )),
+                    ),
+                    const SizedBox(width: AppSpace.s3),
+                    Expanded(
+                      child: Text(item.title,
+                          style: const TextStyle(
+                              color: AppColors.ink, fontSize: 14),
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    if (item.roiScore > 0)
+                      IvBadge('ROI ${item.roiScore}', color: AppColors.gold),
+                  ],
+                ),
+              ),
         ],
       ),
     );

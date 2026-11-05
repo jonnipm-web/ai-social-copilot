@@ -70,9 +70,9 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(widget.itemId));
 
     return Scaffold(
-      backgroundColor: AppColors.ground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         foregroundColor: AppColors.ink,
         title: Text(
           l10n.campaignBuilderTitle,

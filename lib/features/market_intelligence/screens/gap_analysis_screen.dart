@@ -102,9 +102,9 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
       BuildContext context, AsyncValue<GapAnalysis?> asyncGap) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: AppColors.ground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         title:
             Text(l10n.miGapTitle, style: const TextStyle(color: AppColors.ink)),
         iconTheme: const IconThemeData(color: AppColors.ink),

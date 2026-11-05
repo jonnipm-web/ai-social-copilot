@@ -99,10 +99,10 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
     return DefaultTabController(
       length: _tabs.length,
       child: Scaffold(
-        backgroundColor: _kBg,
+        backgroundColor: Colors.transparent,
         drawer: const AppDrawer(),
         appBar: AppBar(
-          backgroundColor: _kBg,
+          backgroundColor: Colors.transparent,
           elevation: 0,
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -222,9 +222,9 @@ class _KnowledgeItemFormScreenState
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: AppColors.ground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         foregroundColor: AppColors.ink,
         title: Text(
           _isEdit ? l10n.knowledgeFormEditTitle : l10n.knowledgeFormNewTitle,

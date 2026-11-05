@@ -87,9 +87,9 @@ class _OpportunityDiscoveryScreenState
         ref.watch(opportunitiesByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
-      backgroundColor: AppColors.ground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         title: Text(l10n.miOpportunityTitle,
             style: const TextStyle(color: AppColors.ink)),
         iconTheme: const IconThemeData(color: AppColors.ink),

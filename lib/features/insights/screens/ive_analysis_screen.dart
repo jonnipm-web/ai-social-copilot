@@ -202,9 +202,9 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
         widget.projectId;
 
     return Scaffold(
-      backgroundColor: AppColors.ground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.canPop()

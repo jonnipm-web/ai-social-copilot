@@ -94,7 +94,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
     final busy = analyzerState.isLoading || _exec.isBusy;
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Colors.transparent,
       drawer: const AppDrawer(),
       appBar: AppBar(
         leading: IconButton(
@@ -107,7 +107,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
             }
           },
         ),
-        backgroundColor: _cardColor,
+        backgroundColor: Colors.transparent,
         title: Text(
           l10n.navWebsiteAnalyzer,
           style: const TextStyle(color: AppColors.ink),

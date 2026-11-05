@@ -60,9 +60,9 @@ class ActionDetailScreen extends ConsumerWidget {
     final itemAsync = ref.watch(actionQueueItemByIdProvider(itemId));
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon:

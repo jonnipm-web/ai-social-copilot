@@ -154,9 +154,9 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
         ref.watch(contentClusterByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon:

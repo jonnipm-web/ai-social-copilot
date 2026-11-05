@@ -79,9 +79,9 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
     final strategyAsync = ref.watch(knowledgeStrategyProvider(itemId));
 
     return Scaffold(
-      backgroundColor: AppColors.ground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         foregroundColor: AppColors.ink,
         title: Text(
           l10n.knowledgeStrategyTitle,

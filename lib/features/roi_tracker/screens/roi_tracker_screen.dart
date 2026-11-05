@@ -212,7 +212,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
     final asyncSummary = ref.watch(roiSummaryProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.ground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
@@ -224,7 +224,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
             }
           },
         ),
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         title: Text(l10n.roiTrackerTitle,
             style: const TextStyle(color: AppColors.ink)),
         iconTheme: const IconThemeData(color: AppColors.ink),

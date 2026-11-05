@@ -2472,5 +2472,9 @@
   "impactIveBoundaryFact": "FACT (server-verified)",
   "impactIveInference": "INFERENCE (derived from facts — not independently verified)",
   "impactIveHypothesis": "HYPOTHESIS (unverified)",
-  "impactIveCannotInvent": "IVE may summarise existing evidence but cannot invent, assume or verify evidence on its own."
+  "impactIveCannotInvent": "IVE may summarise existing evidence but cannot invent, assume or verify evidence on its own.",
+  "dashScoreChartTitle": "Score by analysis",
+  "dashModulesTitle": "Modules",
+  "dashOverviewTitle": "Overview",
+  "dashQuotaTitle": "AI usage"
 }

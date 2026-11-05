@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'app_motion.dart';
 import 'app_tokens.dart';
 
 /// InsightValues Dark Premium theme. Every value comes from [AppColors],
@@ -88,7 +89,10 @@ class AppTheme {
 
     return base.copyWith(
       colorScheme: scheme,
-      scaffoldBackgroundColor: AppColors.ground,
+      // Transparent: IvBackground (app.dart) paints the ground + light fades
+      // behind every route.
+      scaffoldBackgroundColor: Colors.transparent,
+      pageTransitionsTheme: kIvPageTransitionsTheme,
       canvasColor: AppColors.ground,
       dividerColor: AppColors.line,
       textTheme: textTheme,
@@ -96,7 +100,7 @@ class AppTheme {
           color: AppColors.line, thickness: 1, space: 1),
       iconTheme: const IconThemeData(color: AppColors.inkMuted, size: 20),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         foregroundColor: AppColors.ink,
         elevation: 0,

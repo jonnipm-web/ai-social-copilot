@@ -7240,4 +7240,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get impactIveCannotInvent =>
       'IVE may summarise existing evidence but cannot invent, assume or verify evidence on its own.';
+
+  @override
+  String get dashScoreChartTitle => 'Score by analysis';
+
+  @override
+  String get dashModulesTitle => 'Modules';
+
+  @override
+  String get dashOverviewTitle => 'Overview';
+
+  @override
+  String get dashQuotaTitle => 'AI usage';
 }

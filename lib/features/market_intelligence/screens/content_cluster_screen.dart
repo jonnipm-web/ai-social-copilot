@@ -97,9 +97,9 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
         ref.watch(contentClusterByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
-      backgroundColor: AppColors.ground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         title: Text(l10n.miClusterTitle,
             style: const TextStyle(color: AppColors.ink)),
         iconTheme: const IconThemeData(color: AppColors.ink),

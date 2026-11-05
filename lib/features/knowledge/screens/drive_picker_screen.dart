@@ -214,9 +214,9 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
     return Stack(
       children: [
         Scaffold(
-          backgroundColor: _kBg,
+          backgroundColor: Colors.transparent,
           appBar: AppBar(
-            backgroundColor: _kBg,
+            backgroundColor: Colors.transparent,
             foregroundColor: AppColors.ink,
             title: Text(
               l10n.uxDriveImportTitle,

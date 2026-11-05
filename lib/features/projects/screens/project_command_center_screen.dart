@@ -467,7 +467,7 @@ class _ProjectCommandCenterScreenState
         : <String, EcosystemScore>{};
 
     return Scaffold(
-      backgroundColor: AppColors.ground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
@@ -479,7 +479,7 @@ class _ProjectCommandCenterScreenState
             }
           },
         ),
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         title: Text(t.projectCommandTitle,
             style: const TextStyle(color: AppColors.ink)),
         iconTheme: const IconThemeData(color: AppColors.ink),

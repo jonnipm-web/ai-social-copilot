@@ -19,7 +19,7 @@ class CampaignsScreen extends ConsumerWidget {
     final campaignsAsync = ref.watch(campaignsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.ground,
+      backgroundColor: Colors.transparent,
       drawer: const AppDrawer(),
       appBar: AppBar(
         leading: IconButton(
@@ -32,7 +32,7 @@ class CampaignsScreen extends ConsumerWidget {
             }
           },
         ),
-        backgroundColor: AppColors.ground,
+        backgroundColor: Colors.transparent,
         foregroundColor: AppColors.ink,
         title: Text(
           l10n.campaignsTitle,
