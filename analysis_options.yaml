@@ -1,0 +1,7 @@
+# The CI job extracts the Flutter SDK into ./flutter inside the workspace;
+# without this exclusion `flutter analyze` also analyzes the SDK's own
+# examples and fails on them. App rules are otherwise unchanged (defaults).
+analyzer:
+  exclude:
+    - flutter/**
+    - build/**

@@ -19,8 +19,8 @@ import '../../../data/models/ive_interaction_request.dart';
 import '../../../providers/ive_context_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart'
-import 'package:ai_social_copilot/core/theme/app_tokens.dart';
     show showCopilotChat;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 const _kBg = AppColors.ground;

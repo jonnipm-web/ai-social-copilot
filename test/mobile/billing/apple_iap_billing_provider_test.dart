@@ -8,7 +8,6 @@
 //   - Full purchase flow tests require iOS sandbox + Xcode build (GATE-EXT-5/7)
 //     and are intentionally excluded from CI. Marked as "sandbox-only".
 
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ai_social_copilot/mobile/billing/apple_iap_billing_provider.dart';

@@ -23,8 +23,8 @@ import 'context_copilot_widget.dart'
     show showCopilotChat, iveChatOpenNotifier, iveInlineAskVisibleNotifier;
 import 'ive_exclusion_region.dart' show iveExclusionRegionsNotifier;
 import 'ive_placement_engine.dart'
-import 'package:ai_social_copilot/core/theme/app_tokens.dart';
     show computeRestingPosition, IvePlacementInput, IveSafeAreaInsets;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Route bridge ──────────────────────────────────────────────────────────────
 final iveRouteNotifier = ValueNotifier<String>('');

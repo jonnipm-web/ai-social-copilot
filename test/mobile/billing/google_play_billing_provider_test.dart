@@ -8,9 +8,6 @@
 //   - Full purchase flow tests require Google Play sandbox setup (GATE-EXT-6)
 //     and are intentionally excluded from CI. Marked as "sandbox-only".
 
-import 'dart:async';
-
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ai_social_copilot/mobile/billing/google_play_billing_provider.dart';
