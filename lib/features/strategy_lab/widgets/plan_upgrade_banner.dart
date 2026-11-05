@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../l10n/app_localizations.dart';
 import '../data/strategy_builder_api.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 String planDisplayName(AppLocalizations l, String? plan) => switch (plan) {
       'pro' => l.planNamePro,
@@ -36,7 +37,7 @@ class PlanUpgradeBanner extends StatelessWidget {
     final l = AppLocalizations.of(context)!;
     final required = planDisplayName(l, requiredPlan);
     final current = planDisplayName(l, currentPlan);
-    final color = Colors.amber.shade700;
+    final color = AppColors.warning;
     return Container(
       key: const Key('planUpgradeBanner'),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),

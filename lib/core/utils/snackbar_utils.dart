@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../l10n/app_localizations.dart';
 import 'app_exceptions.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 export 'app_exceptions.dart';
 
@@ -195,7 +196,7 @@ void showErrorSnack(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(message),
-      backgroundColor: Colors.red.shade700,
+      backgroundColor: AppColors.negative,
       behavior: SnackBarBehavior.floating,
     ),
   );
@@ -210,7 +211,7 @@ void showInfoSnack(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(message),
-      backgroundColor: Colors.white24,
+      backgroundColor: AppColors.inkSubtle,
       behavior: SnackBarBehavior.floating,
     ),
   );
@@ -220,7 +221,7 @@ void showSuccessSnack(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(message),
-      backgroundColor: Colors.green.shade700,
+      backgroundColor: AppColors.positive,
       behavior: SnackBarBehavior.floating,
     ),
   );

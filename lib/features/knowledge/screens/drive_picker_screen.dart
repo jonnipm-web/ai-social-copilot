@@ -4,6 +4,7 @@ import '../../../core/diagnostics/diagnostic_container.dart';
 import '../../../core/diagnostics/diagnostic_models.dart';
 import '../../../data/services/drive_service.dart';
 import '../../../l10n/app_localizations.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // IVE-COMMERCIAL-OBSERVABILITY-07A — DRIVE category (mission section 04):
 // "session resolution, OAuth stage category, picker stage, list/download/
@@ -31,11 +32,11 @@ void _logDrive(
   );
 }
 
-const _kBg = Color(0xFF0F0F1A);
-const _kCard = Color(0xFF1A1A2E);
-const _kPrimary = Color(0xFF6C63FF);
-const _kGreen = Color(0xFF4CAF50);
-const _kRed = Color(0xFFF44336);
+const _kBg = AppColors.ground;
+const _kCard = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGreen = AppColors.positive;
+const _kRed = AppColors.negative;
 
 class DrivePickerScreen extends StatefulWidget {
   const DrivePickerScreen({super.key});
@@ -216,7 +217,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
           backgroundColor: _kBg,
           appBar: AppBar(
             backgroundColor: _kBg,
-            foregroundColor: Colors.white,
+            foregroundColor: AppColors.ink,
             title: Text(
               l10n.uxDriveImportTitle,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -226,10 +227,10 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                 TextButton.icon(
                   onPressed: _signOut,
                   icon: const Icon(Icons.logout_rounded,
-                      size: 16, color: Colors.white54),
+                      size: 16, color: AppColors.inkMuted),
                   label: Text(l10n.uxDriveSignOut,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 12)),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
                 ),
             ],
           ),
@@ -240,7 +241,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
             color: Colors.black54,
             child: Center(
               child: Card(
-                color: const Color(0xFF1A1A2E),
+                color: AppColors.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(28),
                   child: Column(
@@ -249,7 +250,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                       const CircularProgressIndicator(color: _kPrimary),
                       const SizedBox(height: 16),
                       Text(l10n.uxDriveDownloading,
-                          style: const TextStyle(color: Colors.white70)),
+                          style: const TextStyle(color: AppColors.inkMuted)),
                     ],
                   ),
                 ),
@@ -283,7 +284,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                   Text(
                     l10n.uxDriveConnectTitle,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 18,
                         fontWeight: FontWeight.bold),
                   ),
@@ -291,7 +292,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                   Text(
                     l10n.uxDriveConnectBody,
                     style: const TextStyle(
-                        color: Colors.white54, fontSize: 13, height: 1.5),
+                        color: AppColors.inkMuted, fontSize: 13, height: 1.5),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -310,7 +311,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
+                                  strokeWidth: 2, color: AppColors.ink),
                             )
                           : const Icon(Icons.login_rounded),
                       label: Text(_signing
@@ -318,7 +319,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                           : l10n.uxDriveSignInGoogle),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kPrimary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.onAccent,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
@@ -352,23 +353,23 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                     Text(
                       l10n.uxDriveConnectedAs(_userName!),
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 12),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                     ),
                   ],
                 ),
               const SizedBox(height: 10),
               TextField(
                 controller: _searchCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: AppColors.ink),
                 decoration: InputDecoration(
                   hintText: l10n.uxDriveSearchHint,
-                  hintStyle: const TextStyle(color: Colors.white38),
+                  hintStyle: const TextStyle(color: AppColors.inkSubtle),
                   prefixIcon:
-                      const Icon(Icons.search_rounded, color: Colors.white38),
+                      const Icon(Icons.search_rounded, color: AppColors.inkSubtle),
                   suffixIcon: _searchCtrl.text.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear_rounded,
-                              color: Colors.white38),
+                              color: AppColors.inkSubtle),
                           onPressed: () {
                             _searchCtrl.clear();
                             _loadFiles();
@@ -402,7 +403,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                               color: _kRed, size: 40),
                           const SizedBox(height: 12),
                           Text(_error!,
-                              style: const TextStyle(color: Colors.white54),
+                              style: const TextStyle(color: AppColors.inkMuted),
                               textAlign: TextAlign.center),
                           const SizedBox(height: 16),
                           TextButton(
@@ -417,7 +418,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                           child: Text(
                             l10n.uxDriveNoFiles,
                             style: const TextStyle(
-                                color: Colors.white38, height: 1.6),
+                                color: AppColors.inkSubtle, height: 1.6),
                             textAlign: TextAlign.center,
                           ),
                         )
@@ -451,7 +452,7 @@ class _FileTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: _kCard,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.07)),
+          border: Border.all(color: AppColors.ink.withOpacity(0.07)),
         ),
         child: Row(
           children: [
@@ -464,7 +465,7 @@ class _FileTile extends StatelessWidget {
                   Text(
                     file.name,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 13,
                         fontWeight: FontWeight.w500),
                     maxLines: 2,
@@ -475,13 +476,13 @@ class _FileTile extends StatelessWidget {
                     file.typeLabel == 'Texto'
                         ? AppLocalizations.of(context)!.uxDriveTypeText
                         : file.typeLabel,
-                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                    style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
                   ),
                 ],
               ),
             ),
             const Icon(Icons.arrow_forward_ios_rounded,
-                color: Colors.white24, size: 14),
+                color: AppColors.inkSubtle, size: 14),
           ],
         ),
       ),

@@ -10,6 +10,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/post_provider.dart';
 import '../../../shared/widgets/result_block.dart';
 import '../../../shared/widgets/score_chip.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class HistoryDetailScreen extends ConsumerWidget {
   final String id;
@@ -51,7 +52,7 @@ class HistoryDetailScreen extends ConsumerWidget {
                   onPressed: () => _copyAll(context, gen),
                   icon: const Icon(Icons.copy_all_rounded, size: 16),
                   label: Text(l10n.uxCopyAll),
-                  style: TextButton.styleFrom(foregroundColor: Colors.white70),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.inkMuted),
                 ),
               ) ??
               const SizedBox.shrink(),
@@ -70,12 +71,12 @@ class HistoryDetailScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(Icons.error_outline,
-                        size: 48, color: Colors.white24),
+                        size: 48, color: AppColors.inkSubtle),
                     const SizedBox(height: 16),
                     Text(
                       l10n.uxHistoryItemLoadError,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white70),
+                      style: const TextStyle(color: AppColors.inkMuted),
                     ),
                   ],
                 ),
@@ -88,9 +89,9 @@ class HistoryDetailScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
+                    color: AppColors.ink.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white12),
+                    border: Border.all(color: AppColors.line),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,7 +102,7 @@ class HistoryDetailScreen extends ConsumerWidget {
                             l10n.uxHistoryOriginalText,
                             style: const TextStyle(
                               fontSize: 11,
-                              color: Colors.white38,
+                              color: AppColors.inkSubtle,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -109,14 +110,14 @@ class HistoryDetailScreen extends ConsumerWidget {
                           const Icon(
                             Icons.access_time,
                             size: 12,
-                            color: Colors.white24,
+                            color: AppColors.inkSubtle,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             _formatDateTime(gen.createdAt, l10n),
                             style: const TextStyle(
                               fontSize: 11,
-                              color: Colors.white24,
+                              color: AppColors.inkSubtle,
                             ),
                           ),
                         ],
@@ -192,12 +193,12 @@ class HistoryDetailScreen extends ConsumerWidget {
         (_) => Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Shimmer.fromColors(
-            baseColor: const Color(0xFF1A1A2E),
-            highlightColor: const Color(0xFF2A2A4E),
+            baseColor: AppColors.surface,
+            highlightColor: AppColors.line,
             child: Container(
               height: 120,
               decoration: BoxDecoration(
-                color: const Color(0xFF1A1A2E),
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
               ),
             ),

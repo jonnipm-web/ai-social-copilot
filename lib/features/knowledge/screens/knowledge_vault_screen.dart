@@ -16,6 +16,7 @@ import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
 import '../../../shared/widgets/ive_exclusion_region.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class KnowledgeVaultScreen extends ConsumerStatefulWidget {
   const KnowledgeVaultScreen({super.key});
@@ -54,7 +55,7 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
             .firstOrNull;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: AppColors.ground,
       drawer: const AppDrawer(),
       appBar: AppBar(
         leading: IconButton(
@@ -67,8 +68,8 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
             }
           },
         ),
-        backgroundColor: const Color(0xFF0F0F1A),
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.ground,
+        foregroundColor: AppColors.ink,
         title: Text(
           l10n.knowledgeVaultTitle,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -82,8 +83,8 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF6C63FF),
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.accent,
+        foregroundColor: AppColors.onAccent,
         icon: const Icon(Icons.add_rounded),
         label: Text(l10n.knowledgeVaultNewItem),
         onPressed: () async {
@@ -109,7 +110,7 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
               error: (e, _) => Center(
                 child: Text(
                     l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
-                    style: const TextStyle(color: Colors.white70)),
+                    style: const TextStyle(color: AppColors.inkMuted)),
               ),
               data: (items) => items.isEmpty
                   ? _EmptyState(
@@ -199,14 +200,14 @@ class _Chip extends StatelessWidget {
         child: Chip(
           label: Text(label,
               style: TextStyle(
-                color: selected ? Colors.white : Colors.white54,
+                color: selected ? AppColors.ink : AppColors.inkMuted,
                 fontSize: 12,
               )),
           backgroundColor: selected
-              ? const Color(0xFF6C63FF)
-              : Colors.white.withOpacity(0.07),
+              ? AppColors.accent
+              : AppColors.ink.withOpacity(0.07),
           side: BorderSide(
-              color: selected ? const Color(0xFF6C63FF) : Colors.white12),
+              color: selected ? AppColors.accent : AppColors.line),
           padding: const EdgeInsets.symmetric(horizontal: 4),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
@@ -239,7 +240,7 @@ class _EmptyState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.auto_stories_rounded,
-                size: 72, color: Color(0xFF6C63FF)),
+                size: 72, color: AppColors.accent),
             const SizedBox(height: 16),
             Text(
               projectFiltered
@@ -247,7 +248,7 @@ class _EmptyState extends StatelessWidget {
                       projectName ?? l10n.knowledgeVaultThisProject)
                   : l10n.knowledgeVaultEmptyTitle,
               style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.ink,
                   fontSize: 20,
                   fontWeight: FontWeight.bold),
             ),
@@ -257,13 +258,13 @@ class _EmptyState extends StatelessWidget {
                   ? l10n.knowledgeVaultEmptyProjectBody
                   : l10n.knowledgeVaultEmptyBody,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C63FF),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.onAccent,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
@@ -346,7 +347,7 @@ class _ProjectPickerSheet extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF1A1A2E),
+        color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
@@ -359,7 +360,7 @@ class _ProjectPickerSheet extends ConsumerWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: AppColors.inkSubtle,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -368,7 +369,7 @@ class _ProjectPickerSheet extends ConsumerWidget {
           Text(
             l10n.knowledgeVaultLinkToProject(item.title),
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.ink,
               fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
@@ -384,7 +385,7 @@ class _ProjectPickerSheet extends ConsumerWidget {
                         .map((p) => p.name)
                         .firstOrNull ??
                     item.projectId!),
-                style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 12),
+                style: const TextStyle(color: AppColors.accent, fontSize: 12),
               ),
             ),
           const SizedBox(height: 16),
@@ -403,7 +404,7 @@ class _ProjectPickerSheet extends ConsumerWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(l10n.knowledgeVaultUnlinkedSnack),
-                    backgroundColor: const Color(0xFF6C63FF),
+                    backgroundColor: AppColors.accent,
                   ),
                 );
               }
@@ -426,7 +427,7 @@ class _ProjectPickerSheet extends ConsumerWidget {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(l10n.knowledgeVaultLinkedSnack(p.name)),
-                          backgroundColor: const Color(0xFF4CAF50),
+                          backgroundColor: AppColors.positive,
                         ),
                       );
                     }
@@ -460,24 +461,24 @@ class _ProjectTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: selected
-              ? const Color(0xFF6C63FF).withOpacity(0.15)
-              : const Color(0xFF0F0F1A),
+              ? AppColors.accent.withOpacity(0.15)
+              : AppColors.ground,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? const Color(0xFF6C63FF) : Colors.white12,
+            color: selected ? AppColors.accent : AppColors.line,
           ),
         ),
         child: Row(
           children: [
             Icon(icon,
-                color: selected ? const Color(0xFF6C63FF) : Colors.white38,
+                color: selected ? AppColors.accent : AppColors.inkSubtle,
                 size: 18),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 name,
                 style: TextStyle(
-                  color: selected ? const Color(0xFF6C63FF) : Colors.white70,
+                  color: selected ? AppColors.accent : AppColors.inkMuted,
                   fontSize: 14,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                 ),
@@ -485,7 +486,7 @@ class _ProjectTile extends StatelessWidget {
             ),
             if (selected)
               const Icon(Icons.check_rounded,
-                  color: Color(0xFF6C63FF), size: 18),
+                  color: AppColors.accent, size: 18),
           ],
         ),
       ),
@@ -539,13 +540,13 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
   Color get _statusColor {
     switch (item.status) {
       case 'analyzed':
-        return const Color(0xFF4CAF50);
+        return AppColors.positive;
       case 'processing':
-        return const Color(0xFFFF9800);
+        return AppColors.warning;
       case 'error':
-        return const Color(0xFFF44336);
+        return AppColors.negative;
       default:
-        return Colors.white38;
+        return AppColors.inkSubtle;
     }
   }
 
@@ -564,7 +565,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Card(
-      color: const Color(0xFF1A1A2E),
+      color: AppColors.surface,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
@@ -582,13 +583,13 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
             children: [
               Row(
                 children: [
-                  Icon(_sourceIcon, color: const Color(0xFF6C63FF), size: 18),
+                  Icon(_sourceIcon, color: AppColors.accent, size: 18),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       item.title,
                       style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontSize: 15,
                           fontWeight: FontWeight.w600),
                     ),
@@ -606,13 +607,13 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                 Row(
                   children: [
                     const Icon(Icons.folder_rounded,
-                        color: Color(0xFF6C63FF), size: 12),
+                        color: AppColors.accent, size: 12),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         projectName!,
                         style: const TextStyle(
-                            color: Color(0xFF6C63FF), fontSize: 11),
+                            color: AppColors.accent, fontSize: 11),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -623,7 +624,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                 const SizedBox(height: 4),
                 Text(l10n.knowledgeVaultNicheLabel(item.niche!),
                     style:
-                        const TextStyle(color: Colors.white54, fontSize: 12)),
+                        const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
               ],
               const SizedBox(height: 12),
               // COMMERCIAL-EXPERIENCE-CLOSURE-16R (mission Section 05) —
@@ -655,8 +656,8 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                         ? Icons.insights_rounded
                         : Icons.auto_awesome_rounded,
                     color: item.status == 'processing'
-                        ? Colors.white24
-                        : const Color(0xFF6C63FF),
+                        ? AppColors.inkSubtle
+                        : AppColors.accent,
                     enabled: item.status != 'processing',
                     onTap: () async {
                       if (item.status == 'analyzed') {
@@ -696,7 +697,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                             SnackBar(
                               content: Text(l10n.knowledgeVaultAnalyzeError(
                                   extractErrorMessage(e, l10n))),
-                              backgroundColor: const Color(0xFFF44336),
+                              backgroundColor: AppColors.negative,
                             ),
                           );
                         }
@@ -706,7 +707,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                   _ActionButton(
                     label: l10n.knowledgeVaultEdit,
                     icon: Icons.edit_rounded,
-                    color: Colors.white24,
+                    color: AppColors.inkSubtle,
                     onTap: () => context.push(
                       AppConstants.routeKnowledgeEdit
                           .replaceFirst(':id', item.id),
@@ -725,7 +726,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                           ? l10n.knowledgeVaultAddToProject
                           : l10n.knowledgeVaultChangeProject,
                       icon: Icons.folder_special_rounded,
-                      color: const Color(0xFF00BCD4),
+                      color: AppColors.info,
                       onTap: () => _showProjectPicker(
                         context,
                         ref,
@@ -745,7 +746,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                   if (item.status == 'analyzed')
                     IconButton(
                       icon: const Icon(Icons.auto_awesome_rounded,
-                          color: Color(0xFF6C63FF)),
+                          color: AppColors.accent),
                       iconSize: 20,
                       tooltip: l10n.knowledgeVaultExplainWithIve,
                       onPressed: () {
@@ -773,7 +774,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                     ),
                   IconButton(
                     icon:
-                        const Icon(Icons.delete_rounded, color: Colors.white24),
+                        const Icon(Icons.delete_rounded, color: AppColors.inkSubtle),
                     iconSize: 20,
                     onPressed: () => _confirmDelete(context, ref, l10n),
                     tooltip: l10n.knowledgeVaultDelete,
@@ -792,23 +793,23 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: AppColors.surface,
         title: Text(l10n.knowledgeVaultDeleteItemTitle,
-            style: const TextStyle(color: Colors.white)),
+            style: const TextStyle(color: AppColors.ink)),
         content: Text(
           l10n.knowledgeVaultDeleteItemBody(item.title),
-          style: const TextStyle(color: Colors.white70),
+          style: const TextStyle(color: AppColors.inkMuted),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(l10n.commonCancel,
-                style: const TextStyle(color: Colors.white54)),
+                style: const TextStyle(color: AppColors.inkMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text(l10n.knowledgeVaultDelete,
-                style: const TextStyle(color: Color(0xFFF44336))),
+                style: const TextStyle(color: AppColors.negative)),
           ),
         ],
       ),
@@ -823,7 +824,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
           SnackBar(
             content: Text(
                 l10n.knowledgeVaultDeleteError(extractErrorMessage(e, l10n))),
-            backgroundColor: const Color(0xFFF44336),
+            backgroundColor: AppColors.negative,
           ),
         );
       }

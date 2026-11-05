@@ -8,6 +8,7 @@ import '../../../providers/website_analyzer_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class WebsiteAnalyzerScreen extends ConsumerStatefulWidget {
   const WebsiteAnalyzerScreen({super.key});
@@ -25,10 +26,10 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final _exec = AiExecutionController();
 
-  static const Color _background = Color(0xFF0F0F1A);
-  static const Color _cardColor = Color(0xFF1A1A2E);
-  static const Color _primary = Color(0xFF6C63FF);
-  static const Color _accent = Color(0xFF00BCD4);
+  static const Color _background = AppColors.ground;
+  static const Color _cardColor = AppColors.surface;
+  static const Color _primary = AppColors.accent;
+  static const Color _accent = AppColors.info;
 
   @override
   void dispose() {
@@ -38,9 +39,9 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
   }
 
   Color _scoreColor(num score) {
-    if (score > 70) return Colors.green;
-    if (score > 40) return Colors.orange;
-    return Colors.red;
+    if (score > 70) return AppColors.positive;
+    if (score > 40) return AppColors.warning;
+    return AppColors.negative;
   }
 
   Future<void> _analyze() async {
@@ -71,7 +72,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
           SnackBar(
             content: Text(
                 l10n.websiteAnalyzerAnalyzeError(extractErrorMessage(e, l10n))),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.negative,
           ),
         );
       }
@@ -109,9 +110,9 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
         backgroundColor: _cardColor,
         title: Text(
           l10n.navWebsiteAnalyzer,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: AppColors.ink),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: AppColors.ink),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -137,7 +138,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                       Text(
                         l10n.websiteAnalyzerHeaderTitle,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -148,7 +149,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                   Text(
                     l10n.websiteAnalyzerHeaderBody,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                      color: AppColors.ink.withOpacity(0.7),
                       fontSize: 14,
                     ),
                   ),
@@ -166,15 +167,15 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                 children: [
                   TextFormField(
                     controller: _urlController,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: AppColors.ink),
                     keyboardType: TextInputType.url,
                     decoration: InputDecoration(
                       labelText: l10n.websiteAnalyzerUrlLabel,
                       labelStyle:
-                          TextStyle(color: Colors.white.withOpacity(0.6)),
+                          TextStyle(color: AppColors.ink.withOpacity(0.6)),
                       hintText: l10n.websiteAnalyzerUrlHint,
                       hintStyle:
-                          TextStyle(color: Colors.white.withOpacity(0.3)),
+                          TextStyle(color: AppColors.ink.withOpacity(0.3)),
                       prefixIcon: Icon(Icons.link, color: _accent),
                       filled: true,
                       fillColor: _cardColor,
@@ -188,12 +189,12 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Colors.red),
+                        borderSide: const BorderSide(color: AppColors.negative),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide:
-                            const BorderSide(color: Colors.red, width: 2),
+                            const BorderSide(color: AppColors.negative, width: 2),
                       ),
                     ),
                     validator: (value) {
@@ -218,7 +219,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: AppColors.ink,
                               ),
                             )
                           : const Icon(Icons.search),
@@ -233,7 +234,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _accent,
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.ink,
                         disabledBackgroundColor: _accent.withOpacity(0.5),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -255,7 +256,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                 Text(
                   l10n.websiteAnalyzerPreviousTitle,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -281,7 +282,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                 child: Text(
                   l10n.websiteAnalyzerLoadError(
                       extractErrorMessage(error, l10n)),
-                  style: const TextStyle(color: Colors.red),
+                  style: const TextStyle(color: AppColors.negative),
                 ),
               ),
               data: (analyses) {
@@ -291,20 +292,20 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                     decoration: BoxDecoration(
                       color: _cardColor,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      border: Border.all(color: AppColors.ink.withOpacity(0.1)),
                     ),
                     child: Column(
                       children: [
                         Icon(
                           Icons.language_outlined,
                           size: 48,
-                          color: Colors.white.withOpacity(0.3),
+                          color: AppColors.ink.withOpacity(0.3),
                         ),
                         const SizedBox(height: 12),
                         Text(
                           l10n.websiteAnalyzerEmptyTitle,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
+                            color: AppColors.ink.withOpacity(0.5),
                             fontSize: 16,
                           ),
                         ),
@@ -312,7 +313,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                         Text(
                           l10n.websiteAnalyzerEmptyBody,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.3),
+                            color: AppColors.ink.withOpacity(0.3),
                             fontSize: 13,
                           ),
                         ),
@@ -360,7 +361,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                                   child: Text(
                                     displayUrl,
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: AppColors.ink,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
                                     ),
@@ -370,14 +371,14 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                                 Text(
                                   dateStr,
                                   style: TextStyle(
-                                    color: Colors.white.withOpacity(0.4),
+                                    color: AppColors.ink.withOpacity(0.4),
                                     fontSize: 12,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
                                 Icon(
                                   Icons.chevron_right,
-                                  color: Colors.white.withOpacity(0.4),
+                                  color: AppColors.ink.withOpacity(0.4),
                                   size: 18,
                                 ),
                               ],

@@ -20,6 +20,7 @@ import '../../../providers/project_provider.dart';
 import '../../../providers/quota_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/ive_exclusion_region.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -103,7 +104,7 @@ class DashboardScreen extends ConsumerWidget {
                       l10n.dashWelcome,
                       style:
                           Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: Colors.white,
+                                color: AppColors.ink,
                                 fontWeight: FontWeight.bold,
                               ),
                     ),
@@ -111,7 +112,7 @@ class DashboardScreen extends ConsumerWidget {
                     Text(
                       l10n.dashPlanLabel(profile?.roleLabel ?? 'Free'),
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 14),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 14),
                     ),
                     const SizedBox(height: 24),
 
@@ -164,7 +165,7 @@ class DashboardScreen extends ConsumerWidget {
                       icon: Icons.auto_fix_high_rounded,
                       label: l10n.dashImproveWithAi,
                       subtitle: l10n.dashImproveWithAiSubtitle,
-                      color: const Color(0xFF6C63FF),
+                      color: AppColors.accent,
                       onTap: () => context.go(AppConstants.routeGenerate),
                     ),
                     const SizedBox(height: 12),
@@ -284,12 +285,12 @@ class DashboardScreen extends ConsumerWidget {
                     // Painel Admin
                     if (isAdmin) ...[
                       const SizedBox(height: 24),
-                      const Divider(color: Colors.white12),
+                      const Divider(color: AppColors.line),
                       const SizedBox(height: 12),
                       Text(
                         l10n.dashAdminSectionTitle,
                         style: const TextStyle(
-                          color: Color(0xFFFFD700),
+                          color: AppColors.gold,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.5,
@@ -302,7 +303,7 @@ class DashboardScreen extends ConsumerWidget {
                         icon: Icons.admin_panel_settings_rounded,
                         label: l10n.dashAdminPanelButton,
                         subtitle: l10n.dashAdminPanelSubtitle,
-                        color: const Color(0xFFFFD700),
+                        color: AppColors.gold,
                         onTap: () => context.go(AppConstants.routeAdmin),
                       ),
                     ],
@@ -335,9 +336,9 @@ class _UsageCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: AppColors.ink.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: AppColors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -346,7 +347,7 @@ class _UsageCard extends StatelessWidget {
             children: [
               Icon(
                 isFull ? Icons.lock_outline_rounded : Icons.bolt_rounded,
-                color: isFull ? Colors.red : Colors.teal,
+                color: isFull ? AppColors.negative : AppColors.accent,
                 size: 18,
               ),
               const SizedBox(width: 8),
@@ -365,7 +366,7 @@ class _UsageCard extends StatelessWidget {
                       : l10n.dashUsageRemaining(
                           remaining.toString(), limit.toString()),
                   style: TextStyle(
-                    color: isFull ? Colors.red : Colors.white,
+                    color: isFull ? AppColors.negative : AppColors.ink,
                     fontWeight: FontWeight.w600,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -374,7 +375,7 @@ class _UsageCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 l10n.dashUsageThisMonth,
-                style: const TextStyle(color: Colors.white38, fontSize: 12),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
               ),
             ],
           ),
@@ -383,12 +384,12 @@ class _UsageCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: pct.clamp(0.0, 1.0),
-              backgroundColor: Colors.white12,
+              backgroundColor: AppColors.line,
               color: isFull
-                  ? Colors.red
+                  ? AppColors.negative
                   : pct > 0.8
-                      ? Colors.orange
-                      : const Color(0xFF6C63FF),
+                      ? AppColors.warning
+                      : AppColors.accent,
               minHeight: 6,
             ),
           ),
@@ -446,7 +447,7 @@ class _ActionButton extends StatelessWidget {
                     Text(
                       subtitle,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 12),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                     ),
                   ],
                 ),
@@ -473,10 +474,10 @@ class _ShortcutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const color = Colors.white70;
+    const color = AppColors.inkMuted;
 
     return Material(
-      color: Colors.white.withOpacity(0.05),
+      color: AppColors.ink.withOpacity(0.05),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -485,7 +486,7 @@ class _ShortcutCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white12),
+            border: Border.all(color: AppColors.line),
           ),
           child: Column(
             children: [
@@ -535,11 +536,11 @@ class _ProShortcutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const proColor = Color(0xFFFFD700);
-    final color = hasAccess ? Colors.white70 : Colors.white54;
+    const proColor = AppColors.gold;
+    final color = hasAccess ? AppColors.inkMuted : AppColors.inkMuted;
 
     return Material(
-      color: Colors.white.withOpacity(0.05),
+      color: AppColors.ink.withOpacity(0.05),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -549,7 +550,7 @@ class _ProShortcutCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: hasAccess ? Colors.white12 : proColor.withOpacity(0.25),
+              color: hasAccess ? AppColors.line : proColor.withOpacity(0.25),
             ),
           ),
           child: Column(
@@ -592,7 +593,7 @@ class _ProShortcutCard extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 benefit,
-                style: const TextStyle(color: Colors.white38, fontSize: 10.5),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10.5),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -603,7 +604,7 @@ class _ProShortcutCard extends StatelessWidget {
                     hasAccess
                         ? Icons.check_circle_rounded
                         : Icons.lock_outline_rounded,
-                    color: hasAccess ? const Color(0xFF4CAF50) : proColor,
+                    color: hasAccess ? AppColors.positive : proColor,
                     size: 11,
                   ),
                   const SizedBox(width: 4),
@@ -611,7 +612,7 @@ class _ProShortcutCard extends StatelessWidget {
                     child: Text(
                       hasAccess ? l10n.dashProIncluded : l10n.dashProUpgradeCta,
                       style: TextStyle(
-                        color: hasAccess ? const Color(0xFF4CAF50) : proColor,
+                        color: hasAccess ? AppColors.positive : proColor,
                         fontSize: 9.5,
                         fontWeight: FontWeight.w600,
                       ),
@@ -738,25 +739,25 @@ class _StatTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFD700).withOpacity(0.08),
+        color: AppColors.gold.withOpacity(0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.2)),
+        border: Border.all(color: AppColors.gold.withOpacity(0.2)),
       ),
       child: Column(
         children: [
-          Icon(icon, color: const Color(0xFFFFD700), size: 20),
+          Icon(icon, color: AppColors.gold, size: 20),
           const SizedBox(height: 4),
           Text(
             value,
             style: const TextStyle(
-              color: Color(0xFFFFD700),
+              color: AppColors.gold,
               fontWeight: FontWeight.bold,
               fontSize: 18,
             ),
           ),
           Text(
             label,
-            style: const TextStyle(color: Colors.white38, fontSize: 10),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
           ),
         ],
       ),
@@ -775,9 +776,9 @@ int _avgOpportunityScore(List<MarketAnalysis> analyses) {
 }
 
 Color _execScoreColor(int score) {
-  if (score >= 80) return const Color(0xFF4CAF50);
-  if (score >= 60) return const Color(0xFFFF9800);
-  return const Color(0xFFF44336);
+  if (score >= 80) return AppColors.positive;
+  if (score >= 60) return AppColors.warning;
+  return AppColors.negative;
 }
 
 // ── R6: Portfolio summary (INFORMATION) ─────────────────────────────────────
@@ -804,7 +805,7 @@ class _PortfolioSummaryRow extends StatelessWidget {
                       color: color, fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 2),
               Text(label,
-                  style: const TextStyle(color: Colors.white38, fontSize: 10),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
                   textAlign: TextAlign.center),
             ],
           ),
@@ -813,20 +814,20 @@ class _PortfolioSummaryRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: AppColors.ink.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: AppColors.line),
       ),
       child: Row(
         children: [
           stat('$activeProjects', l10n.dashPortfolioActiveProjects,
-              const Color(0xFF6C63FF)),
+              AppColors.accent),
           stat('$analysesCount', l10n.dashPortfolioAnalyses,
-              const Color(0xFF00BCD4)),
+              AppColors.info),
           stat(
             avgScore > 0 ? '$avgScore' : '—',
             l10n.dashPortfolioAvgScore,
-            avgScore > 0 ? _execScoreColor(avgScore) : Colors.white38,
+            avgScore > 0 ? _execScoreColor(avgScore) : AppColors.inkSubtle,
           ),
         ],
       ),
@@ -857,13 +858,13 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
     final recs = <_Rec>[];
 
     if (projects.isEmpty) {
-      recs.add(_Rec(Icons.add_business_rounded, const Color(0xFF6C63FF),
+      recs.add(_Rec(Icons.add_business_rounded, AppColors.accent,
           l10n.dashRecEmptyProjectTitle, l10n.dashRecEmptyProjectBody));
     } else if (analyses.isEmpty) {
       final projectName = projects.first.name;
       recs.add(_Rec(
           Icons.analytics_rounded,
-          const Color(0xFF00BCD4),
+          AppColors.info,
           l10n.dashRecEmptyAnalysisTitle,
           l10n.dashRecEmptyAnalysisBody(projectName)));
     }
@@ -871,7 +872,7 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
     if (pending.isNotEmpty) {
       recs.add(_Rec(
           Icons.bolt_rounded,
-          const Color(0xFFFFD700),
+          AppColors.gold,
           l10n.dashRecPendingActionsTitle(pending.length),
           l10n.dashRecPendingActionsBody));
     }
@@ -882,7 +883,7 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
       final top = topAnalyses.first;
       recs.add(_Rec(
         Icons.star_rounded,
-        const Color(0xFF4CAF50),
+        AppColors.positive,
         l10n.dashRecTopOpportunityTitle(top.niche ?? top.input),
         l10n.dashRecTopOpportunityBody(top.opportunityScore),
       ));
@@ -893,9 +894,9 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: AppColors.ink.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.25)),
+        border: Border.all(color: AppColors.gold.withOpacity(0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -903,13 +904,13 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
           Row(
             children: [
               const Icon(Icons.lightbulb_rounded,
-                  color: Color(0xFFFFD700), size: 18),
+                  color: AppColors.gold, size: 18),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(l10n.dashRecommendationsTitle,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 14,
                         fontWeight: FontWeight.bold)),
               ),
@@ -935,13 +936,13 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
                         children: [
                           Text(r.title,
                               style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.ink,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600)),
                           const SizedBox(height: 2),
                           Text(r.body,
                               style: const TextStyle(
-                                  color: Colors.white54,
+                                  color: AppColors.inkMuted,
                                   fontSize: 11,
                                   height: 1.4)),
                         ],
@@ -976,9 +977,9 @@ class _DashboardPendingActionsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: AppColors.ink.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: AppColors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -986,12 +987,12 @@ class _DashboardPendingActionsCard extends StatelessWidget {
           Row(
             children: [
               const Icon(Icons.bolt_rounded,
-                  color: Color(0xFFFF9800), size: 18),
+                  color: AppColors.warning, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(l10n.dashPendingActionsTitle,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 14,
                         fontWeight: FontWeight.bold)),
               ),
@@ -1002,7 +1003,7 @@ class _DashboardPendingActionsCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8)),
                 child: Text(l10n.dashPendingActionsViewAll,
                     style: const TextStyle(
-                        color: Color(0xFF6C63FF), fontSize: 12)),
+                        color: AppColors.accent, fontSize: 12)),
               ),
             ],
           ),
@@ -1013,7 +1014,7 @@ class _DashboardPendingActionsCard extends StatelessWidget {
               child: Text(
                 l10n.dashPendingActionsEmpty,
                 style: const TextStyle(
-                    color: Colors.white38, fontSize: 12, height: 1.5),
+                    color: AppColors.inkSubtle, fontSize: 12, height: 1.5),
               ),
             )
           else
@@ -1025,19 +1026,19 @@ class _DashboardPendingActionsCard extends StatelessWidget {
                         width: 6,
                         height: 6,
                         decoration: const BoxDecoration(
-                            color: Color(0xFFFF9800), shape: BoxShape.circle),
+                            color: AppColors.warning, shape: BoxShape.circle),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(item.title,
                             style: const TextStyle(
-                                color: Colors.white70, fontSize: 13),
+                                color: AppColors.inkMuted, fontSize: 13),
                             overflow: TextOverflow.ellipsis),
                       ),
                       if (item.roiScore > 0)
                         Text('ROI: ${item.roiScore}',
                             style: const TextStyle(
-                                color: Color(0xFFFFD700), fontSize: 10)),
+                                color: AppColors.gold, fontSize: 10)),
                     ],
                   ),
                 )),

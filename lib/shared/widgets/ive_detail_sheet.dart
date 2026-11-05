@@ -6,6 +6,7 @@ import '../../data/models/copilot_context_data.dart';
 import '../../data/models/ive_interaction_request.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/ive_context_provider.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 /// Generic drill-down sheet IVE opens when user taps any data item.
 ///
@@ -84,7 +85,7 @@ class IveDetailSheet extends ConsumerWidget {
       maxChildSize: 0.92,
       builder: (_, ctrl) => Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF1A1635),
+          color: AppColors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -128,7 +129,7 @@ class IveDetailSheet extends ConsumerWidget {
           width: 40,
           height: 4,
           decoration: BoxDecoration(
-            color: Colors.white24,
+            color: AppColors.inkSubtle,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -142,14 +143,14 @@ class IveDetailSheet extends ConsumerWidget {
             child: Text(
               title,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.ink,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close_rounded, color: Colors.white38),
+            icon: const Icon(Icons.close_rounded, color: AppColors.inkSubtle),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -158,9 +159,9 @@ class IveDetailSheet extends ConsumerWidget {
   Widget _explanation(AppLocalizations l10n) => Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF2A2450),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+          border: Border.all(color: AppColors.accent.withOpacity(0.3)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,7 +172,7 @@ class IveDetailSheet extends ConsumerWidget {
               Text(
                 l10n.ctxIveDetailExplanation,
                 style: const TextStyle(
-                    color: Color(0xFF6C63FF),
+                    color: AppColors.accent,
                     fontWeight: FontWeight.bold,
                     fontSize: 13),
               ),
@@ -180,7 +181,7 @@ class IveDetailSheet extends ConsumerWidget {
             Text(
               humanExplanation,
               style: const TextStyle(
-                  color: Colors.white, fontSize: 14, height: 1.5),
+                  color: AppColors.ink, fontSize: 14, height: 1.5),
             ),
           ],
         ),
@@ -192,7 +193,7 @@ class IveDetailSheet extends ConsumerWidget {
           Text(
             l10n.impactEvidence,
             style: const TextStyle(
-                color: Colors.white70,
+                color: AppColors.inkMuted,
                 fontSize: 13,
                 fontWeight: FontWeight.bold),
           ),
@@ -205,7 +206,7 @@ class IveDetailSheet extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF12101E),
+          color: AppColors.ground,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -219,13 +220,13 @@ class IveDetailSheet extends ConsumerWidget {
                 children: [
                   Text(e.label,
                       style: const TextStyle(
-                          color: Colors.white70,
+                          color: AppColors.inkMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
                   Text(e.value,
                       style:
-                          const TextStyle(color: Colors.white, fontSize: 13)),
+                          const TextStyle(color: AppColors.ink, fontSize: 13)),
                 ],
               ),
             ),
@@ -236,10 +237,10 @@ class IveDetailSheet extends ConsumerWidget {
   Widget _expandedSection(AppLocalizations l10n) => ExpansionTile(
         title: Text(
           l10n.ctxIveDetailNumbers,
-          style: const TextStyle(color: Colors.white54, fontSize: 13),
+          style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
         ),
-        iconColor: Colors.white38,
-        collapsedIconColor: Colors.white24,
+        iconColor: AppColors.inkSubtle,
+        collapsedIconColor: AppColors.inkSubtle,
         tilePadding: EdgeInsets.zero,
         children: expandedData!.entries
             .map((e) => Padding(
@@ -249,10 +250,10 @@ class IveDetailSheet extends ConsumerWidget {
                       Expanded(
                           child: Text(e.key,
                               style: const TextStyle(
-                                  color: Colors.white38, fontSize: 12))),
+                                  color: AppColors.inkSubtle, fontSize: 12))),
                       Text(e.value.toString(),
                           style: const TextStyle(
-                              color: Colors.white60, fontSize: 12)),
+                              color: AppColors.inkMuted, fontSize: 12)),
                     ],
                   ),
                 ))
@@ -265,7 +266,7 @@ class IveDetailSheet extends ConsumerWidget {
           Text(
             l10n.ctxIveDetailSuggestedActions,
             style: const TextStyle(
-                color: Colors.white70,
+                color: AppColors.inkMuted,
                 fontSize: 13,
                 fontWeight: FontWeight.bold),
           ),
@@ -278,15 +279,15 @@ class IveDetailSheet extends ConsumerWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         leading: Text(action.emoji, style: const TextStyle(fontSize: 20)),
         title: Text(action.label,
-            style: const TextStyle(color: Colors.white, fontSize: 13)),
+            style: const TextStyle(color: AppColors.ink, fontSize: 13)),
         subtitle: action.description != null
             ? Text(action.description!,
-                style: const TextStyle(color: Colors.white38, fontSize: 11))
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11))
             : null,
         trailing: action.onTap != null
             ? IconButton(
                 icon: const Icon(Icons.arrow_forward_ios_rounded,
-                    size: 14, color: Color(0xFF6C63FF)),
+                    size: 14, color: AppColors.accent),
                 onPressed: () {
                   Navigator.of(context).pop();
                   action.onTap!();
@@ -308,8 +309,8 @@ class IveDetailSheet extends ConsumerWidget {
         width: double.infinity,
         child: OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF6C63FF),
-            side: const BorderSide(color: Color(0xFF6C63FF)),
+            foregroundColor: AppColors.accent,
+            side: const BorderSide(color: AppColors.accent),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

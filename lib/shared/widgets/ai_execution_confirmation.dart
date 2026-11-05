@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/diagnostic_session_provider.dart'
     show diagnosticLoggerProvider;
 import '../../providers/quota_provider.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // IVE-COMMERCIAL-FOUNDATION-11 — the ONE reusable AI-execution
 // confirmation + processing-state mechanism for the whole app (mission
@@ -271,22 +272,22 @@ class AiExecutionController extends ChangeNotifier {
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1B2E),
+        backgroundColor: AppColors.surface,
         title: Text(l10n.aiConfirmTitle,
-            style: const TextStyle(color: Colors.white)),
+            style: const TextStyle(color: AppColors.ink)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               costLine,
-              style: const TextStyle(color: Colors.white70),
+              style: const TextStyle(color: AppColors.inkMuted),
             ),
             if (quota != null) ...[
               const SizedBox(height: 8),
               Text(
                 l10n.aiConfirmRemaining(quota.remaining, quota.limit),
-                style: const TextStyle(color: Colors.white38, fontSize: 12),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
               ),
             ],
           ],
@@ -319,7 +320,7 @@ class QuotaInfoSnapshot {
 /// animation system: this is UI polish, not a new architecture surface.
 class AiThinkingIndicator extends StatefulWidget {
   const AiThinkingIndicator(
-      {super.key, this.color = const Color(0xFFFFD93D), this.size = 6});
+      {super.key, this.color = AppColors.warning, this.size = 6});
   final Color color;
   final double size;
 

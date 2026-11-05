@@ -12,6 +12,7 @@ import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/ive_exclusion_region.dart';
 import '../widgets/action_engine_execute_sheet.dart';
 import 'action_detail_screen.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // COMMERCIAL-V1-UX-RECONCILIATION (PT/EN commercial matrix) -- item.status
 // raw enum values ('pending'/'approved'/'executing'/'completed'/
@@ -55,14 +56,14 @@ String actionEngineTypeLabel(AppLocalizations l10n, String type) {
 }
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg = Color(0xFF0F0F1A);
-const _kCard = Color(0xFF1A1A2E);
-const _kPrimary = Color(0xFF6C63FF);
-const _kGreen = Color(0xFF4CAF50);
-const _kOrange = Color(0xFFFF9800);
-const _kRed = Color(0xFFF44336);
-const _kCyan = Color(0xFF00BCD4);
-const _kGold = Color(0xFFFFD700);
+const _kBg = AppColors.ground;
+const _kCard = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGreen = AppColors.positive;
+const _kOrange = AppColors.warning;
+const _kRed = AppColors.negative;
+const _kCyan = AppColors.info;
+const _kGold = AppColors.gold;
 
 // ════════════════════════════════════════════════════════════════════════════
 // Action Engine Screen (M5) — Feature-flagged
@@ -95,7 +96,7 @@ class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
         elevation: 0,
         leading: IconButton(
           icon:
-              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+              const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeDashboard),
@@ -103,7 +104,7 @@ class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
         title: Text(
           l10n.navActionEngine,
           style: const TextStyle(
-              color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
       drawer: const AppDrawer(),
@@ -132,18 +133,18 @@ class _FeatureGated extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.bolt_rounded, color: Colors.white24, size: 64),
+            const Icon(Icons.bolt_rounded, color: AppColors.inkSubtle, size: 64),
             const SizedBox(height: 20),
             Text(l10n.navActionEngine,
                 style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 22,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Text(
               l10n.actionEngineComingSoonBody,
               style: const TextStyle(
-                  color: Colors.white54, fontSize: 13, height: 1.5),
+                  color: AppColors.inkMuted, fontSize: 13, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -188,7 +189,7 @@ class _ActionBody extends ConsumerWidget {
           const Center(child: CircularProgressIndicator(color: _kPrimary)),
       error: (e, _) => Center(
         child: Text(l10n.commonError,
-            style: const TextStyle(color: Colors.white54)),
+            style: const TextStyle(color: AppColors.inkMuted)),
       ),
       data: (items) {
         // 'approved' sits between 'pending' (awaiting approval) and
@@ -308,7 +309,7 @@ class _SummaryChip extends StatelessWidget {
                     color: color, fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 2),
             Text(label,
-                style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
           ],
         ),
       ),
@@ -371,13 +372,13 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
 
   static Color _statusColor(String s) {
     const m = {
-      'pending': Color(0xFFFF9800),
-      'approved': Color(0xFF6C63FF),
-      'executing': Color(0xFF00BCD4),
-      'completed': Color(0xFF4CAF50),
-      'cancelled': Color(0xFFF44336),
+      'pending': AppColors.warning,
+      'approved': AppColors.accent,
+      'executing': AppColors.info,
+      'completed': AppColors.positive,
+      'cancelled': AppColors.negative,
     };
-    return m[s] ?? Colors.white38;
+    return m[s] ?? AppColors.inkSubtle;
   }
 
   Future<void> _run(Future<void> Function() action) async {
@@ -404,18 +405,18 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: AppColors.surface,
         title: Text(l10n.actionEngineDeleteTitle,
-            style: const TextStyle(color: Colors.white, fontSize: 16)),
+            style: const TextStyle(color: AppColors.ink, fontSize: 16)),
         content: Text(
           l10n.actionEngineDeleteBody(widget.item.title),
-          style: const TextStyle(color: Colors.white54, fontSize: 13),
+          style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(l10n.commonCancel,
-                style: const TextStyle(color: Colors.white38)),
+                style: const TextStyle(color: AppColors.inkSubtle)),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
@@ -464,7 +465,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
         decoration: BoxDecoration(
           color: _kCard,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.07)),
+          border: Border.all(color: AppColors.ink.withOpacity(0.07)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,7 +476,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                   child: Text(
                     item.title,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 13,
                         fontWeight: FontWeight.w600),
                   ),
@@ -508,7 +509,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                   ),
                 const SizedBox(width: 4),
                 const Icon(Icons.chevron_right_rounded,
-                    color: Colors.white24, size: 16),
+                    color: AppColors.inkSubtle, size: 16),
               ],
             ),
             if (projectName != null) ...[
@@ -516,12 +517,12 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
               Row(
                 children: [
                   const Icon(Icons.folder_outlined,
-                      size: 12, color: Colors.white38),
+                      size: 12, color: AppColors.inkSubtle),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(projectName,
                         style: const TextStyle(
-                            color: Colors.white38, fontSize: 11),
+                            color: AppColors.inkSubtle, fontSize: 11),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                   ),
@@ -586,7 +587,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                 if (!_loading)
                   IconButton(
                     icon: const Icon(Icons.delete_outline_rounded,
-                        color: Colors.white24, size: 16),
+                        color: AppColors.inkSubtle, size: 16),
                     onPressed: _confirmDelete,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -611,12 +612,12 @@ class _ScoreBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: AppColors.ink.withOpacity(0.05),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         '$label: $value',
-        style: TextStyle(color: Colors.white54, fontSize: isSmaller ? 9 : 10),
+        style: TextStyle(color: AppColors.inkMuted, fontSize: isSmaller ? 9 : 10),
       ),
     );
   }
@@ -706,13 +707,13 @@ class _Chip extends StatelessWidget {
             color: selected ? _kPrimary : _kCard,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected ? _kPrimary : Colors.white.withOpacity(0.12),
+              color: selected ? _kPrimary : AppColors.ink.withOpacity(0.12),
             ),
           ),
           child: Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.white : Colors.white54,
+              color: selected ? AppColors.ink : AppColors.inkMuted,
               fontSize: 12,
               fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
             ),
@@ -733,12 +734,12 @@ class _EmptyQueue extends StatelessWidget {
       padding: const EdgeInsets.all(32),
       child: Column(
         children: [
-          const Icon(Icons.bolt_rounded, color: Colors.white24, size: 56),
+          const Icon(Icons.bolt_rounded, color: AppColors.inkSubtle, size: 56),
           const SizedBox(height: 16),
           Text(
             l10n.actionEngineEmptyTitle,
             style: const TextStyle(
-                color: Colors.white70,
+                color: AppColors.inkMuted,
                 fontSize: 16,
                 fontWeight: FontWeight.bold),
           ),
@@ -746,7 +747,7 @@ class _EmptyQueue extends StatelessWidget {
           Text(
             l10n.actionEngineEmptyBody,
             style: const TextStyle(
-                color: Colors.white38, fontSize: 12, height: 1.5),
+                color: AppColors.inkSubtle, fontSize: 12, height: 1.5),
             textAlign: TextAlign.center,
           ),
         ],

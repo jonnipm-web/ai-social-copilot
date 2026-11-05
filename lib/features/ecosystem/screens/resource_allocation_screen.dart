@@ -9,15 +9,16 @@ import '../../../data/models/resource_allocation.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
-const _kBg = Color(0xFF0A0A14);
-const _kCard = Color(0xFF12121E);
-const _kBorder = Color(0xFF1E1E30);
-const _kPrimary = Color(0xFF7C4DFF);
-const _kGreen = Color(0xFF00E676);
-const _kOrange = Color(0xFFFF9100);
-const _kRed = Color(0xFFFF1744);
-const _kGold = Color(0xFFFFD700);
+const _kBg = AppColors.ground;
+const _kCard = AppColors.ground;
+const _kBorder = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGreen = AppColors.positive;
+const _kOrange = AppColors.warning;
+const _kRed = AppColors.negative;
+const _kGold = AppColors.gold;
 
 // ════════════════════════════════════════════════════════════════════════════
 // Resource Allocation Screen — Módulo 5
@@ -53,14 +54,14 @@ class _ResourceAllocationScreenState
         elevation: 0,
         leading: IconButton(
           icon:
-              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+              const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeEcosystem),
         ),
         title: Text(l10n.ecoResourceAllocationTitle,
             style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold)),
+                color: AppColors.ink, fontWeight: FontWeight.bold)),
       ),
       body: SafeArea(
         top: false,
@@ -154,7 +155,7 @@ class _ModeChip extends StatelessWidget {
         child: Text(label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: active ? Colors.white : Colors.white54,
+              color: active ? AppColors.ink : AppColors.inkMuted,
               fontWeight: active ? FontWeight.bold : FontWeight.normal,
               fontSize: 13,
             )),
@@ -181,7 +182,7 @@ class _BudgetSelector extends StatelessWidget {
       children: [
         Text(AppLocalizations.of(context)!.ecoAllocBudgetQuestion,
             style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.ink,
                 fontWeight: FontWeight.bold,
                 fontSize: 14)),
         const SizedBox(height: 10),
@@ -204,7 +205,7 @@ class _BudgetSelector extends StatelessWidget {
                 ),
                 child: Text(display,
                     style: TextStyle(
-                      color: active ? _kGold : Colors.white54,
+                      color: active ? _kGold : AppColors.inkMuted,
                       fontWeight: active ? FontWeight.bold : FontWeight.normal,
                       fontSize: 14,
                     )),
@@ -234,7 +235,7 @@ class _AllocationResult extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF1A1040), Color(0xFF12121E)],
+              colors: [AppColors.surface, AppColors.ground],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -259,7 +260,7 @@ class _AllocationResult extends StatelessWidget {
               const SizedBox(height: 8),
               Text(alloc.summary,
                   style: const TextStyle(
-                      color: Colors.white, fontSize: 13, height: 1.5)),
+                      color: AppColors.ink, fontSize: 13, height: 1.5)),
             ],
           ),
         ),
@@ -267,11 +268,11 @@ class _AllocationResult extends StatelessWidget {
 
         if (alloc.items.isEmpty)
           Text(l10n.ecoAllocEmpty,
-              style: const TextStyle(color: Colors.white54))
+              style: const TextStyle(color: AppColors.inkMuted))
         else ...[
           Text(l10n.ecoAllocDistribution(alloc.totalBudget.round(), label),
               style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.ink,
                   fontWeight: FontWeight.bold,
                   fontSize: 14)),
           const SizedBox(height: 12),
@@ -319,7 +320,7 @@ class _AllocationItem extends StatelessWidget {
               Expanded(
                 child: Text(item.score.project.name,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontWeight: FontWeight.bold,
                         fontSize: 13)),
               ),
@@ -328,7 +329,7 @@ class _AllocationItem extends StatelessWidget {
                       color: color, fontWeight: FontWeight.bold, fontSize: 15)),
               const SizedBox(width: 6),
               Text('${item.percentage.round()}%',
-                  style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
             ],
           ),
           const SizedBox(height: 8),
@@ -336,21 +337,21 @@ class _AllocationItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(3),
             child: LinearProgressIndicator(
               value: item.percentage / 100,
-              backgroundColor: Colors.white10,
+              backgroundColor: AppColors.line,
               valueColor: AlwaysStoppedAnimation(color),
               minHeight: 6,
             ),
           ),
           const SizedBox(height: 6),
           Text(item.reason,
-              style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
           const SizedBox(height: 2),
           Text(
               l10n.uxfEcoAllocationScoreLine(
                   '${item.score.ecosystemScore}',
                   item.score.recommendationEmoji,
                   ecosystemVerdictLabel(item.score.recommendation, l10n)),
-              style: const TextStyle(color: Colors.white38, fontSize: 10)),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
         ],
       ),
     );

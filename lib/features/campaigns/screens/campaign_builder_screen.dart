@@ -13,6 +13,7 @@ import '../../../providers/knowledge_provider.dart';
 import '../../../providers/strategy_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class CampaignBuilderScreen extends ConsumerStatefulWidget {
   const CampaignBuilderScreen({super.key, required this.itemId});
@@ -69,10 +70,10 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(widget.itemId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: AppColors.ground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F1A),
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.ground,
+        foregroundColor: AppColors.ink,
         title: Text(
           l10n.campaignBuilderTitle,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -82,19 +83,19 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
             child: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
-                style: const TextStyle(color: Colors.white70))),
+                style: const TextStyle(color: AppColors.inkMuted))),
         data: (item) {
           if (item == null) {
             return Center(
                 child: Text(l10n.campaignBuilderItemNotFound,
-                    style: const TextStyle(color: Colors.white70)));
+                    style: const TextStyle(color: AppColors.inkMuted)));
           }
           return analysisAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(
                 child: Text(
                     l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
-                    style: const TextStyle(color: Colors.white70))),
+                    style: const TextStyle(color: AppColors.inkMuted))),
             data: (analysis) {
               if (analysis == null) {
                 return _noAnalysis(context, l10n);
@@ -115,18 +116,18 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.analytics_outlined,
-                size: 64, color: Color(0xFF6C63FF)),
+                size: 64, color: AppColors.accent),
             const SizedBox(height: 16),
             Text(
               l10n.campaignBuilderNoAnalysisBody,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C63FF),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.onAccent,
               ),
               onPressed: () => Navigator.pop(context),
               child: Text(l10n.commonBack),
@@ -148,21 +149,21 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFF6C63FF).withOpacity(0.1),
+              color: AppColors.accent.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
               border:
-                  Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+                  Border.all(color: AppColors.accent.withOpacity(0.3)),
             ),
             child: Row(
               children: [
                 const Icon(Icons.auto_stories_rounded,
-                    color: Color(0xFF6C63FF), size: 20),
+                    color: AppColors.accent, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     item.title,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 14,
                         fontWeight: FontWeight.w600),
                   ),
@@ -188,17 +189,17 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                   decoration: BoxDecoration(
                     color: sel
-                        ? const Color(0xFF6C63FF).withOpacity(0.2)
-                        : const Color(0xFF1A1A2E),
+                        ? AppColors.accent.withOpacity(0.2)
+                        : AppColors.surface,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: sel ? const Color(0xFF6C63FF) : Colors.white12,
+                      color: sel ? AppColors.accent : AppColors.line,
                     ),
                   ),
                   child: Text(
                     campaignObjectiveLabel(obj, l10n),
                     style: TextStyle(
-                      color: sel ? const Color(0xFF6C63FF) : Colors.white54,
+                      color: sel ? AppColors.accent : AppColors.inkMuted,
                       fontSize: 12,
                       fontWeight: sel ? FontWeight.w600 : FontWeight.normal,
                     ),
@@ -224,18 +225,18 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       color: sel
-                          ? const Color(0xFF6C63FF).withOpacity(0.2)
-                          : const Color(0xFF1A1A2E),
+                          ? AppColors.accent.withOpacity(0.2)
+                          : AppColors.surface,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: sel ? const Color(0xFF6C63FF) : Colors.white12,
+                        color: sel ? AppColors.accent : AppColors.line,
                       ),
                     ),
                     child: Text(
                       '${d}d',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: sel ? const Color(0xFF6C63FF) : Colors.white54,
+                        color: sel ? AppColors.accent : AppColors.inkMuted,
                         fontSize: 12,
                         fontWeight: sel ? FontWeight.w600 : FontWeight.normal,
                       ),
@@ -271,11 +272,11 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                   decoration: BoxDecoration(
                     color: sel
-                        ? const Color(0xFF00BCD4).withOpacity(0.15)
-                        : const Color(0xFF1A1A2E),
+                        ? AppColors.info.withOpacity(0.15)
+                        : AppColors.surface,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: sel ? const Color(0xFF00BCD4) : Colors.white12,
+                      color: sel ? AppColors.info : AppColors.line,
                     ),
                   ),
                   child: Row(
@@ -283,12 +284,12 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
                     children: [
                       if (sel)
                         const Icon(Icons.check_circle_rounded,
-                            color: Color(0xFF00BCD4), size: 12),
+                            color: AppColors.info, size: 12),
                       if (sel) const SizedBox(width: 4),
                       Text(
                         ch,
                         style: TextStyle(
-                          color: sel ? const Color(0xFF00BCD4) : Colors.white54,
+                          color: sel ? AppColors.info : AppColors.inkMuted,
                           fontSize: 12,
                           fontWeight: sel ? FontWeight.w600 : FontWeight.normal,
                         ),
@@ -307,8 +308,8 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
             width: double.infinity,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C63FF),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.onAccent,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
@@ -318,7 +319,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2, color: AppColors.ink),
                     )
                   : const Icon(Icons.campaign_rounded),
               label: Text(
@@ -339,7 +340,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
               child: Text(
                 l10n.campaignBuilderSelectChannelWarning,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFFF44336), fontSize: 12),
+                style: const TextStyle(color: AppColors.negative, fontSize: 12),
               ),
             ),
         ],
@@ -394,7 +395,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(l10n.campaignBuilderGenerateError),
-            backgroundColor: const Color(0xFFF44336),
+            backgroundColor: AppColors.negative,
           ),
         );
       }
@@ -407,7 +408,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
     return Text(
       text,
       style: const TextStyle(
-          color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+          color: AppColors.inkMuted, fontSize: 13, fontWeight: FontWeight.w600),
     );
   }
 }

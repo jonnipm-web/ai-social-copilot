@@ -29,6 +29,7 @@ import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart'
     show showCopilotChat;
 import '../../../shared/widgets/translated_content_notice.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class ProjectCommandCenterScreen extends ConsumerStatefulWidget {
   const ProjectCommandCenterScreen({super.key});
@@ -113,11 +114,11 @@ class _ProjectCommandCenterScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(t.projectCommandCreatedSuccess),
-            backgroundColor: const Color(0xFF6BCB77),
+            backgroundColor: AppColors.positive,
             duration: const Duration(seconds: 5),
             action: SnackBarAction(
               label: t.projectCommandAddSources,
-              textColor: Colors.white,
+              textColor: AppColors.ink,
               onPressed: () => context.push(
                 AppConstants.routeKnowledgeNew,
                 extra: {'projectId': pid},
@@ -133,7 +134,7 @@ class _ProjectCommandCenterScreenState
           SnackBar(
               content:
                   Text(extractErrorMessage(e, AppLocalizations.of(context))),
-              backgroundColor: Colors.red),
+              backgroundColor: AppColors.negative),
         );
       }
     } finally {
@@ -184,23 +185,23 @@ class _ProjectCommandCenterScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: AppColors.surface,
         title: Text(t.projectCommandDeleteConfirmTitle,
-            style: const TextStyle(color: Colors.white)),
+            style: const TextStyle(color: AppColors.ink)),
         content: Text(
           t.projectCommandDeleteConfirmBody(project.name),
-          style: const TextStyle(color: Colors.white70),
+          style: const TextStyle(color: AppColors.inkMuted),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(t.commonCancel,
-                style: const TextStyle(color: Colors.white54)),
+                style: const TextStyle(color: AppColors.inkMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style:
-                TextButton.styleFrom(foregroundColor: const Color(0xFFFF6B6B)),
+                TextButton.styleFrom(foregroundColor: AppColors.negative),
             child: Text(t.projectCommandDelete),
           ),
         ],
@@ -215,7 +216,7 @@ class _ProjectCommandCenterScreenState
             SnackBar(
                 content: Text(
                     t.projectCommandDeleteError(extractErrorMessage(e, t))),
-                backgroundColor: Colors.red),
+                backgroundColor: AppColors.negative),
           );
         }
       }
@@ -242,10 +243,10 @@ class _ProjectCommandCenterScreenState
           content: Text(
             t.projectCommandNoKnowledgeWarning,
           ),
-          backgroundColor: const Color(0xFFFF9800),
+          backgroundColor: AppColors.warning,
           action: SnackBarAction(
             label: t.oppAdd,
-            textColor: Colors.white,
+            textColor: AppColors.ink,
             onPressed: () => context.push(
               AppConstants.routeKnowledgeNew,
               extra: {'projectId': project.id},
@@ -286,7 +287,7 @@ class _ProjectCommandCenterScreenState
       SnackBar(
         content:
             Text(t.projectCommandAnalyzingSnackbar(project.name, items.length)),
-        backgroundColor: const Color(0xFF6C63FF),
+        backgroundColor: AppColors.accent,
         duration: const Duration(seconds: 30),
       ),
     );
@@ -348,10 +349,10 @@ class _ProjectCommandCenterScreenState
         SnackBar(
           content: Text(t.projectCommandOpportunitiesGenerated(
               opportunities.length, project.name)),
-          backgroundColor: const Color(0xFF4CAF50),
+          backgroundColor: AppColors.positive,
           action: SnackBarAction(
             label: t.projectCommandView,
-            textColor: Colors.white,
+            textColor: AppColors.ink,
             onPressed: () => context.go(AppConstants.routeOpportunityLab),
           ),
           duration: const Duration(seconds: 6),
@@ -364,7 +365,7 @@ class _ProjectCommandCenterScreenState
         SnackBar(
           content:
               Text(t.projectCommandAnalyzeError(extractErrorMessage(e, t))),
-          backgroundColor: const Color(0xFFF44336),
+          backgroundColor: AppColors.negative,
         ),
       );
     }
@@ -466,7 +467,7 @@ class _ProjectCommandCenterScreenState
         : <String, EcosystemScore>{};
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: AppColors.ground,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
@@ -478,10 +479,10 @@ class _ProjectCommandCenterScreenState
             }
           },
         ),
-        backgroundColor: const Color(0xFF0F0F1A),
+        backgroundColor: AppColors.ground,
         title: Text(t.projectCommandTitle,
-            style: const TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+            style: const TextStyle(color: AppColors.ink)),
+        iconTheme: const IconThemeData(color: AppColors.ink),
         actions: [
           // Refresh
           IconButton(
@@ -491,10 +492,10 @@ class _ProjectCommandCenterScreenState
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Color(0xFF6BCB77),
+                      color: AppColors.positive,
                     ),
                   )
-                : const Icon(Icons.refresh_rounded, color: Color(0xFF6BCB77)),
+                : const Icon(Icons.refresh_rounded, color: AppColors.positive),
             tooltip: t.projectCommandRefreshTooltip,
             onPressed: _refreshing ? null : _refresh,
           ),
@@ -502,7 +503,7 @@ class _ProjectCommandCenterScreenState
           IconButton(
             icon: Icon(
               _showForm ? Icons.close_rounded : Icons.add_rounded,
-              color: const Color(0xFF6BCB77),
+              color: AppColors.positive,
             ),
             onPressed: () => setState(() => _showForm = !_showForm),
           ),
@@ -515,16 +516,16 @@ class _ProjectCommandCenterScreenState
           Expanded(
             child: asyncProjects.when(
               loading: () => const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF6BCB77))),
+                  child: CircularProgressIndicator(color: AppColors.positive)),
               error: (e, _) => Center(
                   child: Text(
                       t.projectCommandLoadError(extractErrorMessage(e, t)),
-                      style: const TextStyle(color: Colors.redAccent))),
+                      style: const TextStyle(color: AppColors.negative))),
               data: (projects) => projects.isEmpty
                   ? _buildEmpty(t)
                   : RefreshIndicator(
-                      color: const Color(0xFF6BCB77),
-                      backgroundColor: const Color(0xFF1A1A2E),
+                      color: AppColors.positive,
+                      backgroundColor: AppColors.surface,
                       onRefresh: _refresh,
                       child: _buildProjectList(projects, scoresMap),
                     ),
@@ -540,20 +541,20 @@ class _ProjectCommandCenterScreenState
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.rocket_launch_outlined,
-                color: Colors.white24, size: 64),
+                color: AppColors.inkSubtle, size: 64),
             const SizedBox(height: 16),
             Text(t.projectCommandEmptyTitle,
-                style: const TextStyle(color: Colors.white38, fontSize: 16)),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 16)),
             const SizedBox(height: 8),
             Text(t.projectCommandEmptySubtitle,
-                style: const TextStyle(color: Colors.white24, fontSize: 13)),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 13)),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () => setState(() => _showForm = true),
               icon: const Icon(Icons.add_rounded),
               label: Text(t.projectCommandNewProject),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6BCB77),
+                backgroundColor: AppColors.positive,
                 foregroundColor: Colors.black,
               ),
             ),
@@ -567,16 +568,16 @@ class _ProjectCommandCenterScreenState
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF6BCB77).withOpacity(0.3)),
+        border: Border.all(color: AppColors.positive.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(t.projectCommandNewProject,
               style: const TextStyle(
-                  color: Color(0xFF6BCB77), fontWeight: FontWeight.bold)),
+                  color: AppColors.positive, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           _Field(
               controller: _nameCtrl,
@@ -594,7 +595,7 @@ class _ProjectCommandCenterScreenState
               hint: t.projectCommandFieldUrlHint),
           const SizedBox(height: 10),
           Text(t.projectCommandFieldTypeLabel,
-              style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
@@ -604,15 +605,15 @@ class _ProjectCommandCenterScreenState
                     label: Text(_projectTypeLabel(type, t)),
                     selected: _type == type,
                     onSelected: (_) => setState(() => _type = type),
-                    selectedColor: const Color(0xFF6BCB77),
+                    selectedColor: AppColors.positive,
                     labelStyle: TextStyle(
-                        color: _type == type ? Colors.black : Colors.white60,
+                        color: _type == type ? Colors.black : AppColors.inkMuted,
                         fontSize: 12),
-                    backgroundColor: const Color(0xFF0F0F1A),
+                    backgroundColor: AppColors.ground,
                     side: BorderSide(
                         color: _type == type
-                            ? const Color(0xFF6BCB77)
-                            : const Color(0xFF333355)),
+                            ? AppColors.positive
+                            : AppColors.line),
                   ),
                 )
                 .toList(),
@@ -624,8 +625,8 @@ class _ProjectCommandCenterScreenState
                 child: OutlinedButton(
                   onPressed: () => setState(() => _showForm = false),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white54,
-                    side: const BorderSide(color: Color(0xFF333355)),
+                    foregroundColor: AppColors.inkMuted,
+                    side: const BorderSide(color: AppColors.line),
                   ),
                   child: Text(t.commonCancel),
                 ),
@@ -635,7 +636,7 @@ class _ProjectCommandCenterScreenState
                 child: ElevatedButton(
                   onPressed: _saving ? null : _save,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6BCB77),
+                    backgroundColor: AppColors.positive,
                     foregroundColor: Colors.black,
                   ),
                   child: _saving
@@ -707,24 +708,24 @@ class _Field extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
-      style: const TextStyle(color: Colors.white, fontSize: 13),
+      style: const TextStyle(color: AppColors.ink, fontSize: 13),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: const TextStyle(color: Colors.white54, fontSize: 12),
-        hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+        labelStyle: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
+        hintStyle: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
         filled: true,
-        fillColor: const Color(0xFF0F0F1A),
+        fillColor: AppColors.ground,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF333355)),
+          borderSide: const BorderSide(color: AppColors.line),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF6BCB77)),
+          borderSide: const BorderSide(color: AppColors.positive),
         ),
       ),
     );
@@ -757,13 +758,13 @@ class _ProjectCard extends StatelessWidget {
   Color get _statusColor {
     switch (project.status) {
       case 'active':
-        return const Color(0xFF6BCB77);
+        return AppColors.positive;
       case 'completed':
-        return const Color(0xFF4D96FF);
+        return AppColors.info;
       case 'paused':
-        return const Color(0xFFFFD93D);
+        return AppColors.warning;
       default:
-        return Colors.white38;
+        return AppColors.inkSubtle;
     }
   }
 
@@ -809,7 +810,7 @@ class _ProjectCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A2E),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: _statusColor.withOpacity(0.2)),
         ),
@@ -826,13 +827,13 @@ class _ProjectCard extends StatelessWidget {
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6BCB77).withOpacity(0.1),
+                          color: AppColors.positive.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
                           child: Text('#$rank',
                               style: const TextStyle(
-                                  color: Color(0xFF6BCB77),
+                                  color: AppColors.positive,
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold)),
                         ),
@@ -841,7 +842,7 @@ class _ProjectCard extends StatelessWidget {
                       Expanded(
                         child: Text(project.name,
                             style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.ink,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15)),
                       ),
@@ -884,7 +885,7 @@ class _ProjectCard extends StatelessWidget {
                       padding: const EdgeInsets.only(left: 38),
                       child: Text(project.presentedDescription,
                           style: const TextStyle(
-                              color: Colors.white54, fontSize: 12),
+                              color: AppColors.inkMuted, fontSize: 12),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis),
                     ),
@@ -901,7 +902,7 @@ class _ProjectCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(ecosystemVerdictLabel(s.recommendation, t),
                               style: const TextStyle(
-                                  color: Color(0xFFAB83FF),
+                                  color: AppColors.accent,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600)),
                         ],
@@ -914,23 +915,23 @@ class _ProjectCard extends StatelessWidget {
                       _StatChip(
                           label: t.projectCommandStatOpportunity,
                           value: '$oppScore',
-                          color: const Color(0xFF00BCD4)),
+                          color: AppColors.info),
                       const SizedBox(width: 8),
                       _StatChip(
                           label: t.projectCommandStatPotential,
                           value: revenue,
-                          color: const Color(0xFFFFD93D)),
+                          color: AppColors.warning),
                       const SizedBox(width: 8),
                       _StatChip(
                           label: t.projectCommandStatDeadline,
                           value: _fmtPrazo(project.timeToRevenueDays, t),
-                          color: const Color(0xFFAB83FF)),
+                          color: AppColors.accent),
                     ],
                   ),
                 ],
               ),
             ),
-            const Divider(color: Color(0xFF333355), height: 1),
+            const Divider(color: AppColors.line, height: 1),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
@@ -938,31 +939,31 @@ class _ProjectCard extends StatelessWidget {
                   _ActionBtn(
                     icon: Icons.info_outline_rounded,
                     label: t.projectCommandActionDetail,
-                    color: const Color(0xFF6C63FF),
+                    color: AppColors.accent,
                     onTap: onTap,
                   ),
                   if (onAnalyze != null)
                     _ActionBtn(
                         icon: Icons.analytics_rounded,
                         label: t.projectCommandActionAnalysis,
-                        color: const Color(0xFF00BCD4),
+                        color: AppColors.info,
                         onTap: onAnalyze!),
                   if (onIveAnalysis != null)
                     _ActionBtn(
                         icon: Icons.psychology_rounded,
                         label: 'IVE',
-                        color: const Color(0xFF6C63FF),
+                        color: AppColors.accent,
                         onTap: onIveAnalysis!),
                   _ActionBtn(
                     icon: Icons.play_arrow_rounded,
                     label: t.projectCommandActionActivate,
-                    color: const Color(0xFF6BCB77),
+                    color: AppColors.positive,
                     onTap: () => onStatusChange('active'),
                   ),
                   _ActionBtn(
                     icon: Icons.delete_rounded,
                     label: t.projectCommandDelete,
-                    color: const Color(0xFFFF6B6B),
+                    color: AppColors.negative,
                     onTap: onDelete,
                   ),
                 ],
@@ -975,9 +976,9 @@ class _ProjectCard extends StatelessWidget {
   }
 
   Color _ecoScoreColor(int score) {
-    if (score >= 70) return const Color(0xFF6BCB77);
-    if (score >= 40) return const Color(0xFFFFD93D);
-    return const Color(0xFFFF6B6B);
+    if (score >= 70) return AppColors.positive;
+    if (score >= 40) return AppColors.warning;
+    return AppColors.negative;
   }
 }
 
@@ -1019,9 +1020,9 @@ class _ProjectDetailSheet extends ConsumerWidget {
   final VoidCallback onOpenConfig;
 
   Color _ecoScoreColor(int score) {
-    if (score >= 70) return const Color(0xFF6BCB77);
-    if (score >= 40) return const Color(0xFFFFD93D);
-    return const Color(0xFFFF6B6B);
+    if (score >= 70) return AppColors.positive;
+    if (score >= 40) return AppColors.warning;
+    return AppColors.negative;
   }
 
   String _fmtRevenue(double v, AppLocalizations t) {
@@ -1042,7 +1043,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
       maxChildSize: 0.95,
       builder: (_, ctrl) => Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF1E1B2E),
+          color: AppColors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: ListView(
@@ -1056,7 +1057,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: AppColors.inkSubtle,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1068,7 +1069,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 Expanded(
                   child: Text(project.name,
                       style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontWeight: FontWeight.bold,
                           fontSize: 18)),
                 ),
@@ -1082,7 +1083,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                               fontWeight: FontWeight.bold)),
                       Text(t.projectCommandEcoScoreLabel,
                           style: const TextStyle(
-                              color: Colors.white38, fontSize: 10)),
+                              color: AppColors.inkSubtle, fontSize: 10)),
                     ],
                   ),
               ],
@@ -1091,13 +1092,13 @@ class _ProjectDetailSheet extends ConsumerWidget {
             if (project.presentedDescription.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(project.presentedDescription,
-                  style: const TextStyle(color: Colors.white60, fontSize: 13)),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 13)),
             ],
             if (project.url != null) ...[
               const SizedBox(height: 4),
               Text(project.url!,
                   style:
-                      const TextStyle(color: Color(0xFF6C63FF), fontSize: 12)),
+                      const TextStyle(color: AppColors.accent, fontSize: 12)),
             ],
             const SizedBox(height: 16),
 
@@ -1122,10 +1123,10 @@ class _ProjectDetailSheet extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFAB83FF).withOpacity(0.08),
+                  color: AppColors.accent.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                      color: const Color(0xFFAB83FF).withOpacity(0.3)),
+                      color: AppColors.accent.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
@@ -1135,7 +1136,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                     Expanded(
                       child: Text(ecosystemVerdictLabel(s.recommendation, t),
                           style: const TextStyle(
-                              color: Color(0xFFAB83FF),
+                              color: AppColors.accent,
                               fontWeight: FontWeight.bold,
                               fontSize: 14)),
                     ),
@@ -1160,11 +1161,11 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   Text(
                     t.projectCommandActionsStats(
                         s.completedActions, s.actionCount, s.completionRate),
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                   ),
                   Text(
                     t.projectCommandTotalRoi(_fmtRevenue(s.totalRoi, t)),
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                   ),
                 ],
               ),
@@ -1180,21 +1181,21 @@ class _ProjectDetailSheet extends ConsumerWidget {
                     child: _MetricTile(
                         label: t.projectCommandStatOpportunity,
                         value: '${project.opportunityScore}',
-                        color: const Color(0xFF00BCD4)),
+                        color: AppColors.info),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: _MetricTile(
                         label: t.projectCommandMetricComplexity,
                         value: '${project.complexityScore}',
-                        color: const Color(0xFFFFD93D)),
+                        color: AppColors.warning),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: _MetricTile(
                         label: t.projectCommandStatPotential,
                         value: _fmtRevenue(project.revenuePotential, t),
-                        color: const Color(0xFF6BCB77)),
+                        color: AppColors.positive),
                   ),
                 ],
               ),
@@ -1204,28 +1205,28 @@ class _ProjectDetailSheet extends ConsumerWidget {
             // Pontos fortes
             if (s != null && s.strengths.isNotEmpty) ...[
               _sectionTitle(t.projectCommandSectionStrengths),
-              ..._bullets(s.strengths, const Color(0xFF6BCB77), '✓ '),
+              ..._bullets(s.strengths, AppColors.positive, '✓ '),
               const SizedBox(height: 12),
             ],
 
             // Riscos
             if (s != null && s.risks.isNotEmpty) ...[
               _sectionTitle(t.opportunityDetailRisksTitle),
-              ..._bullets(s.risks, const Color(0xFFFF6B6B), '⚠ '),
+              ..._bullets(s.risks, AppColors.negative, '⚠ '),
               const SizedBox(height: 12),
             ],
 
             // Quick wins
             if (s != null && s.quickWins.isNotEmpty) ...[
               _sectionTitle(t.projectCommandSectionQuickWins),
-              ..._bullets(s.quickWins, const Color(0xFFFFD93D), '⚡ '),
+              ..._bullets(s.quickWins, AppColors.warning, '⚡ '),
               const SizedBox(height: 12),
             ],
 
             // Next actions (from detailsJson)
             if (project.nextActions.isNotEmpty) ...[
               _sectionTitle(t.projectCommandSectionNextActions),
-              ..._bullets(project.nextActions, const Color(0xFFAB83FF), '→ '),
+              ..._bullets(project.nextActions, AppColors.accent, '→ '),
               const SizedBox(height: 12),
             ],
 
@@ -1233,7 +1234,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
 
             // Intelligence Profile section
             if (intelligenceProfile != null) ...[
-              const Divider(color: Color(0xFF333355)),
+              const Divider(color: AppColors.line),
               const SizedBox(height: 12),
               _sectionTitle(t.projectCommandSectionIntelligenceProfile),
               _intelligenceSection(context, ref, intelligenceProfile!),
@@ -1244,7 +1245,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
             // Phase B, Section 04/09) — persistent per-project state, not
             // the unrelated portfolio-wide simulation on
             // resource_allocation_screen.dart.
-            const Divider(color: Color(0xFF333355)),
+            const Divider(color: AppColors.line),
             const SizedBox(height: 12),
             _sectionTitle(t.projectCommandSectionResourceAllocation),
             _ResourceAllocationSection(
@@ -1253,7 +1254,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
 
-            const Divider(color: Color(0xFF333355)),
+            const Divider(color: AppColors.line),
             const SizedBox(height: 12),
 
             // Action buttons
@@ -1263,7 +1264,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   child: _SheetButton(
                     icon: Icons.lightbulb_outline_rounded,
                     label: t.projectAnalyzeIdea,
-                    color: const Color(0xFF00BCD4),
+                    color: AppColors.info,
                     onTap: onAnalyzeIdea,
                   ),
                 ),
@@ -1273,7 +1274,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                     child: _SheetButton(
                       icon: Icons.analytics_rounded,
                       label: t.projectCommandViewMarketAnalysis,
-                      color: const Color(0xFF00BCD4),
+                      color: AppColors.info,
                       onTap: onAnalyze!,
                     ),
                   ),
@@ -1288,7 +1289,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                     child: _SheetButton(
                       icon: Icons.menu_book_rounded,
                       label: t.projectCommandViewKnowledge,
-                      color: const Color(0xFF00BCD4),
+                      color: AppColors.info,
                       onTap: onViewKnowledge!,
                     ),
                   ),
@@ -1299,7 +1300,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                     child: _SheetButton(
                       icon: Icons.psychology_rounded,
                       label: t.projectCommandAnalyzeWithAi,
-                      color: const Color(0xFF6C63FF),
+                      color: AppColors.accent,
                       onTap: onAnalyzeKnowledge!,
                     ),
                   ),
@@ -1313,7 +1314,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                     child: _SheetButton(
                       icon: Icons.auto_awesome_rounded,
                       label: t.insightTitle,
-                      color: const Color(0xFF6C63FF),
+                      color: AppColors.accent,
                       onTap: onIveAnalysis!,
                     ),
                   ),
@@ -1327,7 +1328,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   child: _SheetButton(
                     icon: Icons.play_arrow_rounded,
                     label: t.projectCommandActionActivate,
-                    color: const Color(0xFF6BCB77),
+                    color: AppColors.positive,
                     onTap: () => onStatusChange('active'),
                   ),
                 ),
@@ -1336,7 +1337,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   child: _SheetButton(
                     icon: Icons.pause_rounded,
                     label: t.projectCommandActionPause,
-                    color: const Color(0xFFFFD93D),
+                    color: AppColors.warning,
                     onTap: () => onStatusChange('paused'),
                   ),
                 ),
@@ -1345,7 +1346,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   child: _SheetButton(
                     icon: Icons.check_circle_outline_rounded,
                     label: t.projectCommandActionComplete,
-                    color: const Color(0xFF4D96FF),
+                    color: AppColors.info,
                     onTap: () => onStatusChange('completed'),
                   ),
                 ),
@@ -1358,7 +1359,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   child: _SheetButton(
                     icon: Icons.settings_outlined,
                     label: t.projectOpenConfig,
-                    color: const Color(0xFFAAAAAA),
+                    color: AppColors.inkMuted,
                     onTap: onOpenConfig,
                   ),
                 ),
@@ -1367,7 +1368,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   child: _SheetButton(
                     icon: Icons.delete_outline_rounded,
                     label: t.projectCommandDeleteProject,
-                    color: const Color(0xFFFF6B6B),
+                    color: AppColors.negative,
                     onTap: onDelete,
                   ),
                 ),
@@ -1389,10 +1390,10 @@ class _ProjectDetailSheet extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF6C63FF).withOpacity(0.07),
+            color: AppColors.accent.withOpacity(0.07),
             borderRadius: BorderRadius.circular(10),
             border:
-                Border.all(color: const Color(0xFF6C63FF).withOpacity(0.25)),
+                Border.all(color: AppColors.accent.withOpacity(0.25)),
           ),
           child: Row(
             children: [
@@ -1405,7 +1406,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                     Text(
                       t.projectCommandMaturityLabel(p.maturityLabel(t)),
                       style: const TextStyle(
-                        color: Color(0xFF6C63FF),
+                        color: AppColors.accent,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
@@ -1416,7 +1417,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                         child: Text(
                           p.dataWarning(t)!,
                           style: const TextStyle(
-                              color: Colors.orange, fontSize: 11),
+                              color: AppColors.warning, fontSize: 11),
                         ),
                       ),
                   ],
@@ -1446,7 +1447,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(t.projectCommandIdentifiedTopics,
               style: const TextStyle(
-                  color: Colors.white38,
+                  color: AppColors.inkSubtle,
                   fontSize: 10,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
@@ -1458,14 +1459,14 @@ class _ProjectDetailSheet extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF00BCD4).withOpacity(0.12),
+                        color: AppColors.info.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                            color: const Color(0xFF00BCD4).withOpacity(0.3)),
+                            color: AppColors.info.withOpacity(0.3)),
                       ),
                       child: Text(t,
                           style: const TextStyle(
-                              color: Color(0xFF00BCD4), fontSize: 10)),
+                              color: AppColors.info, fontSize: 10)),
                     ))
                 .toList(),
           ),
@@ -1476,7 +1477,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(t.projectCommandKnowledgeGaps,
               style: const TextStyle(
-                  color: Colors.white38,
+                  color: AppColors.inkSubtle,
                   fontSize: 10,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
@@ -1486,11 +1487,11 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('⚠ ',
-                        style: TextStyle(color: Colors.orange, fontSize: 11)),
+                        style: TextStyle(color: AppColors.warning, fontSize: 11)),
                     Expanded(
                         child: Text(KnowledgeCoverage.gapLabel(gap, t),
                             style: const TextStyle(
-                                color: Colors.white54, fontSize: 11))),
+                                color: AppColors.inkMuted, fontSize: 11))),
                   ],
                 ),
               )),
@@ -1508,8 +1509,8 @@ class _ProjectDetailSheet extends ConsumerWidget {
           width: double.infinity,
           child: OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF6C63FF),
-              side: const BorderSide(color: Color(0xFF6C63FF)),
+              foregroundColor: AppColors.accent,
+              side: const BorderSide(color: AppColors.accent),
               padding: const EdgeInsets.symmetric(vertical: 10),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
@@ -1570,11 +1571,11 @@ class _ProjectDetailSheet extends ConsumerWidget {
             SizedBox(
               width: 90,
               child: Text(label,
-                  style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
             ),
             Expanded(
               child: Text(value,
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 11),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis),
             ),
@@ -1617,9 +1618,9 @@ class _ProjectDetailSheet extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF1A1A2E),
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF333355)),
+                border: Border.all(color: AppColors.line),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1627,19 +1628,19 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   if (briefing.executiveSummary.isNotEmpty)
                     Text(briefing.executiveSummary,
                         style: const TextStyle(
-                            color: Colors.white70, fontSize: 12, height: 1.4)),
+                            color: AppColors.inkMuted, fontSize: 12, height: 1.4)),
                   if (knowledgeCount != null) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         const Icon(Icons.menu_book_rounded,
-                            size: 13, color: Colors.white38),
+                            size: 13, color: AppColors.inkSubtle),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             t.projectBriefingKnowledgeCount(knowledgeCount),
                             style: const TextStyle(
-                                color: Colors.white54, fontSize: 11),
+                                color: AppColors.inkMuted, fontSize: 11),
                           ),
                         ),
                       ],
@@ -1649,7 +1650,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Text(t.projectBriefingRecentChanges,
                         style: const TextStyle(
-                            color: Colors.white38,
+                            color: AppColors.inkSubtle,
                             fontSize: 10,
                             fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
@@ -1657,7 +1658,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                           padding: const EdgeInsets.only(bottom: 2),
                           child: Text('• ${item.title}',
                               style: const TextStyle(
-                                  color: Colors.white54, fontSize: 11)),
+                                  color: AppColors.inkMuted, fontSize: 11)),
                         )),
                   ],
                 ],
@@ -1673,7 +1674,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(title,
             style: const TextStyle(
-                color: Colors.white54,
+                color: AppColors.inkMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.8)),
@@ -1689,7 +1690,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 Expanded(
                     child: Text(item,
                         style: const TextStyle(
-                            color: Colors.white70, fontSize: 12))),
+                            color: AppColors.inkMuted, fontSize: 12))),
               ],
             ),
           ))
@@ -1796,7 +1797,7 @@ class _ResourceAllocationSectionState
       ),
       error: (e, _) => Text(
         t.projectCommandResourceLoadError,
-        style: const TextStyle(color: Colors.white38, fontSize: 12),
+        style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
       ),
       data: (editState) {
         if (!_controllersInitialized) {
@@ -1824,15 +1825,15 @@ class _ResourceAllocationSectionState
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFF00BCD4).withOpacity(0.08),
+                color: AppColors.info.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: const Color(0xFF00BCD4).withOpacity(0.25)),
+                    color: AppColors.info.withOpacity(0.25)),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.check_circle,
-                      size: 14, color: Color(0xFF00BCD4)),
+                      size: 14, color: AppColors.info),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -1842,13 +1843,13 @@ class _ResourceAllocationSectionState
                         editState.saved.currency,
                       ),
                       style: const TextStyle(
-                          color: Color(0xFF00BCD4), fontSize: 12),
+                          color: AppColors.info, fontSize: 12),
                     ),
                   ),
                   if (editState.isDirty)
                     Text(t.projectCommandEditingBadge,
                         style: const TextStyle(
-                            color: Color(0xFFFFD93D),
+                            color: AppColors.warning,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5)),
@@ -1865,20 +1866,20 @@ class _ResourceAllocationSectionState
                   child: TextField(
                     controller: _hoursController,
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    style: const TextStyle(color: AppColors.ink, fontSize: 13),
                     decoration: InputDecoration(
                       labelText: t.projectCommandHoursLabel,
                       labelStyle:
-                          const TextStyle(color: Colors.white38, fontSize: 12),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
                       errorText: hoursError,
                       isDense: true,
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Colors.white24),
+                        borderSide: const BorderSide(color: AppColors.inkSubtle),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFF6C63FF)),
+                        borderSide: const BorderSide(color: AppColors.accent),
                       ),
                     ),
                     onChanged: (text) {
@@ -1893,21 +1894,21 @@ class _ResourceAllocationSectionState
                     controller: _budgetController,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    style: const TextStyle(color: AppColors.ink, fontSize: 13),
                     decoration: InputDecoration(
                       labelText: t.projectCommandBudgetLabel(
                           editState.preview.currency),
                       labelStyle:
-                          const TextStyle(color: Colors.white38, fontSize: 12),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
                       errorText: budgetError,
                       isDense: true,
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Colors.white24),
+                        borderSide: const BorderSide(color: AppColors.inkSubtle),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFF6C63FF)),
+                        borderSide: const BorderSide(color: AppColors.accent),
                       ),
                     ),
                     onChanged: (text) => _onBudgetChanged(text, notifier, t),
@@ -1926,8 +1927,8 @@ class _ResourceAllocationSectionState
                         label:
                             Text('${h}h', style: const TextStyle(fontSize: 11)),
                         backgroundColor:
-                            const Color(0xFF6C63FF).withOpacity(0.12),
-                        labelStyle: const TextStyle(color: Color(0xFF6C63FF)),
+                            AppColors.accent.withOpacity(0.12),
+                        labelStyle: const TextStyle(color: AppColors.accent),
                         side: BorderSide.none,
                         onPressed: () {
                           notifier.updateHoursPreview(h);
@@ -1951,8 +1952,8 @@ class _ResourceAllocationSectionState
                           }
                         : null,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white54,
-                      side: const BorderSide(color: Colors.white24),
+                      foregroundColor: AppColors.inkMuted,
+                      side: const BorderSide(color: AppColors.inkSubtle),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                     child: Text(t.commonCancel,
@@ -1964,9 +1965,9 @@ class _ResourceAllocationSectionState
                   child: ElevatedButton(
                     onPressed: canSave ? () => notifier.save() : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6C63FF),
+                      backgroundColor: AppColors.accent,
                       disabledBackgroundColor:
-                          const Color(0xFF6C63FF).withOpacity(0.25),
+                          AppColors.accent.withOpacity(0.25),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                     child: isSaving
@@ -1974,11 +1975,11 @@ class _ResourceAllocationSectionState
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                                strokeWidth: 2, color: AppColors.ink),
                           )
                         : Text(t.commonSave,
                             style: const TextStyle(
-                                fontSize: 13, color: Colors.white)),
+                                fontSize: 13, color: AppColors.ink)),
                   ),
                 ),
               ],
@@ -1990,7 +1991,7 @@ class _ResourceAllocationSectionState
                   t.projectCommandSaveAllocationError(
                       extractErrorMessage(editState.error, t)),
                   style:
-                      const TextStyle(color: Color(0xFFFF6B6B), fontSize: 11)),
+                      const TextStyle(color: AppColors.negative, fontSize: 11)),
             ],
             const SizedBox(height: 10),
 
@@ -2010,8 +2011,8 @@ class _ResourceAllocationSectionState
               width: double.infinity,
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF00BCD4),
-                  side: const BorderSide(color: Color(0xFF00BCD4)),
+                  foregroundColor: AppColors.info,
+                  side: const BorderSide(color: AppColors.info),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
@@ -2174,7 +2175,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
       expand: false,
       builder: (context, ctrl) => Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF1A1A2E),
+          color: AppColors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: ListView(
@@ -2188,12 +2189,12 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                       style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontSize: 18,
                           fontWeight: FontWeight.bold)),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white60),
+                  icon: const Icon(Icons.close, color: AppColors.inkMuted),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -2219,7 +2220,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
             ),
             const SizedBox(height: 16),
             Text(t.projectConfigTypeLabel,
-                style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -2230,10 +2231,10 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
                   selected: _type == type,
                   onSelected:
                       _editing ? (_) => setState(() => _type = type) : null,
-                  backgroundColor: const Color(0xFF2A2A45),
-                  selectedColor: const Color(0xFF6C5CE7),
+                  backgroundColor: AppColors.line,
+                  selectedColor: AppColors.accent,
                   labelStyle: TextStyle(
-                    color: _type == type ? Colors.white : Colors.white60,
+                    color: _type == type ? AppColors.ink : AppColors.inkMuted,
                     fontSize: 12,
                   ),
                 );
@@ -2241,7 +2242,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
             ),
             const SizedBox(height: 16),
             Text(t.projectConfigStatusLabel,
-                style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -2252,10 +2253,10 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
                   selected: _status == status,
                   onSelected:
                       _editing ? (_) => setState(() => _status = status) : null,
-                  backgroundColor: const Color(0xFF2A2A45),
-                  selectedColor: const Color(0xFF6C5CE7),
+                  backgroundColor: AppColors.line,
+                  selectedColor: AppColors.accent,
                   labelStyle: TextStyle(
-                    color: _status == status ? Colors.white : Colors.white60,
+                    color: _status == status ? AppColors.ink : AppColors.inkMuted,
                     fontSize: 12,
                   ),
                 );
@@ -2265,7 +2266,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
               const SizedBox(height: 16),
               Text(_error!,
                   style:
-                      const TextStyle(color: Color(0xFFFF6B6B), fontSize: 13)),
+                      const TextStyle(color: AppColors.negative, fontSize: 13)),
             ],
             const SizedBox(height: 24),
             if (!_editing)
@@ -2276,8 +2277,8 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
                   icon: const Icon(Icons.edit_outlined, size: 18),
                   label: Text(t.projectConfigEdit),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C5CE7),
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.onAccent,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
@@ -2289,7 +2290,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
                     child: OutlinedButton(
                       onPressed: _saving ? null : _cancelEdit,
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white60,
+                        foregroundColor: AppColors.inkMuted,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: Text(t.commonCancel),
@@ -2300,8 +2301,8 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
                     child: ElevatedButton(
                       onPressed: _saving ? null : _save,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C5CE7),
-                        foregroundColor: Colors.white,
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.onAccent,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: _saving
@@ -2309,7 +2310,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
+                                  strokeWidth: 2, color: AppColors.ink),
                             )
                           : Text(t.commonSave),
                     ),
@@ -2332,17 +2333,17 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(color: Colors.white60, fontSize: 12)),
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
           enabled: enabled,
           maxLines: maxLines,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: AppColors.ink),
           decoration: InputDecoration(
             filled: true,
             fillColor:
-                enabled ? const Color(0xFF2A2A45) : const Color(0xFF222235),
+                enabled ? AppColors.line : AppColors.surfaceRaised,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
@@ -2364,9 +2365,9 @@ class _ScoreRow extends StatelessWidget {
   final int value;
 
   Color get _color {
-    if (value >= 70) return const Color(0xFF6BCB77);
-    if (value >= 40) return const Color(0xFFFFD93D);
-    return const Color(0xFFFF6B6B);
+    if (value >= 70) return AppColors.positive;
+    if (value >= 40) return AppColors.warning;
+    return AppColors.negative;
   }
 
   @override
@@ -2378,14 +2379,14 @@ class _ScoreRow extends StatelessWidget {
           SizedBox(
             width: 110,
             child: Text(label,
-                style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
           ),
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: value / 100,
-                backgroundColor: const Color(0xFF333355),
+                backgroundColor: AppColors.line,
                 valueColor: AlwaysStoppedAnimation(_color),
                 minHeight: 6,
               ),
@@ -2430,7 +2431,7 @@ class _MetricTile extends StatelessWidget {
                   color: color, fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 2),
           Text(label,
-              style: const TextStyle(color: Colors.white38, fontSize: 10)),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
         ],
       ),
     );
@@ -2493,7 +2494,7 @@ class _StatChip extends StatelessWidget {
                 style: TextStyle(
                     color: color, fontWeight: FontWeight.bold, fontSize: 12)),
             Text(label,
-                style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
           ],
         ),
       ),

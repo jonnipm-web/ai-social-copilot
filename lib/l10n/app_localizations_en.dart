@@ -1779,7 +1779,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashWelcome => 'Hi! Welcome back 👋';
+  String get dashWelcome => 'Hi! Welcome back';
 
   @override
   String dashPlanLabel(String plan) {
@@ -2214,7 +2214,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get improvePostButtonLabel => '✨  Improve post';
+  String get improvePostButtonLabel => 'Improve post';
 
   @override
   String get improvePostButtonLoading => 'Analyzing your content...';
@@ -2585,13 +2585,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Limited potential. Saturated market or weak monetization. Consider pivoting.';
 
   @override
-  String get miHubPriorityHigh => '🚀  High Priority';
+  String get miHubPriorityHigh => 'High Priority';
 
   @override
-  String get miHubPriorityMedium => '⚡  Medium Priority';
+  String get miHubPriorityMedium => 'Medium Priority';
 
   @override
-  String get miHubPriorityLow => '⚠️  Low Priority';
+  String get miHubPriorityLow => 'Low Priority';
 
   @override
   String get miHubOpportunityScoreLabel => 'OPPORTUNITY SCORE';
@@ -3867,7 +3867,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get knowledgeFormUrlInvalid => 'URL must start with http or https.';
 
   @override
-  String get knowledgeFormGoogleDocsHintTitle => '📄 For Google Docs / Books:';
+  String get knowledgeFormGoogleDocsHintTitle => 'For Google Docs / Books:';
 
   @override
   String get knowledgeFormGoogleDocsHintBody =>
@@ -5049,13 +5049,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'No projects found.\nAdd content to the Vault and create projects.';
 
   @override
-  String get ecoTop5ProjectsTitle => '🚀 TOP 5 PROJECTS';
+  String get ecoTop5ProjectsTitle => 'TOP 5 PROJECTS';
 
   @override
   String get ecoTop5ProjectsSubtitle => 'Ranked by Ecosystem Score';
 
   @override
-  String get ecoTop5OpportunitiesTitle => '💡 TOP 5 OPPORTUNITIES';
+  String get ecoTop5OpportunitiesTitle => 'TOP 5 OPPORTUNITIES';
 
   @override
   String get ecoTop5OpportunitiesSubtitle =>
@@ -5084,7 +5084,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ecoTop5QuickWinsTitle => '⚡ TOP 5 QUICK WINS';
+  String get ecoTop5QuickWinsTitle => 'TOP 5 QUICK WINS';
 
   @override
   String get ecoTop5QuickWinsSubtitle => 'High impact, low effort';
@@ -5106,7 +5106,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ecoLabelEffort => 'Effort';
 
   @override
-  String get ecoTop5RisksTitle => '⚠️ TOP 5 RISKS';
+  String get ecoTop5RisksTitle => 'TOP 5 RISKS';
 
   @override
   String get ecoTop5RisksSubtitle => 'Actions in low-scoring projects';
@@ -5119,7 +5119,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'This action belongs to a project with a critical Ecosystem Score (below 30). It needs urgent attention to avoid losing the opportunity.';
 
   @override
-  String get ecoTop5WastesTitle => '🗑️ TOP 5 WASTES';
+  String get ecoTop5WastesTitle => 'TOP 5 WASTES';
 
   @override
   String get ecoTop5WastesSubtitle => 'Low impact, high effort';
@@ -5221,7 +5221,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add projects and analyses to generate recommendations.';
 
   @override
-  String get ecoBlockedBadge => '🔒 BLOCKED';
+  String get ecoBlockedBadge => 'BLOCKED';
 
   @override
   String get ecoGateDocuments => 'Documents';
@@ -5276,28 +5276,28 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ecoBriefSectionChanged => '🔄 What changed';
+  String get ecoBriefSectionChanged => 'What changed';
 
   @override
-  String get ecoBriefSectionGrew => '📈 What grew';
+  String get ecoBriefSectionGrew => 'What grew';
 
   @override
-  String get ecoBriefSectionDeclined => '📉 What declined';
+  String get ecoBriefSectionDeclined => 'What declined';
 
   @override
-  String get ecoBriefSectionPriorities => '🎯 What to prioritize';
+  String get ecoBriefSectionPriorities => 'What to prioritize';
 
   @override
-  String get ecoBriefSectionPause => '⏸️ What to pause';
+  String get ecoBriefSectionPause => '⏸ What to pause';
 
   @override
-  String get ecoBriefSectionNewOpps => '💡 New opportunities';
+  String get ecoBriefSectionNewOpps => 'New opportunities';
 
   @override
-  String get ecoBriefSectionRisks => '⚠️ Risks';
+  String get ecoBriefSectionRisks => 'Risks';
 
   @override
-  String get ecoBriefSectionRisksIdentified => '⚠️ Identified risks';
+  String get ecoBriefSectionRisksIdentified => 'Identified risks';
 
   @override
   String get ecoBriefOverallHealth => 'Overall Health';
@@ -5309,7 +5309,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ecoBriefLowScoreHint =>
-      '⚠ Low score. Review the risks and priorities below to improve it.';
+      'Low score. Review the risks and priorities below to improve it.';
 
   @override
   String get ecoBriefHeaderLabel => 'EXECUTIVE BRIEFING';
@@ -5611,7 +5611,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ctxDvProfileComplete => '✅ Complete';
 
   @override
-  String get ctxDvProfileIncomplete => '❌ Incomplete — link a market analysis';
+  String get ctxDvProfileIncomplete => 'Incomplete — link a market analysis';
 
   @override
   String get ctxCoverageExcellent => 'Excellent';

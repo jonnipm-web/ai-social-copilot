@@ -9,6 +9,7 @@ import '../../data/models/profile.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 /// IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 — navegação comercial dirigida
 /// pelo Module Registry (lib/core/modules/module_registry.dart), não mais
@@ -56,7 +57,7 @@ class AppDrawer extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Drawer(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: AppColors.ground,
       child: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => _DrawerContent(profile: null),
@@ -96,8 +97,8 @@ class _DrawerContent extends ConsumerWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  const Color(0xFF6C63FF),
-                  const Color(0xFF6C63FF).withOpacity(0.6),
+                  AppColors.accent,
+                  AppColors.accent.withOpacity(0.6),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -106,12 +107,12 @@ class _DrawerContent extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.auto_awesome, color: Colors.white, size: 32),
+                const Icon(Icons.auto_awesome, color: AppColors.ink, size: 32),
                 const SizedBox(height: 8),
                 Text(
                   AppConstants.appName,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -123,13 +124,13 @@ class _DrawerContent extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: AppColors.ink.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         profile?.roleLabel ?? 'Free',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
@@ -141,7 +142,7 @@ class _DrawerContent extends ConsumerWidget {
                 Text(
                   profile?.email ?? '',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
+                    color: AppColors.ink.withOpacity(0.7),
                     fontSize: 12,
                   ),
                 ),
@@ -172,7 +173,7 @@ class _DrawerContent extends ConsumerWidget {
           // não serem ocultos quando há muitos módulos — WEB-007).
           // push:true mantém o comportamento corrigido da CLOSURE-16 §27/35:
           // estas telas empilham sobre o stack existente em vez de substituir.
-          const Divider(color: Colors.white12, height: 1),
+          const Divider(color: AppColors.line, height: 1),
           _NavItem(
             icon: Icons.workspace_premium_rounded,
             label: t.navUpgrade,
@@ -202,7 +203,7 @@ class _DrawerContent extends ConsumerWidget {
             push: true,
           ),
           if (isAdmin) ...[
-            const Divider(color: Colors.white12, height: 1),
+            const Divider(color: AppColors.line, height: 1),
             _NavItem(
               icon: Icons.admin_panel_settings_rounded,
               label: t.navAdminPanel,
@@ -214,13 +215,13 @@ class _DrawerContent extends ConsumerWidget {
           ],
 
           // Sair
-          const Divider(color: Colors.white12, height: 1),
+          const Divider(color: AppColors.line, height: 1),
           ListTile(
             leading: const Icon(Icons.logout_rounded,
-                color: Colors.white54, size: 20),
+                color: AppColors.inkMuted, size: 20),
             title: Text(
               t.authSignOut,
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
             ),
             onTap: () async {
               Navigator.of(context).pop();
@@ -314,10 +315,10 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isSelected = current == route;
     final color = isAdmin
-        ? const Color(0xFFFFD700)
+        ? AppColors.gold
         : isSelected
-            ? const Color(0xFF6C63FF)
-            : Colors.white70;
+            ? AppColors.accent
+            : AppColors.inkMuted;
 
     return ListTile(
       leading: Icon(icon, color: color, size: 20),
@@ -330,7 +331,7 @@ class _NavItem extends StatelessWidget {
         ),
       ),
       selected: isSelected,
-      selectedTileColor: const Color(0xFF6C63FF).withOpacity(0.15),
+      selectedTileColor: AppColors.accent.withOpacity(0.15),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       onTap: () {

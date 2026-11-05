@@ -8,6 +8,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class PersonasScreen extends ConsumerWidget {
   const PersonasScreen({super.key});
@@ -38,13 +39,13 @@ class PersonasScreen extends ConsumerWidget {
         onPressed: () => context.push(AppConstants.routePersonaNew),
         icon: const Icon(Icons.add_rounded),
         label: Text(l10n.personasNewPersona),
-        backgroundColor: const Color(0xFF6C63FF),
+        backgroundColor: AppColors.accent,
       ),
       body: personasAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
             child: Text(l10n.commonError,
-                style: const TextStyle(color: Colors.white54))),
+                style: const TextStyle(color: AppColors.inkMuted))),
         data: (personas) {
           if (personas.isEmpty) {
             return Center(
@@ -52,14 +53,14 @@ class PersonasScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.person_pin_rounded,
-                      size: 64, color: Colors.white24),
+                      size: 64, color: AppColors.inkSubtle),
                   const SizedBox(height: 12),
                   Text(l10n.personasEmpty,
-                      style: const TextStyle(color: Colors.white54)),
+                      style: const TextStyle(color: AppColors.inkMuted)),
                   const SizedBox(height: 4),
                   Text(l10n.personasEmptyHint,
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 12)),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 12)),
                 ],
               ),
             );
@@ -75,7 +76,7 @@ class PersonasScreen extends ConsumerWidget {
                 _SectionHeader(
                   label: l10n.personasGlobalSection,
                   icon: Icons.public_rounded,
-                  color: const Color(0xFFFFD700),
+                  color: AppColors.gold,
                 ),
                 const SizedBox(height: 8),
                 ...globals.map((p) =>
@@ -86,7 +87,7 @@ class PersonasScreen extends ConsumerWidget {
                 _SectionHeader(
                   label: l10n.personasMineSection,
                   icon: Icons.person_rounded,
-                  color: const Color(0xFF6C63FF),
+                  color: AppColors.accent,
                 ),
                 const SizedBox(height: 8),
                 ...mine.map((p) =>
@@ -140,24 +141,24 @@ class _PersonaCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
-      color: Colors.white.withOpacity(0.05),
+      color: AppColors.ink.withOpacity(0.05),
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: persona.isGlobal
-              ? const Color(0xFFFFD700).withOpacity(0.3)
-              : Colors.white12,
+              ? AppColors.gold.withOpacity(0.3)
+              : AppColors.line,
         ),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: const Color(0xFF6C63FF).withOpacity(0.2),
+          backgroundColor: AppColors.accent.withOpacity(0.2),
           child: Text(
             persona.name.isNotEmpty ? persona.name[0].toUpperCase() : '?',
             style: const TextStyle(
-              color: Color(0xFF6C63FF),
+              color: AppColors.accent,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -165,26 +166,26 @@ class _PersonaCard extends ConsumerWidget {
         title: Text(
           persona.name,
           style:
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (persona.niche != null)
               Text(persona.niche!,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
             if (persona.voiceTone != null)
               Text(
                   AppLocalizations.of(context)!
                       .personasToneLabel(persona.voiceTone!),
-                  style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
           ],
         ),
         trailing: (isAdmin || !persona.isGlobal)
             ? PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert,
-                    color: Colors.white38, size: 20),
-                color: const Color(0xFF1A1A2E),
+                    color: AppColors.inkSubtle, size: 20),
+                color: AppColors.surface,
                 onSelected: (value) async {
                   final l10n = AppLocalizations.of(context)!;
                   if (value == 'delete') {
@@ -200,7 +201,7 @@ class _PersonaCard extends ConsumerWidget {
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, true),
                             child: Text(l10n.commonDelete,
-                                style: const TextStyle(color: Colors.red)),
+                                style: const TextStyle(color: AppColors.negative)),
                           ),
                         ],
                       ),
@@ -217,7 +218,7 @@ class _PersonaCard extends ConsumerWidget {
                   PopupMenuItem(
                       value: 'delete',
                       child: Text(AppLocalizations.of(context)!.commonDelete,
-                          style: const TextStyle(color: Colors.red))),
+                          style: const TextStyle(color: AppColors.negative))),
                 ],
               )
             : null,

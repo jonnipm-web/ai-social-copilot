@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../data/strategy_builder_api.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class ExperimentHistorySection extends ConsumerStatefulWidget {
   const ExperimentHistorySection({super.key, required this.strategyId});
@@ -58,12 +59,12 @@ class ExperimentHistorySectionState
       };
 
   Color _categoryColor(String category) => switch (category) {
-        'BACKTEST' => Colors.blueGrey,
-        'ROBUSTNESS_EXPERIMENT' => Colors.deepPurple,
-        'SIMULATION' => Colors.teal,
-        'USER_DECISION' => Colors.orange,
-        'IVE_RECOMMENDATION' => Colors.indigo,
-        _ => Colors.grey,
+        'BACKTEST' => AppColors.inkMuted,
+        'ROBUSTNESS_EXPERIMENT' => AppColors.accent,
+        'SIMULATION' => AppColors.accent,
+        'USER_DECISION' => AppColors.warning,
+        'IVE_RECOMMENDATION' => AppColors.info,
+        _ => AppColors.inkMuted,
       };
 
   @override
@@ -124,8 +125,8 @@ class ExperimentHistorySectionState
                           style: TextStyle(
                               fontSize: 11,
                               color: contaminated
-                                  ? Colors.orangeAccent
-                                  : Colors.white54),
+                                  ? AppColors.warning
+                                  : AppColors.inkMuted),
                         ),
                       ],
                     ),

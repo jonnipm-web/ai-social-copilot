@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../data/models/ive_issue.dart';
 import '../../../data/models/ive_state.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Visual State ──────────────────────────────────────────────────────────────
 
@@ -41,91 +42,91 @@ class IveVisualStateConfig {
     switch (state) {
       case IveVisualState.idle:
         return const IveVisualStateConfig(
-          ringColor: Color(0xFF6C63FF),
-          glowColor: Color(0xFF6C63FF),
+          ringColor: AppColors.accent,
+          glowColor: AppColors.accent,
           glowIntensity: 0.35,
-          overlayColor: Color(0xFF6C63FF),
+          overlayColor: AppColors.accent,
           overlayOpacity: 0.0,
           stateIndex: 0,
         );
       case IveVisualState.attentive:
         return const IveVisualStateConfig(
-          ringColor: Color(0xFF9B8FFF),
-          glowColor: Color(0xFF9B8FFF),
+          ringColor: AppColors.accent,
+          glowColor: AppColors.accent,
           glowIntensity: 0.45,
-          overlayColor: Color(0xFF9B8FFF),
+          overlayColor: AppColors.accent,
           overlayOpacity: 0.05,
           stateIndex: 1,
         );
       case IveVisualState.listening:
         return const IveVisualStateConfig(
-          ringColor: Color(0xFF4DA6FF),
-          glowColor: Color(0xFF4DA6FF),
+          ringColor: AppColors.info,
+          glowColor: AppColors.info,
           glowIntensity: 0.55,
-          overlayColor: Color(0xFF4DA6FF),
+          overlayColor: AppColors.info,
           overlayOpacity: 0.05,
           stateIndex: 2,
         );
       case IveVisualState.thinking:
         return const IveVisualStateConfig(
-          ringColor: Color(0xFF00C6FF),
-          glowColor: Color(0xFF00C6FF),
+          ringColor: AppColors.info,
+          glowColor: AppColors.info,
           glowIntensity: 0.50,
-          overlayColor: Color(0xFF00C6FF),
+          overlayColor: AppColors.info,
           overlayOpacity: 0.04,
           stateIndex: 3,
         );
       case IveVisualState.speaking:
         return const IveVisualStateConfig(
-          ringColor: Color(0xFF7B5CF6),
-          glowColor: Color(0xFF7B5CF6),
+          ringColor: AppColors.accent,
+          glowColor: AppColors.accent,
           glowIntensity: 0.65,
-          overlayColor: Color(0xFF7B5CF6),
+          overlayColor: AppColors.accent,
           overlayOpacity: 0.06,
           stateIndex: 4,
         );
       case IveVisualState.success:
         return const IveVisualStateConfig(
-          ringColor: Color(0xFF00E875),
-          glowColor: Color(0xFF00E875),
+          ringColor: AppColors.positive,
+          glowColor: AppColors.positive,
           glowIntensity: 0.70,
-          overlayColor: Color(0xFF00E875),
+          overlayColor: AppColors.positive,
           overlayOpacity: 0.08,
           stateIndex: 5,
         );
       case IveVisualState.warning:
         return const IveVisualStateConfig(
-          ringColor: Color(0xFFFFB020),
-          glowColor: Color(0xFFFFB020),
+          ringColor: AppColors.warning,
+          glowColor: AppColors.warning,
           glowIntensity: 0.65,
-          overlayColor: Color(0xFFFFB020),
+          overlayColor: AppColors.warning,
           overlayOpacity: 0.07,
           stateIndex: 6,
         );
       case IveVisualState.error:
         return const IveVisualStateConfig(
-          ringColor: Color(0xFFFF3D5A),
-          glowColor: Color(0xFFFF3D5A),
+          ringColor: AppColors.negative,
+          glowColor: AppColors.negative,
           glowIntensity: 0.75,
-          overlayColor: Color(0xFFFF3D5A),
+          overlayColor: AppColors.negative,
           overlayOpacity: 0.10,
           stateIndex: 7,
         );
       case IveVisualState.opportunity:
         return const IveVisualStateConfig(
-          ringColor: Color(0xFF00FFD0),
-          glowColor: Color(0xFF00FFD0),
+          ringColor: AppColors.accent,
+          glowColor: AppColors.accent,
           glowIntensity: 0.65,
-          overlayColor: Color(0xFF00FFD0),
+          overlayColor: AppColors.accent,
           overlayOpacity: 0.06,
           stateIndex: 8,
         );
       case IveVisualState.executive:
         return const IveVisualStateConfig(
-          ringColor: Color(0xFFD4AF37),
-          glowColor: Color(0xFFD4AF37),
+          ringColor: AppColors.gold,
+          glowColor: AppColors.gold,
           glowIntensity: 0.60,
-          overlayColor: Color(0xFFD4AF37),
+          overlayColor: AppColors.gold,
           overlayOpacity: 0.05,
           stateIndex: 9,
         );

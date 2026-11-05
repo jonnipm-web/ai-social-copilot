@@ -21,15 +21,16 @@ import '../../action_engine/screens/action_detail_screen.dart';
 import '../opportunity_type_labels.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 import '../../../shared/widgets/translated_content_notice.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
-const _kBg = Color(0xFF0F0F1A);
-const _kCard = Color(0xFF1A1A2E);
-const _kPrimary = Color(0xFF6C63FF);
-const _kGreen = Color(0xFF4CAF50);
-const _kOrange = Color(0xFFFF9800);
-const _kRed = Color(0xFFF44336);
-const _kTeal = Color(0xFF00BCD4);
+const _kBg = AppColors.ground;
+const _kCard = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGreen = AppColors.positive;
+const _kOrange = AppColors.warning;
+const _kRed = AppColors.negative;
+const _kTeal = AppColors.info;
 
 Color _scoreColor(int s) {
   if (s >= 80) return _kGreen;
@@ -57,7 +58,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon:
-              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+              const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeOpportunityLab),
@@ -65,7 +66,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
         title: Text(
           l10n.opportunityDetailTitle,
           style: const TextStyle(
-              color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
           itemAsync.maybeWhen(
@@ -82,12 +83,12 @@ class OpportunityDetailScreen extends ConsumerWidget {
         error: (e, _) => Center(
           child: Text(
               l10n.opportunityDetailLoadError(extractErrorMessage(e, l10n)),
-              style: const TextStyle(color: Colors.white54)),
+              style: const TextStyle(color: AppColors.inkMuted)),
         ),
         data: (item) => item == null
             ? Center(
                 child: Text(l10n.opportunityDetailNotFound,
-                    style: const TextStyle(color: Colors.white54)))
+                    style: const TextStyle(color: AppColors.inkMuted)))
             : _DetailBody(item: item, ref: ref),
       ),
     );
@@ -105,7 +106,7 @@ class _StatusMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: Colors.white),
+      icon: const Icon(Icons.more_vert, color: AppColors.ink),
       color: _kCard,
       onSelected: (v) async {
         if (v == 'approve') {
@@ -130,7 +131,7 @@ class _StatusMenu extends StatelessWidget {
                 backgroundColor: _kGreen,
                 action: SnackBarAction(
                   label: l10n.opportunityDetailViewAction,
-                  textColor: Colors.white,
+                  textColor: AppColors.ink,
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => ActionDetailScreen(itemId: action.id),
@@ -153,16 +154,16 @@ class _StatusMenu extends StatelessWidget {
             builder: (_) => AlertDialog(
               backgroundColor: _kCard,
               title: Text(l10n.opportunityDetailDeleteConfirmTitle,
-                  style: const TextStyle(color: Colors.white)),
+                  style: const TextStyle(color: AppColors.ink)),
               content: Text(
                 l10n.opportunityDetailDeleteConfirmBody(item.title),
-                style: const TextStyle(color: Colors.white70),
+                style: const TextStyle(color: AppColors.inkMuted),
               ),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(context, false),
                     child: Text(l10n.commonCancel,
-                        style: const TextStyle(color: Colors.white54))),
+                        style: const TextStyle(color: AppColors.inkMuted))),
                 TextButton(
                     onPressed: () => Navigator.pop(context, true),
                     child: Text(l10n.opportunityDetailDelete,
@@ -329,7 +330,7 @@ class _HeroHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: _kCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Row(
         children: [
@@ -364,7 +365,7 @@ class _HeroHeader extends StatelessWidget {
                 Text(
                   item.title,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       height: 1.3),
@@ -374,7 +375,7 @@ class _HeroHeader extends StatelessWidget {
                   Text(
                     item.description,
                     style: const TextStyle(
-                        color: Colors.white60, fontSize: 12, height: 1.4),
+                        color: AppColors.inkMuted, fontSize: 12, height: 1.4),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -399,7 +400,7 @@ class _RingPainter extends CustomPainter {
     final c = Offset(size.width / 2, size.height / 2);
     final r = size.width / 2 - 6;
     final trackPaint = Paint()
-      ..color = Colors.white12
+      ..color = AppColors.line
       ..strokeWidth = 6
       ..style = PaintingStyle.stroke;
     final arcPaint = Paint()
@@ -436,27 +437,27 @@ class _ScoreBreakdown extends StatelessWidget {
       (
         l10n.opportunityDetailScoreMarket,
         item.marketScore,
-        const Color(0xFF6C63FF)
+        AppColors.accent
       ),
       (
         l10n.opportunityDetailScoreRevenue,
         item.revenueScore,
-        const Color(0xFF4CAF50)
+        AppColors.positive
       ),
       (
         l10n.opportunityDetailScoreCompetition,
         item.competitionScore,
-        const Color(0xFFFF9800)
+        AppColors.warning
       ),
       (
         l10n.opportunityDetailScoreSynergy,
         item.synergyScore,
-        const Color(0xFF00BCD4)
+        AppColors.info
       ),
       (
         l10n.opportunityDetailScoreStrategicFit,
         item.strategicFit,
-        const Color(0xFFB44FE8)
+        AppColors.accent
       ),
     ];
 
@@ -488,14 +489,14 @@ class _ScoreRow extends StatelessWidget {
           SizedBox(
             width: 110,
             child: Text(label,
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
           ),
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: value / 100,
-                backgroundColor: Colors.white12,
+                backgroundColor: AppColors.line,
                 valueColor: AlwaysStoppedAnimation(color),
                 minHeight: 8,
               ),
@@ -589,11 +590,11 @@ class _InfoRow extends StatelessWidget {
           Icon(icon, color: _kPrimary, size: 15),
           const SizedBox(width: 8),
           Text('$label: ',
-              style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
           Expanded(
             child: Text(value,
                 style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 12,
                     fontWeight: FontWeight.w500)),
           ),
@@ -662,7 +663,7 @@ class _RationaleCard extends StatelessWidget {
             child: Text(
               rationale,
               style: const TextStyle(
-                  color: Colors.white70, fontSize: 13, height: 1.5),
+                  color: AppColors.inkMuted, fontSize: 13, height: 1.5),
             ),
           ),
         ],
@@ -694,7 +695,7 @@ class _ConfidenceMeter extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: value / 100,
-              backgroundColor: Colors.white12,
+              backgroundColor: AppColors.line,
               valueColor: AlwaysStoppedAnimation(color),
               minHeight: 12,
             ),
@@ -730,7 +731,7 @@ class _RisksList extends StatelessWidget {
                     Expanded(
                       child: Text(r,
                           style: const TextStyle(
-                              color: Colors.white70,
+                              color: AppColors.inkMuted,
                               fontSize: 12,
                               height: 1.4)),
                     ),
@@ -782,7 +783,7 @@ class _ActionStepsList extends StatelessWidget {
               Expanded(
                 child: Text(text,
                     style: const TextStyle(
-                        color: Colors.white70, fontSize: 12, height: 1.4)),
+                        color: AppColors.inkMuted, fontSize: 12, height: 1.4)),
               ),
             ],
           ),
@@ -811,7 +812,7 @@ class _Section extends StatelessWidget {
       decoration: BoxDecoration(
         color: _kCard,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: AppColors.ink.withOpacity(0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -822,7 +823,7 @@ class _Section extends StatelessWidget {
               const SizedBox(width: 8),
               Text(title,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 13,
                       fontWeight: FontWeight.bold)),
             ],
@@ -907,7 +908,7 @@ class _ActionButtons extends StatelessWidget {
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kGreen,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.ink,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
@@ -958,7 +959,7 @@ class _ActionButtons extends StatelessWidget {
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kTeal,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.ink,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
@@ -1088,7 +1089,7 @@ class _LinkedKnowledgeSection extends ConsumerWidget {
           Text(
             l10n.oppLinkedKnowledgeTitle,
             style: const TextStyle(
-                color: Colors.white54,
+                color: AppColors.inkMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w600),
           ),
@@ -1105,13 +1106,13 @@ class _LinkedKnowledgeSection extends ConsumerWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.06),
+                  color: AppColors.ink.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.white12),
+                  border: Border.all(color: AppColors.line),
                 ),
                 child: Text(
                   title,
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 11),
                 ),
               );
             }).toList(),

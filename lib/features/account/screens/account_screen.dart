@@ -9,6 +9,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/language_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/quota_provider.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 /// IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 — "Conta e Configurações":
 /// perfil, idioma, plano/uso, upgrade, ajuda, sobre, privacidade, termos,
@@ -48,17 +49,17 @@ class AccountScreen extends ConsumerWidget {
             error: (_, __) => const SizedBox.shrink(),
             data: (profile) => ListTile(
               leading: const Icon(Icons.person_outline_rounded,
-                  color: Colors.white70),
+                  color: AppColors.inkMuted),
               title: Text(profile?.email ?? '',
-                  style: const TextStyle(color: Colors.white)),
+                  style: const TextStyle(color: AppColors.ink)),
               subtitle: isGoogleLinked
                   ? Text(t.accountGoogleLinked,
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 12))
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 12))
                   : null,
             ),
           ),
-          const Divider(color: Colors.white12, height: 32),
+          const Divider(color: AppColors.line, height: 32),
           _SectionLabel(t.accountLanguage),
           RadioListTile<String>(
             value: 'pt',
@@ -76,7 +77,7 @@ class AccountScreen extends ConsumerWidget {
                 ? ref.read(languageProvider.notifier).setLanguage(v)
                 : null,
           ),
-          const Divider(color: Colors.white12, height: 32),
+          const Divider(color: AppColors.line, height: 32),
           _SectionLabel(t.accountCurrentPlan),
           quotaAsync.when(
             loading: () => const Padding(
@@ -95,41 +96,41 @@ class AccountScreen extends ConsumerWidget {
               onTapCta: () => context.push(AppConstants.routeUpgrade),
             ),
           ),
-          const Divider(color: Colors.white12, height: 32),
+          const Divider(color: AppColors.line, height: 32),
           ListTile(
             leading:
-                const Icon(Icons.help_outline_rounded, color: Colors.white70),
+                const Icon(Icons.help_outline_rounded, color: AppColors.inkMuted),
             title: Text(t.accountHelpSupport),
             trailing:
-                const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.inkSubtle),
             onTap: () => context.push(AppConstants.routeSupport),
           ),
           ListTile(
             leading:
-                const Icon(Icons.info_outline_rounded, color: Colors.white70),
+                const Icon(Icons.info_outline_rounded, color: AppColors.inkMuted),
             title: Text(t.accountAbout),
             trailing:
-                const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.inkSubtle),
             onTap: () => context.push(AppConstants.routeAbout),
           ),
-          const Divider(color: Colors.white12, height: 32),
+          const Divider(color: AppColors.line, height: 32),
           if (AppConstants.accountDeletionUrl != null)
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded,
-                  color: Colors.white54),
+                  color: AppColors.inkMuted),
               title: Text(t.accountDeleteAccount,
-                  style: const TextStyle(color: Colors.white54)),
+                  style: const TextStyle(color: AppColors.inkMuted)),
               trailing: const Icon(Icons.open_in_new_rounded,
-                  color: Colors.white24, size: 18),
+                  color: AppColors.inkSubtle, size: 18),
               onTap: () => launchUrl(
                 Uri.parse(AppConstants.accountDeletionUrl!),
                 mode: LaunchMode.externalApplication,
               ),
             ),
           ListTile(
-            leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+            leading: const Icon(Icons.logout_rounded, color: AppColors.negative),
             title: Text(t.accountSignOut,
-                style: const TextStyle(color: Colors.redAccent)),
+                style: const TextStyle(color: AppColors.negative)),
             onTap: () async {
               await ref.read(authNotifierProvider.notifier).signOut();
               if (context.mounted) context.go(AppConstants.routeLogin);
@@ -182,7 +183,7 @@ class _PlanSection extends StatelessWidget {
                 isPro
                     ? Icons.workspace_premium_rounded
                     : Icons.card_giftcard_rounded,
-                color: isPro ? const Color(0xFFFFD700) : Colors.white70,
+                color: isPro ? AppColors.gold : AppColors.inkMuted,
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -191,12 +192,12 @@ class _PlanSection extends StatelessWidget {
                   children: [
                     Text(planLabel,
                         style:
-                            const TextStyle(color: Colors.white, fontSize: 16)),
+                            const TextStyle(color: AppColors.ink, fontSize: 16)),
                     const SizedBox(height: 2),
                     Text(
                       usageLabel,
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 12),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
                     ),
                   ],
                 ),
@@ -228,7 +229,7 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(
-            color: Colors.white38, fontSize: 12, fontWeight: FontWeight.w600),
+            color: AppColors.inkSubtle, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }

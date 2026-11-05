@@ -18,6 +18,7 @@ import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/ive_exclusion_region.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // IVE-COMMERCIAL-TARGETED-REMEDIATION-06S — same fix as
 // dashboard_screen.dart's shortcuts: several cards here (the AppBar's
@@ -47,15 +48,15 @@ VoidCallback _commercialCtaTap(
       context, AppLocalizations.of(context)!.ctxHomeFeatureUnavailable);
 }
 
-const _kBg = Color(0xFF0A0A14);
-const _kCard = Color(0xFF12121E);
-const _kBorder = Color(0xFF1E1E30);
-const _kPrimary = Color(0xFF7C4DFF);
-const _kGreen = Color(0xFF00E676);
-const _kOrange = Color(0xFFFF9100);
-const _kRed = Color(0xFFFF1744);
-const _kGold = Color(0xFFFFD700);
-const _kCyan = Color(0xFF00E5FF);
+const _kBg = AppColors.ground;
+const _kCard = AppColors.ground;
+const _kBorder = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGreen = AppColors.positive;
+const _kOrange = AppColors.warning;
+const _kRed = AppColors.negative;
+const _kGold = AppColors.gold;
+const _kCyan = AppColors.info;
 
 // ════════════════════════════════════════════════════════════════════════════
 // AI Social Copilot OS — Home Command Center
@@ -80,11 +81,11 @@ class HomeScreen extends ConsumerWidget {
           children: [
             const Text('InsightValues',
                 style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontWeight: FontWeight.bold,
                     fontSize: 16)),
             Text(l10n.ctxHomeCommandCenter,
-                style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
           ],
         ),
         actions: [
@@ -104,7 +105,7 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white38),
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.inkSubtle),
             tooltip: l10n.ctxHomeRefreshTooltip,
             onPressed: () {
               ref.invalidate(projectIntelligenceProfilesProvider);
@@ -166,7 +167,7 @@ class _ExecutiveCommandCard extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1A0E40), Color(0xFF0E0E1E)],
+          colors: [AppColors.surface, AppColors.ground],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -262,7 +263,7 @@ class _ExecutiveCommandCard extends ConsumerWidget {
   Color _learningColor(int v) {
     if (v >= 60) return _kCyan;
     if (v >= 30) return _kOrange;
-    return Colors.white38;
+    return AppColors.inkSubtle;
   }
 }
 
@@ -366,18 +367,18 @@ class _NextBestActionCard extends ConsumerWidget {
                   const Spacer(),
                   Text(l10n.ctxHomeConfidence(top.confidence),
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 10)),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
                 ]),
                 const SizedBox(height: 8),
                 Text(top.title,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontWeight: FontWeight.bold,
                         fontSize: 14)),
                 const SizedBox(height: 4),
                 Text(top.reason,
                     style: const TextStyle(
-                        color: Colors.white54, fontSize: 12, height: 1.4)),
+                        color: AppColors.inkMuted, fontSize: 12, height: 1.4)),
                 const SizedBox(height: 8),
                 Text(l10n.ctxHomeExpectedImpact(top.expectedImpact),
                     style: const TextStyle(color: _kGold, fontSize: 11)),
@@ -479,7 +480,7 @@ class _EcosystemIntelligenceCard extends ConsumerWidget {
                 const SizedBox(height: 12),
                 Text(l10n.ctxHomeConnectionsFound,
                     style: const TextStyle(
-                        color: Colors.white54,
+                        color: AppColors.inkMuted,
                         fontSize: 11,
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
@@ -495,7 +496,7 @@ class _EcosystemIntelligenceCard extends ConsumerWidget {
                 Text(
                   l10n.ctxHomeNoConnections,
                   style: const TextStyle(
-                      color: Colors.white38, fontSize: 12, height: 1.4),
+                      color: AppColors.inkSubtle, fontSize: 12, height: 1.4),
                 ),
               ],
             ],
@@ -550,7 +551,7 @@ class _OsCard extends StatelessWidget {
                 onTap: onSeeAll,
                 child: Text(AppLocalizations.of(context)!.ctxHomeSeeAll,
                     style:
-                        const TextStyle(color: Colors.white38, fontSize: 11)),
+                        const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
               ),
           ]),
           const SizedBox(height: 12),
@@ -616,7 +617,7 @@ class _MetricChip extends StatelessWidget {
               style: TextStyle(
                   color: color, fontWeight: FontWeight.bold, fontSize: 13)),
           Text(label,
-              style: const TextStyle(color: Colors.white38, fontSize: 9)),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 9)),
         ]),
       ]),
     );
@@ -647,7 +648,7 @@ class _QuickAction extends StatelessWidget {
             Icon(icon, color: _kPrimary, size: 16),
             const SizedBox(height: 3),
             Text(label,
-                style: const TextStyle(color: Colors.white54, fontSize: 10),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 10),
                 textAlign: TextAlign.center),
           ]),
         ),
@@ -696,20 +697,20 @@ class _ProjectRow extends StatelessWidget {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(profile.project.name,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontWeight: FontWeight.bold,
                       fontSize: 13)),
               const SizedBox(height: 2),
               Row(children: [
                 Text(profile.maturityLabel(l10n),
                     style:
-                        const TextStyle(color: Colors.white38, fontSize: 10)),
+                        const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
                 const Text(' · ',
-                    style: TextStyle(color: Colors.white24, fontSize: 10)),
+                    style: TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
                 Text(
                   l10n.ctxHomeCoverage(
                       profile.coverage.coverageEmoji, profile.coverage.score),
-                  style: const TextStyle(color: Colors.white38, fontSize: 10),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
                 ),
               ]),
             ]),
@@ -762,25 +763,25 @@ class _PersonaRow extends StatelessWidget {
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(profile.persona.name,
                 style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontWeight: FontWeight.w500,
                     fontSize: 13)),
             const SizedBox(height: 2),
             Text(
               l10n.ctxHomePersonaStats(
                   profile.trainingCount, profile.vocabularySize),
-              style: const TextStyle(color: Colors.white38, fontSize: 10),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
             ),
           ]),
         ),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Text('${profile.learningScore}%',
               style: TextStyle(
-                  color: profile.learningScore >= 40 ? _kCyan : Colors.white38,
+                  color: profile.learningScore >= 40 ? _kCyan : AppColors.inkSubtle,
                   fontWeight: FontWeight.bold,
                   fontSize: 14)),
           Text(profile.learningLabel(l10n),
-              style: const TextStyle(color: Colors.white38, fontSize: 9)),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 9)),
         ]),
       ]),
     );
@@ -804,7 +805,7 @@ class _ConnectionRow extends StatelessWidget {
       ),
       child: Text(
         _edgeDescription(edge, AppLocalizations.of(context)!),
-        style: const TextStyle(color: Colors.white54, fontSize: 11),
+        style: const TextStyle(color: AppColors.inkMuted, fontSize: 11),
       ),
     );
   }
@@ -866,7 +867,7 @@ class _EmptyHint extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(message,
-            style: const TextStyle(color: Colors.white38, fontSize: 12)),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12)),
         if (action != null && onTap != null) ...[
           const SizedBox(height: 6),
           GestureDetector(

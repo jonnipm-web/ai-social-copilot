@@ -7,6 +7,7 @@ import '../../../core/utils/ai_enum_labels.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/campaign_provider.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class CampaignDetailScreen extends ConsumerWidget {
   const CampaignDetailScreen({super.key, required this.campaignId});
@@ -19,10 +20,10 @@ class CampaignDetailScreen extends ConsumerWidget {
     final campaignAsync = ref.watch(campaignByIdProvider(campaignId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: AppColors.ground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F1A),
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.ground,
+        foregroundColor: AppColors.ink,
         title: Text(
           l10n.campaignDetailTitle,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -32,12 +33,12 @@ class CampaignDetailScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
             child: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
-                style: const TextStyle(color: Colors.white70))),
+                style: const TextStyle(color: AppColors.inkMuted))),
         data: (campaign) {
           if (campaign == null) {
             return Center(
                 child: Text(l10n.campaignDetailNotFound,
-                    style: const TextStyle(color: Colors.white70)));
+                    style: const TextStyle(color: AppColors.inkMuted)));
           }
           return _CampaignContent(campaign: campaign);
         },
@@ -71,7 +72,7 @@ class _CampaignContent extends StatelessWidget {
           _Card(
             child: Text(campaign.overview,
                 style: const TextStyle(
-                    color: Colors.white70, fontSize: 13, height: 1.5)),
+                    color: AppColors.inkMuted, fontSize: 13, height: 1.5)),
           ),
           const SizedBox(height: 16),
         ],
@@ -80,7 +81,7 @@ class _CampaignContent extends StatelessWidget {
         if (campaign.keyMessages.isNotEmpty) ...[
           _SectionTitle(l10n.campaignDetailKeyMessagesTitle),
           ...campaign.keyMessages.map((m) =>
-              _BulletItem(m, Icons.message_rounded, const Color(0xFF6C63FF))),
+              _BulletItem(m, Icons.message_rounded, AppColors.accent)),
           const SizedBox(height: 16),
         ],
 
@@ -88,7 +89,7 @@ class _CampaignContent extends StatelessWidget {
         if (campaign.expectedResults.isNotEmpty) ...[
           _SectionTitle(l10n.campaignDetailExpectedResultsTitle),
           ...campaign.expectedResults.map((r) => _BulletItem(
-              r, Icons.check_circle_rounded, const Color(0xFF4CAF50))),
+              r, Icons.check_circle_rounded, AppColors.positive)),
           const SizedBox(height: 16),
         ],
 
@@ -124,14 +125,14 @@ class _CampaignContent extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50).withOpacity(0.1),
+                        color: AppColors.positive.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: const Color(0xFF4CAF50).withOpacity(0.3)),
+                            color: AppColors.positive.withOpacity(0.3)),
                       ),
                       child: Text(m,
                           style: const TextStyle(
-                              color: Color(0xFF4CAF50), fontSize: 12)),
+                              color: AppColors.positive, fontSize: 12)),
                     ))
                 .toList(),
           ),
@@ -163,12 +164,12 @@ class _Header extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF00BCD4).withOpacity(0.3),
-            const Color(0xFF00BCD4).withOpacity(0.05),
+            AppColors.info.withOpacity(0.3),
+            AppColors.info.withOpacity(0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF00BCD4).withOpacity(0.3)),
+        border: Border.all(color: AppColors.info.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,13 +177,13 @@ class _Header extends StatelessWidget {
           Row(
             children: [
               const Icon(Icons.campaign_rounded,
-                  color: Color(0xFF00BCD4), size: 24),
+                  color: AppColors.info, size: 24),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   campaign.title,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 16,
                       fontWeight: FontWeight.bold),
                 ),
@@ -194,7 +195,7 @@ class _Header extends StatelessWidget {
             Text(
               campaign.campaignJson['tagline'].toString(),
               style: const TextStyle(
-                  color: Color(0xFF00BCD4),
+                  color: AppColors.info,
                   fontSize: 13,
                   fontStyle: FontStyle.italic),
             ),
@@ -204,11 +205,11 @@ class _Header extends StatelessWidget {
             spacing: 8,
             children: [
               _Tag(campaignObjectiveLabel(campaign.objective, l10n),
-                  const Color(0xFF6C63FF)),
+                  AppColors.accent),
               _Tag(l10n.campaignsDurationDays(campaign.durationDays),
-                  const Color(0xFFFF9800)),
+                  AppColors.warning),
               ...campaign.channels.take(3).map(
-                    (ch) => _Tag(ch, const Color(0xFF00BCD4)),
+                    (ch) => _Tag(ch, AppColors.info),
                   ),
             ],
           ),
@@ -250,7 +251,7 @@ class _SectionTitle extends StatelessWidget {
       child: Text(
         title,
         style: const TextStyle(
-          color: Colors.white,
+          color: AppColors.ink,
           fontSize: 14,
           fontWeight: FontWeight.w700,
         ),
@@ -269,7 +270,7 @@ class _Card extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(10),
       ),
       child: child,
@@ -294,7 +295,7 @@ class _BulletItem extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(text,
-                style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 13)),
           ),
         ],
       ),
@@ -309,27 +310,27 @@ class _CalendarEntry extends StatelessWidget {
   Color _channelColor(String ch) {
     switch (ch.toLowerCase()) {
       case 'instagram':
-        return const Color(0xFFE91E63);
+        return AppColors.accent;
       case 'facebook':
         return const Color(0xFF1877F2);
       case 'linkedin':
         return const Color(0xFF0077B5);
       case 'youtube':
-        return const Color(0xFFF44336);
+        return AppColors.negative;
       case 'tiktok':
         return const Color(0xFF00F2EA);
       case 'email':
-        return const Color(0xFFFF9800);
+        return AppColors.warning;
       case 'blog':
-        return const Color(0xFF4CAF50);
+        return AppColors.positive;
       case 'hotmart':
-        return const Color(0xFF6C63FF);
+        return AppColors.accent;
       case 'shopify':
-        return const Color(0xFF00BCD4);
+        return AppColors.info;
       case 'amazon':
-        return const Color(0xFFFF5722);
+        return AppColors.warning;
       default:
-        return Colors.white38;
+        return AppColors.inkSubtle;
     }
   }
 
@@ -348,7 +349,7 @@ class _CalendarEntry extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withOpacity(0.25)),
       ),
@@ -385,14 +386,14 @@ class _CalendarEntry extends StatelessWidget {
                           _Tag(channel, color),
                           const SizedBox(width: 6),
                           if (contentType.isNotEmpty)
-                            _Tag(contentType, Colors.white38),
+                            _Tag(contentType, AppColors.inkSubtle),
                         ],
                       ),
                       if (topic.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(topic,
                             style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.ink,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500)),
                       ],
@@ -415,27 +416,27 @@ class _CalendarEntry extends StatelessWidget {
                       SnackBar(
                         content: Text(l10n.campaignDetailCopied),
                         duration: const Duration(seconds: 1),
-                        backgroundColor: const Color(0xFF1A1A2E),
+                        backgroundColor: AppColors.surface,
                       ),
                     );
                   },
                   child: const Icon(Icons.copy_rounded,
-                      color: Colors.white24, size: 16),
+                      color: AppColors.inkSubtle, size: 16),
                 ),
               ],
             ),
             if (hook.isNotEmpty) ...[
               const SizedBox(height: 8),
-              _DetailRow(l10n.campaignDetailHookLabel, hook, Colors.white60),
+              _DetailRow(l10n.campaignDetailHookLabel, hook, AppColors.inkMuted),
             ],
             if (cta.isNotEmpty) ...[
               const SizedBox(height: 4),
               _DetailRow(
-                  l10n.campaignDetailCtaLabel, cta, const Color(0xFFFFD700)),
+                  l10n.campaignDetailCtaLabel, cta, AppColors.gold),
             ],
             if (brief.isNotEmpty) ...[
               const SizedBox(height: 4),
-              _DetailRow(l10n.campaignDetailBriefLabel, brief, Colors.white38),
+              _DetailRow(l10n.campaignDetailBriefLabel, brief, AppColors.inkSubtle),
             ],
           ],
         ),
@@ -459,7 +460,7 @@ class _DetailRow extends StatelessWidget {
           width: 38,
           child: Text('$label:',
               style: const TextStyle(
-                  color: Colors.white38,
+                  color: AppColors.inkSubtle,
                   fontSize: 10,
                   fontWeight: FontWeight.w600)),
         ),
@@ -487,9 +488,9 @@ class _EmailEntry extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFF9800).withOpacity(0.25)),
+        border: Border.all(color: AppColors.warning.withOpacity(0.25)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,12 +498,12 @@ class _EmailEntry extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFFFF9800).withOpacity(0.15),
+              color: AppColors.warning.withOpacity(0.15),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text('D$day',
                 style: const TextStyle(
-                    color: Color(0xFFFF9800),
+                    color: AppColors.warning,
                     fontSize: 10,
                     fontWeight: FontWeight.bold)),
           ),
@@ -514,20 +515,20 @@ class _EmailEntry extends StatelessWidget {
                 if (subject.isNotEmpty)
                   Text(subject,
                       style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontSize: 13,
                           fontWeight: FontWeight.w600)),
                 if (preview.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(preview,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 12)),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
                 ],
                 if (obj.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(obj,
                       style: const TextStyle(
-                          color: Color(0xFFFF9800), fontSize: 11)),
+                          color: AppColors.warning, fontSize: 11)),
                 ],
               ],
             ),

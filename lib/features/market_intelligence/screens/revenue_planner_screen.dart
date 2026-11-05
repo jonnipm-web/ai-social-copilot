@@ -9,6 +9,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class RevenuePlannerScreen extends ConsumerStatefulWidget {
   const RevenuePlannerScreen({super.key, required this.analysisId});
@@ -42,7 +43,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
         SnackBar(
             content: Text(
                 AppLocalizations.of(context)!.miRevenueProjectNameRequired),
-            backgroundColor: Colors.orange),
+            backgroundColor: AppColors.warning),
       );
       return;
     }
@@ -102,12 +103,12 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
         ref.watch(revenuePlanByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: AppColors.ground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F1A),
+        backgroundColor: AppColors.ground,
         title: Text(l10n.miRevenueTitle,
-            style: const TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+            style: const TextStyle(color: AppColors.ink)),
+        iconTheme: const IconThemeData(color: AppColors.ink),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go(
@@ -118,45 +119,45 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
       ),
       body: asyncPlan.when(
         loading: () => const Center(
-            child: CircularProgressIndicator(color: Color(0xFF00BCD4))),
+            child: CircularProgressIndicator(color: AppColors.info)),
         error: (e, _) => Center(
             child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
-                style: const TextStyle(color: Colors.redAccent))),
+                style: const TextStyle(color: AppColors.negative))),
         data: (plan) => plan == null
             ? SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
                     const Icon(Icons.attach_money_outlined,
-                        color: Colors.white24, size: 64),
+                        color: AppColors.inkSubtle, size: 64),
                     const SizedBox(height: 16),
                     Text(l10n.miRevenueEmptyTitle,
-                        style: const TextStyle(color: Colors.white38)),
+                        style: const TextStyle(color: AppColors.inkSubtle)),
                     const SizedBox(height: 8),
                     Text(l10n.miRevenueEmptyBody,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                            color: Colors.white24, fontSize: 12, height: 1.4)),
+                            color: AppColors.inkSubtle, fontSize: 12, height: 1.4)),
                     const SizedBox(height: 24),
                     TextField(
                       controller: _projectCtrl,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: AppColors.ink),
                       decoration: InputDecoration(
                         labelText: l10n.miRevenueProjectFieldLabel,
-                        labelStyle: const TextStyle(color: Colors.white54),
+                        labelStyle: const TextStyle(color: AppColors.inkMuted),
                         filled: true,
-                        fillColor: const Color(0xFF1A1A2E),
+                        fillColor: AppColors.surface,
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12)),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide:
-                              const BorderSide(color: Color(0xFF333355)),
+                              const BorderSide(color: AppColors.line),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide:
-                              const BorderSide(color: Color(0xFF00BCD4)),
+                              const BorderSide(color: AppColors.info),
                         ),
                       ),
                     ),
@@ -166,7 +167,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Text(_error!,
                             style: const TextStyle(
-                                color: Colors.redAccent, fontSize: 13)),
+                                color: AppColors.negative, fontSize: 13)),
                       ),
                     SizedBox(
                       width: double.infinity,
@@ -178,13 +179,13 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                                 width: 16,
                                 height: 16,
                                 child: CircularProgressIndicator(
-                                    color: Colors.white, strokeWidth: 2))
+                                    color: AppColors.ink, strokeWidth: 2))
                             : const Icon(Icons.calculate_rounded),
                         label: Text(_running
                             ? l10n.miRevenueCalculating
                             : l10n.miRevenueGenerateButton),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00BCD4),
+                          backgroundColor: AppColors.info,
                           foregroundColor: Colors.black,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
@@ -203,7 +204,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                     Text(
                       plan.projectName,
                       style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontSize: 20,
                           fontWeight: FontWeight.bold),
                     ),
@@ -214,7 +215,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                       label: l10n.miRevenueScenarioConservative,
                       monthly: plan.monthlyConservative,
                       annual: plan.annualConservative,
-                      color: const Color(0xFF6BCB77),
+                      color: AppColors.positive,
                       icon: Icons.trending_flat_rounded,
                       fmt: _fmt,
                       l10n: l10n,
@@ -224,7 +225,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                       label: l10n.miRevenueScenarioModerate,
                       monthly: plan.monthlyModerate,
                       annual: plan.annualModerate,
-                      color: const Color(0xFF00BCD4),
+                      color: AppColors.info,
                       icon: Icons.trending_up_rounded,
                       fmt: _fmt,
                       l10n: l10n,
@@ -234,7 +235,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                       label: l10n.miRevenueScenarioAggressive,
                       monthly: plan.monthlyAggressive,
                       annual: plan.annualAggressive,
-                      color: const Color(0xFFFF6B6B),
+                      color: AppColors.negative,
                       icon: Icons.rocket_launch_rounded,
                       fmt: _fmt,
                       l10n: l10n,
@@ -245,7 +246,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                       const SizedBox(height: 24),
                       Text(l10n.miRevenueSectionSources,
                           style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.ink,
                               fontSize: 15,
                               fontWeight: FontWeight.bold)),
                       const SizedBox(height: 10),
@@ -254,14 +255,14 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A2E),
+                            color: AppColors.surface,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFF333355)),
+                            border: Border.all(color: AppColors.line),
                           ),
                           child: Row(
                             children: [
                               const Icon(Icons.attach_money_rounded,
-                                  color: Color(0xFFFFD93D), size: 18),
+                                  color: AppColors.warning, size: 18),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -269,13 +270,13 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                                   children: [
                                     Text(s['name']?.toString() ?? '',
                                         style: const TextStyle(
-                                            color: Colors.white,
+                                            color: AppColors.ink,
                                             fontWeight: FontWeight.w600,
                                             fontSize: 13)),
                                     if (s['description'] != null)
                                       Text(s['description'].toString(),
                                           style: const TextStyle(
-                                              color: Colors.white54,
+                                              color: AppColors.inkMuted,
                                               fontSize: 12),
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis),
@@ -285,7 +286,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                               if (s['percentage'] != null)
                                 Text('${s['percentage']}%',
                                     style: const TextStyle(
-                                        color: Color(0xFFFFD93D),
+                                        color: AppColors.warning,
                                         fontWeight: FontWeight.bold)),
                             ],
                           ),
@@ -298,7 +299,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                       const SizedBox(height: 24),
                       Text(l10n.miRevenueSectionMilestones,
                           style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.ink,
                               fontSize: 15,
                               fontWeight: FontWeight.bold)),
                       const SizedBox(height: 10),
@@ -307,10 +308,10 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                               margin: const EdgeInsets.only(bottom: 8),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1A1A2E),
+                                color: AppColors.surface,
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                    color: const Color(0xFF00BCD4)
+                                    color: AppColors.info
                                         .withOpacity(0.2)),
                               ),
                               child: Row(
@@ -319,14 +320,14 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                                     width: 28,
                                     height: 28,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF00BCD4)
+                                      color: AppColors.info
                                           .withOpacity(0.1),
                                       shape: BoxShape.circle,
                                     ),
                                     child: Center(
                                       child: Text('${e.key + 1}',
                                           style: const TextStyle(
-                                              color: Color(0xFF00BCD4),
+                                              color: AppColors.info,
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold)),
                                     ),
@@ -339,7 +340,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                                       children: [
                                         Text(e.value['title']?.toString() ?? '',
                                             style: const TextStyle(
-                                                color: Colors.white,
+                                                color: AppColors.ink,
                                                 fontWeight: FontWeight.w600,
                                                 fontSize: 13)),
                                         if (e.value['target'] != null)
@@ -349,7 +350,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                                                       (e.value['target'] as num)
                                                           .toDouble())),
                                               style: const TextStyle(
-                                                  color: Color(0xFF00BCD4),
+                                                  color: AppColors.info,
                                                   fontSize: 12)),
                                       ],
                                     ),
@@ -365,7 +366,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                       const SizedBox(height: 24),
                       Text(l10n.miRevenueSectionAssumptions,
                           style: const TextStyle(
-                              color: Colors.white54,
+                              color: AppColors.inkMuted,
                               fontSize: 13,
                               fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
@@ -376,11 +377,11 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text('• ',
-                                  style: TextStyle(color: Colors.white38)),
+                                  style: TextStyle(color: AppColors.inkSubtle)),
                               Expanded(
                                   child: Text(a,
                                       style: const TextStyle(
-                                          color: Colors.white38,
+                                          color: AppColors.inkSubtle,
                                           fontSize: 12))),
                             ],
                           ),
@@ -445,7 +446,7 @@ class _ScenarioCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         fontSize: 14)),
                 Text(l10n.miRevenueMonthlyLabel(fmt(monthly)),
-                    style: const TextStyle(color: Colors.white, fontSize: 13)),
+                    style: const TextStyle(color: AppColors.ink, fontSize: 13)),
               ],
             ),
           ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class ResultBlock extends StatelessWidget {
   final String title;
@@ -45,12 +46,12 @@ class ResultBlock extends StatelessWidget {
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
-                      color: Colors.white70,
+                      color: AppColors.inkMuted,
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.copy, size: 18, color: Colors.white38),
+                  icon: const Icon(Icons.copy, size: 18, color: AppColors.inkSubtle),
                   tooltip: AppLocalizations.of(context)!.ctxResultCopyTooltip,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -64,7 +65,7 @@ class ResultBlock extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 height: 1.55,
-                color: Colors.white,
+                color: AppColors.ink,
               ),
             ),
           ],

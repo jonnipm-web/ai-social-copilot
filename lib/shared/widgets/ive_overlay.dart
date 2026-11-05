@@ -23,6 +23,7 @@ import 'context_copilot_widget.dart'
     show showCopilotChat, iveChatOpenNotifier, iveInlineAskVisibleNotifier;
 import 'ive_exclusion_region.dart' show iveExclusionRegionsNotifier;
 import 'ive_placement_engine.dart'
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
     show computeRestingPosition, IvePlacementInput, IveSafeAreaInsets;
 
 // ── Route bridge ──────────────────────────────────────────────────────────────
@@ -851,10 +852,10 @@ class _IveBubble extends StatelessWidget {
   }
 
   Color get _accentColor =>
-      _hasIssue ? const Color(0xFFFF4560) : const Color(0xFF7B5CF6);
+      _hasIssue ? AppColors.negative : AppColors.accent;
 
   Color get _iconColor =>
-      _hasIssue ? const Color(0xFFFF4560) : const Color(0xFF9B8FFF);
+      _hasIssue ? AppColors.negative : AppColors.accent;
 
   @override
   Widget build(BuildContext context) {
@@ -865,7 +866,7 @@ class _IveBubble extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1535),
+            color: AppColors.surface,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(14),
               topRight: Radius.circular(14),
@@ -919,7 +920,7 @@ class _IveBubble extends StatelessWidget {
                           TextSpan(
                             text: message,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.ink,
                               fontSize: 12,
                               height: 1.45,
                             ),
@@ -932,7 +933,7 @@ class _IveBubble extends StatelessWidget {
                   GestureDetector(
                     onTap: onDismiss,
                     child: const Icon(Icons.close_rounded,
-                        size: 14, color: Colors.white24),
+                        size: 14, color: AppColors.inkSubtle),
                   ),
                 ],
               ),
@@ -949,7 +950,7 @@ class _IveBubble extends StatelessWidget {
                         width: 4,
                         height: 4,
                         decoration: const BoxDecoration(
-                          color: Color(0xFF7B5CF6),
+                          color: AppColors.accent,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -957,7 +958,7 @@ class _IveBubble extends StatelessWidget {
                       Text(
                         AppLocalizations.of(context)!.iveBubbleChatCta,
                         style: const TextStyle(
-                          color: Color(0xFF9B8FFF),
+                          color: AppColors.accent,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
@@ -995,7 +996,7 @@ class _IssueActionChip extends StatelessWidget {
   const _IssueActionChip({required this.action});
   final IveIssueAction action;
 
-  static const _color = Color(0xFFFF4560);
+  static const _color = AppColors.negative;
 
   @override
   Widget build(BuildContext context) {

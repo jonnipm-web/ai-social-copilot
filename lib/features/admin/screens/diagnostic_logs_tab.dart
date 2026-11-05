@@ -6,12 +6,13 @@ import '../../../core/diagnostics/diagnostic_report_formatter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/diagnostic_session_provider.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
-const _kBg = Color(0xFF0F0F1A);
-const _kCard = Color(0xFF1A1A2E);
-const _kGold = Color(0xFFFFD700);
-const _kRed = Color(0xFFF44336);
-const _kGreen = Color(0xFF4CAF50);
+const _kBg = AppColors.ground;
+const _kCard = AppColors.surface;
+const _kGold = AppColors.gold;
+const _kRed = AppColors.negative;
+const _kGreen = AppColors.positive;
 
 /// IVE-COMMERCIAL-OBSERVABILITY-07A — mission sections 08 ("Admin/Support
 /// Log Viewer") + 09 ("Owner Diagnostic Controls") combined into one Admin
@@ -87,7 +88,7 @@ class _DiagnosticControlsCardState
         color: _kCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: session.isActive ? _kGreen.withOpacity(0.5) : Colors.white12,
+          color: session.isActive ? _kGreen.withOpacity(0.5) : AppColors.line,
         ),
       ),
       child: Column(
@@ -99,14 +100,14 @@ class _DiagnosticControlsCardState
                 session.isActive
                     ? Icons.fiber_manual_record
                     : Icons.circle_outlined,
-                color: session.isActive ? _kGreen : Colors.white38,
+                color: session.isActive ? _kGreen : AppColors.inkSubtle,
                 size: 14,
               ),
               const SizedBox(width: 8),
               Text(
                 session.isActive ? l10n.uxDiagActive : l10n.uxDiagInactive,
                 style: TextStyle(
-                  color: session.isActive ? _kGreen : Colors.white54,
+                  color: session.isActive ? _kGreen : AppColors.inkMuted,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                   letterSpacing: 0.5,
@@ -121,12 +122,12 @@ class _DiagnosticControlsCardState
                 Expanded(
                   child: SelectableText(
                     'ID: ${session.sessionId}',
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.copy_rounded,
-                      color: Colors.white38, size: 16),
+                      color: AppColors.inkSubtle, size: 16),
                   tooltip: l10n.uxDiagCopySessionId,
                   onPressed: () {
                     Clipboard.setData(
@@ -140,7 +141,7 @@ class _DiagnosticControlsCardState
             ),
             if (session.label != null && session.label!.isNotEmpty)
               Text(l10n.uxDiagLabelValue(session.label!),
-                  style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12)),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
@@ -150,7 +151,7 @@ class _DiagnosticControlsCardState
                 label: Text(l10n.uxDiagStopSession),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kRed,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.ink,
                 ),
               ),
             ),
@@ -158,12 +159,12 @@ class _DiagnosticControlsCardState
             const SizedBox(height: 12),
             TextField(
               controller: _labelCtrl,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: AppColors.ink),
               decoration: InputDecoration(
                 hintText: l10n.uxDiagLabelHint,
-                hintStyle: const TextStyle(color: Colors.white38),
+                hintStyle: const TextStyle(color: AppColors.inkSubtle),
                 filled: true,
-                fillColor: const Color(0xFF0F0F1A),
+                fillColor: AppColors.ground,
                 border: const OutlineInputBorder(borderSide: BorderSide.none),
               ),
             ),
@@ -176,7 +177,7 @@ class _DiagnosticControlsCardState
                 label: Text(l10n.uxDiagStartSession),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kGreen,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.ink,
                 ),
               ),
             ),
@@ -230,12 +231,12 @@ class _SessionListSection extends ConsumerWidget {
           children: [
             Text(l10n.uxDiagSessionsTitle,
                 style: const TextStyle(
-                    color: Colors.white70,
+                    color: AppColors.inkMuted,
                     fontWeight: FontWeight.bold,
                     fontSize: 13)),
             IconButton(
               icon: const Icon(Icons.refresh_rounded,
-                  color: Colors.white38, size: 18),
+                  color: AppColors.inkSubtle, size: 18),
               onPressed: () => ref.invalidate(diagnosticSessionsListProvider),
             ),
           ],
@@ -256,7 +257,7 @@ class _SessionListSection extends ConsumerWidget {
               return Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(l10n.uxDiagNoSessions,
-                    style: const TextStyle(color: Colors.white38)),
+                    style: const TextStyle(color: AppColors.inkSubtle)),
               );
             }
             return Column(
@@ -292,23 +293,23 @@ class _SessionTile extends StatelessWidget {
           status == 'active'
               ? Icons.fiber_manual_record
               : Icons.check_circle_outline,
-          color: status == 'active' ? _kGreen : Colors.white38,
+          color: status == 'active' ? _kGreen : AppColors.inkSubtle,
           size: 18,
         ),
         title: Text(
           (session['label'] as String?)?.isNotEmpty == true
               ? session['label'] as String
               : l10n.uxDiagSessionShort(userId),
-          style: const TextStyle(color: Colors.white, fontSize: 13),
+          style: const TextStyle(color: AppColors.ink, fontSize: 13),
         ),
         subtitle: Text(
           '${startedAt?.toLocal() ?? '—'}'
           '${duration != null ? ' · ${duration.inMinutes}min' : ''}'
           ' · ${session['role_snapshot'] ?? '—'} · $status',
-          style: const TextStyle(color: Colors.white38, fontSize: 11),
+          style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
         ),
         trailing:
-            const Icon(Icons.chevron_right_rounded, color: Colors.white24),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.inkSubtle),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(
               builder: (_) => _SessionDetailScreen(session: session)),
@@ -371,12 +372,12 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
               children: [
                 TextField(
                   controller: _searchCtrl,
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  style: const TextStyle(color: AppColors.ink, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: l10n.uxDiagSearchHint,
-                    hintStyle: const TextStyle(color: Colors.white38),
+                    hintStyle: const TextStyle(color: AppColors.inkSubtle),
                     prefixIcon: const Icon(Icons.search_rounded,
-                        color: Colors.white38, size: 18),
+                        color: AppColors.inkSubtle, size: 18),
                     filled: true,
                     fillColor: _kCard,
                     border:
@@ -409,7 +410,7 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
                 if (filtered.isEmpty) {
                   return Center(
                     child: Text(l10n.uxDiagNoEventsMatch,
-                        style: const TextStyle(color: Colors.white38)),
+                        style: const TextStyle(color: AppColors.inkSubtle)),
                   );
                 }
                 return ListView.builder(
@@ -432,10 +433,10 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
     return DropdownButtonFormField<String?>(
       value: _severityFilter,
       dropdownColor: _kCard,
-      style: const TextStyle(color: Colors.white, fontSize: 12),
+      style: const TextStyle(color: AppColors.ink, fontSize: 12),
       decoration: InputDecoration(
         labelText: l10n.uxDiagSeverity,
-        labelStyle: const TextStyle(color: Colors.white38, fontSize: 11),
+        labelStyle: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
         filled: true,
         fillColor: _kCard,
         border: const OutlineInputBorder(borderSide: BorderSide.none),
@@ -458,10 +459,10 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
     return DropdownButtonFormField<String?>(
       value: _categoryFilter,
       dropdownColor: _kCard,
-      style: const TextStyle(color: Colors.white, fontSize: 12),
+      style: const TextStyle(color: AppColors.ink, fontSize: 12),
       decoration: InputDecoration(
         labelText: l10n.uxDiagCategory,
-        labelStyle: const TextStyle(color: Colors.white38, fontSize: 11),
+        labelStyle: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
         filled: true,
         fillColor: _kCard,
         border: const OutlineInputBorder(borderSide: BorderSide.none),
@@ -521,7 +522,7 @@ class _EventTile extends StatelessWidget {
       case 'WARN':
         return _kGold;
       default:
-        return Colors.white38;
+        return AppColors.inkSubtle;
     }
   }
 
@@ -548,16 +549,16 @@ class _EventTile extends StatelessWidget {
                       fontWeight: FontWeight.bold)),
               const SizedBox(width: 6),
               Text(event['category'] as String? ?? '',
-                  style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
               const Spacer(),
               Text(event['occurred_at'] as String? ?? '',
-                  style: const TextStyle(color: Colors.white24, fontSize: 9)),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 9)),
             ],
           ),
           const SizedBox(height: 4),
           Text(event['event_name'] as String? ?? '',
               style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.ink,
                   fontSize: 12,
                   fontWeight: FontWeight.w600)),
           if (event['route'] != null ||
@@ -576,7 +577,7 @@ class _EventTile extends StatelessWidget {
                 // when symbolicating a specific crash.
                 if (event['build_sha'] != null) 'build: ${event['build_sha']}',
               ].join(' · '),
-              style: const TextStyle(color: Colors.white54, fontSize: 11),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 11),
             ),
           if (event['error_message'] != null)
             Padding(

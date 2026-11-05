@@ -9,6 +9,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/post_provider.dart';
 import '../../../shared/widgets/result_block.dart';
 import '../../../shared/widgets/score_chip.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class ResultScreen extends ConsumerStatefulWidget {
   final String originalText;
@@ -81,7 +82,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
             onPressed: _copyAll,
             icon: const Icon(Icons.copy_all_rounded, size: 16),
             label: Text(l10n.uxCopyAll),
-            style: TextButton.styleFrom(foregroundColor: Colors.white70),
+            style: TextButton.styleFrom(foregroundColor: AppColors.inkMuted),
           ),
           if (!_saved)
             TextButton.icon(
@@ -98,7 +99,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
           if (_saved)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Icon(Icons.bookmark_added, color: Colors.green),
+              child: Icon(Icons.bookmark_added, color: AppColors.positive),
             ),
         ],
       ),
@@ -118,7 +119,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
                       const Icon(
                         Icons.timer_outlined,
                         size: 13,
-                        color: Colors.white38,
+                        color: AppColors.inkSubtle,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -126,7 +127,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
                             widget.processingSeconds!.toStringAsFixed(1)),
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.white38,
+                          color: AppColors.inkSubtle,
                         ),
                       ),
                     ],

@@ -10,6 +10,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class NicheDiscoveryScreen extends ConsumerStatefulWidget {
   const NicheDiscoveryScreen({super.key, required this.analysisId});
@@ -83,12 +84,12 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
     final asyncList = ref.watch(nichesByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: AppColors.ground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F1A),
+        backgroundColor: AppColors.ground,
         title: Text(l10n.miNicheTitle,
-            style: const TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+            style: const TextStyle(color: AppColors.ink)),
+        iconTheme: const IconThemeData(color: AppColors.ink),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go(
@@ -104,12 +105,12 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                        color: Color(0xFF4D96FF), strokeWidth: 2),
+                        color: AppColors.info, strokeWidth: 2),
                   )
-                : const Icon(Icons.hub_rounded, color: Color(0xFF4D96FF)),
+                : const Icon(Icons.hub_rounded, color: AppColors.info),
             label: Text(
               _running ? l10n.miNicheDiscovering : l10n.miNicheDiscoverButton,
-              style: const TextStyle(color: Color(0xFF4D96FF)),
+              style: const TextStyle(color: AppColors.info),
             ),
           ),
         ],
@@ -121,39 +122,39 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: AppColors.negative.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
+                border: Border.all(color: AppColors.negative.withOpacity(0.3)),
               ),
               child: Text(_error!,
                   style:
-                      const TextStyle(color: Colors.redAccent, fontSize: 13)),
+                      const TextStyle(color: AppColors.negative, fontSize: 13)),
             ),
           Expanded(
             child: asyncList.when(
               loading: () => const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF4D96FF))),
+                  child: CircularProgressIndicator(color: AppColors.info)),
               error: (e, _) => Center(
                   child: Text(
                       l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
-                      style: const TextStyle(color: Colors.redAccent))),
+                      style: const TextStyle(color: AppColors.negative))),
               data: (niches) => niches.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(Icons.hub_outlined,
-                              color: Colors.white24, size: 64),
+                              color: AppColors.inkSubtle, size: 64),
                           const SizedBox(height: 16),
                           Text(l10n.miNicheEmptyTitle,
-                              style: const TextStyle(color: Colors.white38)),
+                              style: const TextStyle(color: AppColors.inkSubtle)),
                           const SizedBox(height: 8),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Text(l10n.miNicheEmptyBody,
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
-                                    color: Colors.white24,
+                                    color: AppColors.inkSubtle,
                                     fontSize: 12,
                                     height: 1.4)),
                           ),
@@ -161,8 +162,8 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
                           ElevatedButton(
                             onPressed: _running ? null : _discover,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4D96FF),
-                              foregroundColor: Colors.white,
+                              backgroundColor: AppColors.info,
+                              foregroundColor: AppColors.ground,
                             ),
                             child: Text(l10n.miNicheEmptyButton),
                           ),
@@ -191,11 +192,11 @@ class _NicheCard extends StatelessWidget {
   Color get _levelColor {
     switch (niche.level) {
       case 'niche':
-        return const Color(0xFF4D96FF);
+        return AppColors.info;
       case 'sub_niche':
-        return const Color(0xFFAB83FF);
+        return AppColors.accent;
       default:
-        return const Color(0xFF00BCD4);
+        return AppColors.info;
     }
   }
 
@@ -217,7 +218,7 @@ class _NicheCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _levelColor.withOpacity(0.2)),
       ),
@@ -249,7 +250,7 @@ class _NicheCard extends StatelessWidget {
                   children: [
                     Text(niche.name,
                         style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.ink,
                             fontWeight: FontWeight.bold,
                             fontSize: 14)),
                     Text(_levelLabel(l10n),
@@ -262,12 +263,12 @@ class _NicheCard extends StatelessWidget {
                 children: [
                   Text('${niche.overallScore}',
                       style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontSize: 20,
                           fontWeight: FontWeight.bold)),
                   Text(l10n.miNicheScoreLabel,
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 10)),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
                 ],
               ),
             ],
@@ -276,7 +277,7 @@ class _NicheCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(niche.description,
                 style: const TextStyle(
-                    color: Colors.white60, fontSize: 12, height: 1.4),
+                    color: AppColors.inkMuted, fontSize: 12, height: 1.4),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis),
           ],
@@ -287,12 +288,12 @@ class _NicheCard extends StatelessWidget {
               _MiniBar(
                   label: l10n.miNicheScorePotential,
                   value: niche.potentialScore,
-                  color: const Color(0xFF6BCB77)),
+                  color: AppColors.positive),
               const SizedBox(width: 8),
               _MiniBar(
                   label: l10n.miNicheScoreGrowth,
                   value: niche.growthScore,
-                  color: const Color(0xFF4D96FF)),
+                  color: AppColors.info),
             ],
           ),
           const SizedBox(height: 6),
@@ -301,12 +302,12 @@ class _NicheCard extends StatelessWidget {
               _MiniBar(
                   label: l10n.miNicheScoreMonetization,
                   value: niche.monetizationScore,
-                  color: const Color(0xFFFFD93D)),
+                  color: AppColors.warning),
               const SizedBox(width: 8),
               _MiniBar(
                   label: l10n.miNicheScoreTrend,
                   value: niche.trendScore,
-                  color: const Color(0xFFAB83FF)),
+                  color: AppColors.accent),
             ],
           ),
           if (niche.keywords.isNotEmpty) ...[
@@ -355,7 +356,7 @@ class _MiniBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(label,
-                  style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 10)),
               Text('$value',
                   style: TextStyle(
                       color: color, fontSize: 10, fontWeight: FontWeight.bold)),

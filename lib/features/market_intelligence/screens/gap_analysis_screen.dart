@@ -10,6 +10,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // IVE-COMMERCIAL-FOUNDATION-11 — this screen is the representative
 // quota-consuming call site migrated in Phase A (mission Section 11).
@@ -101,12 +102,12 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
       BuildContext context, AsyncValue<GapAnalysis?> asyncGap) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: AppColors.ground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F1A),
+        backgroundColor: AppColors.ground,
         title:
-            Text(l10n.miGapTitle, style: const TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+            Text(l10n.miGapTitle, style: const TextStyle(color: AppColors.ink)),
+        iconTheme: const IconThemeData(color: AppColors.ink),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go(
@@ -118,12 +119,12 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
           TextButton.icon(
             onPressed: _running ? null : _run,
             icon: _running
-                ? const AiThinkingIndicator(color: Color(0xFFFFD93D))
+                ? const AiThinkingIndicator(color: AppColors.warning)
                 : const Icon(Icons.find_in_page_rounded,
-                    color: Color(0xFFFFD93D)),
+                    color: AppColors.warning),
             label: Text(
               _running ? l10n.miGapAnalyzing : l10n.miGapAnalyzeButton,
-              style: const TextStyle(color: Color(0xFFFFD93D)),
+              style: const TextStyle(color: AppColors.warning),
             ),
           ),
         ],
@@ -135,39 +136,39 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: AppColors.negative.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
+                border: Border.all(color: AppColors.negative.withOpacity(0.3)),
               ),
               child: Text(_error!,
                   style:
-                      const TextStyle(color: Colors.redAccent, fontSize: 13)),
+                      const TextStyle(color: AppColors.negative, fontSize: 13)),
             ),
           Expanded(
             child: asyncGap.when(
               loading: () => const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFFFD93D))),
+                  child: CircularProgressIndicator(color: AppColors.warning)),
               error: (e, _) => Center(
                   child: Text(
                       l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
-                      style: const TextStyle(color: Colors.redAccent))),
+                      style: const TextStyle(color: AppColors.negative))),
               data: (gap) => gap == null
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(Icons.find_in_page_outlined,
-                              color: Colors.white24, size: 64),
+                              color: AppColors.inkSubtle, size: 64),
                           const SizedBox(height: 16),
                           Text(l10n.miGapEmptyTitle,
-                              style: const TextStyle(color: Colors.white38)),
+                              style: const TextStyle(color: AppColors.inkSubtle)),
                           const SizedBox(height: 8),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Text(l10n.miGapEmptyBody,
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
-                                    color: Colors.white24,
+                                    color: AppColors.inkSubtle,
                                     fontSize: 12,
                                     height: 1.4)),
                           ),
@@ -175,7 +176,7 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
                           ElevatedButton(
                             onPressed: _running ? null : _run,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFFD93D),
+                              backgroundColor: AppColors.warning,
                               foregroundColor: Colors.black,
                             ),
                             child: Text(l10n.miGapEmptyButton),
@@ -190,31 +191,31 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
                         children: [
                           _GapSection(
                             icon: Icons.article_rounded,
-                            color: const Color(0xFFFF6B6B),
+                            color: AppColors.negative,
                             title: l10n.miGapSectionContent,
                             items: gap.contentGaps,
                           ),
                           _GapSection(
                             icon: Icons.search_rounded,
-                            color: const Color(0xFF4D96FF),
+                            color: AppColors.info,
                             title: l10n.miGapSectionSeo,
                             items: gap.seoGaps,
                           ),
                           _GapSection(
                             icon: Icons.shield_rounded,
-                            color: const Color(0xFF6BCB77),
+                            color: AppColors.positive,
                             title: l10n.miGapSectionAuthority,
                             items: gap.authorityGaps,
                           ),
                           _GapSection(
                             icon: Icons.attach_money_rounded,
-                            color: const Color(0xFFFFD93D),
+                            color: AppColors.warning,
                             title: l10n.miGapSectionMonetization,
                             items: gap.monetizationGaps,
                           ),
                           _GapSection(
                             icon: Icons.inventory_2_rounded,
-                            color: const Color(0xFFAB83FF),
+                            color: AppColors.accent,
                             title: l10n.miGapSectionProduct,
                             items: gap.productGaps,
                           ),
@@ -222,21 +223,21 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1A1A2E),
+                              color: AppColors.surface,
                               borderRadius: BorderRadius.circular(10),
                               border:
-                                  Border.all(color: const Color(0xFF333355)),
+                                  Border.all(color: AppColors.line),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 const Icon(Icons.summarize_rounded,
-                                    color: Color(0xFFFFD93D), size: 18),
+                                    color: AppColors.warning, size: 18),
                                 const SizedBox(width: 8),
                                 Text(
                                   l10n.miGapTotalIdentified(gap.totalGaps),
                                   style: const TextStyle(
-                                    color: Color(0xFFFFD93D),
+                                    color: AppColors.warning,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -273,7 +274,7 @@ class _GapSection extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withOpacity(0.2)),
       ),
@@ -308,7 +309,7 @@ class _GapSection extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(color: Color(0xFF333355), height: 1),
+          const Divider(color: AppColors.line, height: 1),
           ...items.asMap().entries.map(
                 (e) => Padding(
                   padding:
@@ -335,7 +336,7 @@ class _GapSection extends StatelessWidget {
                       Expanded(
                         child: Text(e.value,
                             style: const TextStyle(
-                                color: Colors.white70,
+                                color: AppColors.inkMuted,
                                 fontSize: 13,
                                 height: 1.4)),
                       ),
