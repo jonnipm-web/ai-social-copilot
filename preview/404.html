@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+  IVE-COMMERCIAL-TARGETED-REMEDIATION-04 — GitHub Pages SPA fallback.
+
+  GitHub Pages only serves static files -- it has no concept of GoRouter's
+  client-side routes, so a direct link or hard refresh on e.g. /about
+  (a real, working route once the Flutter app loads) is requested as a
+  literal server-side path GH Pages knows nothing about, and it serves
+  this file with an HTTP 404 status instead. In-app navigation (clicking
+  a link while the app is already running) never hits this at all --
+  that's pure client-side routing and never leaves the single loaded
+  index.html document.
+
+  This is the standard, widely-used technique for hosting a client-side-
+  routed SPA on GitHub Pages (https://github.com/rafgraph/spa-github-pages):
+  redirect the unknown path back to the app's root, encoding the original
+  path in a query string GoRouter never sees; web/index.html's matching
+  script (added by the deploy workflow after `flutter create`) decodes it
+  and restores the real URL via history.replaceState *before* Flutter's
+  own router ever initializes, so the user lands on the exact route they
+  asked for, indistinguishable from having navigated there in-app.
+
+  pathSegmentsToKeep = 1 preserves the repo's GitHub Pages base path
+  (/ai-social-copilot/) -- do not change this without also updating
+  --base-href in deploy-web.yml.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>InsightValues</title>
+    <script>
+      var pathSegmentsToKeep = 1;
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      );
+    </script>
+  </head>
+  <body></body>
+</html>
