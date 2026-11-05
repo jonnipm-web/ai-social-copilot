@@ -29,7 +29,10 @@ import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart'
     show showCopilotChat;
 import '../../../shared/widgets/translated_content_notice.dart';
+import 'package:ai_social_copilot/core/theme/app_motion.dart';
 import 'package:ai_social_copilot/core/theme/app_tokens.dart';
+import 'package:ai_social_copilot/shared/ui/iv_charts.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 
 class ProjectCommandCenterScreen extends ConsumerStatefulWidget {
   const ProjectCommandCenterScreen({super.key});
@@ -470,7 +473,7 @@ class _ProjectCommandCenterScreenState
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () {
             if (context.canPop()) {
               context.pop();
@@ -480,55 +483,65 @@ class _ProjectCommandCenterScreenState
           },
         ),
         backgroundColor: Colors.transparent,
-        title: Text(t.projectCommandTitle,
-            style: const TextStyle(color: AppColors.ink)),
-        iconTheme: const IconThemeData(color: AppColors.ink),
+        title: Text(t.projectCommandTitle),
         actions: [
-          // Refresh
           IconButton(
             icon: _refreshing
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.positive,
-                    ),
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.refresh_rounded, color: AppColors.positive),
+                : const Icon(Icons.refresh_rounded),
             tooltip: t.projectCommandRefreshTooltip,
             onPressed: _refreshing ? null : _refresh,
           ),
-          // Novo projeto
-          IconButton(
-            icon: Icon(
-              _showForm ? Icons.close_rounded : Icons.add_rounded,
-              color: AppColors.positive,
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpace.s2),
+            child: AnimatedSwitcher(
+              duration: AppMotion.short,
+              transitionBuilder: (c, a) =>
+                  RotationTransition(turns: Tween(begin: 0.75, end: 1.0).animate(a), child: FadeTransition(opacity: a, child: c)),
+              child: IconButton.filledTonal(
+                key: ValueKey(_showForm),
+                tooltip: _showForm ? t.commonCancel : t.projectCommandNewProject,
+                icon: Icon(_showForm ? Icons.close_rounded : Icons.add_rounded),
+                onPressed: () => setState(() => _showForm = !_showForm),
+              ),
             ),
-            onPressed: () => setState(() => _showForm = !_showForm),
           ),
         ],
       ),
       drawer: const AppDrawer(),
       body: Column(
         children: [
-          if (_showForm) _buildForm(),
+          AnimatedSize(
+            duration: AppMotion.medium,
+            curve: AppMotion.emphasized,
+            alignment: Alignment.topCenter,
+            child: _showForm ? _buildForm() : const SizedBox(width: double.infinity),
+          ),
           Expanded(
-            child: asyncProjects.when(
-              loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.positive)),
-              error: (e, _) => Center(
+            child: AnimatedSwitcher(
+              duration: AppMotion.medium,
+              child: asyncProjects.when(
+                loading: () => const _ListSkeleton(),
+                error: (e, _) => Center(
+                    child: Padding(
+                  padding: const EdgeInsets.all(AppSpace.s6),
                   child: Text(
                       t.projectCommandLoadError(extractErrorMessage(e, t)),
-                      style: const TextStyle(color: AppColors.negative))),
-              data: (projects) => projects.isEmpty
-                  ? _buildEmpty(t)
-                  : RefreshIndicator(
-                      color: AppColors.positive,
-                      backgroundColor: AppColors.surface,
-                      onRefresh: _refresh,
-                      child: _buildProjectList(projects, scoresMap),
-                    ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.negative)),
+                )),
+                data: (projects) => projects.isEmpty
+                    ? _buildEmpty(t)
+                    : RefreshIndicator(
+                        backgroundColor: AppColors.surface,
+                        onRefresh: _refresh,
+                        child: _buildProjectList(projects, scoresMap),
+                      ),
+              ),
             ),
           ),
         ],
@@ -537,121 +550,135 @@ class _ProjectCommandCenterScreenState
   }
 
   Widget _buildEmpty(AppLocalizations t) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.rocket_launch_outlined,
-                color: AppColors.inkSubtle, size: 64),
-            const SizedBox(height: 16),
-            Text(t.projectCommandEmptyTitle,
-                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 16)),
-            const SizedBox(height: 8),
-            Text(t.projectCommandEmptySubtitle,
-                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 13)),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: () => setState(() => _showForm = true),
-              icon: const Icon(Icons.add_rounded),
-              label: Text(t.projectCommandNewProject),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.positive,
-                foregroundColor: Colors.black,
-              ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpace.s6),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: IvStagger(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Center(
+                  child: IvIconTile(Icons.rocket_launch_rounded, size: 72),
+                ),
+                Text(t.projectCommandEmptyTitle,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: AppColors.ink,
+                        fontSize: AppType.heading,
+                        fontWeight: FontWeight.w600)),
+                Text(t.projectCommandEmptySubtitle,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: AppColors.inkMuted,
+                        fontSize: 14,
+                        height: 1.5)),
+                IvPrimaryAction(
+                  icon: Icons.add_rounded,
+                  label: t.projectCommandNewProject,
+                  onTap: () => setState(() => _showForm = true),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       );
 
   Widget _buildForm() {
     final t = AppLocalizations.of(context)!;
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.positive.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(t.projectCommandNewProject,
-              style: const TextStyle(
-                  color: AppColors.positive, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          _Field(
-              controller: _nameCtrl,
-              label: t.projectCommandFieldNameLabel,
-              hint: t.projectCommandFieldNameHint),
-          const SizedBox(height: 10),
-          _Field(
-              controller: _descCtrl,
-              label: t.projectCommandFieldDescLabel,
-              hint: t.projectCommandFieldDescHint),
-          const SizedBox(height: 10),
-          _Field(
-              controller: _urlCtrl,
-              label: t.projectCommandFieldUrlLabel,
-              hint: t.projectCommandFieldUrlHint),
-          const SizedBox(height: 10),
-          Text(t.projectCommandFieldTypeLabel,
-              style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            children: ['website', 'app', 'product', 'service', 'content']
-                .map(
-                  (type) => ChoiceChip(
-                    label: Text(_projectTypeLabel(type, t)),
-                    selected: _type == type,
-                    onSelected: (_) => setState(() => _type = type),
-                    selectedColor: AppColors.positive,
-                    labelStyle: TextStyle(
-                        color: _type == type ? Colors.black : AppColors.inkMuted,
-                        fontSize: 12),
-                    backgroundColor: AppColors.ground,
-                    side: BorderSide(
-                        color: _type == type
-                            ? AppColors.positive
-                            : AppColors.line),
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => setState(() => _showForm = false),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.inkMuted,
-                    side: const BorderSide(color: AppColors.line),
-                  ),
-                  child: Text(t.commonCancel),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpace.s4, AppSpace.s2, AppSpace.s4, AppSpace.s2),
+      child: Center(
+        child: ConstrainedBox(
+          constraints:
+              const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+          child: IvCard(
+            highlight: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IvSectionHeader(
+                  title: t.projectCommandNewProject,
+                  icon: Icons.add_business_rounded,
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _saving ? null : _save,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.positive,
-                    foregroundColor: Colors.black,
-                  ),
-                  child: _saving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                              color: Colors.black, strokeWidth: 2))
-                      : Text(t.commonSave,
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: AppSpace.s4),
+                _Field(
+                    controller: _nameCtrl,
+                    label: t.projectCommandFieldNameLabel,
+                    hint: t.projectCommandFieldNameHint),
+                const SizedBox(height: AppSpace.s3),
+                _Field(
+                    controller: _descCtrl,
+                    label: t.projectCommandFieldDescLabel,
+                    hint: t.projectCommandFieldDescHint),
+                const SizedBox(height: AppSpace.s3),
+                _Field(
+                    controller: _urlCtrl,
+                    label: t.projectCommandFieldUrlLabel,
+                    hint: t.projectCommandFieldUrlHint),
+                const SizedBox(height: AppSpace.s4),
+                IvEyebrow(t.projectCommandFieldTypeLabel),
+                const SizedBox(height: AppSpace.s2),
+                Wrap(
+                  spacing: AppSpace.s2,
+                  runSpacing: AppSpace.s2,
+                  children: ['website', 'app', 'product', 'service', 'content']
+                      .map(
+                        (type) => ChoiceChip(
+                          label: Text(_projectTypeLabel(type, t)),
+                          selected: _type == type,
+                          showCheckmark: false,
+                          avatar: Icon(_projectTypeIcon(type),
+                              size: 16,
+                              color: _type == type
+                                  ? AppColors.accent
+                                  : AppColors.inkMuted),
+                          onSelected: (_) => setState(() => _type = type),
+                          selectedColor: AppColors.accentSoft,
+                          labelStyle: TextStyle(
+                              color: _type == type
+                                  ? AppColors.accent
+                                  : AppColors.inkMuted,
+                              fontWeight: FontWeight.w500,
+                              fontSize: AppType.label),
+                          backgroundColor: AppColors.surfaceRaised,
+                          side: BorderSide(
+                              color: _type == type
+                                  ? AppColors.accent.withOpacity(0.5)
+                                  : AppColors.line),
+                        ),
+                      )
+                      .toList(),
                 ),
-              ),
-            ],
+                const SizedBox(height: AppSpace.s4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => setState(() => _showForm = false),
+                        child: Text(t.commonCancel),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpace.s3),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _saving ? null : _save,
+                        child: _saving
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    color: AppColors.onAccent,
+                                    strokeWidth: 2))
+                            : Text(t.commonSave),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -660,6 +687,7 @@ class _ProjectCommandCenterScreenState
     List<Project> projects,
     Map<String, EcosystemScore> scoresMap,
   ) {
+    final t = AppLocalizations.of(context)!;
     // Ordena por ecosystemScore quando disponível, fallback para priorityScore
     final sorted = [...projects]..sort((a, b) {
         final sa = scoresMap[a.id]?.ecosystemScore ?? a.priorityScore;
@@ -667,31 +695,150 @@ class _ProjectCommandCenterScreenState
         return sb.compareTo(sa);
       });
 
+    final active = projects
+        .where((p) => p.status == 'active' || p.status == 'executing')
+        .length;
+    final opp = projects
+        .map((p) => scoresMap[p.id]?.opportunityScore ?? p.opportunityScore)
+        .where((v) => v > 0)
+        .toList();
+    final avgOpp =
+        opp.isEmpty ? 0 : (opp.reduce((a, b) => a + b) / opp.length).round();
+
     return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      itemCount: sorted.length,
+      padding: const EdgeInsets.fromLTRB(
+          AppSpace.s4, AppSpace.s2, AppSpace.s4, AppSpace.s12),
+      itemCount: sorted.length + 1,
       itemBuilder: (_, i) {
-        final p = sorted[i];
+        if (i == 0) {
+          return Center(
+            child: ConstrainedBox(
+              constraints:
+                  const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: AppSpace.s4),
+                child: IvGrid(
+                  minTileWidth: 150,
+                  maxColumns: 3,
+                  children: [
+                    IvStatCard(
+                      label: t.navProjects,
+                      value: projects.length,
+                      icon: Icons.folder_copy_rounded,
+                      color: AppColors.info,
+                    ),
+                    IvStatCard(
+                      label: t.projectCommandStatusActive,
+                      value: active,
+                      icon: Icons.play_circle_outline_rounded,
+                      color: AppColors.accent,
+                    ),
+                    IvStatCard(
+                      label: t.projectCommandStatOpportunity,
+                      value: avgOpp,
+                      valueText: avgOpp > 0 ? null : '—',
+                      icon: Icons.speed_rounded,
+                      color: avgOpp > 0
+                          ? ivScoreColor(avgOpp)
+                          : AppColors.inkSubtle,
+                      trailing: avgOpp > 0
+                          ? IvRingGauge(
+                              value: avgOpp.toDouble(),
+                              size: 44,
+                              stroke: 5,
+                              center: const SizedBox.shrink())
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        final p = sorted[i - 1];
         final score = scoresMap[p.id];
-        return _ProjectCard(
-          project: p,
-          rank: i + 1,
-          ecosystemScore: score,
-          onTap: () => _openDetail(p, score),
-          onStatusChange: (s) =>
-              ref.read(projectsNotifierProvider.notifier).updateStatus(p.id, s),
-          onDelete: () => _confirmDelete(p),
-          onAnalyze: p.marketAnalysisId != null
-              ? () => context.go(AppConstants.routeMarketIntelligenceHub
-                  .replaceFirst(':id', p.marketAnalysisId!))
-              : null,
-          onIveAnalysis: () => context.push(
-            AppConstants.routeProjectAnalysis.replaceFirst(':id', p.id),
+        return Center(
+          child: ConstrainedBox(
+            constraints:
+                const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+            child: FadeSlideIn(
+              index: i,
+              child: _ProjectCard(
+                project: p,
+                rank: i,
+                ecosystemScore: score,
+                onTap: () => _openDetail(p, score),
+                onStatusChange: (s) => ref
+                    .read(projectsNotifierProvider.notifier)
+                    .updateStatus(p.id, s),
+                onDelete: () => _confirmDelete(p),
+                onAnalyze: p.marketAnalysisId != null
+                    ? () => context.go(AppConstants.routeMarketIntelligenceHub
+                        .replaceFirst(':id', p.marketAnalysisId!))
+                    : null,
+                onIveAnalysis: () => context.push(
+                  AppConstants.routeProjectAnalysis.replaceFirst(':id', p.id),
+                ),
+              ),
+            ),
           ),
         );
       },
     );
+  }
+}
+
+class _ListSkeleton extends StatelessWidget {
+  const _ListSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(AppSpace.s4),
+      children: const [
+        IvSkeleton(height: 84),
+        SizedBox(height: AppSpace.s4),
+        IvSkeleton(height: 180),
+        SizedBox(height: AppSpace.s3),
+        IvSkeleton(height: 180),
+      ],
+    );
+  }
+}
+
+IconData _projectTypeIcon(String type) {
+  switch (type) {
+    case 'website':
+      return Icons.language_rounded;
+    case 'app':
+      return Icons.smartphone_rounded;
+    case 'product':
+      return Icons.inventory_2_rounded;
+    case 'service':
+      return Icons.handshake_rounded;
+    case 'content':
+      return Icons.article_rounded;
+    default:
+      return Icons.category_rounded;
+  }
+}
+
+/// Icon for an ecosystem verdict (replaces the old emoji glyphs).
+IconData _verdictIcon(String recommendation) {
+  switch (recommendation) {
+    case 'ESCALAR':
+      return Icons.bolt_rounded;
+    case 'ACELERAR':
+      return Icons.rocket_launch_rounded;
+    case 'MANTER':
+      return Icons.check_circle_rounded;
+    case 'VALIDAR':
+      return Icons.manage_search_rounded;
+    case 'ANÁLISE INCOMPLETA':
+      return Icons.query_stats_rounded;
+    default:
+      return Icons.lightbulb_rounded;
   }
 }
 
@@ -708,26 +855,8 @@ class _Field extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
-      style: const TextStyle(color: AppColors.ink, fontSize: 13),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        labelStyle: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
-        hintStyle: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
-        filled: true,
-        fillColor: AppColors.ground,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.line),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.positive),
-        ),
-      ),
+      style: const TextStyle(color: AppColors.ink, fontSize: 14),
+      decoration: InputDecoration(labelText: label, hintText: hint),
     );
   }
 }
@@ -804,142 +933,114 @@ class _ProjectCard extends StatelessWidget {
         ? _fmtRevenue(s.totalRoi, t)
         : _fmtRevenue(project.revenuePotential, t);
     final ecoScore = s?.ecosystemScore;
+    final gaugeValue = (ecoScore ?? oppScore).toDouble();
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _statusColor.withOpacity(0.2)),
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpace.s3),
+      child: IvCard(
+        onTap: onTap,
+        accent: _statusColor,
+        padding: EdgeInsets.zero,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpace.s4, AppSpace.s4, AppSpace.s4, AppSpace.s3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: AppColors.positive.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text('#$rank',
-                              style: const TextStyle(
-                                  color: AppColors.positive,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold)),
-                        ),
+                      IvRingGauge(
+                        value: gaugeValue,
+                        size: 52,
+                        stroke: 5,
+                        semanticsLabel: '${gaugeValue.round()} / 100',
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: AppSpace.s3),
                       Expanded(
-                        child: Text(project.name,
-                            style: const TextStyle(
-                                color: AppColors.ink,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15)),
-                      ),
-                      // Ecosystem score badge quando disponível
-                      if (ecoScore != null)
-                        Container(
-                          margin: const EdgeInsets.only(right: 6),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: _ecoScoreColor(ecoScore).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text('$ecoScore',
-                              style: TextStyle(
-                                  color: _ecoScoreColor(ecoScore),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text('#$rank',
+                                    style: const TextStyle(
+                                        color: AppColors.inkSubtle,
+                                        fontSize: AppType.caption,
+                                        fontWeight: FontWeight.w600,
+                                        fontFeatures: AppType.tabular)),
+                                const SizedBox(width: AppSpace.s2),
+                                IvBadge(_statusLabel(t), color: _statusColor),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpace.s1),
+                            Text(project.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    color: AppColors.ink,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                    letterSpacing: -0.1)),
+                          ],
                         ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: _statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border:
-                              Border.all(color: _statusColor.withOpacity(0.5)),
-                        ),
-                        child: Text(_statusLabel(t),
-                            style: TextStyle(
-                                color: _statusColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
                   if (project.presentedDescription.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 38),
-                      child: Text(project.presentedDescription,
-                          style: const TextStyle(
-                              color: AppColors.inkMuted, fontSize: 12),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis),
-                    ),
+                    const SizedBox(height: AppSpace.s3),
+                    Text(project.presentedDescription,
+                        style: const TextStyle(
+                            color: AppColors.inkMuted,
+                            fontSize: AppType.label,
+                            height: 1.45),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
                   ],
                   // Recomendação da IA quando disponível
                   if (s != null && s.recommendation.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 38),
-                      child: Row(
-                        children: [
-                          Text(s.recommendationEmoji,
-                              style: const TextStyle(fontSize: 12)),
-                          const SizedBox(width: 4),
-                          Text(ecosystemVerdictLabel(s.recommendation, t),
-                              style: const TextStyle(
-                                  color: AppColors.accent,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600)),
-                        ],
-                      ),
+                    const SizedBox(height: AppSpace.s3),
+                    IvBadge(
+                      ecosystemVerdictLabel(s.recommendation, t),
+                      color: AppColors.accent,
+                      icon: _verdictIcon(s.recommendation),
                     ),
                   ],
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppSpace.s4),
                   Row(
                     children: [
                       _StatChip(
                           label: t.projectCommandStatOpportunity,
                           value: '$oppScore',
-                          color: AppColors.info),
-                      const SizedBox(width: 8),
+                          color: ivScoreColor(oppScore)),
+                      const SizedBox(width: AppSpace.s2),
                       _StatChip(
                           label: t.projectCommandStatPotential,
                           value: revenue,
-                          color: AppColors.warning),
-                      const SizedBox(width: 8),
+                          color: AppColors.gold),
+                      const SizedBox(width: AppSpace.s2),
                       _StatChip(
                           label: t.projectCommandStatDeadline,
                           value: _fmtPrazo(project.timeToRevenueDays, t),
-                          color: AppColors.accent),
+                          color: AppColors.info),
                     ],
                   ),
                 ],
               ),
             ),
-            const Divider(color: AppColors.line, height: 1),
+            const Divider(height: 1),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpace.s2, vertical: AppSpace.s1),
               child: Row(
                 children: [
                   _ActionBtn(
-                    icon: Icons.info_outline_rounded,
+                    icon: Icons.open_in_full_rounded,
                     label: t.projectCommandActionDetail,
-                    color: AppColors.accent,
+                    color: AppColors.inkMuted,
                     onTap: onTap,
                   ),
                   if (onAnalyze != null)
@@ -961,7 +1062,7 @@ class _ProjectCard extends StatelessWidget {
                     onTap: () => onStatusChange('active'),
                   ),
                   _ActionBtn(
-                    icon: Icons.delete_rounded,
+                    icon: Icons.delete_outline_rounded,
                     label: t.projectCommandDelete,
                     color: AppColors.negative,
                     onTap: onDelete,
@@ -975,11 +1076,6 @@ class _ProjectCard extends StatelessWidget {
     );
   }
 
-  Color _ecoScoreColor(int score) {
-    if (score >= 70) return AppColors.positive;
-    if (score >= 40) return AppColors.warning;
-    return AppColors.negative;
-  }
 }
 
 // ── Project Detail Bottom Sheet ───────────────────────────────────────────────
@@ -1130,8 +1226,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
-                    Text(s.recommendationEmoji,
-                        style: const TextStyle(fontSize: 22)),
+                    IvIconTile(_verdictIcon(s.recommendation), size: 32),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(ecosystemVerdictLabel(s.recommendation, t),
@@ -2482,19 +2577,46 @@ class _StatChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpace.s3, vertical: AppSpace.s2 + 2),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.2)),
+          color: AppColors.surfaceRaised.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.line),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(value,
-                style: TextStyle(
-                    color: color, fontWeight: FontWeight.bold, fontSize: 12)),
-            Text(label,
-                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+            Text(label.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: AppColors.inkSubtle,
+                    fontSize: 10,
+                    letterSpacing: 0.6,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(height: 3),
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration:
+                      BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: AppColors.ink,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          fontFeatures: AppType.tabular)),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -2518,11 +2640,31 @@ class _ActionBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: TextButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, color: color, size: 14),
-        label: Text(label, style: TextStyle(color: color, fontSize: 11)),
-        style: TextButton.styleFrom(padding: EdgeInsets.zero),
+      child: Tooltip(
+        message: label,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          hoverColor: color.withOpacity(0.08),
+          splashColor: color.withOpacity(0.12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpace.s2),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: color, size: 18),
+                const SizedBox(height: 3),
+                Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: AppColors.inkMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
