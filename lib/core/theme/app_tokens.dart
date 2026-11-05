@@ -40,9 +40,9 @@ class AppColors {
   static const goldSoft = Color(0xFF2A2413);
 
   // Data / status
-  static const positive = Color(0xFF3DBE7E);
+  static const positive = Color(0xFF45CB86);
   static const positiveSoft = Color(0xFF0F2A1D);
-  static const negative = Color(0xFFEF6461);
+  static const negative = Color(0xFFEF5F5C);
   static const negativeSoft = Color(0xFF2E1414);
   static const warning = Color(0xFFE3A33B);
   static const warningSoft = Color(0xFF2B2110);
