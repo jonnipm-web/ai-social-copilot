@@ -91,16 +91,213 @@ class DashboardScreen extends ConsumerWidget {
           final topAnalyses = [...analyses]
             ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpace.s4, AppSpace.s2, AppSpace.s4, AppSpace.s12),
-            child: Center(
-              child: ConstrainedBox(
-                constraints:
-                    const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
-                child: IvStagger(
-                  gap: AppSpace.s4,
-                  children: [
+          final mainItems = <Widget>[
+                    // ── Hero ────────────────────────────────────────────
+                    _Hero(
+                      title: l10n.dashWelcome,
+                      planLabel:
+                          l10n.dashPlanLabel(profile?.roleLabel ?? 'Free'),
+                      isPro: hasProAccess,
+                    ),
+
+                    // ── Primary action ──────────────────────────────────
+                    IvPrimaryAction(
+                      icon: Icons.auto_fix_high_rounded,
+                      label: l10n.dashImproveWithAi,
+                      subtitle: l10n.dashImproveWithAiSubtitle,
+                      onTap: () => context.go(AppConstants.routeGenerate),
+                    ),
+
+                    // ── Portfolio KPIs (INFORMATION) ────────────────────
+                    if (projects.isNotEmpty)
+                      _PortfolioSummaryRow(
+                        activeProjects: projects
+                            .where((p) =>
+                                p.status == 'active' || p.status == 'executing')
+                            .length,
+                        analysesCount: analyses.length,
+                        avgScore: _avgOpportunityScore(analyses),
+                        l10n: l10n,
+                      ),
+
+                    // ── Score chart (real analyses only; a ranking needs 2+) ─
+                    if (topAnalyses.length >= 2)
+                      IvCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            IvSectionHeader(
+                              title: l10n.dashScoreChartTitle,
+                              icon: Icons.insights_rounded,
+                              iconColor: AppColors.info,
+                            ),
+                            const SizedBox(height: AppSpace.s4),
+                            IvBarList(
+                              max: 100,
+                              data: [
+                                for (final a in topAnalyses.take(6))
+                                  IvBarDatum(a.niche ?? a.input,
+                                      a.opportunityScore.toDouble()),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // ── Modules ─────────────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpace.s2),
+                      child: IvEyebrow(l10n.dashModulesTitle),
+                    ),
+                    IvGrid(
+                      minTileWidth: 150,
+                      children: [
+                        _ModuleTile(
+                          icon: Icons.groups_2_rounded,
+                          color: AppColors.accent,
+                          label: l10n.dashShortcutPersonas,
+                          benefit: l10n.dashProBenefitPersonas,
+                          pro: true,
+                          hasAccess: hasProAccess,
+                          l10n: l10n,
+                          onTap: shortcutTap(
+                              'personas', AppConstants.routePersonas),
+                        ),
+                        _ModuleTile(
+                          icon: Icons.perm_media_rounded,
+                          color: AppColors.info,
+                          label: l10n.dashShortcutLibrary,
+                          benefit: l10n.dashProBenefitLibrary,
+                          pro: true,
+                          hasAccess: hasProAccess,
+                          l10n: l10n,
+                          onTap: shortcutTap(
+                              'content-library', AppConstants.routeContent),
+                        ),
+                        _ModuleTile(
+                          icon: Icons.calendar_month_rounded,
+                          color: AppColors.warning,
+                          label: l10n.dashShortcutCalendar,
+                          benefit: l10n.dashProBenefitCalendar,
+                          pro: true,
+                          hasAccess: hasProAccess,
+                          l10n: l10n,
+                          onTap: shortcutTap(
+                              'calendar', AppConstants.routeCalendar),
+                        ),
+                        _ModuleTile(
+                          icon: Icons.history_rounded,
+                          color: AppColors.inkMuted,
+                          label: l10n.dashShortcutHistory,
+                          onTap: () => context.push(AppConstants.routeHistory),
+                        ),
+                        _ModuleTile(
+                          icon: Icons.auto_stories_rounded,
+                          color: AppColors.accent,
+                          label: l10n.dashShortcutVault,
+                          onTap: () => context.go(AppConstants.routeKnowledge),
+                        ),
+                        // GATE-17-FINAL-CLOSURE — reports its geometry so the
+                        // floating IVE avatar's resting corner steers clear.
+                        IveExclusionRegion(
+                          child: _ModuleTile(
+                            icon: Icons.campaign_rounded,
+                            color: AppColors.positive,
+                            label: l10n.dashShortcutCampaigns,
+                            benefit: l10n.dashProBenefitCampaigns,
+                            pro: true,
+                            hasAccess: hasProAccess,
+                            l10n: l10n,
+                            onTap: shortcutTap(
+                                'campaigns', AppConstants.routeCampaigns),
+                          ),
+                        ),
+                        _ModuleTile(
+                          icon: Icons.language_rounded,
+                          color: AppColors.info,
+                          label: l10n.dashShortcutWebsiteAnalyzer,
+                          onTap: () =>
+                              context.go(AppConstants.routeWebsiteAnalyzer),
+                        ),
+                        _ModuleTile(
+                          icon: Icons.insights_rounded,
+                          color: AppColors.accent,
+                          label: l10n.dashShortcutPerformance,
+                          benefit: l10n.dashProBenefitPerformance,
+                          pro: true,
+                          hasAccess: hasProAccess,
+                          l10n: l10n,
+                          onTap: shortcutTap(
+                              'performance', AppConstants.routePerformance),
+                        ),
+                      ],
+                    ),
+
+                    // ── Admin ───────────────────────────────────────────
+                    if (isAdmin) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppSpace.s4),
+                        child: IvEyebrow(l10n.dashAdminSectionTitle,
+                            color: AppColors.gold),
+                      ),
+                      _AdminStats(ref: ref, l10n: l10n),
+                      IvCard(
+                        accent: AppColors.gold,
+                        onTap: () => context.go(AppConstants.routeAdmin),
+                        child: Row(
+                          children: [
+                            const IvIconTile(
+                                Icons.admin_panel_settings_rounded,
+                                color: AppColors.gold),
+                            const SizedBox(width: AppSpace.s3),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(l10n.dashAdminPanelButton,
+                                      style: const TextStyle(
+                                          color: AppColors.ink,
+                                          fontWeight: FontWeight.w600)),
+                                  Text(l10n.dashAdminPanelSubtitle,
+                                      style: const TextStyle(
+                                          color: AppColors.inkMuted,
+                                          fontSize: AppType.caption)),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded,
+                                color: AppColors.inkSubtle),
+                          ],
+                        ),
+                      ),
+                    ],
+
+          ];
+          final sideItems = <Widget>[
+                    // ── Quota ───────────────────────────────────────────
+                    usageAsync.when(
+                      loading: () => const IvSkeleton(height: 96),
+                      error: (_, __) => const SizedBox.shrink(),
+                      data: (quota) => _UsageCard(
+                          used: quota.used, limit: quota.limit, l10n: l10n),
+                    ),
+
+                    // ── Recommendations (INTERPRETATION + PRIORITY) ─────
+                    _ExecutiveRecommendationsCard(
+                      projects: projects,
+                      analyses: analyses,
+                      pending: pending,
+                      l10n: l10n,
+                    ),
+
+                    // ── Pending actions (PRIORITY → ACTION) ─────────────
+                    _DashboardPendingActionsCard(
+                      pending: pending,
+                      l10n: l10n,
+                    ),
+
+          ];
+          final singleItems = <Widget>[
                     // ── Hero ────────────────────────────────────────────
                     _Hero(
                       title: l10n.dashWelcome,
@@ -302,11 +499,42 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                       ),
                     ],
-                  ],
+
+          ];
+
+          return LayoutBuilder(builder: (context, c) {
+            final wide = c.maxWidth >= 1000;
+            return SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                  wide ? AppSpace.s8 : AppSpace.s4,
+                  AppSpace.s2,
+                  wide ? AppSpace.s8 : AppSpace.s4,
+                  AppSpace.s12),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxWidth: wide ? 1160 : AppConstants.maxBodyWidth),
+                  child: wide
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: IvStagger(
+                                  gap: AppSpace.s4, children: mainItems),
+                            ),
+                            const SizedBox(width: AppSpace.s6),
+                            SizedBox(
+                              width: 380,
+                              child: IvStagger(
+                                  gap: AppSpace.s4, children: sideItems),
+                            ),
+                          ],
+                        )
+                      : IvStagger(gap: AppSpace.s4, children: singleItems),
                 ),
               ),
-            ),
-          );
+            );
+          });
         },
       ),
     );

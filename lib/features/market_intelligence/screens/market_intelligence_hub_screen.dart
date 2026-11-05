@@ -268,7 +268,10 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
 
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-            child: Column(
+            child: Center(
+             child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1080),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: _staggered([
                 TranslatedContentNotice(localizedFrom: analysis.localizedFrom),
@@ -359,6 +362,8 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                 ),
               ]),
             ),
+            ),
+            ),
           );
         },
       ),
@@ -402,195 +407,151 @@ class _ExecScoreCard extends StatelessWidget {
     final score = analysis.opportunityScore;
     final color = _scoreColor(score);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        gradient: LinearGradient(
-          colors: [_kCard, color.withOpacity(0.10)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(color: color.withOpacity(0.45), width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final subScores = [
+      _ScoreBar(label: l10n.miHubScoreSeo, score: analysis.scoreSeo),
+      _ScoreBar(
+          label: l10n.miHubScoreMonetization,
+          score: analysis.scoreMonetization),
+      _ScoreBar(
+          label: l10n.miHubScoreCompetition, score: analysis.scoreCompetition),
+      _ScoreBar(label: l10n.miHubScoreGrowth, score: analysis.scoreGrowth),
+    ];
+
+    return IvCard(
+      highlight: true,
+      accent: AppColors.accent,
+      padding: const EdgeInsets.all(AppSpace.s6),
+      child: LayoutBuilder(builder: (context, c) {
+        final wide = c.maxWidth >= 720;
+        final ringSize = wide ? 148.0 : 112.0;
+
+        final ring = IvRingGauge(
+          value: score.toDouble(),
+          size: ringSize,
+          stroke: wide ? 11 : 9,
+          color: color,
+          semanticsLabel: '$score / 100',
+          center: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.analytics_rounded, color: color, size: 18),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  l10n.miHubOpportunityScoreLabel,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.inkMuted,
-                    fontSize: 11,
-                    letterSpacing: 1.4,
-                    fontWeight: FontWeight.w600,
-                  ),
+              IvCountUp(
+                value: score,
+                style: TextStyle(
+                  fontSize: ringSize * 0.3,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.ink,
+                  height: 1,
+                  letterSpacing: -1,
                 ),
               ),
-              const Spacer(),
-              if (analysis.niche != null)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 130),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: _kPrimary.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                      border: Border.all(color: _kPrimary.withOpacity(0.35)),
-                    ),
-                    child: Text(
-                      analysis.niche!,
-                      style: const TextStyle(
-                          color: _kPrimary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
+              const SizedBox(height: 2),
+              const Text('/100',
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.inkSubtle,
+                      fontWeight: FontWeight.w500)),
             ],
           ),
-          const SizedBox(height: 14),
-          // COMMERCIAL-V1-UX-RECONCILIATION (mobile overflow fix) — a fixed
-          // horizontal Row(score, Spacer, context column) overflowed by
-          // ~136px at a 390px viewport (confirmed by
-          // test/features/market_intelligence/market_intelligence_scroll_test.dart's
-          // RenderFlex assertion in debug/test mode; silently clipped
-          // content in release since Flutter strips that assert there).
-          // LayoutBuilder switches to a stacked Column below a breakpoint
-          // instead of forcing the same horizontal layout into less
-          // width — the score also shrinks so it never dominates a narrow
-          // card on its own.
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 380;
-              final ringSize = isNarrow ? 104.0 : 128.0;
-              final scoreRow = IvRingGauge(
-                value: score.toDouble(),
-                size: ringSize,
-                stroke: isNarrow ? 9 : 11,
-                color: color,
-                semanticsLabel: '$score / 100',
-                center: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IvCountUp(
-                      value: score,
-                      style: TextStyle(
-                        fontSize: ringSize * 0.32,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.ink,
-                        height: 1,
-                        letterSpacing: -1,
-                      ),
-                    ),
-                    Text(
-                      '/100',
-                      style: TextStyle(
-                        fontSize: ringSize * 0.11,
-                        color: AppColors.inkSubtle,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-              final contextColumn = Column(
-                crossAxisAlignment: isNarrow
-                    ? CrossAxisAlignment.start
-                    : CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
+        );
+
+        final info = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IvEyebrow(l10n.miHubOpportunityScoreLabel),
+            const SizedBox(height: AppSpace.s2),
+            Text(
+              analysis.niche ?? analysis.input,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.ink,
+                fontSize: wide ? 24 : 20,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.3,
+                height: 1.2,
+              ),
+            ),
+            const SizedBox(height: AppSpace.s2),
+            Wrap(
+              spacing: AppSpace.s2,
+              runSpacing: AppSpace.s2,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                IvBadge(_rec(l10n), color: color, icon: Icons.flag_rounded),
+                if (analysis.niche != null)
                   ConstrainedBox(
-                    constraints: BoxConstraints(
-                        maxWidth: isNarrow ? double.infinity : 140),
+                    constraints: const BoxConstraints(maxWidth: 320),
                     child: Text(
                       analysis.input,
-                      style: const TextStyle(
-                          color: AppColors.inkMuted,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                      textAlign: isNarrow ? TextAlign.start : TextAlign.end,
+                      style: const TextStyle(
+                          color: AppColors.inkSubtle, fontSize: 13),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                    ),
-                    child: Text(
-                      _rec(l10n),
-                      style: TextStyle(
-                          color: color,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              );
-
-              if (isNarrow) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    scoreRow,
-                    const SizedBox(height: 10),
-                    contextColumn,
-                  ],
-                );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  scoreRow,
-                  const Spacer(),
-                  contextColumn,
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              _ScoreBar(label: l10n.miHubScoreSeo, score: analysis.scoreSeo),
-              const SizedBox(width: 8),
-              _ScoreBar(
-                  label: l10n.miHubScoreMonetization,
-                  score: analysis.scoreMonetization),
-              const SizedBox(width: 8),
-              _ScoreBar(
-                  label: l10n.miHubScoreCompetition,
-                  score: analysis.scoreCompetition),
-              const SizedBox(width: 8),
-              _ScoreBar(
-                  label: l10n.miHubScoreGrowth, score: analysis.scoreGrowth),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
-              borderRadius: BorderRadius.circular(AppRadius.md),
+              ],
             ),
-            child: Text(
+            const SizedBox(height: AppSpace.s4),
+            Text(
               _desc(l10n),
               style: const TextStyle(
-                  color: AppColors.inkMuted, fontSize: 13, height: 1.5),
+                  color: AppColors.inkMuted, fontSize: 14, height: 1.55),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+
+        final scoresRow = Row(
+          children: [
+            for (var i = 0; i < subScores.length; i++) ...[
+              if (i > 0)
+                Container(
+                    width: 1,
+                    height: 56,
+                    color: AppColors.line,
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: AppSpace.s2)),
+              subScores[i],
+            ],
+          ],
+        );
+
+        if (wide) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  ring,
+                  const SizedBox(width: AppSpace.s8),
+                  Expanded(child: info),
+                ],
+              ),
+              const SizedBox(height: AppSpace.s6),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: AppSpace.s4),
+                decoration: BoxDecoration(
+                  color: AppColors.ground.withOpacity(0.35),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: scoresRow,
+              ),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: ring),
+            const SizedBox(height: AppSpace.s4),
+            info,
+            const SizedBox(height: AppSpace.s4),
+            scoresRow,
+          ],
+        );
+      }),
     );
   }
 }

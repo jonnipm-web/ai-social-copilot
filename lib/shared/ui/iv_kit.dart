@@ -819,3 +819,41 @@ class IvEmojiIcon extends StatelessWidget {
     );
   }
 }
+
+// ── App frame (proportion on large screens) ─────────────────────────────────
+
+/// Keeps every route at a readable width on desktop: content is centred in
+/// a frame of at most [maxWidth] (the background glow stays full-bleed),
+/// MediaQuery reports the frame width so per-screen breakpoints stay
+/// correct, and text scales up slightly on large screens so mobile-sized
+/// type doesn't look tiny on a 1900px monitor.
+class IvAppFrame extends StatelessWidget {
+  const IvAppFrame({super.key, required this.child, this.maxWidth = 1240});
+
+  final Widget child;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final w = mq.size.width;
+    final frameW = math.min(w, maxWidth);
+    final boost = w >= 1440
+        ? 1.12
+        : w >= 1024
+            ? 1.08
+            : 1.0;
+    final base = mq.textScaler.scale(100) / 100;
+    final framed = MediaQuery(
+      data: mq.copyWith(
+        size: Size(frameW, mq.size.height),
+        textScaler: TextScaler.linear(base * boost),
+      ),
+      child: child,
+    );
+    if (w <= maxWidth) return framed;
+    return Center(
+      child: SizedBox(width: frameW, child: ClipRect(child: framed)),
+    );
+  }
+}

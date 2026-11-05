@@ -970,7 +970,7 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
                 // of a per-screen collision-avoidance hack.
                 NotificationListener<ScrollNotification>(
                   onNotification: ivePageScrollNotification,
-                  child: child!,
+                  child: IvAppFrame(child: child!),
                 ),
                 IveOverlay(navigatorKey: rootNavigatorKey),
                 IveIntroGate(navigatorKey: rootNavigatorKey),

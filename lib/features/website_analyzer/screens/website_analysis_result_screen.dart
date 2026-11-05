@@ -13,6 +13,7 @@ import '../../../providers/website_analyzer_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/canonical_back_button.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
+import 'package:ai_social_copilot/core/theme/app_motion.dart';
 import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 import 'package:ai_social_copilot/shared/ui/iv_charts.dart';
 import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
@@ -237,7 +238,10 @@ class _AnalysisContent extends StatelessWidget {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: Column(
+      child: Center(
+       child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1080),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // URL Header
@@ -330,7 +334,7 @@ class _AnalysisContent extends StatelessWidget {
             child: _DiagnosticContent(analysis: analysis, l10n: l10n),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpace.s3),
 
           if (analysis.strengths.isNotEmpty)
             _ExpandableSection(
@@ -344,7 +348,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.strengths.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.strengths.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.weaknesses.isNotEmpty)
             _ExpandableSection(
@@ -358,7 +362,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.weaknesses.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.weaknesses.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.criticalIssues.isNotEmpty)
             _ExpandableSection(
@@ -372,7 +376,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.criticalIssues.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.criticalIssues.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.seoAnalysis.isNotEmpty)
             _ExpandableSection(
@@ -383,7 +387,7 @@ class _AnalysisContent extends StatelessWidget {
               child: _MapContent(data: analysis.seoAnalysis),
             ),
 
-          if (analysis.seoAnalysis.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.seoAnalysis.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.adsenseAnalysis.isNotEmpty)
             _ExpandableSection(
@@ -394,7 +398,7 @@ class _AnalysisContent extends StatelessWidget {
               child: _AdsenseContent(analysis: analysis, l10n: l10n),
             ),
 
-          if (analysis.adsenseAnalysis.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.adsenseAnalysis.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.quickWins.isNotEmpty)
             _ExpandableSection(
@@ -409,7 +413,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.quickWins.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.quickWins.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.plan7Days.isNotEmpty)
             _ExpandableSection(
@@ -420,7 +424,7 @@ class _AnalysisContent extends StatelessWidget {
               child: _NumberedList(items: analysis.plan7Days),
             ),
 
-          if (analysis.plan7Days.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.plan7Days.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.plan30Days.isNotEmpty)
             _ExpandableSection(
@@ -431,7 +435,7 @@ class _AnalysisContent extends StatelessWidget {
               child: _NumberedList(items: analysis.plan30Days),
             ),
 
-          if (analysis.plan30Days.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.plan30Days.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.articleIdeas.isNotEmpty)
             _ExpandableSection(
@@ -445,7 +449,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.articleIdeas.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.articleIdeas.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.monetizationOpportunities.isNotEmpty)
             _ExpandableSection(
@@ -460,7 +464,7 @@ class _AnalysisContent extends StatelessWidget {
             ),
 
           if (analysis.monetizationOpportunities.isNotEmpty)
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpace.s3),
 
           if (analysis.commercialOpportunities.isNotEmpty)
             _ExpandableSection(
@@ -477,6 +481,8 @@ class _AnalysisContent extends StatelessWidget {
           // Bottom padding for the bottom bar
           const SizedBox(height: 80),
         ],
+      ),
+       ),
       ),
     );
   }
@@ -579,48 +585,56 @@ class _ExpandableSectionState extends State<_ExpandableSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: widget.cardColor,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.ink.withOpacity(0.08)),
-      ),
+    return IvCard(
+      padding: EdgeInsets.zero,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
             borderRadius: BorderRadius.circular(AppRadius.lg),
             child: Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpace.s4, vertical: AppSpace.s3 + 2),
               child: Row(
                 children: [
-                  Icon(widget.icon, color: widget.iconColor, size: 20),
-                  const SizedBox(width: 10),
+                  IvIconTile(widget.icon, color: widget.iconColor, size: 32),
+                  const SizedBox(width: AppSpace.s3),
                   Expanded(
                     child: Text(
                       widget.title,
                       style: const TextStyle(
                         color: AppColors.ink,
                         fontWeight: FontWeight.w600,
-                        fontSize: 15,
+                        fontSize: 16,
                       ),
                     ),
                   ),
-                  Icon(
-                    _expanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: AppColors.ink.withOpacity(0.5),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: AppMotion.short,
+                    child: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.inkMuted),
                   ),
                 ],
               ),
             ),
           ),
-          if (_expanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-              child: widget.child,
-            ),
+          AnimatedSize(
+            duration: AppMotion.medium,
+            curve: AppMotion.emphasized,
+            alignment: Alignment.topCenter,
+            child: _expanded
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpace.s4, 0,
+                        AppSpace.s4, AppSpace.s4),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: widget.child,
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
         ],
       ),
     );
@@ -995,19 +1009,17 @@ class _BottomActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.s4, vertical: AppSpace.s3),
       decoration: BoxDecoration(
-        color: cardColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
+        color: AppColors.surface.withOpacity(0.92),
+        border: const Border(top: BorderSide(color: AppColors.line)),
       ),
       child: SafeArea(
         top: false,
+        child: Center(
+         child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1080),
         child: Row(
           children: [
             Expanded(
@@ -1021,7 +1033,7 @@ class _BottomActionBar extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpace.s2),
             Expanded(
               child: _ActionButton(
                 label: l10n.websiteResultCreateCampaign,
@@ -1033,7 +1045,7 @@ class _BottomActionBar extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpace.s2),
             Expanded(
               child: _ActionButton(
                 label: l10n.websiteResultSeoPlan,
@@ -1041,7 +1053,7 @@ class _BottomActionBar extends StatelessWidget {
                 color: AppColors.positive,
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpace.s2),
             Expanded(
               child: _ActionButton(
                 label: l10n.websiteResultAdsensePlan,
@@ -1050,6 +1062,8 @@ class _BottomActionBar extends StatelessWidget {
               ),
             ),
           ],
+        ),
+         ),
         ),
       ),
     );
@@ -1074,33 +1088,40 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDisabled = onTap == null;
     final effectiveColor = isDisabled ? AppColors.inkSubtle : color;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: effectiveColor.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: effectiveColor.withOpacity(0.25)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: effectiveColor, size: 18),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                color: effectiveColor,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.s2),
+          decoration: BoxDecoration(
+            color: isDisabled
+                ? AppColors.surfaceRaised.withOpacity(0.5)
+                : effectiveColor.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: effectiveColor.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: effectiveColor, size: 18),
+              const SizedBox(width: AppSpace.s2),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isDisabled ? AppColors.inkSubtle : AppColors.ink,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
