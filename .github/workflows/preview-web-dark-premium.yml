@@ -1,0 +1,56 @@
+name: Preview Web — Dark Premium (temporário)
+
+# Prévia do redesign Dark Premium (PR #125) para o Owner testar na web
+# ANTES do merge. Publica em .../ai-social-copilot/preview/ no mesmo
+# GitHub Pages, sem tocar no site principal (raiz): destination_dir +
+# keep_files preservam tudo fora de /preview. O próximo deploy da main
+# (deploy-web.yml, keep_files padrão = false) remove a prévia sozinho.
+# Sem --source-maps: nenhum mapa é gerado, nada sensível a proteger.
+# Remover este arquivo antes do merge.
+
+on:
+  push:
+    branches: [claude/iv-dark-premium-ui]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: preview-web-dark-premium
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: false
+
+      - name: flutter_env.cfg com as credenciais (mesmos secrets do deploy-web)
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > flutter_env.cfg
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> flutter_env.cfg
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> flutter_env.cfg
+
+      - name: Suporte Web
+        run: flutter create --platforms web --project-name ai_social_copilot .
+
+      - run: flutter pub get
+
+      - name: Build Web (prévia)
+        run: flutter build web --release --base-href /ai-social-copilot/preview/ --dart-define=BUILD_SHA=${{ github.sha }}
+
+      - name: Garantir que nenhum source map vai para a prévia
+        run: find build/web -name '*.js.map' -delete
+
+      - name: Publicar em /preview (site principal intocado)
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
+          destination_dir: preview
+          keep_files: true
