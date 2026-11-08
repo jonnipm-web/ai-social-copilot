@@ -140,10 +140,13 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                   );
                 }
 
-                return ListView.builder(
+                return SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 64),
-                  itemCount: filtered.length,
-                  itemBuilder: (_, i) => FadeSlideIn(index: i, child: _ContentCard(
+                  child: IvCardGrid(
+                      minTileWidth: 440,
+                      maxColumns: 2,
+                      gap: AppSpace.s3,
+                      children: List.generate(filtered.length, (i) => FadeSlideIn(index: i, child: _ContentCard(
                     item: filtered[i],
                     ref: ref,
                     projectName: _projectId != null
@@ -160,7 +163,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                         ref.invalidate(contentItemsProvider);
                       }
                     },
-                  )),
+                  )))),
                 );
               },
             ),
@@ -273,7 +276,7 @@ class _ContentCard extends StatelessWidget {
 
     return Card(
       color: AppColors.ink.withOpacity(0.05),
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
         side: const BorderSide(color: AppColors.line),
