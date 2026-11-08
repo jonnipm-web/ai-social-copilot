@@ -1147,12 +1147,6 @@ class _ProjectDetailSheet extends ConsumerWidget {
   /// Configuration sheet for this project.
   final VoidCallback onOpenConfig;
 
-  Color _ecoScoreColor(int score) {
-    if (score >= 70) return AppColors.positive;
-    if (score >= 40) return AppColors.warning;
-    return AppColors.negative;
-  }
-
   String _fmtRevenue(double v, AppLocalizations t) {
     if (v <= 0) return t.projectCommandRevenueNotEstimatedYet;
     if (v >= 1000000) return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
