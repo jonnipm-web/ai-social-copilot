@@ -32,7 +32,10 @@ class HistoryScreen extends ConsumerWidget {
           },
         ),
       ),
-      body: IvBody(child: Center(
+      // topCenter, not Center: a short list must start at the top, not
+      // float in the middle of the page.
+      body: IvBody(child: Align(
+        alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1120),
           child: historyAsync.when(
