@@ -7309,4 +7309,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get projectDetailActionsTitle => 'Ações do projeto';
+
+  @override
+  String get commonShowMore => 'Ver mais';
+
+  @override
+  String get commonShowLess => 'Ver menos';
 }

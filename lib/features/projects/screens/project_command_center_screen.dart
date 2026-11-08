@@ -1232,6 +1232,32 @@ class _ProjectDetailSheet extends ConsumerWidget {
               ],
             ),
           ),
+          if (MediaQuery.sizeOf(context).width >= 1100) ...[
+            const SizedBox(width: AppSpace.s6),
+            SizedBox(
+              width: 420,
+              child: Row(children: [
+                Expanded(
+                    child: _MetricTile(
+                        label: t.projectCommandStatOpportunity,
+                        value: '${s?.opportunityScore ?? project.opportunityScore}',
+                        color: AppColors.info)),
+                const SizedBox(width: AppSpace.s2),
+                Expanded(
+                    child: _MetricTile(
+                        label: t.projectCommandStatPotential,
+                        value: _fmtRevenue(
+                            s?.totalRoi ?? project.revenuePotential, t),
+                        color: AppColors.positive)),
+                const SizedBox(width: AppSpace.s2),
+                Expanded(
+                    child: _MetricTile(
+                        label: t.projectCommandMetricComplexity,
+                        value: '${project.complexityScore}',
+                        color: AppColors.warning)),
+              ]),
+            ),
+          ],
         ],
       ),
     );
@@ -1241,12 +1267,9 @@ class _ProjectDetailSheet extends ConsumerWidget {
       if (project.presentedDescription.isNotEmpty)
         _panel(title: t.projectCommandFieldDescLabel, children: [
           TranslatedContentNotice(localizedFrom: project.localizedFrom),
-          SelectableText(_readable(project.presentedDescription),
-              style: const TextStyle(
-                  color: AppColors.inkMuted, fontSize: 14, height: 1.6)),
+          _CollapsibleText(_readable(project.presentedDescription)),
         ]),
       _briefingSection(context, ref),
-      const SizedBox(height: AppSpace.s4),
       if (s != null && (s.strengths.isNotEmpty || s.risks.isNotEmpty))
         LayoutBuilder(builder: (context, c) {
           final strengths = _panel(
@@ -1286,58 +1309,6 @@ class _ProjectDetailSheet extends ConsumerWidget {
 
     // ── Side column: scores, resources and every action ───────────────────
     final side = <Widget>[
-      if (s != null)
-        _panel(title: t.projectCommandSectionEcosystemScores, children: [
-          _ScoreRow(t.projectCommandStatOpportunity, s.opportunityScore),
-          _ScoreRow(t.projectCommandScoreStrategicFit, s.strategicFit),
-          _ScoreRow(t.projectCommandScoreSynergy, s.synergyScore),
-          _ScoreRow(t.projectCommandScoreRoi, s.roiScore),
-          _ScoreRow(t.projectCommandScoreMomentum, s.momentumScore),
-          _ScoreRow(t.opportunityDetailScoreMarket, s.marketScore),
-          _ScoreRow(t.projectCommandScoreExecution, s.executionScore),
-          const SizedBox(height: AppSpace.s2),
-          Text(
-            t.projectCommandActionsStats(
-                s.completedActions, s.actionCount, s.completionRate),
-            style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
-          ),
-          const SizedBox(height: AppSpace.s1),
-          Text(
-            t.projectCommandTotalRoi(_fmtRevenue(s.totalRoi, t)),
-            style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
-          ),
-        ])
-      else
-        _panel(title: t.projectCommandSectionProjectMetrics, children: [
-          Row(
-            children: [
-              Expanded(
-                child: _MetricTile(
-                    label: t.projectCommandStatOpportunity,
-                    value: '${project.opportunityScore}',
-                    color: AppColors.info),
-              ),
-              const SizedBox(width: AppSpace.s2),
-              Expanded(
-                child: _MetricTile(
-                    label: t.projectCommandMetricComplexity,
-                    value: '${project.complexityScore}',
-                    color: AppColors.warning),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpace.s2),
-          _MetricTile(
-              label: t.projectCommandStatPotential,
-              value: _fmtRevenue(project.revenuePotential, t),
-              color: AppColors.positive),
-        ]),
-      _panel(title: t.projectCommandSectionResourceAllocation, children: [
-        _ResourceAllocationSection(
-          projectId: project.id,
-          projectName: project.name,
-        ),
-      ]),
       _panel(title: t.projectDetailActionsTitle, children: [
             // Action buttons
             Row(
@@ -1456,6 +1427,58 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 ),
               ],
             ),
+      ]),
+      if (s != null)
+        _panel(title: t.projectCommandSectionEcosystemScores, children: [
+          _ScoreRow(t.projectCommandStatOpportunity, s.opportunityScore),
+          _ScoreRow(t.projectCommandScoreStrategicFit, s.strategicFit),
+          _ScoreRow(t.projectCommandScoreSynergy, s.synergyScore),
+          _ScoreRow(t.projectCommandScoreRoi, s.roiScore),
+          _ScoreRow(t.projectCommandScoreMomentum, s.momentumScore),
+          _ScoreRow(t.opportunityDetailScoreMarket, s.marketScore),
+          _ScoreRow(t.projectCommandScoreExecution, s.executionScore),
+          const SizedBox(height: AppSpace.s2),
+          Text(
+            t.projectCommandActionsStats(
+                s.completedActions, s.actionCount, s.completionRate),
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
+          ),
+          const SizedBox(height: AppSpace.s1),
+          Text(
+            t.projectCommandTotalRoi(_fmtRevenue(s.totalRoi, t)),
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
+          ),
+        ])
+      else
+        _panel(title: t.projectCommandSectionProjectMetrics, children: [
+          Row(
+            children: [
+              Expanded(
+                child: _MetricTile(
+                    label: t.projectCommandStatOpportunity,
+                    value: '${project.opportunityScore}',
+                    color: AppColors.info),
+              ),
+              const SizedBox(width: AppSpace.s2),
+              Expanded(
+                child: _MetricTile(
+                    label: t.projectCommandMetricComplexity,
+                    value: '${project.complexityScore}',
+                    color: AppColors.warning),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpace.s2),
+          _MetricTile(
+              label: t.projectCommandStatPotential,
+              value: _fmtRevenue(project.revenuePotential, t),
+              color: AppColors.positive),
+        ]),
+      _panel(title: t.projectCommandSectionResourceAllocation, children: [
+        _ResourceAllocationSection(
+          projectId: project.id,
+          projectName: project.name,
+        ),
       ]),
     ];
 
@@ -1750,25 +1773,18 @@ class _ProjectDetailSheet extends ConsumerWidget {
           ...briefing.whatGrew,
           ...briefing.whatDeclined
         ].take(3).toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        return _panel(
+          title: t.projectBriefingSectionTitle,
           children: [
-            _sectionTitle(t.projectBriefingSectionTitle),
-            Container(
+            SizedBox(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.surface, gradient: kIvSurfaceGradient,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(color: AppColors.line),
-              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (briefing.executiveSummary.isNotEmpty)
                     Text(briefing.executiveSummary,
                         style: const TextStyle(
-                            color: AppColors.inkMuted, fontSize: 12, height: 1.4)),
+                            color: AppColors.inkMuted, fontSize: 14, height: 1.5)),
                   if (knowledgeCount != null) ...[
                     const SizedBox(height: 8),
                     Row(
@@ -1809,16 +1825,6 @@ class _ProjectDetailSheet extends ConsumerWidget {
       },
     );
   }
-
-  Widget _sectionTitle(String title) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(title,
-            style: const TextStyle(
-                color: AppColors.inkMuted,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.8)),
-      );
 
   List<Widget> _bullets(List<String> items, Color color, String prefix) => items
       .map((item) => Padding(
@@ -2625,7 +2631,7 @@ class _StatChip extends StatelessWidget {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: AppSpace.s3, vertical: AppSpace.s2 + 2),
+            horizontal: AppSpace.s2 + 2, vertical: AppSpace.s2 + 2),
         decoration: BoxDecoration(
           color: AppColors.surfaceRaised.withOpacity(0.7),
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -2634,14 +2640,16 @@ class _StatChip extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label.toUpperCase(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    color: AppColors.inkSubtle,
-                    fontSize: 11,
-                    letterSpacing: 0.6,
-                    fontWeight: FontWeight.w600)),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(label,
+                  maxLines: 1,
+                  style: const TextStyle(
+                      color: AppColors.inkSubtle,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500)),
+            ),
             const SizedBox(height: 3),
             Row(
               children: [
@@ -2653,14 +2661,17 @@ class _StatChip extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: AppColors.ink,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          fontFeatures: AppType.tabular)),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(value,
+                        maxLines: 1,
+                        style: const TextStyle(
+                            color: AppColors.ink,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            fontFeatures: AppType.tabular)),
+                  ),
                 ),
               ],
             ),
@@ -2748,5 +2759,58 @@ String _projectStatusLabel(String status, AppLocalizations t) {
       return t.projectCommandStatusIdea;
     default:
       return status;
+  }
+}
+
+// ── Collapsible long text ────────────────────────────────────────────────────
+
+class _CollapsibleText extends StatefulWidget {
+  const _CollapsibleText(this.text);
+  final String text;
+
+  @override
+  State<_CollapsibleText> createState() => _CollapsibleTextState();
+}
+
+class _CollapsibleTextState extends State<_CollapsibleText> {
+  static const _maxLines = 8;
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    const style =
+        TextStyle(color: AppColors.inkMuted, fontSize: 14, height: 1.6);
+    final long = '\n'.allMatches(widget.text).length >= _maxLines ||
+        widget.text.length > 600;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: _open || !long
+              ? SelectableText(widget.text, style: style)
+              : Text(widget.text,
+                  style: style,
+                  maxLines: _maxLines,
+                  overflow: TextOverflow.fade),
+        ),
+        if (long)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => setState(() => _open = !_open),
+              icon: Icon(
+                  _open
+                      ? Icons.expand_less_rounded
+                      : Icons.expand_more_rounded,
+                  size: 18),
+              label: Text(_open ? t.commonShowLess : t.commonShowMore),
+            ),
+          ),
+      ],
+    );
   }
 }

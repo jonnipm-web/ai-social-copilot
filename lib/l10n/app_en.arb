@@ -2482,5 +2482,7 @@
   "authTagline": "AI-powered project and decision intelligence",
   "commonAdd": "Add",
   "commonRefresh": "Refresh",
-  "projectDetailActionsTitle": "Project actions"
+  "projectDetailActionsTitle": "Project actions",
+  "commonShowMore": "Show more",
+  "commonShowLess": "Show less"
 }

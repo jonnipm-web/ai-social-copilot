@@ -7270,4 +7270,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get projectDetailActionsTitle => 'Project actions';
+
+  @override
+  String get commonShowMore => 'Show more';
+
+  @override
+  String get commonShowLess => 'Show less';
 }

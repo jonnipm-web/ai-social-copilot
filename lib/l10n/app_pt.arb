@@ -2592,5 +2592,7 @@
   "authTagline": "Inteligência de projetos e decisões, guiada por IA",
   "commonAdd": "Adicionar",
   "commonRefresh": "Atualizar",
-  "projectDetailActionsTitle": "Ações do projeto"
+  "projectDetailActionsTitle": "Ações do projeto",
+  "commonShowMore": "Ver mais",
+  "commonShowLess": "Ver menos"
 }

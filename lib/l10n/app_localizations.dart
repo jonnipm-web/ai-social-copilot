@@ -12708,6 +12708,18 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Ações do projeto'**
   String get projectDetailActionsTitle;
+
+  /// No description provided for @commonShowMore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver mais'**
+  String get commonShowMore;
+
+  /// No description provided for @commonShowLess.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver menos'**
+  String get commonShowLess;
 }
 
 class _AppLocalizationsDelegate
