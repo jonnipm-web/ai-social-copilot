@@ -1513,7 +1513,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                         ),
                         const SizedBox(width: AppSpace.s6),
                         SizedBox(
-                          width: 380,
+                          width: 400,
                           child: FadeSlideIn(
                             index: 2,
                             child: Column(
@@ -2604,12 +2604,15 @@ class _SheetButton extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: onTap,
       icon: Icon(icon, size: 16, color: color),
-      label: Text(label,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-          style: TextStyle(color: color, fontSize: 13)),
+      label: Flexible(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(label,
+              maxLines: 1, style: TextStyle(color: color, fontSize: 13)),
+        ),
+      ),
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         side: BorderSide(color: color.withOpacity(0.4)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
       ),
