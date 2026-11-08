@@ -36,8 +36,14 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: 6),
           Text(t.aboutTagline, style: const TextStyle(color: AppColors.inkMuted)),
           const SizedBox(height: 28),
-          _VersionTile(t: t),
-          const Divider(color: AppColors.line, height: 32),
+          IvCard(
+            padding: const EdgeInsets.symmetric(vertical: AppSpace.s2),
+            child: _VersionTile(t: t),
+          ),
+          const SizedBox(height: AppSpace.s4),
+          IvCard(
+            padding: const EdgeInsets.symmetric(vertical: AppSpace.s2),
+            child: Column(children: [
           _LinkTile(
             icon: Icons.public_rounded,
             label: t.aboutWebsite,
@@ -68,6 +74,8 @@ class AboutScreen extends StatelessWidget {
             trailing:
                 const Icon(Icons.chevron_right_rounded, color: AppColors.inkSubtle),
             onTap: () => context.push(AppConstants.routeUpgrade),
+          ),
+            ]),
           ),
           const SizedBox(height: 24),
           Text(
