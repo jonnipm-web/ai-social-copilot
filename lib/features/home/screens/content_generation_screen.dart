@@ -258,7 +258,7 @@ class _ContentGenerationScreenState
       body: IvBody(child: Center(
         child: ConstrainedBox(
           constraints:
-              const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+              const BoxConstraints(maxWidth: 880),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(

@@ -3,7 +3,6 @@ import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart'
     show extractErrorMessage, showErrorSnack;
 import '../../../data/models/quota_info.dart';
@@ -29,8 +28,7 @@ class UpgradeScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(20),
         child: Center(
           child: ConstrainedBox(
-            constraints:
-                const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+            constraints: const BoxConstraints(maxWidth: 960),
             child: quotaAsync.when(
               loading: () => const Padding(
                 padding: EdgeInsets.symmetric(vertical: 56),
@@ -83,51 +81,56 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
       children: [
         _UsageBanner(quota: quota),
         const SizedBox(height: 28),
-        _PlanCard(
-          title: t.planFree,
-          subtitle: quota.isAdmin ? '' : t.upgradeFreeSubtitle,
-          price: t.planFreePrice,
-          period: '',
-          isHighlighted: false,
-          isCurrentPlan: !quota.isCommercialPro && !quota.isAdmin,
-          badge: null,
-          features: [
-            _Feature(t.planFreeAnalyses(_UpgradeContent._freeLimit), true),
-            _Feature(t.upgradeFeatureWebsiteAnalysis, true),
-            _Feature(t.upgradeFeatureStrategyActions, true),
-            _Feature(t.upgradeFeatureUnlimited, false),
-            _Feature(t.upgradeFeaturePriority, false),
-            _Feature(t.upgradeFeatureSupport, false),
+        IvCardGrid(
+          minTileWidth: 360,
+          maxColumns: 2,
+          children: [
+            _PlanCard(
+              title: t.planFree,
+              subtitle: quota.isAdmin ? '' : t.upgradeFreeSubtitle,
+              price: t.planFreePrice,
+              period: '',
+              isHighlighted: false,
+              isCurrentPlan: !quota.isCommercialPro && !quota.isAdmin,
+              badge: null,
+              features: [
+                _Feature(t.planFreeAnalyses(_UpgradeContent._freeLimit), true),
+                _Feature(t.upgradeFeatureWebsiteAnalysis, true),
+                _Feature(t.upgradeFeatureStrategyActions, true),
+                _Feature(t.upgradeFeatureUnlimited, false),
+                _Feature(t.upgradeFeaturePriority, false),
+                _Feature(t.upgradeFeatureSupport, false),
+              ],
+              buttonLabel:
+                  quota.isCommercialPro ? t.upgradePreviousPlan : t.planCurrentPlan,
+              onPressed: null,
+            ),
+            _PlanCard(
+              title: t.planPro,
+              subtitle: t.upgradeProSubtitle,
+              price: t.planProPriceAmount,
+              period: t.planProPricePeriod,
+              isHighlighted: !quota.isCommercialPro,
+              isCurrentPlan: quota.isCommercialPro,
+              badge: quota.isCommercialPro
+                  ? t.upgradeCurrentPlanBadge
+                  : t.upgradeMostPopular,
+              features: [
+                _Feature(t.planProAnalyses(displayedProLimit), true),
+                _Feature(t.upgradeFeatureWebsiteAnalysis, true),
+                _Feature(t.upgradeFeatureStrategyActions, true),
+                _Feature(t.upgradeFeaturePriority, true),
+                _Feature(t.upgradeFeatureSupportEmail, true),
+                _Feature(t.upgradeFeatureEarlyAccess, true),
+              ],
+              buttonLabel: quota.isCommercialPro
+                  ? t.planCurrentPlan
+                  : (_isRedirecting ? t.checkoutOpening : t.upgradeSubscribeCta),
+              onPressed: quota.isCommercialPro || quota.isAdmin || _isRedirecting
+                  ? null
+                  : _onUpgradeTap,
+            ),
           ],
-          buttonLabel:
-              quota.isCommercialPro ? t.upgradePreviousPlan : t.planCurrentPlan,
-          onPressed: null,
-        ),
-        const SizedBox(height: 16),
-        _PlanCard(
-          title: t.planPro,
-          subtitle: t.upgradeProSubtitle,
-          price: t.planProPriceAmount,
-          period: t.planProPricePeriod,
-          isHighlighted: !quota.isCommercialPro,
-          isCurrentPlan: quota.isCommercialPro,
-          badge: quota.isCommercialPro
-              ? t.upgradeCurrentPlanBadge
-              : t.upgradeMostPopular,
-          features: [
-            _Feature(t.planProAnalyses(displayedProLimit), true),
-            _Feature(t.upgradeFeatureWebsiteAnalysis, true),
-            _Feature(t.upgradeFeatureStrategyActions, true),
-            _Feature(t.upgradeFeaturePriority, true),
-            _Feature(t.upgradeFeatureSupportEmail, true),
-            _Feature(t.upgradeFeatureEarlyAccess, true),
-          ],
-          buttonLabel: quota.isCommercialPro
-              ? t.planCurrentPlan
-              : (_isRedirecting ? t.checkoutOpening : t.upgradeSubscribeCta),
-          onPressed: quota.isCommercialPro || quota.isAdmin || _isRedirecting
-              ? null
-              : _onUpgradeTap,
         ),
         const SizedBox(height: 12),
         Text(

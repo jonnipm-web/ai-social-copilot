@@ -41,101 +41,113 @@ class AccountScreen extends ConsumerWidget {
       body: IvBody(child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _SectionLabel(t.accountProfile),
-          profileAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: LinearProgressIndicator(),
-            ),
-            error: (_, __) => const SizedBox.shrink(),
-            data: (profile) => ListTile(
-              leading: const Icon(Icons.person_outline_rounded,
-                  color: AppColors.inkMuted),
-              title: Text(profile?.email ?? '',
-                  style: const TextStyle(color: AppColors.ink)),
-              subtitle: isGoogleLinked
-                  ? Text(t.accountGoogleLinked,
-                      style:
-                          const TextStyle(color: AppColors.inkSubtle, fontSize: 12))
-                  : null,
-            ),
-          ),
-          const Divider(color: AppColors.line, height: 32),
-          _SectionLabel(t.accountLanguage),
-          RadioListTile<String>(
-            value: 'pt',
-            groupValue: language.languageCode,
-            title: Text(t.accountLanguagePortuguese),
-            onChanged: (v) => v != null
-                ? ref.read(languageProvider.notifier).setLanguage(v)
-                : null,
-          ),
-          RadioListTile<String>(
-            value: 'en',
-            groupValue: language.languageCode,
-            title: Text(t.accountLanguageEnglish),
-            onChanged: (v) => v != null
-                ? ref.read(languageProvider.notifier).setLanguage(v)
-                : null,
-          ),
-          const Divider(color: AppColors.line, height: 32),
-          _SectionLabel(t.accountCurrentPlan),
-          quotaAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: LinearProgressIndicator(),
-            ),
-            error: (_, __) => const SizedBox.shrink(),
-            data: (quota) => _PlanSection(
-              isPro: quota.isCommercialPro,
-              planLabel: quota.isAdmin
-                  ? 'Admin'
-                  : (quota.isCommercialPro ? t.planPro : t.planFree),
-              usageLabel:
-                  '${t.accountUsage}: ${quota.used} / ${quota.isAdmin ? '99.999' : quota.limit}',
-              ctaLabel: t.accountUpgradeManage,
-              onTapCta: () => context.push(AppConstants.routeUpgrade),
-            ),
-          ),
-          const Divider(color: AppColors.line, height: 32),
-          ListTile(
-            leading:
-                const Icon(Icons.help_outline_rounded, color: AppColors.inkMuted),
-            title: Text(t.accountHelpSupport),
-            trailing:
-                const Icon(Icons.chevron_right_rounded, color: AppColors.inkSubtle),
-            onTap: () => context.push(AppConstants.routeSupport),
-          ),
-          ListTile(
-            leading:
-                const Icon(Icons.info_outline_rounded, color: AppColors.inkMuted),
-            title: Text(t.accountAbout),
-            trailing:
-                const Icon(Icons.chevron_right_rounded, color: AppColors.inkSubtle),
-            onTap: () => context.push(AppConstants.routeAbout),
-          ),
-          const Divider(color: AppColors.line, height: 32),
-          if (AppConstants.accountDeletionUrl != null)
-            ListTile(
-              leading: const Icon(Icons.delete_outline_rounded,
-                  color: AppColors.inkMuted),
-              title: Text(t.accountDeleteAccount,
-                  style: const TextStyle(color: AppColors.inkMuted)),
-              trailing: const Icon(Icons.open_in_new_rounded,
-                  color: AppColors.inkSubtle, size: 18),
-              onTap: () => launchUrl(
-                Uri.parse(AppConstants.accountDeletionUrl!),
-                mode: LaunchMode.externalApplication,
-              ),
-            ),
-          ListTile(
-            leading: const Icon(Icons.logout_rounded, color: AppColors.negative),
-            title: Text(t.accountSignOut,
-                style: const TextStyle(color: AppColors.negative)),
-            onTap: () async {
-              await ref.read(authNotifierProvider.notifier).signOut();
-              if (context.mounted) context.go(AppConstants.routeLogin);
-            },
+          IvCardGrid(
+            minTileWidth: 420,
+            maxColumns: 2,
+            children: [
+              _AccountGroup(children: [
+                  _SectionLabel(t.accountProfile),
+                  profileAsync.when(
+                    loading: () => const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: LinearProgressIndicator(),
+                    ),
+                    error: (_, __) => const SizedBox.shrink(),
+                    data: (profile) => ListTile(
+                      leading: const Icon(Icons.person_outline_rounded,
+                          color: AppColors.inkMuted),
+                      title: Text(profile?.email ?? '',
+                          style: const TextStyle(color: AppColors.ink)),
+                      subtitle: isGoogleLinked
+                          ? Text(t.accountGoogleLinked,
+                              style:
+                                  const TextStyle(color: AppColors.inkSubtle, fontSize: 12))
+                          : null,
+                    ),
+                  ),
+              ]),
+              _AccountGroup(children: [
+                  _SectionLabel(t.accountLanguage),
+                  RadioListTile<String>(
+                    value: 'pt',
+                    groupValue: language.languageCode,
+                    title: Text(t.accountLanguagePortuguese),
+                    onChanged: (v) => v != null
+                        ? ref.read(languageProvider.notifier).setLanguage(v)
+                        : null,
+                  ),
+                  RadioListTile<String>(
+                    value: 'en',
+                    groupValue: language.languageCode,
+                    title: Text(t.accountLanguageEnglish),
+                    onChanged: (v) => v != null
+                        ? ref.read(languageProvider.notifier).setLanguage(v)
+                        : null,
+                  ),
+              ]),
+              _AccountGroup(children: [
+                  _SectionLabel(t.accountCurrentPlan),
+                  quotaAsync.when(
+                    loading: () => const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: LinearProgressIndicator(),
+                    ),
+                    error: (_, __) => const SizedBox.shrink(),
+                    data: (quota) => _PlanSection(
+                      isPro: quota.isCommercialPro,
+                      planLabel: quota.isAdmin
+                          ? 'Admin'
+                          : (quota.isCommercialPro ? t.planPro : t.planFree),
+                      usageLabel:
+                          '${t.accountUsage}: ${quota.used} / ${quota.isAdmin ? '99.999' : quota.limit}',
+                      ctaLabel: t.accountUpgradeManage,
+                      onTapCta: () => context.push(AppConstants.routeUpgrade),
+                    ),
+                  ),
+              ]),
+              _AccountGroup(children: [
+                  ListTile(
+                    leading:
+                        const Icon(Icons.help_outline_rounded, color: AppColors.inkMuted),
+                    title: Text(t.accountHelpSupport),
+                    trailing:
+                        const Icon(Icons.chevron_right_rounded, color: AppColors.inkSubtle),
+                    onTap: () => context.push(AppConstants.routeSupport),
+                  ),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.info_outline_rounded, color: AppColors.inkMuted),
+                    title: Text(t.accountAbout),
+                    trailing:
+                        const Icon(Icons.chevron_right_rounded, color: AppColors.inkSubtle),
+                    onTap: () => context.push(AppConstants.routeAbout),
+                  ),
+              ]),
+              _AccountGroup(children: [
+                  if (AppConstants.accountDeletionUrl != null)
+                    ListTile(
+                      leading: const Icon(Icons.delete_outline_rounded,
+                          color: AppColors.inkMuted),
+                      title: Text(t.accountDeleteAccount,
+                          style: const TextStyle(color: AppColors.inkMuted)),
+                      trailing: const Icon(Icons.open_in_new_rounded,
+                          color: AppColors.inkSubtle, size: 18),
+                      onTap: () => launchUrl(
+                        Uri.parse(AppConstants.accountDeletionUrl!),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                    ),
+                  ListTile(
+                    leading: const Icon(Icons.logout_rounded, color: AppColors.negative),
+                    title: Text(t.accountSignOut,
+                        style: const TextStyle(color: AppColors.negative)),
+                    onTap: () async {
+                      await ref.read(authNotifierProvider.notifier).signOut();
+                      if (context.mounted) context.go(AppConstants.routeLogin);
+                    },
+                  ),
+              ]),
+            ],
           ),
         ],
       )),
@@ -226,11 +238,28 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: Text(
         label,
         style: const TextStyle(
             color: AppColors.inkSubtle, fontSize: 12, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+class _AccountGroup extends StatelessWidget {
+  const _AccountGroup({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return IvCard(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.s2, vertical: AppSpace.s3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
       ),
     );
   }
