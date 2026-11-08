@@ -960,14 +960,16 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
 
     if (projects.isEmpty) {
       recs.add(_Rec(Icons.add_business_rounded, AppColors.accent,
-          l10n.dashRecEmptyProjectTitle, l10n.dashRecEmptyProjectBody));
+          l10n.dashRecEmptyProjectTitle, l10n.dashRecEmptyProjectBody,
+          AppConstants.routeProjects));
     } else if (analyses.isEmpty) {
       final projectName = projects.first.name;
       recs.add(_Rec(
           Icons.analytics_rounded,
           AppColors.info,
           l10n.dashRecEmptyAnalysisTitle,
-          l10n.dashRecEmptyAnalysisBody(projectName)));
+          l10n.dashRecEmptyAnalysisBody(projectName),
+          AppConstants.routeMarketIntelligence));
     }
 
     if (pending.isNotEmpty) {
@@ -975,7 +977,8 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
           Icons.bolt_rounded,
           AppColors.gold,
           l10n.dashRecPendingActionsTitle(pending.length),
-          l10n.dashRecPendingActionsBody));
+          l10n.dashRecPendingActionsBody,
+          AppConstants.routeActionEngine));
     }
 
     final topAnalyses = analyses.where((a) => a.opportunityScore >= 75).toList()
@@ -987,6 +990,7 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
         AppColors.positive,
         l10n.dashRecTopOpportunityTitle(top.niche ?? top.input),
         l10n.dashRecTopOpportunityBody(top.opportunityScore),
+        AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', top.id),
       ));
     }
 
@@ -1010,7 +1014,9 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
                 padding: EdgeInsets.symmetric(vertical: AppSpace.s3),
                 child: Divider(height: 1),
               ),
-            Row(
+            _TapRow(
+              onTap: () => context.push(recs[i].route),
+              child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 IvIconTile(recs[i].icon, color: recs[i].color, size: 34),
@@ -1033,7 +1039,13 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                const Padding(
+                  padding: EdgeInsets.only(left: AppSpace.s2, top: 6),
+                  child: Icon(Icons.chevron_right_rounded,
+                      size: 20, color: AppColors.inkSubtle),
+                ),
               ],
+            ),
             ),
           ],
         ],
@@ -1043,11 +1055,36 @@ class _ExecutiveRecommendationsCard extends StatelessWidget {
 }
 
 class _Rec {
-  const _Rec(this.icon, this.color, this.title, this.body);
+  const _Rec(this.icon, this.color, this.title, this.body, this.route);
   final IconData icon;
   final Color color;
   final String title;
   final String body;
+  final String route;
+}
+
+/// Whole-row tap target with hover/press feedback and a pointer cursor.
+class _TapRow extends StatelessWidget {
+  const _TapRow({required this.onTap, required this.child});
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        hoverColor: AppColors.ink.withOpacity(0.04),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpace.s1, vertical: AppSpace.s1),
+          child: child,
+        ),
+      ),
+    );
+  }
 }
 
 // ── R6: Pending actions (PRIORITY, feeds directly into ACTION) ─────────────
@@ -1090,15 +1127,22 @@ class _DashboardPendingActionsCard extends StatelessWidget {
             )
           else
             for (final item in pending.take(5))
-              Container(
-                margin: const EdgeInsets.only(top: AppSpace.s2),
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpace.s2),
+                child: Material(
+                  color: AppColors.surfaceRaised.withOpacity(0.6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    side: const BorderSide(color: AppColors.line),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => context.push(AppConstants.routeActionDetail
+                        .replaceFirst(':id', item.id)),
+                    hoverColor: AppColors.ink.withOpacity(0.04),
+                    child: Padding(
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppSpace.s3, vertical: AppSpace.s3),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceRaised.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: AppColors.line),
-                ),
                 child: Row(
                   children: [
                     Container(
@@ -1123,7 +1167,13 @@ class _DashboardPendingActionsCard extends StatelessWidget {
                     ),
                     if (item.roiScore > 0)
                       IvBadge('ROI ${item.roiScore}', color: AppColors.gold),
+                    const SizedBox(width: AppSpace.s1),
+                    const Icon(Icons.chevron_right_rounded,
+                        size: 20, color: AppColors.inkSubtle),
                   ],
+                ),
+                    ),
+                  ),
                 ),
               ),
         ],
