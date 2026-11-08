@@ -1017,7 +1017,10 @@ class _BottomActionBar extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
+        // heightFactor: 1 — a bare Center fills the whole height the Scaffold
+        // offers a bottom bar, covering the page with this bar's background.
         child: Center(
+         heightFactor: 1,
          child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1080),
         child: Row(
