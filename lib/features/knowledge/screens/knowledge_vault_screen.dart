@@ -266,16 +266,15 @@ class _ItemList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 64),
-      itemCount: items.length,
-      itemBuilder: (ctx, i) => FadeSlideIn(index: i, child: _KnowledgeCard(
+      child: IvCardGrid(children: List.generate(items.length, (i) => FadeSlideIn(index: i, child: _KnowledgeCard(
         item: items[i],
         onInvalidate: onInvalidate,
         projects: projects,
         projectName:
             items[i].projectId == null ? null : projectsMap[items[i].projectId],
-      )),
+      )))),
     );
   }
 }
@@ -536,7 +535,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
     final l10n = AppLocalizations.of(context)!;
     return Card(
       color: AppColors.surface,
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.lg),

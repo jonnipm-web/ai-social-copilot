@@ -993,3 +993,64 @@ class IvEmptyState extends StatelessWidget {
     );
   }
 }
+
+// ── Card grid ───────────────────────────────────────────────────────────────
+
+/// Lays cards out in 1–[maxColumns] columns depending on the width, with
+/// every card in a row stretched to the tallest one. Use inside a scroll
+/// view (it does not scroll itself). Cards must not contain a
+/// LayoutBuilder (equal heights are measured intrinsically).
+class IvCardGrid extends StatelessWidget {
+  const IvCardGrid({
+    super.key,
+    required this.children,
+    this.minTileWidth = 380,
+    this.gap = AppSpace.s4,
+    this.maxColumns = 3,
+  });
+
+  final List<Widget> children;
+  final double minTileWidth;
+  final double gap;
+  final int maxColumns;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, c) {
+      final cols = math.max(
+          1,
+          math.min(maxColumns,
+              ((c.maxWidth + gap) / (minTileWidth + gap)).floor()));
+      if (cols == 1) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) SizedBox(height: gap),
+              children[i],
+            ],
+          ],
+        );
+      }
+      final rows = <Widget>[];
+      for (var i = 0; i < children.length; i += cols) {
+        final slice = children.sublist(i, math.min(i + cols, children.length));
+        if (rows.isNotEmpty) rows.add(SizedBox(height: gap));
+        rows.add(IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var k = 0; k < cols; k++) ...[
+                if (k > 0) SizedBox(width: gap),
+                Expanded(
+                    child: k < slice.length ? slice[k] : const SizedBox()),
+              ],
+            ],
+          ),
+        ));
+      }
+      return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+    });
+  }
+}

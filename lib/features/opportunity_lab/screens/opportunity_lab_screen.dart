@@ -212,11 +212,10 @@ class _LabBody extends ConsumerWidget {
           children: [
             _ProjectFilter(selected: projectId, onSelect: onProjectChange),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-                itemCount: items.length,
-                itemBuilder: (_, i) => FadeSlideIn(index: i, child: Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+              child: SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+      child: IvCardGrid(children: List.generate(items.length, (i) => FadeSlideIn(index: i, child: Padding(
+                  padding: EdgeInsets.zero,
                   child: _LabItemCard(
                     item: items[i],
                     projectName: projectNameFor(items[i].projectId),
@@ -322,8 +321,8 @@ class _LabBody extends ConsumerWidget {
                           }
                         : null,
                   ),
-                )),
-              ),
+                )))),
+    ),
             ),
           ],
         );

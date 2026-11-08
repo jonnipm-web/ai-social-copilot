@@ -225,28 +225,22 @@ class _ActionBody extends ConsumerWidget {
                           if (pending.isNotEmpty) ...[
                             _SectionHeader(l10n.actionEngineSectionPending,
                                 pending.length, _kOrange),
-                            ...pending.map((item) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: _ActionCard(item: item),
-                                )),
+                            IvCardGrid(children: [for (final item in pending) _ActionCard(item: item)]),
+                            const SizedBox(height: 16),
                             const SizedBox(height: 8),
                           ],
                           if (active.isNotEmpty) ...[
                             _SectionHeader(l10n.actionEngineSectionActive,
                                 active.length, _kCyan),
-                            ...active.map((item) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: _ActionCard(item: item),
-                                )),
+                            IvCardGrid(children: [for (final item in active) _ActionCard(item: item)]),
+                            const SizedBox(height: 16),
                             const SizedBox(height: 8),
                           ],
                           if (completed.isNotEmpty) ...[
                             _SectionHeader(l10n.actionEngineSectionCompleted,
                                 completed.length, _kGreen),
-                            ...completed.take(5).map((item) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: _ActionCard(item: item),
-                                )),
+                            IvCardGrid(children: [for (final item in completed.take(5)) _ActionCard(item: item)]),
+                            const SizedBox(height: 16),
                           ],
                         ],
                       ),
