@@ -845,33 +845,36 @@ class _AdminStats extends ConsumerWidget {
     final knowledgeAsync = ref.watch(knowledgeItemsProvider);
     final campaignsAsync = ref.watch(campaignsProvider);
 
-    Widget stat(String label, int? value, IconData icon) => IvStatCard(
+    Widget stat(String label, int? value, IconData icon, String route) =>
+        IvStatCard(
           label: label,
           value: value ?? 0,
           valueText: value == null ? '—' : null,
           icon: icon,
           color: AppColors.gold,
+          onTap: () => context.push(route),
         );
 
     return IvGrid(
       minTileWidth: 150,
       children: [
         stat(l10n.dashAdminStatUsers, usersAsync.valueOrNull?.length,
-            Icons.people_rounded),
+            Icons.people_rounded, AppConstants.routeAdmin),
         stat(l10n.dashAdminStatPersonas, personasAsync.valueOrNull?.length,
-            Icons.groups_2_rounded),
+            Icons.groups_2_rounded, AppConstants.routePersonas),
         stat(l10n.dashAdminStatContent, contentAsync.valueOrNull?.length,
-            Icons.perm_media_rounded),
+            Icons.perm_media_rounded, AppConstants.routeContent),
         stat(l10n.dashAdminStatVault, knowledgeAsync.valueOrNull?.length,
-            Icons.auto_stories_rounded),
+            Icons.auto_stories_rounded, AppConstants.routeKnowledge),
         stat(l10n.dashAdminStatCampaigns, campaignsAsync.valueOrNull?.length,
-            Icons.campaign_rounded),
+            Icons.campaign_rounded, AppConstants.routeCampaigns),
         stat(
             l10n.dashAdminStatAnalyzed,
             knowledgeAsync.valueOrNull
                 ?.where((i) => i.status == 'analyzed')
                 .length,
-            Icons.analytics_rounded),
+            Icons.analytics_rounded,
+            AppConstants.routeKnowledge),
       ],
     );
   }
@@ -911,18 +914,21 @@ class _PortfolioSummaryRow extends StatelessWidget {
           value: activeProjects,
           icon: Icons.rocket_launch_rounded,
           color: AppColors.accent,
+          onTap: () => context.push(AppConstants.routeProjects),
         ),
         IvStatCard(
           label: l10n.dashPortfolioAnalyses,
           value: analysesCount,
           icon: Icons.analytics_rounded,
           color: AppColors.info,
+          onTap: () => context.push(AppConstants.routeMarketIntelligence),
         ),
         IvStatCard(
           label: l10n.dashPortfolioAvgScore,
           value: avgScore,
           valueText: avgScore > 0 ? null : '—',
           icon: Icons.speed_rounded,
+          onTap: () => context.push(AppConstants.routeMarketIntelligence),
           color: avgScore > 0 ? ivScoreColor(avgScore) : AppColors.inkSubtle,
           trailing: avgScore > 0
               ? IvRingGauge(
