@@ -726,7 +726,7 @@ class _ProjectCard extends ConsumerWidget {
     return GestureDetector(
       onTap: () => _showDetail(context, ref),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: EdgeInsets.zero,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: _kCard,
@@ -830,7 +830,7 @@ class _SimpleCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 4),
+        margin: EdgeInsets.zero,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: _kCard,
