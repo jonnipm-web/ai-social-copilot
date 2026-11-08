@@ -1104,9 +1104,10 @@ class _ScoreGrid extends StatelessWidget {
           Icons.people_rounded),
     ];
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+    return IvGrid(
+      minTileWidth: 140,
+      maxColumns: 5,
+      gap: AppSpace.s2,
       children: scores.map((s) => _ScoreCard(data: s)).toList(),
     );
   }
@@ -1134,8 +1135,8 @@ class _ScoreCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 120,
-      padding: const EdgeInsets.all(12),
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpace.s4),
       decoration: BoxDecoration(
         color: AppColors.surface, gradient: kIvSurfaceGradient,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1154,7 +1155,7 @@ class _ScoreCard extends StatelessWidget {
             ),
           ),
           Text(data.label,
-              style: const TextStyle(color: AppColors.inkMuted, fontSize: 11),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
               textAlign: TextAlign.center),
           const SizedBox(height: 6),
           LinearProgressIndicator(

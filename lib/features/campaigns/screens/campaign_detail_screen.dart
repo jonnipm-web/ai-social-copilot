@@ -73,24 +73,42 @@ class _CampaignContent extends StatelessWidget {
           _Card(
             child: Text(campaign.overview,
                 style: const TextStyle(
-                    color: AppColors.inkMuted, fontSize: 13, height: 1.5)),
+                    color: AppColors.inkMuted, fontSize: 14, height: 1.6)),
           ),
           const SizedBox(height: 16),
         ],
 
-        // Key messages
-        if (campaign.keyMessages.isNotEmpty) ...[
-          _SectionTitle(l10n.campaignDetailKeyMessagesTitle),
-          ...campaign.keyMessages.map((m) =>
-              _BulletItem(m, Icons.message_rounded, AppColors.accent)),
-          const SizedBox(height: 16),
-        ],
-
-        // Expected results
-        if (campaign.expectedResults.isNotEmpty) ...[
-          _SectionTitle(l10n.campaignDetailExpectedResultsTitle),
-          ...campaign.expectedResults.map((r) => _BulletItem(
-              r, Icons.check_circle_rounded, AppColors.positive)),
+        // Key messages | expected results — side by side on wide screens
+        if (campaign.keyMessages.isNotEmpty ||
+            campaign.expectedResults.isNotEmpty) ...[
+          IvCardGrid(
+            minTileWidth: 360,
+            maxColumns: 2,
+            children: [
+              if (campaign.keyMessages.isNotEmpty)
+                _Card(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SectionTitle(l10n.campaignDetailKeyMessagesTitle),
+                      ...campaign.keyMessages.map((m) => _BulletItem(
+                          m, Icons.message_rounded, AppColors.accent)),
+                    ],
+                  ),
+                ),
+              if (campaign.expectedResults.isNotEmpty)
+                _Card(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SectionTitle(l10n.campaignDetailExpectedResultsTitle),
+                      ...campaign.expectedResults.map((r) => _BulletItem(
+                          r, Icons.check_circle_rounded, AppColors.positive)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: 16),
         ],
 
@@ -98,7 +116,14 @@ class _CampaignContent extends StatelessWidget {
         if (campaign.calendar.isNotEmpty) ...[
           _SectionTitle(l10n.campaignDetailCalendarTitle),
           const SizedBox(height: 8),
-          ...campaign.calendar.map((entry) => _CalendarEntry(entry)),
+          IvCardGrid(
+            minTileWidth: 360,
+            maxColumns: 2,
+            gap: AppSpace.s2,
+            children: [
+              for (final entry in campaign.calendar) _CalendarEntry(entry),
+            ],
+          ),
           const SizedBox(height: 16),
         ],
 
@@ -348,7 +373,7 @@ class _CalendarEntry extends StatelessWidget {
     final color = _channelColor(channel);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.zero,
       decoration: BoxDecoration(
         color: AppColors.surface, gradient: kIvSurfaceGradient,
         borderRadius: BorderRadius.circular(AppRadius.md),
