@@ -321,12 +321,11 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                   );
                 }
 
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: analyses.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
+                return IvCardGrid(
+                  minTileWidth: 420,
+                  maxColumns: 2,
+                  gap: AppSpace.s3,
+                  children: List.generate(analyses.length, (index) {
                     final analysis = analyses[index];
                     final websiteScore = analysis.scoreWebsite;
                     final adsenseScore = analysis.scoreAdsense;
@@ -402,7 +401,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                         ),
                       ),
                     );
-                  },
+                  }),
                 );
               },
             ),

@@ -613,11 +613,11 @@ class _Top5Section extends StatelessWidget {
             style: const TextStyle(
                 color: AppColors.ink,
                 fontWeight: FontWeight.w600,
-                fontSize: 15)),
+                fontSize: 18)),
         const SizedBox(height: 2),
         Text(subtitle,
-            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
-        const SizedBox(height: 10),
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 13)),
+        const SizedBox(height: 12),
         if (children.isEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 8),
@@ -625,7 +625,11 @@ class _Top5Section extends StatelessWidget {
                 style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12)),
           )
         else
-          ...children,
+          IvCardGrid(
+              minTileWidth: 420,
+              maxColumns: 2,
+              gap: AppSpace.s3,
+              children: children),
       ],
     );
   }

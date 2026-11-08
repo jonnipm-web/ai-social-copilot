@@ -614,31 +614,34 @@ class _SummarySection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          IvGrid(
+            minTileWidth: 150,
             children: summary.entries.map((e) {
               final c = color(e.key);
               return Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.all(AppSpace.s4),
                 decoration: BoxDecoration(
                   color: c.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: c.withOpacity(0.2)),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(icon(e.key), color: c, size: 18),
-                    const SizedBox(height: 4),
+                    Icon(icon(e.key), color: c, size: 20),
+                    const SizedBox(height: 8),
                     Text(_fmt(e.value),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                             color: c,
                             fontWeight: FontWeight.w600,
-                            fontSize: 13)),
+                            fontSize: 20)),
                     Text(label(e.key),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            color: AppColors.inkSubtle, fontSize: 11)),
+                            color: AppColors.inkMuted, fontSize: 12)),
                   ],
                 ),
               );
@@ -795,7 +798,8 @@ class _ExecutiveDashboardSection extends StatelessWidget {
                         letterSpacing: 1.2,
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
-                Row(
+                IvGrid(
+                  minTileWidth: 180,
                   children: [
                     if (revenue > 0)
                       _ExecStat(l10n.roiTrackerRevenueRegistered,
@@ -819,9 +823,8 @@ class _ExecutiveDashboardSection extends StatelessWidget {
                   letterSpacing: 1.2,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 16,
-            runSpacing: 8,
+          IvGrid(
+            minTileWidth: 180,
             children: [
               if (opportunities > 0)
                 _ExecStat(_roiTypeLabel(l10n, 'opportunities'),
@@ -854,16 +857,29 @@ class _ExecStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 16, bottom: 4),
+    return Container(
+      padding: const EdgeInsets.all(AppSpace.s4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                  color: color, fontSize: 16, fontWeight: FontWeight.w600)),
+                  color: color,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: AppType.tabular)),
+          const SizedBox(height: 2),
           Text(label,
-              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
         ],
       ),
     );
