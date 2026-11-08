@@ -87,10 +87,12 @@ class _CampaignList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 64),
-      itemCount: campaigns.length,
-      itemBuilder: (_, i) => FadeSlideIn(index: i, child: _CampaignCard(campaign: campaigns[i])),
+      child: IvCardGrid(children: [
+        for (var i = 0; i < campaigns.length; i++)
+          FadeSlideIn(index: i, child: _CampaignCard(campaign: campaigns[i])),
+      ]),
     );
   }
 }
@@ -124,7 +126,7 @@ class _CampaignCard extends ConsumerWidget {
 
     return Card(
       color: AppColors.surface,
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.lg),

@@ -534,10 +534,13 @@ class _MarketIntelligenceScreenState
                 data: (list) => list.isEmpty
                     ? Text(t.miRootNoAnalysesYet,
                         style: const TextStyle(color: AppColors.inkSubtle))
-                    : Column(
-                        children: list
-                            .map((a) => _AnalysisCard(analysis: a))
-                            .toList(),
+                    : IvCardGrid(
+                        minTileWidth: 420,
+                        maxColumns: 2,
+                        gap: AppSpace.s3,
+                        children: [
+                          for (final a in list) _AnalysisCard(analysis: a),
+                        ],
                       ),
               ),
             ],
@@ -601,7 +604,7 @@ class _AnalysisCard extends StatelessWidget {
             .replaceFirst(':id', analysis.id),
       ),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: EdgeInsets.zero,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.surface, gradient: kIvSurfaceGradient,

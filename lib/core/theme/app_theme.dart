@@ -235,6 +235,14 @@ class AppTheme {
         constraints: BoxConstraints(maxWidth: 880),
         showDragHandle: false,
       ),
+      // Without this M3 paints the label in onPrimaryContainer (= accent),
+      // invisible on an accent-filled extended FAB.
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.accent,
+        foregroundColor: AppColors.onAccent,
+        elevation: 0,
+        highlightElevation: 0,
+      ),
       snackBarTheme: const SnackBarThemeData(
         backgroundColor: AppColors.surfaceRaised,
         contentTextStyle: TextStyle(color: AppColors.ink),

@@ -34,8 +34,7 @@ class HistoryScreen extends ConsumerWidget {
       ),
       body: IvBody(child: Center(
         child: ConstrainedBox(
-          constraints:
-              const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+          constraints: const BoxConstraints(maxWidth: 1120),
           child: historyAsync.when(
             loading: () => _buildShimmer(),
             error: (e, _) => Center(
@@ -102,11 +101,16 @@ class HistoryScreen extends ConsumerWidget {
 
               return RefreshIndicator(
                 onRefresh: () async => ref.invalidate(historyProvider),
-                child: ListView.separated(
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
-                  itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, i) => FadeSlideIn(index: i, child: _HistoryCard(item: items[i])),
+                  child: IvCardGrid(
+                    minTileWidth: 340,
+                    children: [
+                      for (var i = 0; i < items.length; i++)
+                        FadeSlideIn(index: i, child: _HistoryCard(item: items[i])),
+                    ],
+                  ),
                 ),
               );
             },

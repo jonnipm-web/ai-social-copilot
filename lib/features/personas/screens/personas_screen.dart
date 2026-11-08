@@ -80,8 +80,10 @@ class PersonasScreen extends ConsumerWidget {
                   color: AppColors.gold,
                 ),
                 const SizedBox(height: 8),
-                ...globals.map((p) =>
-                    _PersonaCard(persona: p, isAdmin: isAdmin, ref: ref)),
+                IvCardGrid(minTileWidth: 340, gap: AppSpace.s3, children: [
+                  for (final p in globals)
+                    _PersonaCard(persona: p, isAdmin: isAdmin, ref: ref),
+                ]),
                 const SizedBox(height: 20),
               ],
               if (mine.isNotEmpty) ...[
@@ -91,8 +93,10 @@ class PersonasScreen extends ConsumerWidget {
                   color: AppColors.accent,
                 ),
                 const SizedBox(height: 8),
-                ...mine.map((p) =>
-                    _PersonaCard(persona: p, isAdmin: isAdmin, ref: ref)),
+                IvCardGrid(minTileWidth: 340, gap: AppSpace.s3, children: [
+                  for (final p in mine)
+                    _PersonaCard(persona: p, isAdmin: isAdmin, ref: ref),
+                ]),
               ],
             ],
           );
@@ -143,7 +147,7 @@ class _PersonaCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       color: AppColors.ink.withOpacity(0.05),
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
         side: BorderSide(
