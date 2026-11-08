@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,7 +23,7 @@ class PersonasScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -41,8 +42,8 @@ class PersonasScreen extends ConsumerWidget {
         label: Text(l10n.personasNewPersona),
         backgroundColor: AppColors.accent,
       ),
-      body: personasAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+      body: IvBody(child: personasAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (e, _) => Center(
             child: Text(l10n.commonError,
                 style: const TextStyle(color: AppColors.inkMuted))),
@@ -96,7 +97,7 @@ class PersonasScreen extends ConsumerWidget {
             ],
           );
         },
-      ),
+      )),
     );
   }
 }
@@ -142,7 +143,7 @@ class _PersonaCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       color: AppColors.ink.withOpacity(0.05),
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
         side: BorderSide(
@@ -183,7 +184,7 @@ class _PersonaCard extends ConsumerWidget {
         ),
         trailing: (isAdmin || !persona.isGlobal)
             ? PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert,
+                icon: const Icon(Icons.more_vert_rounded,
                     color: AppColors.inkSubtle, size: 20),
                 color: AppColors.surface,
                 onSelected: (value) async {

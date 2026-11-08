@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -178,7 +179,7 @@ class _ContentGenerationScreenState
             : AppColors.accent;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
         border: Border.all(color: color.withOpacity(0.5)),
@@ -234,7 +235,7 @@ class _ContentGenerationScreenState
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.improvePostTitle),
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.canPop()
               ? context.pop()
@@ -254,7 +255,7 @@ class _ContentGenerationScreenState
         ],
       ),
       drawer: const AppDrawer(),
-      body: Center(
+      body: IvBody(child: Center(
         child: ConstrainedBox(
           constraints:
               const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
@@ -312,7 +313,7 @@ class _ContentGenerationScreenState
                     if (_charCount > 0)
                       TextButton.icon(
                         onPressed: isLoading ? null : _clear,
-                        icon: const Icon(Icons.clear, size: 14),
+                        icon: const Icon(Icons.clear_rounded, size: 14),
                         label: Text(l10n.improvePostClearConfirm),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.inkSubtle,
@@ -336,7 +337,7 @@ class _ContentGenerationScreenState
             ),
           ),
         ),
-      ),
+      )),
     );
   }
 }

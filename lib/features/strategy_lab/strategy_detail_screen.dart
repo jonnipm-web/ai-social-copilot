@@ -331,7 +331,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                     ? const SizedBox.square(
                         dimension: 16,
                         child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.play_arrow),
+                    : const Icon(Icons.play_arrow_rounded),
                 label: Text(l.strategyBuilderRunBacktest),
               ),
             ),
@@ -534,7 +534,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                                     dimension: 16,
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2))
-                                : const Icon(Icons.insights),
+                                : const Icon(Icons.insights_rounded),
                             label: Text(l.strategyDetailAnalyzeFit),
                           ),
                         ),

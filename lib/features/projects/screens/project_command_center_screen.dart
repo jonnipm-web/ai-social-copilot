@@ -472,7 +472,7 @@ class _ProjectCommandCenterScreenState
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () {
             if (context.canPop()) {
@@ -513,7 +513,7 @@ class _ProjectCommandCenterScreenState
         ],
       ),
       drawer: const AppDrawer(),
-      body: Column(
+      body: IvBody(child: Column(
         children: [
           AnimatedSize(
             duration: AppMotion.medium,
@@ -545,7 +545,7 @@ class _ProjectCommandCenterScreenState
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 
@@ -1179,7 +1179,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                               fontWeight: FontWeight.w600)),
                       Text(t.projectCommandEcoScoreLabel,
                           style: const TextStyle(
-                              color: AppColors.inkSubtle, fontSize: 10)),
+                              color: AppColors.inkSubtle, fontSize: 11)),
                     ],
                   ),
               ],
@@ -1307,14 +1307,14 @@ class _ProjectDetailSheet extends ConsumerWidget {
             // Riscos
             if (s != null && s.risks.isNotEmpty) ...[
               _sectionTitle(t.opportunityDetailRisksTitle),
-              ..._bullets(s.risks, AppColors.negative, '⚠ '),
+              ..._bullets(s.risks, AppColors.negative, '• '),
               const SizedBox(height: 12),
             ],
 
             // Quick wins
             if (s != null && s.quickWins.isNotEmpty) ...[
               _sectionTitle(t.projectCommandSectionQuickWins),
-              ..._bullets(s.quickWins, AppColors.warning, '⚡ '),
+              ..._bullets(s.quickWins, AppColors.warning, '• '),
               const SizedBox(height: 12),
             ],
 
@@ -1525,16 +1525,16 @@ class _ProjectDetailSheet extends ConsumerWidget {
 
         // Identity: niche, audience, monetization
         if (p.hasNiche) ...[
-          _infoRow('🎯 ${t.projectCommandNiche}', p.niche),
+          _infoRow('${t.projectCommandNiche}', p.niche),
         ],
         if (p.hasTargetAudience) ...[
-          _infoRow('👥 ${t.projectCommandAudience}', p.targetAudience),
+          _infoRow('${t.projectCommandAudience}', p.targetAudience),
         ],
         if (p.hasMonetizationModel) ...[
-          _infoRow('💰 ${t.projectCommandMonetization}', p.monetizationModel),
+          _infoRow('${t.projectCommandMonetization}', p.monetizationModel),
         ],
         if (p.valueProposition.isNotEmpty) ...[
-          _infoRow('✨ ${t.projectCommandValueProposition}', p.valueProposition),
+          _infoRow('${t.projectCommandValueProposition}', p.valueProposition),
         ],
 
         // Identified topics
@@ -1543,7 +1543,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
           Text(t.projectCommandIdentifiedTopics,
               style: const TextStyle(
                   color: AppColors.inkSubtle,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           Wrap(
@@ -1552,7 +1552,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
             children: p.identifiedTopics
                 .map((t) => Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: AppColors.info.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1561,7 +1561,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                       ),
                       child: Text(t,
                           style: const TextStyle(
-                              color: AppColors.info, fontSize: 10)),
+                              color: AppColors.info, fontSize: 11)),
                     ))
                 .toList(),
           ),
@@ -1573,7 +1573,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
           Text(t.projectCommandKnowledgeGaps,
               style: const TextStyle(
                   color: AppColors.inkSubtle,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           ...p.missingKnowledge.take(3).map((gap) => Padding(
@@ -1581,8 +1581,11 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('⚠ ',
-                        style: TextStyle(color: AppColors.warning, fontSize: 11)),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 0, right: 4),
+                      child: Icon(Icons.warning_amber_rounded,
+                          size: 13, color: AppColors.warning),
+                    ),
                     Expanded(
                         child: Text(KnowledgeCoverage.gapLabel(gap, t),
                             style: const TextStyle(
@@ -1595,7 +1598,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
         // Related projects
         if (p.relatedProjectNames.isNotEmpty) ...[
           const SizedBox(height: 8),
-          _infoRow('🔗 ${t.projectCommandRelatedProjects}',
+          _infoRow('${t.projectCommandRelatedProjects}',
               p.relatedProjectNames.take(3).join(', ')),
         ],
 
@@ -1606,11 +1609,11 @@ class _ProjectDetailSheet extends ConsumerWidget {
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.accent,
               side: const BorderSide(color: AppColors.accent),
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md)),
             ),
-            icon: const Text('🧠', style: TextStyle(fontSize: 14)),
+            icon: const Icon(Icons.psychology_rounded, size: 16),
             label: Text(t.projectCommandAskIveAboutProfile,
                 style: const TextStyle(fontSize: 13)),
             onPressed: () {
@@ -1746,7 +1749,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                     Text(t.projectBriefingRecentChanges,
                         style: const TextStyle(
                             color: AppColors.inkSubtle,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
                     ...recent.map((item) => Padding(
@@ -1918,7 +1921,7 @@ class _ResourceAllocationSectionState
             // nunca o preview em edição (Section 11).
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: AppColors.info.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1927,7 +1930,7 @@ class _ResourceAllocationSectionState
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle,
+                  const Icon(Icons.check_circle_rounded,
                       size: 14, color: AppColors.info),
                   const SizedBox(width: 6),
                   Expanded(
@@ -1945,7 +1948,7 @@ class _ResourceAllocationSectionState
                     Text(t.projectCommandEditingBadge,
                         style: const TextStyle(
                             color: AppColors.warning,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.5)),
                 ],
@@ -2049,7 +2052,7 @@ class _ResourceAllocationSectionState
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.inkMuted,
                       side: const BorderSide(color: AppColors.inkSubtle),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
                     child: Text(t.commonCancel,
                         style: const TextStyle(fontSize: 13)),
@@ -2063,7 +2066,7 @@ class _ResourceAllocationSectionState
                       backgroundColor: AppColors.accent,
                       disabledBackgroundColor:
                           AppColors.accent.withOpacity(0.25),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
                     child: isSaving
                         ? const SizedBox(
@@ -2108,11 +2111,11 @@ class _ResourceAllocationSectionState
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.info,
                   side: const BorderSide(color: AppColors.info),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md)),
                 ),
-                icon: const Text('🧠', style: TextStyle(fontSize: 14)),
+                icon: const Icon(Icons.psychology_rounded, size: 16),
                 label: Text(t.projectCommandAnalyzeResourcesWithIve,
                     style: const TextStyle(fontSize: 13)),
                 onPressed: () {
@@ -2288,8 +2291,8 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
                           fontSize: 18,
                           fontWeight: FontWeight.w600)),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: AppColors.inkMuted),
+                IconButton(tooltip: MaterialLocalizations.of(context).closeButtonTooltip, 
+                  icon: const Icon(Icons.close_rounded, color: AppColors.inkMuted),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -2374,7 +2377,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accent,
                     foregroundColor: AppColors.onAccent,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
               )
@@ -2386,7 +2389,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
                       onPressed: _saving ? null : _cancelEdit,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.inkMuted,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       child: Text(t.commonCancel),
                     ),
@@ -2398,7 +2401,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accent,
                         foregroundColor: AppColors.onAccent,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       child: _saving
                           ? const SizedBox(
@@ -2444,7 +2447,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
               borderSide: BorderSide.none,
             ),
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
         ),
       ],
@@ -2513,7 +2516,7 @@ class _MetricTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.06),
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -2526,7 +2529,7 @@ class _MetricTile extends StatelessWidget {
                   color: color, fontWeight: FontWeight.w600, fontSize: 14)),
           const SizedBox(height: 2),
           Text(label,
-              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
         ],
       ),
     );
@@ -2556,7 +2559,7 @@ class _SheetButton extends StatelessWidget {
           maxLines: 1,
           style: TextStyle(color: color, fontSize: 13)),
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         side: BorderSide(color: color.withOpacity(0.4)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
       ),
@@ -2592,7 +2595,7 @@ class _StatChip extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                     color: AppColors.inkSubtle,
-                    fontSize: 10,
+                    fontSize: 11,
                     letterSpacing: 0.6,
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 3),

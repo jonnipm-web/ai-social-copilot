@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -63,7 +64,7 @@ class ActionDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon:
               const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
@@ -84,9 +85,8 @@ class ActionDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: itemAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      body: IvBody(child: itemAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (e, _) => Center(
           child: Text(l10n.commonError,
               style: const TextStyle(color: AppColors.inkMuted)),
@@ -96,7 +96,7 @@ class ActionDetailScreen extends ConsumerWidget {
                 child: Text(l10n.actionDetailNotFound,
                     style: const TextStyle(color: AppColors.inkMuted)))
             : _DetailBody(item: item, ref: ref),
-      ),
+      )),
     );
   }
 }
@@ -112,7 +112,7 @@ class _StatusMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: AppColors.ink),
+      icon: const Icon(Icons.more_vert_rounded, color: AppColors.ink),
       color: _kCard,
       onSelected: (v) async {
         final notifier = ref.read(actionQueueNotifierProvider.notifier);
@@ -339,7 +339,7 @@ class _HeroHeader extends StatelessWidget {
                     ),
                     Text(AppLocalizations.of(context)!.uxActionPriorityShort,
                         style:
-                            TextStyle(color: sc.withOpacity(0.7), fontSize: 8)),
+                            TextStyle(color: sc.withOpacity(0.7), fontSize: 11)),
                   ],
                 ),
               ),
@@ -473,7 +473,7 @@ class _ScoreRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
           SizedBox(
@@ -609,7 +609,7 @@ class _SourcesList extends StatelessWidget {
       children: sources
           .map((s) => Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: _kPrimary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -639,7 +639,7 @@ class _RationaleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _kPrimary.withOpacity(0.07),
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -673,14 +673,14 @@ class _PlanList extends StatelessWidget {
       children: steps.asMap().entries.map((e) {
         final n = e.key + 1;
         return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(bottom: 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 22,
                 height: 22,
-                margin: const EdgeInsets.only(top: 1),
+                margin: const EdgeInsets.only(top: 0),
                 decoration: BoxDecoration(
                   color: _kPrimary.withOpacity(0.15),
                   shape: BoxShape.circle,
@@ -690,7 +690,7 @@ class _PlanList extends StatelessWidget {
                   child: Text('$n',
                       style: const TextStyle(
                           color: _kPrimary,
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600)),
                 ),
               ),
@@ -791,7 +791,7 @@ class _TypeBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: _kPrimary.withOpacity(0.12),
         borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -799,7 +799,7 @@ class _TypeBadge extends StatelessWidget {
       child: Text(
         actionEngineTypeLabel(l10n, type).toUpperCase(),
         style: const TextStyle(
-            color: _kPrimary, fontSize: 9, fontWeight: FontWeight.w600),
+            color: _kPrimary, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -815,13 +815,13 @@ class _StatusBadge extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final c = _statusColor(status);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: c.withOpacity(0.12),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(actionEngineStatusLabel(l10n, status),
-          style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.w600)),
+          style: TextStyle(color: c, fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -922,7 +922,7 @@ class _StatusButtons extends StatelessWidget {
 
         if (item.status == 'completed')
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: _kGreen.withOpacity(0.08),
@@ -952,7 +952,7 @@ class _StatusButtons extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               foregroundColor: _kPrimary,
               side: const BorderSide(color: _kPrimary),
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               minimumSize: const Size(double.infinity, 0),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.lg)),
@@ -1015,7 +1015,7 @@ class _Btn extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor: color,
             side: BorderSide(color: color),
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
           ),
@@ -1031,7 +1031,7 @@ class _Btn extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: AppColors.ink,
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
         ),

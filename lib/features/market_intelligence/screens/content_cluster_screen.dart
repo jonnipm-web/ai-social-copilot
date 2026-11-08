@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -103,17 +104,16 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
         title: Text(l10n.miClusterTitle,
             style: const TextStyle(color: AppColors.ink)),
         iconTheme: const IconThemeData(color: AppColors.ink),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go(
             AppConstants.routeMarketIntelligenceHub
                 .replaceFirst(':id', widget.analysisId),
           ),
         ),
       ),
-      body: asyncCluster.when(
-        loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.accent)),
+      body: IvBody(child: asyncCluster.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (e, _) => Center(
             child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: AppColors.negative))),
@@ -195,7 +195,7 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: AppColors.surface, gradient: kIvSurfaceGradient,
                         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -233,7 +233,7 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                   ],
                 ),
               ),
-      ),
+      )),
     );
   }
 }
@@ -339,7 +339,7 @@ class _ArticleSection extends StatelessWidget {
                         child: Text('${e.key + 1}',
                             style: const TextStyle(
                                 color: AppColors.positive,
-                                fontSize: 10,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w600)),
                       ),
                     ),

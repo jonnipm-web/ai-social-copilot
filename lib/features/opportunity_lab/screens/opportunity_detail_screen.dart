@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -55,7 +56,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon:
               const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
@@ -76,9 +77,8 @@ class OpportunityDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: itemAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      body: IvBody(child: itemAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (e, _) => Center(
           child: Text(
               l10n.opportunityDetailLoadError(extractErrorMessage(e, l10n)),
@@ -89,7 +89,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
                 child: Text(l10n.opportunityDetailNotFound,
                     style: const TextStyle(color: AppColors.inkMuted)))
             : _DetailBody(item: item, ref: ref),
-      ),
+      )),
     );
   }
 }
@@ -105,7 +105,7 @@ class _StatusMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: AppColors.ink),
+      icon: const Icon(Icons.more_vert_rounded, color: AppColors.ink),
       color: _kCard,
       onSelected: (v) async {
         if (v == 'approve') {
@@ -482,7 +482,7 @@ class _ScoreRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
           SizedBox(
@@ -617,7 +617,7 @@ class _SourcesList extends StatelessWidget {
       children: sources
           .map((s) => Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: _kPrimary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -647,7 +647,7 @@ class _RationaleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _kPrimary.withOpacity(0.07),
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -755,14 +755,14 @@ class _ActionStepsList extends StatelessWidget {
         final n = e.key + 1;
         final text = e.value;
         return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(bottom: 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 22,
                 height: 22,
-                margin: const EdgeInsets.only(top: 1),
+                margin: const EdgeInsets.only(top: 0),
                 decoration: BoxDecoration(
                   color: _kPrimary.withOpacity(0.15),
                   shape: BoxShape.circle,
@@ -773,7 +773,7 @@ class _ActionStepsList extends StatelessWidget {
                     '$n',
                     style: const TextStyle(
                         color: _kPrimary,
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -844,7 +844,7 @@ class _TypeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: _kPrimary.withOpacity(0.12),
         borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -852,7 +852,7 @@ class _TypeBadge extends StatelessWidget {
       child: Text(
         opportunityTypeLabel(type, AppLocalizations.of(context)!).toUpperCase(),
         style: const TextStyle(
-            color: _kPrimary, fontSize: 9, fontWeight: FontWeight.w600),
+            color: _kPrimary, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -876,14 +876,14 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = _color(status);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: c.withOpacity(0.12),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
         opportunityStatusLabel(status, AppLocalizations.of(context)!),
-        style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.w600),
+        style: TextStyle(color: c, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -908,7 +908,7 @@ class _ActionButtons extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kGreen,
                 foregroundColor: AppColors.ink,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.lg)),
               ),
@@ -959,7 +959,7 @@ class _ActionButtons extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kTeal,
                 foregroundColor: AppColors.ink,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.lg)),
               ),
@@ -1016,7 +1016,7 @@ class _ActionButtons extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: _kPrimary,
                 side: const BorderSide(color: _kPrimary),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.lg)),
               ),
@@ -1103,7 +1103,7 @@ class _LinkedKnowledgeSection extends ConsumerWidget {
                 return const SizedBox.shrink();
               return Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: AppColors.line),

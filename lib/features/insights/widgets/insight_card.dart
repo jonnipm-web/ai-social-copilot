@@ -44,7 +44,7 @@ class InsightCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -67,7 +67,7 @@ class InsightCard extends StatelessWidget {
           ),
           if (item.description.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               child: Text(
                 item.description,
                 style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
@@ -75,13 +75,13 @@ class InsightCard extends StatelessWidget {
             ),
           if (item.sources.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               child:
                   _SourcesRow(label: t.insightSources, sources: item.sources),
             ),
           if (item.actionSteps.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -109,7 +109,7 @@ class InsightCard extends StatelessWidget {
               ),
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
             child: Row(
               children: [
                 Text(
@@ -159,7 +159,7 @@ class _ConfidenceBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: _color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -198,14 +198,14 @@ class _SourcesRow extends StatelessWidget {
               .map(
                 (s) => Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColors.accent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(s,
                       style: const TextStyle(
-                          color: AppColors.accent, fontSize: 10)),
+                          color: AppColors.accent, fontSize: 11)),
                 ),
               )
               .toList(),
@@ -234,7 +234,7 @@ class _SmallBtn extends StatelessWidget {
       style: TextButton.styleFrom(
         foregroundColor: color,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        minimumSize: Size.zero,
+        minimumSize: const Size(0, 36),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       icon: Icon(icon, size: 14),

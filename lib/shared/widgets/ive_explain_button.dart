@@ -51,7 +51,7 @@ class IveExplainButton extends ConsumerWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('💬', style: TextStyle(fontSize: 12)),
+            const Icon(Icons.chat_bubble_outline_rounded, size: 13),
             const SizedBox(width: 3),
             Text(
               label ?? AppLocalizations.of(context)!.ctxIveExplainCompact,
@@ -69,15 +69,15 @@ class IveExplainButton extends ConsumerWidget {
     return TextButton.icon(
       style: TextButton.styleFrom(
         foregroundColor: AppColors.accent,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
           side: const BorderSide(color: AppColors.accent, width: 0.8),
         ),
-        minimumSize: Size.zero,
+        minimumSize: const Size(0, 36),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
-      icon: const Text('💬', style: TextStyle(fontSize: 13)),
+      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14),
       label: Text(label ?? AppLocalizations.of(context)!.ctxIveExplainFull,
           style: const TextStyle(fontSize: 12)),
       onPressed: () => _open(context, ref),

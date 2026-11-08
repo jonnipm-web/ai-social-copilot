@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -138,7 +139,7 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
         ],
       ),
       drawer: const AppDrawer(),
-      body: LayoutBuilder(
+      body: IvBody(child: LayoutBuilder(
         builder: (ctx, constraints) {
           final w = constraints.maxWidth;
           return _DashboardBody(
@@ -153,7 +154,7 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
             isWide: _Bp.isWide(w),
           );
         },
-      ),
+      )),
     );
   }
 }
@@ -429,7 +430,7 @@ class _ExecModuleGrid extends StatelessWidget {
       return Column(
         children: cards
             .map((c) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: c,
                 ))
             .toList(),
@@ -476,7 +477,7 @@ class _ExecModule extends StatelessWidget {
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: _kCard, gradient: kIvSurfaceGradient,
             borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -510,7 +511,7 @@ class _ExecModule extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text(emptyMessage,
                           style: const TextStyle(
-                              color: AppColors.inkSubtle, fontSize: 10, height: 1.4),
+                              color: AppColors.inkSubtle, fontSize: 11, height: 1.4),
                           textAlign: TextAlign.center),
                     ],
                   ),
@@ -522,7 +523,7 @@ class _ExecModule extends StatelessWidget {
                     children: items.map((item) {
                       final (label, value) = item;
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 5),
+                        padding: const EdgeInsets.only(bottom: 4),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -544,7 +545,7 @@ class _ExecModule extends StatelessWidget {
               const SizedBox(height: 6),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -580,7 +581,7 @@ class _SidebarKpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _kCard, gradient: kIvSurfaceGradient,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -592,7 +593,7 @@ class _SidebarKpiCard extends StatelessWidget {
           Text(title,
               style: const TextStyle(
                   color: AppColors.inkSubtle,
-                  fontSize: 10,
+                  fontSize: 11,
                   letterSpacing: 1.2,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
@@ -650,7 +651,7 @@ class _QuickNavCard extends StatelessWidget {
       ),
     ];
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _kCard, gradient: kIvSurfaceGradient,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -662,7 +663,7 @@ class _QuickNavCard extends StatelessWidget {
           Text(l10n.ctxExecQuickAccess,
               style: const TextStyle(
                   color: AppColors.inkSubtle,
-                  fontSize: 10,
+                  fontSize: 11,
                   letterSpacing: 1.2,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
@@ -727,7 +728,7 @@ class _PendingActionsCard extends StatelessWidget {
               TextButton(
                 onPressed: () => context.push(AppConstants.routeActionEngine),
                 style: TextButton.styleFrom(
-                    minimumSize: Size.zero,
+                    minimumSize: const Size(0, 36),
                     padding: const EdgeInsets.symmetric(horizontal: 8)),
                 child: Text(l10n.dashPendingActionsViewAll,
                     style: const TextStyle(color: _kPrimary, fontSize: 12)),
@@ -765,7 +766,7 @@ class _PendingActionsCard extends StatelessWidget {
                       if (item.roiScore > 0)
                         Text('ROI: ${item.roiScore}',
                             style:
-                                const TextStyle(color: _kGold, fontSize: 10)),
+                                const TextStyle(color: _kGold, fontSize: 11)),
                     ],
                   ),
                 )),
@@ -884,7 +885,7 @@ class _ModuleGrid extends StatelessWidget {
                               child: Text(label,
                                   style: TextStyle(
                                       color: active ? color : AppColors.inkSubtle,
-                                      fontSize: 10,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.w600),
                                   textAlign: TextAlign.center,
                                   maxLines: 2,
@@ -1030,12 +1031,12 @@ class _ExecutiveRecommendations extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           ...recs.map((r) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                           color: r.color.withOpacity(0.12),
                           shape: BoxShape.circle),
@@ -1064,7 +1065,7 @@ class _ExecutiveRecommendations extends StatelessWidget {
                     Text('${r.confidence}%',
                         style: TextStyle(
                             color: r.color,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600)),
                   ],
                 ),

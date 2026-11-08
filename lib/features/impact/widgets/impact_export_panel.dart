@@ -41,7 +41,7 @@ class ImpactExportPanel extends ConsumerWidget {
                 ImpactLine(live.labels.nonFinding(code), muted: true),
               ImpactLine(t.impactSnapshotHint,
                   icon: Icons.photo_camera_outlined),
-              ImpactLine(t.impactExportPrivacy, icon: Icons.lock_outline),
+              ImpactLine(t.impactExportPrivacy, icon: Icons.lock_outline_rounded),
               ImpactLine(t.impactExportFormats,
                   icon: Icons.description_outlined),
             ],
@@ -82,7 +82,7 @@ class ImpactExportPanel extends ConsumerWidget {
       icon: Icons.ios_share_outlined,
       children: [
         ImpactLine(t.impactExportPrivacy,
-            icon: Icons.lock_outline, muted: true),
+            icon: Icons.lock_outline_rounded, muted: true),
         ImpactLine(t.impactExportFormats, muted: true),
         const SizedBox(height: 8),
         // I6 (§20): primary, approval-like actions — the floating IVE avatar
@@ -115,7 +115,7 @@ class ImpactExportPanel extends ConsumerWidget {
             child: Semantics(
                 liveRegion: true,
                 child: ImpactLine(impactErrorText(t, st.error!),
-                    icon: Icons.info_outline)),
+                    icon: Icons.info_outline_rounded)),
           ),
         if (snap == null && st.error == null && !st.busy)
           ImpactLine(t.impactNoSnapshot, muted: true),
@@ -131,7 +131,7 @@ class ImpactExportPanel extends ConsumerWidget {
               '${t.impactSnapshotRef}: ${snap.envelope.snapshotRef ?? '—'}'),
           // I5G1-07 — the confirmation described the live view; the issued
           // snapshot's OWN caveats are shown right here.
-          ImpactLine(t.impactSnapshotCaveats, icon: Icons.info_outline),
+          ImpactLine(t.impactSnapshotCaveats, icon: Icons.info_outline_rounded),
           ImpactLine(t.impactExportLimitations(snap.limitationCount),
               icon: Icons.warning_amber_outlined),
           for (final code in snap.doesNotEstablish)
@@ -143,18 +143,18 @@ class ImpactExportPanel extends ConsumerWidget {
               style: Theme.of(context).textTheme.labelMedium),
           SelectableText(snap.integrity.contentHash, style: mono),
           ImpactLine(t.impactHashNotTruth,
-              icon: Icons.info_outline, muted: true),
+              icon: Icons.info_outline_rounded, muted: true),
           const SizedBox(height: 8),
           IveExclusionRegion(
               child: Wrap(spacing: 8, runSpacing: 8, children: [
             OutlinedButton.icon(
               onPressed: () => _copy(context, snap.documentJson),
-              icon: const Icon(Icons.data_object),
+              icon: const Icon(Icons.data_object_rounded),
               label: Text(t.impactCopyJson),
             ),
             OutlinedButton.icon(
               onPressed: () => _copy(context, snap.text),
-              icon: const Icon(Icons.notes),
+              icon: const Icon(Icons.notes_rounded),
               label: Text(t.impactCopyText),
             ),
           ])),
@@ -178,9 +178,9 @@ class _VerifyResultView extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final (text, icon) = switch (result.state) {
-      'CURRENT' => (t.impactVerifyCurrent, Icons.check_circle_outline),
-      'STALE' => (t.impactVerifyStale, Icons.history),
-      _ => (t.impactVerifyNotIssued, Icons.help_outline),
+      'CURRENT' => (t.impactVerifyCurrent, Icons.check_circle_outline_rounded),
+      'STALE' => (t.impactVerifyStale, Icons.history_rounded),
+      _ => (t.impactVerifyNotIssued, Icons.help_outline_rounded),
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,7 +190,7 @@ class _VerifyResultView extends StatelessWidget {
         if (result.envelopeState == 'MISMATCH') ...[
           ImpactLine(t.impactEnvelopeMismatch,
               icon: Icons.warning_amber_outlined),
-          ImpactLine(t.impactVerifyInconclusive, icon: Icons.block),
+          ImpactLine(t.impactVerifyInconclusive, icon: Icons.block_rounded),
         ] else
           ImpactLine(text, icon: icon),
         ImpactLine(t.impactHashNotTruth, muted: true),

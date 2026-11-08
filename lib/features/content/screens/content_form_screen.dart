@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -125,7 +126,7 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
         title: Text(
             isEdit ? l10n.uxContentFormEditTitle : l10n.uxContentFormNewTitle),
       ),
-      body: SingleChildScrollView(
+      body: IvBody(child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
@@ -203,7 +204,7 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accent,
                   foregroundColor: AppColors.onAccent,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
@@ -228,7 +229,7 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }

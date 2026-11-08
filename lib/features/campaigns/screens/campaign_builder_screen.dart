@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -79,8 +80,8 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
-      body: itemAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+      body: IvBody(child: itemAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (e, _) => Center(
             child: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: AppColors.inkMuted))),
@@ -91,7 +92,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
                     style: const TextStyle(color: AppColors.inkMuted)));
           }
           return analysisAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const IvLoadingSkeleton(),
             error: (e, _) => Center(
                 child: Text(
                     l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
@@ -104,7 +105,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
             },
           );
         },
-      ),
+      )),
     );
   }
 
@@ -147,7 +148,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
         children: [
           // Item header
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppColors.accent.withOpacity(0.1),
               borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -186,7 +187,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
                 onTap: () => setState(() => _objective = obj),
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: sel
                         ? AppColors.accent.withOpacity(0.2)
@@ -221,8 +222,8 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
                 child: GestureDetector(
                   onTap: () => setState(() => _duration = d),
                   child: Container(
-                    margin: const EdgeInsets.only(right: 6),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    margin: const EdgeInsets.only(right: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
                       color: sel
                           ? AppColors.accent.withOpacity(0.2)
@@ -269,7 +270,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
                 },
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: sel
                         ? AppColors.info.withOpacity(0.15)
@@ -310,7 +311,7 @@ class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accent,
                 foregroundColor: AppColors.onAccent,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.lg)),
               ),

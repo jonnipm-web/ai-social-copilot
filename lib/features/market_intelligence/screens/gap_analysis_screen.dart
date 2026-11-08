@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -108,8 +109,8 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
         title:
             Text(l10n.miGapTitle, style: const TextStyle(color: AppColors.ink)),
         iconTheme: const IconThemeData(color: AppColors.ink),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go(
             AppConstants.routeMarketIntelligenceHub
                 .replaceFirst(':id', widget.analysisId),
@@ -129,7 +130,7 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: IvBody(child: Column(
         children: [
           if (_error != null)
             Container(
@@ -146,8 +147,7 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
             ),
           Expanded(
             child: asyncGap.when(
-              loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.warning)),
+              loading: () => const IvLoadingSkeleton(),
               error: (e, _) => Center(
                   child: Text(
                       l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
@@ -250,7 +250,7 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }
@@ -282,7 +282,7 @@ class _GapSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             child: Row(
               children: [
                 Icon(icon, color: color, size: 20),
@@ -313,7 +313,7 @@ class _GapSection extends StatelessWidget {
           ...items.asMap().entries.map(
                 (e) => Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -328,7 +328,7 @@ class _GapSection extends StatelessWidget {
                           child: Text('${e.key + 1}',
                               style: TextStyle(
                                   color: color,
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600)),
                         ),
                       ),

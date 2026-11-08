@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 
 import '../../../core/diagnostics/diagnostic_container.dart';
 import '../../../core/diagnostics/diagnostic_models.dart';
@@ -233,7 +234,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                 ),
             ],
           ),
-          body: _signedIn ? _fileList() : _loginView(),
+          body: IvBody(child: _signedIn ? _fileList() : _loginView()),
         ),
         if (_downloading)
           Container(
@@ -242,7 +243,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
               child: Card(
                 color: AppColors.surface,
                 child: Padding(
-                  padding: const EdgeInsets.all(28),
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -319,7 +320,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kPrimary,
                         foregroundColor: AppColors.onAccent,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppRadius.lg)),
                       ),
@@ -426,10 +427,10 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                           itemCount: _files.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 8),
-                          itemBuilder: (_, i) => _FileTile(
+                          itemBuilder: (_, i) => FadeSlideIn(index: i, child: _FileTile(
                             file: _files[i],
                             onTap: () => _pick(_files[i]),
-                          ),
+                          )),
                         ),
         ),
       ],
@@ -447,7 +448,7 @@ class _FileTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: _kCard, gradient: kIvSurfaceGradient,
           borderRadius: BorderRadius.circular(AppRadius.lg),

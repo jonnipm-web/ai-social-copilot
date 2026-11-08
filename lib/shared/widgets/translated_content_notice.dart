@@ -35,14 +35,14 @@ class TranslatedContentNotice extends ConsumerWidget {
     return Padding(
       padding: padding ?? const EdgeInsets.only(bottom: 12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: AppColors.line),
         ),
         child: Row(
           children: [
-            const Icon(Icons.translate, size: 16, color: AppColors.inkMuted),
+            const Icon(Icons.translate_rounded, size: 16, color: AppColors.inkMuted),
             const SizedBox(width: 8),
             Expanded(
               child: Text(message,

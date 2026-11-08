@@ -139,7 +139,7 @@
   "upgradePreviousPlan": "Plano anterior",
   "upgradeCurrentPlanBadge": "Seu plano",
   "upgradeMostPopular": "Mais popular",
-  "upgradeSubscribeCta": "🚀  Assinar Pro — R$ 29/mês",
+  "upgradeSubscribeCta": "Assinar Pro — R$ 29/mês",
   "adminModulesTitle": "Inventário de Módulos",
   "adminModulesStatus": "Status",
   "adminModulesCommercial": "Comercial",
@@ -1780,7 +1780,7 @@
   "ecoAllocReasonPause": "Não recomendado — considere pausar este projeto",
   "ecoResourceAllocationTitle": "Alocação de Recursos",
   "ecoAllocModeHours": "⏱ Tempo (Horas)",
-  "ecoAllocModeMoney": "💰 Dinheiro (R$)",
+  "ecoAllocModeMoney": "Dinheiro (R$)",
   "ecoAllocBudgetQuestion": "Quanto tenho disponível?",
   "ecoAllocExecutiveRecommendation": "Recomendação Executiva",
   "ecoAllocEmpty": "Adicione projetos com análises para ver a alocação.",
@@ -2586,5 +2586,10 @@
   "dashScoreChartTitle": "Score por análise",
   "dashModulesTitle": "Módulos",
   "dashOverviewTitle": "Visão geral",
-  "dashQuotaTitle": "Uso de IA"
+  "dashQuotaTitle": "Uso de IA",
+  "authShowPassword": "Mostrar senha",
+  "authHidePassword": "Ocultar senha",
+  "authTagline": "Inteligência de projetos e decisões, guiada por IA",
+  "commonAdd": "Adicionar",
+  "commonRefresh": "Atualizar"
 }

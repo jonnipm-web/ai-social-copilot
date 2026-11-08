@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -93,7 +94,7 @@ class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon:
               const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
@@ -107,15 +108,14 @@ class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
         ),
       ),
       drawer: const AppDrawer(),
-      body: flagAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      body: IvBody(child: flagAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (_, __) =>
             _ActionBody(projectId: _projectId, onProjectChange: _setProject),
         data: (enabled) => enabled
             ? _ActionBody(projectId: _projectId, onProjectChange: _setProject)
             : const _FeatureGated(),
-      ),
+      )),
     );
   }
 }
@@ -137,7 +137,7 @@ class _FeatureGated extends StatelessWidget {
             Text(l10n.navActionEngine,
                 style: const TextStyle(
                     color: AppColors.ink,
-                    fontSize: 22,
+                    fontSize: 24,
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             Text(
@@ -184,8 +184,7 @@ class _ActionBody extends ConsumerWidget {
     final itemsAsync = ref.watch(actionQueueNotifierProvider);
 
     return itemsAsync.when(
-      loading: () =>
-          const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      loading: () => const IvLoadingSkeleton(),
       error: (e, _) => Center(
         child: Text(l10n.commonError,
             style: const TextStyle(color: AppColors.inkMuted)),
@@ -227,7 +226,7 @@ class _ActionBody extends ConsumerWidget {
                             _SectionHeader(l10n.actionEngineSectionPending,
                                 pending.length, _kOrange),
                             ...pending.map((item) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.only(bottom: 8),
                                   child: _ActionCard(item: item),
                                 )),
                             const SizedBox(height: 8),
@@ -236,7 +235,7 @@ class _ActionBody extends ConsumerWidget {
                             _SectionHeader(l10n.actionEngineSectionActive,
                                 active.length, _kCyan),
                             ...active.map((item) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.only(bottom: 8),
                                   child: _ActionCard(item: item),
                                 )),
                             const SizedBox(height: 8),
@@ -245,7 +244,7 @@ class _ActionBody extends ConsumerWidget {
                             _SectionHeader(l10n.actionEngineSectionCompleted,
                                 completed.length, _kGreen),
                             ...completed.take(5).map((item) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.only(bottom: 8),
                                   child: _ActionCard(item: item),
                                 )),
                           ],
@@ -308,7 +307,7 @@ class _SummaryChip extends StatelessWidget {
                     color: color, fontSize: 20, fontWeight: FontWeight.w600)),
             const SizedBox(height: 2),
             Text(label,
-                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
           ],
         ),
       ),
@@ -325,7 +324,7 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
           Text(
@@ -339,7 +338,7 @@ class _SectionHeader extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
             decoration: BoxDecoration(
               color: color.withOpacity(0.15),
               borderRadius: BorderRadius.circular(AppRadius.md),
@@ -347,7 +346,7 @@ class _SectionHeader extends StatelessWidget {
             child: Text(
               '$count',
               style: TextStyle(
-                  color: color, fontSize: 10, fontWeight: FontWeight.w600),
+                  color: color, fontSize: 11, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -460,7 +459,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
         ),
       ),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: _kCard, gradient: kIvSurfaceGradient,
           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -493,7 +492,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                 else
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: _statusColor(item.status).withOpacity(0.12),
                       borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -502,7 +501,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                       actionEngineStatusLabel(l10n, item.status),
                       style: TextStyle(
                           color: _statusColor(item.status),
-                          fontSize: 9,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -585,11 +584,12 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                 ],
                 if (!_loading)
                   IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded,
+                    tooltip: AppLocalizations.of(context)!.commonDelete,
+                icon: const Icon(Icons.delete_outline_rounded,
                         color: AppColors.inkSubtle, size: 16),
                     onPressed: _confirmDelete,
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
+                    constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                   ),
               ],
             ),
@@ -609,7 +609,7 @@ class _ScoreBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
@@ -632,7 +632,7 @@ class _ActionBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: color.withOpacity(0.15),
           borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -700,7 +700,7 @@ class _Chip extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: selected ? _kPrimary : _kCard,
             borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -728,28 +728,11 @@ class _EmptyQueue extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        children: [
-          const Icon(Icons.bolt_rounded, color: AppColors.inkSubtle, size: 56),
-          const SizedBox(height: 16),
-          Text(
-            l10n.actionEngineEmptyTitle,
-            style: const TextStyle(
-                color: AppColors.inkMuted,
-                fontSize: 16,
-                fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.actionEngineEmptyBody,
-            style: const TextStyle(
-                color: AppColors.inkSubtle, fontSize: 12, height: 1.5),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+    return IvEmptyState(
+      icon: Icons.bolt_rounded,
+      color: AppColors.warning,
+      title: l10n.actionEngineEmptyTitle,
+      message: l10n.actionEngineEmptyBody,
     );
   }
 }

@@ -159,7 +159,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon:
               const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
@@ -724,7 +724,7 @@ class _InvestmentCard extends StatelessWidget {
               Text(
                 aiInvestmentRecommendationLabel(rec, l10n),
                 style: TextStyle(
-                    color: color, fontSize: 22, fontWeight: FontWeight.w600),
+                    color: color, fontSize: 24, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -803,7 +803,7 @@ class _PriorityActionsCard extends StatelessWidget {
             final priority = action['priority'] as int? ?? (e.key + 1);
 
             return Padding(
-              padding: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -912,7 +912,7 @@ class _CompetitorRankingCard extends StatelessWidget {
               TextButton(
                 onPressed: () => context.push(route),
                 style: TextButton.styleFrom(
-                    minimumSize: Size.zero,
+                    minimumSize: const Size(0, 36),
                     padding: const EdgeInsets.symmetric(horizontal: 8)),
                 child: Text(l10n.miHubCompetitorsViewAll,
                     style: const TextStyle(color: _kPrimary, fontSize: 12)),
@@ -949,7 +949,7 @@ class _CompetitorRankingCard extends StatelessWidget {
               final idx = e.key;
               final c = e.value;
               return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
                     Expanded(
@@ -959,7 +959,7 @@ class _CompetitorRankingCard extends StatelessWidget {
                           Container(
                             width: 20,
                             height: 20,
-                            margin: const EdgeInsets.only(right: 6),
+                            margin: const EdgeInsets.only(right: 4),
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
                               color: idx == 0
@@ -971,7 +971,7 @@ class _CompetitorRankingCard extends StatelessWidget {
                               '${idx + 1}',
                               style: TextStyle(
                                 color: idx == 0 ? _kGold : AppColors.inkSubtle,
-                                fontSize: 10,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -992,7 +992,7 @@ class _CompetitorRankingCard extends StatelessWidget {
                                   Text(
                                     c.url,
                                     style: const TextStyle(
-                                        color: AppColors.inkSubtle, fontSize: 10),
+                                        color: AppColors.inkSubtle, fontSize: 11),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                               ],
@@ -1075,7 +1075,7 @@ class _GapSummaryCard extends StatelessWidget {
               TextButton(
                 onPressed: () => context.push(route),
                 style: TextButton.styleFrom(
-                    minimumSize: Size.zero,
+                    minimumSize: const Size(0, 36),
                     padding: const EdgeInsets.symmetric(horizontal: 8)),
                 child: Text(l10n.miHubGapDetailCta,
                     style: const TextStyle(color: _kPrimary, fontSize: 12)),
@@ -1111,7 +1111,7 @@ class _GapSummaryCard extends StatelessWidget {
                 gap!.productGaps, _kGold),
             const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: _kGold.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1139,7 +1139,7 @@ class _GapRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1159,7 +1159,7 @@ class _GapRow extends StatelessWidget {
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 1),
+                          horizontal: 4, vertical: 0),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1168,7 +1168,7 @@ class _GapRow extends StatelessWidget {
                         '${items.length}',
                         style: TextStyle(
                             color: color,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -1240,7 +1240,7 @@ class _OpportunitiesCard extends StatelessWidget {
               TextButton(
                 onPressed: () => context.push(route),
                 style: TextButton.styleFrom(
-                    minimumSize: Size.zero,
+                    minimumSize: const Size(0, 36),
                     padding: const EdgeInsets.symmetric(horizontal: 8)),
                 child: Text(l10n.miHubOpportunitiesViewAll,
                     style: const TextStyle(color: _kPrimary, fontSize: 12)),
@@ -1267,7 +1267,7 @@ class _OpportunitiesCard extends StatelessWidget {
             ...top.map((o) {
               final c = _scoreColor(o.opportunityScore);
               return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
@@ -1290,7 +1290,7 @@ class _OpportunitiesCard extends StatelessWidget {
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                                horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
                               color: c.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1397,7 +1397,7 @@ class _NicheSummaryCard extends StatelessWidget {
               TextButton(
                 onPressed: () => context.push(route),
                 style: TextButton.styleFrom(
-                    minimumSize: Size.zero,
+                    minimumSize: const Size(0, 36),
                     padding: const EdgeInsets.symmetric(horizontal: 8)),
                 child: Text(l10n.miHubNichesViewAll,
                     style: const TextStyle(color: _kPrimary, fontSize: 12)),
@@ -1511,7 +1511,7 @@ class _ContentClusterSummaryCard extends StatelessWidget {
               TextButton(
                 onPressed: () => context.push(route),
                 style: TextButton.styleFrom(
-                    minimumSize: Size.zero,
+                    minimumSize: const Size(0, 36),
                     padding: const EdgeInsets.symmetric(horizontal: 8)),
                 child: Text(l10n.miHubClusterViewAll,
                     style: const TextStyle(color: _kPrimary, fontSize: 12)),
@@ -1611,7 +1611,7 @@ class _RevenuePlannerSummaryCard extends StatelessWidget {
               TextButton(
                 onPressed: () => context.push(route),
                 style: TextButton.styleFrom(
-                    minimumSize: Size.zero,
+                    minimumSize: const Size(0, 36),
                     padding: const EdgeInsets.symmetric(horizontal: 8)),
                 child: Text(l10n.miHubRevenuePlannerViewAll,
                     style: const TextStyle(color: _kPrimary, fontSize: 12)),
@@ -1786,7 +1786,7 @@ class _RoiIntegrationCard extends StatelessWidget {
                   backgroundColor: _kGreen,
                   foregroundColor: AppColors.ink,
                   disabledBackgroundColor: _kGreen.withOpacity(0.4),
-                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md)),
                 ),
@@ -1843,7 +1843,7 @@ class _TH extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(text,
         style: const TextStyle(
-            color: AppColors.inkSubtle, fontSize: 10, fontWeight: FontWeight.w600));
+            color: AppColors.inkSubtle, fontSize: 11, fontWeight: FontWeight.w600));
   }
 }
 
@@ -1869,7 +1869,7 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
         color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -1877,7 +1877,7 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(label,
           style: TextStyle(
-              color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+              color: color, fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -1929,7 +1929,7 @@ class _RoiStat extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
         const SizedBox(height: 2),
         Text(value,
             style: TextStyle(

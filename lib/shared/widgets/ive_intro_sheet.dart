@@ -169,7 +169,7 @@ class _IveIntroSheetContent extends StatelessWidget {
                         onPressed: onContinue,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accent,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: Text(
                           l10n.ivIntroContinueButton,
@@ -189,7 +189,7 @@ class _IveIntroSheetContent extends StatelessWidget {
   }
 
   Widget _paragraph(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.only(bottom: 8),
         child: Text(
           text,
           textAlign: TextAlign.center,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -205,7 +206,7 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.canPop()
               ? context.pop()
@@ -224,6 +225,7 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
         ),
         actions: [
           IconButton(
+            tooltip: AppLocalizations.of(context)!.commonRefresh,
             icon: insightState.loading
                 ? const SizedBox(
                     width: 18,
@@ -236,7 +238,7 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
         ],
       ),
       drawer: const AppDrawer(),
-      body: RefreshIndicator(
+      body: IvBody(child: RefreshIndicator(
         color: AppColors.accent,
         backgroundColor: AppColors.surface,
         onRefresh: _refresh,
@@ -318,7 +320,7 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
               _EmptyState(t: t),
           ],
         ),
-      ),
+      )),
     );
   }
 
@@ -567,7 +569,7 @@ class _SaveButton extends StatelessWidget {
           disabledBackgroundColor:
               AppColors.positive.withValues(alpha: 0.4),
           disabledForegroundColor: Colors.black38,
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
         ),
         icon: Icon(saved ? Icons.check_rounded : Icons.save_alt_rounded,
@@ -586,7 +588,7 @@ class _ErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.negativeSoft,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -627,7 +629,7 @@ class _HistoryHeader extends StatelessWidget {
               letterSpacing: 0.5)),
       const SizedBox(width: 8),
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         decoration: BoxDecoration(
           color: AppColors.accent.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(AppRadius.md),

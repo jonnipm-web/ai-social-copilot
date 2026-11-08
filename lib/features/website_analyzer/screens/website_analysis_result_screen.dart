@@ -74,7 +74,7 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
                           ),
                         );
                       },
-                      icon: const Icon(Icons.lock, size: 16, color: _accent),
+                      icon: const Icon(Icons.lock_rounded, size: 16, color: _accent),
                       label: Text(
                         l10n.websiteResultSaveToVault,
                         style: const TextStyle(color: _accent, fontSize: 13),
@@ -87,7 +87,7 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
                           extra: {'prefillUrl': analysis.url},
                         );
                       },
-                      icon: const Icon(Icons.auto_awesome,
+                      icon: const Icon(Icons.auto_awesome_rounded,
                           size: 16, color: _primary),
                       label: Text(
                         l10n.websiteResultCreateStrategy,
@@ -172,7 +172,7 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, color: AppColors.negative, size: 48),
+                const Icon(Icons.error_outline_rounded, color: AppColors.negative, size: 48),
                 const SizedBox(height: 16),
                 Text(
                   l10n.websiteResultLoadError,
@@ -284,7 +284,7 @@ class _AnalysisContent extends StatelessWidget {
                 child: _ScoreCard(
                   label: l10n.websiteResultScoreWebsite,
                   score: websiteScore,
-                  icon: Icons.language,
+                  icon: Icons.language_rounded,
                   color: scoreColor(websiteScore),
                   cardColor: cardColor,
                 ),
@@ -294,7 +294,7 @@ class _AnalysisContent extends StatelessWidget {
                 child: _ScoreCard(
                   label: l10n.websiteAnalyzerScoreAdsense,
                   score: adsenseScore,
-                  icon: Icons.monetization_on,
+                  icon: Icons.monetization_on_rounded,
                   color: scoreColor(adsenseScore),
                   cardColor: cardColor,
                 ),
@@ -304,7 +304,7 @@ class _AnalysisContent extends StatelessWidget {
                 child: _ScoreCard(
                   label: l10n.websiteResultScoreSeo,
                   score: seoScore,
-                  icon: Icons.search,
+                  icon: Icons.search_rounded,
                   color: scoreColor(seoScore),
                   cardColor: cardColor,
                 ),
@@ -314,7 +314,7 @@ class _AnalysisContent extends StatelessWidget {
                 child: _ScoreCard(
                   label: l10n.websiteResultScoreMonetization,
                   score: monetizationScore,
-                  icon: Icons.payments,
+                  icon: Icons.payments_rounded,
                   color: scoreColor(monetizationScore),
                   cardColor: cardColor,
                 ),
@@ -327,7 +327,7 @@ class _AnalysisContent extends StatelessWidget {
           // Expandable Sections
           _ExpandableSection(
             title: l10n.websiteResultSectionDiagnostic,
-            icon: Icons.analytics,
+            icon: Icons.analytics_rounded,
             iconColor: primary,
             cardColor: cardColor,
             initiallyExpanded: true,
@@ -339,7 +339,7 @@ class _AnalysisContent extends StatelessWidget {
           if (analysis.strengths.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionStrengths,
-              icon: Icons.thumb_up,
+              icon: Icons.thumb_up_rounded,
               iconColor: AppColors.positive,
               cardColor: cardColor,
               child: _BulletList(
@@ -353,7 +353,7 @@ class _AnalysisContent extends StatelessWidget {
           if (analysis.weaknesses.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionWeaknesses,
-              icon: Icons.thumb_down,
+              icon: Icons.thumb_down_rounded,
               iconColor: AppColors.warning,
               cardColor: cardColor,
               child: _BulletList(
@@ -367,7 +367,7 @@ class _AnalysisContent extends StatelessWidget {
           if (analysis.criticalIssues.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionCriticalIssues,
-              icon: Icons.warning_amber,
+              icon: Icons.warning_amber_rounded,
               iconColor: AppColors.negative,
               cardColor: cardColor,
               child: _BulletList(
@@ -381,7 +381,7 @@ class _AnalysisContent extends StatelessWidget {
           if (analysis.seoAnalysis.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionSeoAnalysis,
-              icon: Icons.search,
+              icon: Icons.search_rounded,
               iconColor: accent,
               cardColor: cardColor,
               child: _MapContent(data: analysis.seoAnalysis),
@@ -392,7 +392,7 @@ class _AnalysisContent extends StatelessWidget {
           if (analysis.adsenseAnalysis.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionAdsenseAnalysis,
-              icon: Icons.monetization_on,
+              icon: Icons.monetization_on_rounded,
               iconColor: AppColors.warning,
               cardColor: cardColor,
               child: _AdsenseContent(analysis: analysis, l10n: l10n),
@@ -403,7 +403,7 @@ class _AnalysisContent extends StatelessWidget {
           if (analysis.quickWins.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionQuickWins,
-              icon: Icons.bolt,
+              icon: Icons.bolt_rounded,
               iconColor: AppColors.warning,
               cardColor: cardColor,
               child: _BulletList(
@@ -418,7 +418,7 @@ class _AnalysisContent extends StatelessWidget {
           if (analysis.plan7Days.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionPlan7Days,
-              icon: Icons.calendar_today,
+              icon: Icons.calendar_today_rounded,
               iconColor: primary,
               cardColor: cardColor,
               child: _NumberedList(items: analysis.plan7Days),
@@ -429,7 +429,7 @@ class _AnalysisContent extends StatelessWidget {
           if (analysis.plan30Days.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionPlan30Days,
-              icon: Icons.date_range,
+              icon: Icons.date_range_rounded,
               iconColor: primary,
               cardColor: cardColor,
               child: _NumberedList(items: analysis.plan30Days),
@@ -440,7 +440,7 @@ class _AnalysisContent extends StatelessWidget {
           if (analysis.articleIdeas.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionArticleIdeas,
-              icon: Icons.article,
+              icon: Icons.article_rounded,
               iconColor: accent,
               cardColor: cardColor,
               child: _BulletList(
@@ -454,7 +454,7 @@ class _AnalysisContent extends StatelessWidget {
           if (analysis.monetizationOpportunities.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionMonetizationOpportunities,
-              icon: Icons.attach_money,
+              icon: Icons.attach_money_rounded,
               iconColor: AppColors.positive,
               cardColor: cardColor,
               child: _BulletList(
@@ -469,7 +469,7 @@ class _AnalysisContent extends StatelessWidget {
           if (analysis.commercialOpportunities.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionCommercialOpportunities,
-              icon: Icons.business_center,
+              icon: Icons.business_center_rounded,
               iconColor: AppColors.warning,
               cardColor: cardColor,
               child: _BulletList(
@@ -701,7 +701,7 @@ class _DiagnosticContent extends StatelessWidget {
                 .map(
                   (topic) => Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.accent.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -782,7 +782,7 @@ class _NumberedList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: items.asMap().entries.map((entry) {
         return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(bottom: 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -841,7 +841,7 @@ class _MapContent extends StatelessWidget {
         final value = entry.value;
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(bottom: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -956,7 +956,7 @@ class _PolicyIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         decoration: BoxDecoration(
           color: (hasIt ? AppColors.positive : AppColors.negative).withOpacity(0.15),
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -967,7 +967,7 @@ class _PolicyIndicator extends StatelessWidget {
         child: Column(
           children: [
             Icon(
-              hasIt ? Icons.check_circle : Icons.cancel,
+              hasIt ? Icons.check_circle_rounded : Icons.cancel_rounded,
               color: hasIt ? AppColors.positive : AppColors.negative,
               size: 18,
             ),
@@ -976,7 +976,7 @@ class _PolicyIndicator extends StatelessWidget {
               label,
               style: TextStyle(
                 color: AppColors.ink.withOpacity(0.7),
-                fontSize: 10,
+                fontSize: 11,
               ),
               textAlign: TextAlign.center,
             ),
@@ -1025,7 +1025,7 @@ class _BottomActionBar extends StatelessWidget {
             Expanded(
               child: _ActionButton(
                 label: l10n.websiteResultCreateStrategy,
-                icon: Icons.auto_awesome,
+                icon: Icons.auto_awesome_rounded,
                 color: primary,
                 onTap: () => context.go(
                   '/knowledge/new',
@@ -1037,7 +1037,7 @@ class _BottomActionBar extends StatelessWidget {
             Expanded(
               child: _ActionButton(
                 label: l10n.websiteResultCreateCampaign,
-                icon: Icons.campaign,
+                icon: Icons.campaign_rounded,
                 color: accent,
                 onTap: () => context.go(
                   '/campaigns/new',
@@ -1049,7 +1049,7 @@ class _BottomActionBar extends StatelessWidget {
             Expanded(
               child: _ActionButton(
                 label: l10n.websiteResultSeoPlan,
-                icon: Icons.search,
+                icon: Icons.search_rounded,
                 color: AppColors.positive,
               ),
             ),
@@ -1057,7 +1057,7 @@ class _BottomActionBar extends StatelessWidget {
             Expanded(
               child: _ActionButton(
                 label: l10n.websiteResultAdsensePlan,
-                icon: Icons.monetization_on,
+                icon: Icons.monetization_on_rounded,
                 color: AppColors.warning,
               ),
             ),

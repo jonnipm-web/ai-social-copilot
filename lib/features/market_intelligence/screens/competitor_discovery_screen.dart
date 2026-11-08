@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -95,8 +96,8 @@ class _CompetitorDiscoveryScreenState
         title: Text(l10n.miCompetitorTitle,
             style: const TextStyle(color: AppColors.ink)),
         iconTheme: const IconThemeData(color: AppColors.ink),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go(
             AppConstants.routeMarketIntelligenceHub
                 .replaceFirst(':id', widget.analysisId),
@@ -122,7 +123,7 @@ class _CompetitorDiscoveryScreenState
           ),
         ],
       ),
-      body: Column(
+      body: IvBody(child: Column(
         children: [
           if (_error != null)
             Container(
@@ -139,8 +140,7 @@ class _CompetitorDiscoveryScreenState
             ),
           Expanded(
             child: asyncList.when(
-              loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.negative)),
+              loading: () => const IvLoadingSkeleton(),
               error: (e, _) => Center(
                   child: Text(
                       l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
@@ -181,12 +181,12 @@ class _CompetitorDiscoveryScreenState
                       padding: const EdgeInsets.all(16),
                       itemCount: competitors.length,
                       itemBuilder: (_, i) =>
-                          _CompetitorCard(competitor: competitors[i]),
+                          FadeSlideIn(index: i, child: _CompetitorCard(competitor: competitors[i])),
                     ),
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }
@@ -251,7 +251,7 @@ class _CompetitorCard extends StatelessWidget {
                   competitorTypeLabel(competitor.type, l10n).toUpperCase(),
                   style: TextStyle(
                       color: _typeColor,
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600),
                 ),
               ),
@@ -360,7 +360,7 @@ class _ScoreItem extends StatelessWidget {
             style: TextStyle(
                 color: color, fontWeight: FontWeight.w600, fontSize: 16)),
         Text(label,
-            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
       ],
     );
   }

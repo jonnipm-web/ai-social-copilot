@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,7 +23,7 @@ class CampaignsScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -46,8 +47,8 @@ class CampaignsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: campaignsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+      body: IvBody(child: campaignsAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (e, _) => Center(
           child: Text(l10n.commonError,
               style: const TextStyle(color: AppColors.inkMuted)),
@@ -57,7 +58,7 @@ class CampaignsScreen extends ConsumerWidget {
                 onTap: () => context.push(AppConstants.routeKnowledge),
               )
             : _CampaignList(campaigns: campaigns),
-      ),
+      )),
     );
   }
 }
@@ -69,43 +70,13 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.campaign_rounded,
-                size: 72, color: AppColors.info),
-            const SizedBox(height: 16),
-            Text(
-              l10n.campaignsEmpty,
-              style: const TextStyle(
-                  color: AppColors.ink,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.campaignsEmptyHint,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.info,
-                foregroundColor: AppColors.ground,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              icon: const Icon(Icons.auto_stories_rounded),
-              label: Text(l10n.campaignsGoToVault),
-              onPressed: onTap,
-            ),
-          ],
-        ),
-      ),
+    return IvEmptyState(
+      icon: Icons.campaign_rounded,
+      color: AppColors.info,
+      title: l10n.campaignsEmpty,
+      message: l10n.campaignsEmptyHint,
+      actionLabel: l10n.campaignsGoToVault,
+      onAction: onTap,
     );
   }
 }
@@ -117,9 +88,9 @@ class _CampaignList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 64),
       itemCount: campaigns.length,
-      itemBuilder: (_, i) => _CampaignCard(campaign: campaigns[i]),
+      itemBuilder: (_, i) => FadeSlideIn(index: i, child: _CampaignCard(campaign: campaigns[i])),
     );
   }
 }
@@ -180,7 +151,7 @@ class _CampaignCard extends ConsumerWidget {
                   ),
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -190,7 +161,7 @@ class _CampaignCard extends ConsumerWidget {
                         campaignObjectiveLabel(campaign.objective, l10n),
                         style: TextStyle(
                             color: color,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600)),
                   ),
                 ],

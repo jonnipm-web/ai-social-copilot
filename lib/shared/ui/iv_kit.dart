@@ -796,6 +796,12 @@ const Map<String, (IconData, Color)> _kEmojiIcons = {
   '⭕': (Icons.radio_button_unchecked_rounded, AppColors.inkMuted),
   '📖': (Icons.auto_stories_rounded, AppColors.info),
   '📝': (Icons.edit_note_rounded, AppColors.accent),
+  '📁': (Icons.folder_rounded, AppColors.info),
+  '📄': (Icons.description_rounded, AppColors.info),
+  '🕸': (Icons.hub_rounded, AppColors.accent),
+  '💎': (Icons.diamond_rounded, AppColors.accent),
+  '👥': (Icons.groups_rounded, AppColors.info),
+  '✨': (Icons.auto_awesome_rounded, AppColors.accent),
 };
 
 (IconData, Color)? ivEmojiIcon(String emoji) =>
@@ -854,6 +860,136 @@ class IvAppFrame extends StatelessWidget {
     if (w <= maxWidth) return framed;
     return Center(
       child: SizedBox(width: frameW, child: ClipRect(child: framed)),
+    );
+  }
+}
+
+// ── Page body width ─────────────────────────────────────────────────────────
+
+/// Caps a page body at [maxWidth] on wide screens by adding symmetric side
+/// padding. Padding (not Center/ConstrainedBox) keeps the child's
+/// constraints exactly as tight as before, so layouts never change on
+/// phones and nothing re-flows unexpectedly on desktop.
+class IvBody extends StatelessWidget {
+  const IvBody({super.key, required this.child, this.maxWidth = 1120});
+
+  final Widget child;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, c) {
+      if (!c.hasBoundedWidth || c.maxWidth <= maxWidth) return child;
+      final side = (c.maxWidth - maxWidth) / 2;
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: side),
+        child: child,
+      );
+    });
+  }
+}
+
+// ── Loading & empty states ──────────────────────────────────────────────────
+
+/// Standard list-page loading state: three shimmering card placeholders.
+class IvLoadingSkeleton extends StatelessWidget {
+  const IvLoadingSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, c) {
+      // Inside a Column/Row slot (unbounded) render a compact block instead
+      // of a scrollable list, so it is safe wherever a spinner was.
+      if (!c.hasBoundedHeight || !c.hasBoundedWidth || c.maxHeight < 200) {
+        return SizedBox(
+          width: c.hasBoundedWidth ? c.maxWidth : 240,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpace.s2),
+            child: IvSkeleton(height: 56, radius: AppRadius.md),
+          ),
+        );
+      }
+      return ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpace.s4),
+        children: const [
+          IvSkeleton(height: 88),
+          SizedBox(height: AppSpace.s3),
+          IvSkeleton(height: 132),
+          SizedBox(height: AppSpace.s3),
+          IvSkeleton(height: 132),
+        ],
+      );
+    });
+  }
+}
+
+/// Standard empty state: icon tile, title, optional message and action.
+class IvEmptyState extends StatelessWidget {
+  const IvEmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.message,
+    this.actionLabel,
+    this.onAction,
+    this.color = AppColors.accent,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpace.s6),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: FadeSlideIn(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IvIconTile(icon, color: color, size: 64),
+                const SizedBox(height: AppSpace.s4),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.ink,
+                    fontSize: AppType.heading,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (message != null) ...[
+                  const SizedBox(height: AppSpace.s2),
+                  Text(
+                    message!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.inkMuted,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+                if (actionLabel != null && onAction != null) ...[
+                  const SizedBox(height: AppSpace.s6),
+                  FilledButton.icon(
+                    onPressed: onAction,
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: Text(actionLabel!),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

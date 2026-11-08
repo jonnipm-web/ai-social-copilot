@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -20,7 +21,7 @@ class SupportScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(t.supportTitle)),
-      body: ListView(
+      body: IvBody(child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           Text(
@@ -62,7 +63,7 @@ class SupportScreen extends StatelessWidget {
                 'mailto:${AppConstants.supportEmail}?subject=$subjectFeedback')),
           ),
         ],
-      ),
+      )),
     );
   }
 }

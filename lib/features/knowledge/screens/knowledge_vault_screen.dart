@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -58,7 +59,7 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
       backgroundColor: Colors.transparent,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -95,7 +96,7 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
           _invalidateItems();
         },
       ),
-      body: Column(
+      body: IvBody(child: Column(
         children: [
           if (projects.isNotEmpty)
             _ProjectFilter(
@@ -106,7 +107,7 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
             ),
           Expanded(
             child: itemsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const IvLoadingSkeleton(),
               error: (e, _) => Center(
                 child: Text(
                     l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
@@ -136,7 +137,7 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }
@@ -162,7 +163,7 @@ class _ProjectFilter extends StatelessWidget {
       height: 48,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         children: [
           _Chip(
             label: l10n.knowledgeVaultFilterAll,
@@ -233,48 +234,17 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.auto_stories_rounded,
-                size: 72, color: AppColors.accent),
-            const SizedBox(height: 16),
-            Text(
-              projectFiltered
-                  ? l10n.knowledgeVaultEmptyProjectTitle(
-                      projectName ?? l10n.knowledgeVaultThisProject)
-                  : l10n.knowledgeVaultEmptyTitle,
-              style: const TextStyle(
-                  color: AppColors.ink,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              projectFiltered
-                  ? l10n.knowledgeVaultEmptyProjectBody
-                  : l10n.knowledgeVaultEmptyBody,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.onAccent,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              icon: const Icon(Icons.add_rounded),
-              label: Text(l10n.knowledgeVaultAddKnowledge),
-              onPressed: onAdd,
-            ),
-          ],
-        ),
-      ),
+    return IvEmptyState(
+      icon: Icons.auto_stories_rounded,
+      title: projectFiltered
+          ? l10n.knowledgeVaultEmptyProjectTitle(
+              projectName ?? l10n.knowledgeVaultThisProject)
+          : l10n.knowledgeVaultEmptyTitle,
+      message: projectFiltered
+          ? l10n.knowledgeVaultEmptyProjectBody
+          : l10n.knowledgeVaultEmptyBody,
+      actionLabel: l10n.knowledgeVaultAddKnowledge,
+      onAction: onAdd,
     );
   }
 }
@@ -297,15 +267,15 @@ class _ItemList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 64),
       itemCount: items.length,
-      itemBuilder: (ctx, i) => _KnowledgeCard(
+      itemBuilder: (ctx, i) => FadeSlideIn(index: i, child: _KnowledgeCard(
         item: items[i],
         onInvalidate: onInvalidate,
         projects: projects,
         projectName:
             items[i].projectId == null ? null : projectsMap[items[i].projectId],
-      ),
+      )),
     );
   }
 }
@@ -458,7 +428,7 @@ class _ProjectTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: selected
               ? AppColors.accent.withOpacity(0.15)
@@ -857,7 +827,7 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -894,7 +864,7 @@ class _ActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: enabled ? onTap : null,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: color.withOpacity(0.15),
           borderRadius: BorderRadius.circular(AppRadius.md),

@@ -64,7 +64,7 @@ class AppDrawer extends ConsumerWidget {
         borderRadius: BorderRadius.horizontal(right: Radius.circular(AppRadius.lg)),
       ),
       child: profileAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const IvLoadingSkeleton(),
         error: (_, __) => _DrawerContent(profile: null),
         data: (profile) => _DrawerContent(profile: profile),
       ),
@@ -146,7 +146,7 @@ class _DrawerContent extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: AppColors.ink,
-                          fontSize: 17,
+                          fontSize: 18,
                           fontWeight: FontWeight.w600,
                           letterSpacing: -0.2,
                         ),
@@ -190,13 +190,16 @@ class _DrawerContent extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: AppSpace.s2),
                 children: [
-                  for (final module in visibleModules)
-                    _NavItem(
-                      icon: _iconFor(module.moduleId),
-                      label: isEnglish ? module.nameEn : module.namePt,
-                      route: module.route!,
-                      current: current,
-                    ),
+                  for (final group in groupDrawerModules(visibleModules)) ...[
+                    _SectionLabel(isEnglish ? group.$1.en : group.$1.pt),
+                    for (final module in group.$2)
+                      _NavItem(
+                        icon: _iconFor(module.moduleId),
+                        label: isEnglish ? module.nameEn : module.namePt,
+                        route: module.route!,
+                        current: current,
+                      ),
+                  ],
                 ],
               ),
             ),
@@ -271,6 +274,75 @@ class _DrawerContent extends ConsumerWidget {
   IconData _iconFor(String moduleId) => drawerIconFor(moduleId);
 }
 
+// UX-AUDIT — the drawer groups modules into labelled sections instead of
+// one flat list of ~15 items. Unknown modules fall into "Mais"/"More", so a
+// new registry entry is never hidden.
+typedef DrawerSection = ({String pt, String en});
+
+const DrawerSection _kOverview = (pt: 'Visão geral', en: 'Overview');
+const DrawerSection _kIntelligence = (pt: 'Inteligência', en: 'Intelligence');
+const DrawerSection _kExecution = (pt: 'Execução', en: 'Execution');
+const DrawerSection _kContent = (pt: 'Conteúdo', en: 'Content');
+const DrawerSection _kLabs = (pt: 'Labs', en: 'Labs');
+const DrawerSection _kMore = (pt: 'Mais', en: 'More');
+
+const Map<String, DrawerSection> _kModuleSection = {
+  'business-dashboard': _kOverview,
+  'projects': _kIntelligence,
+  'knowledge-vault': _kIntelligence,
+  'website-analyzer': _kIntelligence,
+  'market-intelligence': _kIntelligence,
+  'opportunity-lab': _kIntelligence,
+  'action-engine': _kExecution,
+  'campaigns': _kExecution,
+  'performance': _kExecution,
+  'roi-tracker': _kExecution,
+  'improve-post': _kContent,
+  'personas': _kContent,
+  'content-library': _kContent,
+  'calendar': _kContent,
+  'strategy-builder': _kLabs,
+  'quant-analytics': _kLabs,
+  'impact': _kLabs,
+};
+
+const List<DrawerSection> _kSectionOrder = [
+  _kOverview,
+  _kIntelligence,
+  _kExecution,
+  _kContent,
+  _kLabs,
+  _kMore,
+];
+
+/// Groups visible modules into ordered, non-empty drawer sections while
+/// preserving registry order inside each section.
+List<(DrawerSection, List<ModuleDefinition>)> groupDrawerModules(
+    List<ModuleDefinition> modules) {
+  final out = <(DrawerSection, List<ModuleDefinition>)>[];
+  for (final section in _kSectionOrder) {
+    final items = modules
+        .where((m) => (_kModuleSection[m.moduleId] ?? _kMore) == section)
+        .toList();
+    if (items.isNotEmpty) out.add((section, items));
+  }
+  return out;
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpace.s6, AppSpace.s4, AppSpace.s4, AppSpace.s1),
+      child: IvEyebrow(text),
+    );
+  }
+}
+
 // IVE-COMMERCIAL-FOUNDATION-11 — extraída como função pura top-level
 // (Codex adversarial review, Architecture-10 mission, round 1, P2,
 // ACCEPTED: "route_policy.dart's kRouteModuleOwnership... and app_drawer.
@@ -306,6 +378,14 @@ IconData drawerIconFor(String moduleId) {
     // enabled (COMMERCIAL/free); dedicated icon per this map's own coverage
     // contract (app_drawer_test.dart's drawerIconFor coverage check).
     'strategy-builder': Icons.candlestick_chart_rounded,
+    'quant-analytics': Icons.query_stats_rounded,
+    'impact': Icons.verified_rounded,
+    'decision-center': Icons.account_tree_rounded,
+    'resource-allocation': Icons.pie_chart_rounded,
+    'weekly-briefing': Icons.summarize_rounded,
+    'advisor-onboarding': Icons.support_agent_rounded,
+    'intelligence-debug': Icons.bug_report_rounded,
+    'admin-panel': Icons.admin_panel_settings_rounded,
   };
   return icons[moduleId] ?? Icons.circle_outlined;
 }
@@ -355,7 +435,7 @@ class _NavItem extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppSpace.s2, vertical: 1),
+          horizontal: AppSpace.s2, vertical: 0),
       child: ListTile(
       leading: AnimatedContainer(
         duration: AppMotion.short,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -29,8 +30,8 @@ class CampaignDetailScreen extends ConsumerWidget {
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
-      body: campaignAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+      body: IvBody(child: campaignAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (e, _) => Center(
             child: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: AppColors.inkMuted))),
@@ -42,7 +43,7 @@ class CampaignDetailScreen extends ConsumerWidget {
           }
           return _CampaignContent(campaign: campaign);
         },
-      ),
+      )),
     );
   }
 }
@@ -123,7 +124,7 @@ class _CampaignContent extends StatelessWidget {
             children: metrics
                 .map((m) => Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.positive.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -227,7 +228,7 @@ class _Tag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -268,7 +269,7 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.surface, gradient: kIvSurfaceGradient,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -287,7 +288,7 @@ class _BulletItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -461,7 +462,7 @@ class _DetailRow extends StatelessWidget {
           child: Text('$label:',
               style: const TextStyle(
                   color: AppColors.inkSubtle,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600)),
         ),
         Expanded(
@@ -504,7 +505,7 @@ class _EmailEntry extends StatelessWidget {
             child: Text('D$day',
                 style: const TextStyle(
                     color: AppColors.warning,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600)),
           ),
           const SizedBox(width: 10),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -59,11 +60,11 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
     final r = widget.result;
     final l10n = AppLocalizations.of(context)!;
     final text = [
-      '✨ ${l10n.uxPostImproved}\n${r['improved_text']}',
-      '💼 ${l10n.uxPostProfessional}\n${r['professional_version']}',
-      '😊 ${l10n.uxPostCasual}\n${r['casual_version']}',
-      '📈 ${l10n.uxPostPersuasive}\n${r['persuasive_version']}',
-      '💬 ${l10n.uxPostCommentReply}\n${r['comment_reply']}',
+      '${l10n.uxPostImproved}\n${r['improved_text']}',
+      '${l10n.uxPostProfessional}\n${r['professional_version']}',
+      '${l10n.uxPostCasual}\n${r['casual_version']}',
+      '${l10n.uxPostPersuasive}\n${r['persuasive_version']}',
+      '${l10n.uxPostCommentReply}\n${r['comment_reply']}',
     ].join('\n\n');
     Clipboard.setData(ClipboardData(text: text));
     showSuccessSnack(context, l10n.uxContentCopied);
@@ -99,11 +100,11 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
           if (_saved)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Icon(Icons.bookmark_added, color: AppColors.positive),
+              child: Icon(Icons.bookmark_added_rounded, color: AppColors.positive),
             ),
         ],
       ),
-      body: Center(
+      body: IvBody(child: Center(
         child: ConstrainedBox(
           constraints:
               const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
@@ -154,13 +155,13 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
               ResultBlock(
                 title: l10n.uxPostImproved,
                 content: widget.result['improved_text'] as String,
-                icon: Icons.auto_awesome,
+                icon: Icons.auto_awesome_rounded,
               ),
               const SizedBox(height: 12),
               ResultBlock(
                 title: l10n.uxPostProfessional,
                 content: widget.result['professional_version'] as String,
-                icon: Icons.work_outline,
+                icon: Icons.work_outline_rounded,
               ),
               const SizedBox(height: 12),
               ResultBlock(
@@ -172,18 +173,18 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
               ResultBlock(
                 title: l10n.uxPostPersuasive,
                 content: widget.result['persuasive_version'] as String,
-                icon: Icons.trending_up,
+                icon: Icons.trending_up_rounded,
               ),
               const SizedBox(height: 12),
               ResultBlock(
                 title: l10n.uxPostCommentReply,
                 content: widget.result['comment_reply'] as String,
-                icon: Icons.chat_bubble_outline,
+                icon: Icons.chat_bubble_outline_rounded,
               ),
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }

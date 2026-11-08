@@ -537,7 +537,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
 
   Widget _handle() => Center(
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 10),
+          margin: const EdgeInsets.symmetric(vertical: 8),
           width: 40,
           height: 4,
           decoration: BoxDecoration(
@@ -556,7 +556,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   Widget _header(CopilotState state) {
     final l10n = AppLocalizations.of(context)!;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 8, 10),
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
       child: Row(
         children: [
           const Expanded(
@@ -577,7 +577,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                   .read(contextCopilotProvider(_conversationKey).notifier)
                   .clearHistory(),
             ),
-          IconButton(
+          IconButton(tooltip: MaterialLocalizations.of(context).closeButtonTooltip, 
             icon: const Icon(Icons.close_rounded),
             color: AppColors.inkSubtle,
             onPressed: () => Navigator.of(context).pop(),
@@ -682,7 +682,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
         },
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 24),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             border: Border.all(color: AppColors.accent, width: 1),
             borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -728,7 +728,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                     filled: true,
                     fillColor: AppColors.line,
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
+                        horizontal: 16, vertical: 8),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                       borderSide: BorderSide.none,
@@ -863,7 +863,7 @@ class _TurnBubble extends StatelessWidget {
                       api: ref.read(aefRuntimeApiProvider))),
             if (!isUser && turn.degradedContext)
               Padding(
-                padding: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   AppLocalizations.of(ctx)!.iveCoreDegradedContext,
                   style:
@@ -921,7 +921,7 @@ class _TurnBubble extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: Container(
           margin: const EdgeInsets.only(top: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             border: Border.all(color: AppColors.accent, width: 1),
             borderRadius: BorderRadius.circular(AppRadius.md),
@@ -934,13 +934,13 @@ class _TurnBubble extends StatelessWidget {
   }
 
   Widget _badge(String text, Color bg) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Text(text,
-            style: const TextStyle(color: AppColors.inkMuted, fontSize: 10)),
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
       );
 
   // COMMERCIAL-EXPERIENCE-CLOSURE-16 — now wired to `onActionTap`
@@ -953,7 +953,7 @@ class _TurnBubble extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: Container(
           margin: const EdgeInsets.only(top: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: AppColors.accent.withOpacity(0.25),
             border: Border.all(color: AppColors.accent, width: 1),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/project.dart';
@@ -76,7 +77,7 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
     // exigir positivamente `hasValue && isAdmin == true`.
     final profileAsync = ref.watch(currentProfileProvider);
     if (profileAsync.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: IvBody(child: Center(child: CircularProgressIndicator())));
     }
     // Codex Gate (P2, re-verificação): mesma correção defensiva de
     // admin_panel_screen.dart -- exige hasValue && !hasError, fechando o
@@ -88,10 +89,10 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
       final t = AppLocalizations.of(context)!;
       return Scaffold(
         appBar: AppBar(title: Text(t.uxAdminAccessDeniedTitle)),
-        body: Center(
+        body: IvBody(child: Center(
           child: Text(t.uxAdminAccessDeniedBody,
               style: const TextStyle(color: AppColors.inkMuted)),
-        ),
+        )),
       );
     }
 
@@ -112,7 +113,7 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
                       fontWeight: FontWeight.w600,
                       fontSize: 15)),
               Text('Observabilidade · Rastreabilidade · Auditoria',
-                  style: TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+                  style: TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
             ],
           ),
           actions: [
@@ -140,7 +141,7 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
             tabs: _tabs,
           ),
         ),
-        body: const TabBarView(
+        body: IvBody(child: const TabBarView(
           children: [
             _ProjectsTab(),
             _PersonasTab(),
@@ -151,7 +152,7 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
             _HealthTab(),
             _TestsTab(),
           ],
-        ),
+        )),
       ),
     );
   }
@@ -218,7 +219,7 @@ class _ProjectsTab extends ConsumerWidget {
               _debugRow('Ativos (ações)', '${pActs.length}'),
               _debugRow('Oportunidades (Lab)', '${pLab.length}'),
               _debugRow('Análise de mercado',
-                  linked.isNotEmpty ? '✅ Vinculada' : '❌ Não vinculada'),
+                  linked.isNotEmpty ? '✓ Vinculada' : '✗ Não vinculada'),
               _debugRow('Personas vinculadas', 'via nicho'),
               const _Divider(),
               _sectionLabel('INDEXAÇÃO'),
@@ -268,7 +269,7 @@ class _ProjectsTab extends ConsumerWidget {
                     'Gaps detectados',
                     profile.first.coverage.gaps
                         .map((g) =>
-                            '⚠ ${KnowledgeCoverage.gapLabel(g, _dbgL10n)}')
+                            '• ${KnowledgeCoverage.gapLabel(g, _dbgL10n)}')
                         .join('\n')),
             ],
           );
@@ -328,7 +329,7 @@ class _PersonasTab extends ConsumerWidget {
                   p.lastTrainedAt?.toIso8601String().substring(0, 16) ??
                       'Nunca'),
               _debugRow('Treinamento recente (30d)',
-                  p.hasRecentTraining ? '✅ Sim' : '❌ Não'),
+                  p.hasRecentTraining ? '✓ Sim' : '✗ Não'),
               const _Divider(),
               _sectionLabel('FONTES'),
               _debugRow(
@@ -416,8 +417,8 @@ class _OpportunitiesTab extends ConsumerWidget {
               _debugRow(
                   'Análise vinculada',
                   analysis.isNotEmpty
-                      ? '✅ ${analysis.first.input.substring(0, 30)}...'
-                      : '❌ Não'),
+                      ? '✓ ${analysis.first.input.substring(0, 30)}...'
+                      : '✗ Não'),
               _debugRow('Origem', opp.opportunityType),
               _debugRow('Criado em',
                   opp.createdAt.toIso8601String().substring(0, 16)),
@@ -513,13 +514,13 @@ class _DecisionsTab extends ConsumerWidget {
                 const _Divider(),
                 _sectionLabel('REGRAS QUE DISPARARAM'),
                 _debugRow('Limiar ACELERAR',
-                    '≥ 70pts  →  ${s.ecosystemScore >= 70 ? "✅ disparou" : "não disparou"}'),
+                    '≥ 70pts  →  ${s.ecosystemScore >= 70 ? "✓ disparou" : "não disparou"}'),
                 _debugRow('Limiar MANTER',
-                    '45–69pts →  ${s.ecosystemScore >= 45 && s.ecosystemScore < 70 ? "✅ disparou" : "não disparou"}'),
+                    '45–69pts →  ${s.ecosystemScore >= 45 && s.ecosystemScore < 70 ? "✓ disparou" : "não disparou"}'),
                 _debugRow('Limiar REVISAR',
-                    '25–44pts →  ${s.ecosystemScore >= 25 && s.ecosystemScore < 45 ? "✅ disparou" : "não disparou"}'),
+                    '25–44pts →  ${s.ecosystemScore >= 25 && s.ecosystemScore < 45 ? "✓ disparou" : "não disparou"}'),
                 _debugRow('Limiar PAUSAR',
-                    '< 25pts  →  ${s.ecosystemScore < 25 ? "✅ disparou" : "não disparou"}'),
+                    '< 25pts  →  ${s.ecosystemScore < 25 ? "✓ disparou" : "não disparou"}'),
                 const _Divider(),
                 _sectionLabel('FÓRMULA'),
                 if (bd.isNotEmpty) _monoText(bd.first.weightedFormula),
@@ -621,7 +622,7 @@ class _ScoresTab extends ConsumerWidget {
               _debugRow('Confiança', '${bd.confidence}%'),
               if (bd.missingData.isNotEmpty)
                 _debugRow('Dados ausentes',
-                    bd.missingData.map((m) => '⚠ $m').join('\n')),
+                    bd.missingData.map((m) => '• $m').join('\n')),
             ],
           );
         }),
@@ -631,7 +632,7 @@ class _ScoresTab extends ConsumerWidget {
 
   Widget _scoreComponentWidget(ScoreComponent c) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -742,13 +743,13 @@ class _GraphTab extends ConsumerWidget {
             subtitle:
                 '${pEdges.length} conexões · ${pLab.length} oportunidades · ${isOrphan ? "ÓRFÃO" : "Conectado"}',
             children: [
-              _graphNodeRow('📁 PROJETO', project.name, project.id),
+              _graphNodeRow('PROJETO', project.name, project.id),
               const SizedBox(height: 4),
               _debugRow(
                   '  ↓ Análise de mercado',
                   profile.isNotEmpty && profile.first.analysis != null
-                      ? '✅ ${profile.first.analysis!.input.substring(0, 30)}...'
-                      : '❌ Não vinculada'),
+                      ? '✓ ${profile.first.analysis!.input.substring(0, 30)}...'
+                      : '✗ Não vinculada'),
               _debugRow(
                   '  ↓ Estágio',
                   profile.isNotEmpty
@@ -783,7 +784,7 @@ class _GraphTab extends ConsumerWidget {
                 subtitle: '${l.opportunityType} · score: ${l.finalScore}',
                 children: [
                   _debugRow('ID', l.id),
-                  _debugRow('Projeto', '❌ Não vinculado'),
+                  _debugRow('Projeto', '✗ Não vinculado'),
                   _debugRow('Ação',
                       'Vincule esta oportunidade a um projeto existente.'),
                 ],
@@ -798,7 +799,7 @@ class _GraphTab extends ConsumerWidget {
                 children: [
                   _debugRow('ID', k.id),
                   _debugRow('Status', k.status),
-                  _debugRow('Persona', k.personaId ?? '❌ Não vinculado'),
+                  _debugRow('Persona', k.personaId ?? '✗ Não vinculado'),
                   _debugRow('Ação',
                       'Treine uma persona com este documento no Cofre de Conhecimento.'),
                 ],
@@ -946,10 +947,10 @@ class _HealthTab extends ConsumerWidget {
               _debugRow(
                   'Status',
                   marketHealth >= 60
-                      ? '🟢 Saudável'
+                      ? 'Saudável'
                       : marketHealth >= 40
-                          ? '🟡 Atenção'
-                          : '🔴 Crítico'),
+                          ? 'Atenção'
+                          : 'Crítico'),
             ],
           );
         }),
@@ -976,10 +977,10 @@ class _HealthTab extends ConsumerWidget {
               _debugRow(
                   'Status',
                   roiHealth >= 60
-                      ? '🟢 Saudável'
+                      ? 'Saudável'
                       : roiHealth >= 40
-                          ? '🟡 Atenção'
-                          : '🔴 Crítico'),
+                          ? 'Atenção'
+                          : 'Crítico'),
             ],
           );
         }),
@@ -1009,10 +1010,10 @@ class _HealthTab extends ConsumerWidget {
               _debugRow(
                   'Status',
                   execHealth >= 60
-                      ? '🟢 Saudável'
+                      ? 'Saudável'
                       : execHealth >= 40
-                          ? '🟡 Atenção'
-                          : '🔴 Crítico'),
+                          ? 'Atenção'
+                          : 'Crítico'),
             ],
           );
         }),
@@ -1041,10 +1042,10 @@ class _HealthTab extends ConsumerWidget {
               _debugRow(
                   'Status',
                   avgFit >= 40
-                      ? '🟢 Saudável'
+                      ? 'Saudável'
                       : avgFit >= 20
-                          ? '🟡 Atenção'
-                          : '🔴 Crítico'),
+                          ? 'Atenção'
+                          : 'Crítico'),
             ],
           );
         }),
@@ -1053,11 +1054,11 @@ class _HealthTab extends ConsumerWidget {
   }
 
   String _healthLabel(int passed, int total) {
-    if (total == 0) return '⚪ Sem dados';
+    if (total == 0) return 'Sem dados';
     final r = passed / total;
-    if (r >= 0.8) return '🟢 Saudável';
-    if (r >= 0.5) return '🟡 Atenção necessária';
-    return '🔴 Crítico';
+    if (r >= 0.8) return 'Saudável';
+    if (r >= 0.5) return 'Atenção necessária';
+    return 'Crítico';
   }
 
   Widget _healthMetric(String label, int value, int max) {
@@ -1179,11 +1180,11 @@ class _BootstrapEngineCard extends StatelessWidget {
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: _kOrange.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1204,7 +1205,7 @@ class _BootstrapEngineCard extends StatelessWidget {
                       Text(
                           'Converte documentos em oportunidades, ações e roadmap',
                           style:
-                              TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+                              TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -1217,7 +1218,7 @@ class _BootstrapEngineCard extends StatelessWidget {
           // Status / pending info
           needsBootstrapAsync.when(
             loading: () => const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 14),
+              padding: EdgeInsets.symmetric(horizontal: 12),
               child: Text('Verificando projetos...',
                   style: TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
             ),
@@ -1227,7 +1228,7 @@ class _BootstrapEngineCard extends StatelessWidget {
               if (isRunning) return const SizedBox.shrink();
               if (projects.isEmpty) {
                 return const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 14),
+                  padding: EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     children: [
                       Icon(Icons.check_circle_rounded,
@@ -1240,9 +1241,9 @@ class _BootstrapEngineCard extends StatelessWidget {
                 );
               }
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  '⚡ ${projects.length} projeto${projects.length != 1 ? "s" : ""} com documentos mas sem oportunidades ou ações.',
+                  '${projects.length} projeto${projects.length != 1 ? "s" : ""} com documentos mas sem oportunidades ou ações.',
                   style: const TextStyle(color: _kOrange, fontSize: 11),
                 ),
               );
@@ -1253,7 +1254,7 @@ class _BootstrapEngineCard extends StatelessWidget {
           if (isRunning) ...[
             const SizedBox(height: 10),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1269,7 +1270,7 @@ class _BootstrapEngineCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(bootstrapState.progressLabel,
                       style:
-                          const TextStyle(color: AppColors.inkMuted, fontSize: 10)),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
                 ],
               ),
             ),
@@ -1279,12 +1280,12 @@ class _BootstrapEngineCard extends StatelessWidget {
           if (isDone && report != null) ...[
             const SizedBox(height: 10),
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 14),
+              padding: EdgeInsets.symmetric(horizontal: 12),
               child: Divider(color: AppColors.line, height: 1),
             ),
             const SizedBox(height: 8),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1292,7 +1293,7 @@ class _BootstrapEngineCard extends StatelessWidget {
                       style: TextStyle(
                           color: AppColors.inkMuted,
                           fontWeight: FontWeight.w600,
-                          fontSize: 10)),
+                          fontSize: 11)),
                   const SizedBox(height: 6),
                   _resultRow(
                       'Projetos processados', '${report.projectsBootstrapped}'),
@@ -1304,11 +1305,11 @@ class _BootstrapEngineCard extends StatelessWidget {
                   _resultRow(
                       'Personas treinadas', '${report.personasTrainedTotal}'),
                   ...report.projectResults.map((r) => Padding(
-                        padding: const EdgeInsets.only(top: 3),
+                        padding: const EdgeInsets.only(top: 2),
                         child: Text('  ${r.projectName}: ${r.summary}',
                             style: TextStyle(
                                 color: r.success ? AppColors.inkMuted : _kRed,
-                                fontSize: 10)),
+                                fontSize: 11)),
                       )),
                 ],
               ),
@@ -1318,14 +1319,14 @@ class _BootstrapEngineCard extends StatelessWidget {
           // Error
           if (bootstrapState.error != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               child: Text('Erro: ${bootstrapState.error}',
-                  style: const TextStyle(color: _kRed, fontSize: 10)),
+                  style: const TextStyle(color: _kRed, fontSize: 11)),
             ),
 
           // Action button
           Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -1377,7 +1378,7 @@ class _BootstrapEngineCard extends StatelessWidget {
                       isRunning ? AppColors.line : _kOrange.withOpacity(0.2),
                   foregroundColor: _kOrange,
                   side: BorderSide(color: _kOrange.withOpacity(0.4)),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   textStyle: const TextStyle(
                       fontSize: 12, fontWeight: FontWeight.w600),
                 ),
@@ -1396,12 +1397,12 @@ class _BootstrapEngineCard extends StatelessWidget {
             SizedBox(
               width: 140,
               child: Text(label,
-                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
             ),
             Text(value,
                 style: const TextStyle(
                     color: AppColors.inkMuted,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600)),
           ],
         ),
@@ -1448,7 +1449,7 @@ class _DebugCardState extends State<_DebugCard> {
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(children: [
-              Text(widget.leading, style: const TextStyle(fontSize: 18)),
+              IvEmojiIcon(widget.leading, size: 28),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -1467,8 +1468,8 @@ class _DebugCardState extends State<_DebugCard> {
               ),
               Icon(
                   _expanded
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
                   color: AppColors.inkSubtle,
                   size: 18),
             ]),
@@ -1520,7 +1521,7 @@ class _HealthGauge extends StatelessWidget {
         border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Row(children: [
-        Text(icon, style: const TextStyle(fontSize: 28)),
+        IvEmojiIcon(icon, size: 40),
         const SizedBox(width: 14),
         Expanded(
             child:
@@ -1596,7 +1597,7 @@ class _TestResultCard extends StatelessWidget {
         if (test.suggestion != null &&
             test.status != ValidationStatus.pass) ...[
           const SizedBox(height: 6),
-          Text('💡 ${test.suggestion}',
+          Text('${test.suggestion}',
               style: const TextStyle(
                   color: _kCyan, fontSize: 11, fontStyle: FontStyle.italic)),
         ],
@@ -1628,11 +1629,11 @@ class _TestSummaryCard extends StatelessWidget {
         Row(children: [
           Text(
               report.failedTests == 0
-                  ? '✅'
+                  ? '✓'
                   : report.failedTests <= 2
-                      ? '⚠️'
-                      : '❌',
-              style: const TextStyle(fontSize: 22)),
+                      ? '!'
+                      : '✗',
+              style: const TextStyle(fontSize: 24)),
           const SizedBox(width: 10),
           Expanded(
               child: Text(report.overallLabel,
@@ -1653,9 +1654,9 @@ class _TestSummaryCard extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Wrap(spacing: 8, runSpacing: 6, children: [
-          _chip('✅ ${report.passedTests}', _kGreen),
-          _chip('⚠ ${report.warningTests}', _kOrange),
-          _chip('❌ ${report.failedTests}', _kRed),
+          _chip('✓ ${report.passedTests}', _kGreen),
+          _chip('• ${report.warningTests}', _kOrange),
+          _chip('✗ ${report.failedTests}', _kRed),
         ]),
       ]),
     );
@@ -1681,7 +1682,7 @@ class _FinalReportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _kCard,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -1720,14 +1721,14 @@ class _FinalReportCard extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
             'Relatório gerado em ${report.runAt.toIso8601String().substring(0, 19).replaceAll("T", " ")}',
-            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
       ]),
     );
   }
 
   Widget _reportRow(String label, String value, {bool warn = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(children: [
         Expanded(
             child: Text(label,
@@ -1747,7 +1748,7 @@ class _FinalReportCard extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════════════════════
 
 Widget _sectionHeader(String text) => Padding(
-      padding: const EdgeInsets.fromLTRB(0, 8, 0, 10),
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
       child: Text(text,
           style: const TextStyle(
               color: AppColors.inkMuted,
@@ -1761,7 +1762,7 @@ Widget _sectionLabel(String text) => Padding(
       child: Text(text,
           style: const TextStyle(
               color: _kCyan,
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.8)),
     );
@@ -1797,7 +1798,7 @@ Widget _monoText(String text) => Container(
 
 Widget _graphNodeRow(String type, String name, String id) => Row(children: [
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         decoration: BoxDecoration(
           color: _kPrimary.withOpacity(0.15),
           borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -1805,7 +1806,7 @@ Widget _graphNodeRow(String type, String name, String id) => Row(children: [
         ),
         child: Text(type,
             style: const TextStyle(
-                color: _kPrimary, fontSize: 10, fontWeight: FontWeight.w600)),
+                color: _kPrimary, fontSize: 11, fontWeight: FontWeight.w600)),
       ),
       const SizedBox(width: 8),
       Expanded(

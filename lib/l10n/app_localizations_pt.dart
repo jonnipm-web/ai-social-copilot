@@ -337,7 +337,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get upgradeMostPopular => 'Mais popular';
 
   @override
-  String get upgradeSubscribeCta => '🚀  Assinar Pro — R\$ 29/mês';
+  String get upgradeSubscribeCta => 'Assinar Pro — R\$ 29/mês';
 
   @override
   String get adminModulesTitle => 'Inventário de Módulos';
@@ -4856,7 +4856,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get ecoAllocModeHours => '⏱ Tempo (Horas)';
 
   @override
-  String get ecoAllocModeMoney => '💰 Dinheiro (R\$)';
+  String get ecoAllocModeMoney => 'Dinheiro (R\$)';
 
   @override
   String get ecoAllocBudgetQuestion => 'Quanto tenho disponível?';
@@ -7291,4 +7291,19 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get dashQuotaTitle => 'Uso de IA';
+
+  @override
+  String get authShowPassword => 'Mostrar senha';
+
+  @override
+  String get authHidePassword => 'Ocultar senha';
+
+  @override
+  String get authTagline => 'Inteligência de projetos e decisões, guiada por IA';
+
+  @override
+  String get commonAdd => 'Adicionar';
+
+  @override
+  String get commonRefresh => 'Atualizar';
 }

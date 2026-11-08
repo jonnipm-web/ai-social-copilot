@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -90,8 +91,8 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
         title: Text(l10n.miNicheTitle,
             style: const TextStyle(color: AppColors.ink)),
         iconTheme: const IconThemeData(color: AppColors.ink),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go(
             AppConstants.routeMarketIntelligenceHub
                 .replaceFirst(':id', widget.analysisId),
@@ -115,7 +116,7 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: IvBody(child: Column(
         children: [
           if (_error != null)
             Container(
@@ -132,8 +133,7 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
             ),
           Expanded(
             child: asyncList.when(
-              loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.info)),
+              loading: () => const IvLoadingSkeleton(),
               error: (e, _) => Center(
                   child: Text(
                       l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
@@ -174,12 +174,12 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
                       padding: const EdgeInsets.all(16),
                       itemCount: niches.length,
                       itemBuilder: (_, i) =>
-                          _NicheCard(niche: niches[i], rank: i + 1),
+                          FadeSlideIn(index: i, child: _NicheCard(niche: niches[i], rank: i + 1)),
                     ),
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }
@@ -268,7 +268,7 @@ class _NicheCard extends StatelessWidget {
                           fontWeight: FontWeight.w600)),
                   Text(l10n.miNicheScoreLabel,
                       style:
-                          const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
                 ],
               ),
             ],
@@ -320,7 +320,7 @@ class _NicheCard extends StatelessWidget {
                   .map(
                     (k) => Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: _levelColor.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -356,10 +356,10 @@ class _MiniBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(label,
-                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 10)),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
               Text('$value',
                   style: TextStyle(
-                      color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+                      color: color, fontSize: 11, fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 3),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -240,7 +241,7 @@ class _MarketIntelligenceScreenState
         iconTheme: const IconThemeData(color: AppColors.ink),
       ),
       drawer: const AppDrawer(),
-      body: SafeArea(
+      body: IvBody(child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -527,8 +528,7 @@ class _MarketIntelligenceScreenState
                       fontWeight: FontWeight.w600)),
               const SizedBox(height: 12),
               analyses.when(
-                loading: () => const Center(
-                    child: CircularProgressIndicator(color: AppColors.info)),
+                loading: () => const IvLoadingSkeleton(),
                 error: (e, _) => Text(t.commonError,
                     style: const TextStyle(color: AppColors.negative)),
                 data: (list) => list.isEmpty
@@ -543,7 +543,7 @@ class _MarketIntelligenceScreenState
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }
@@ -567,7 +567,7 @@ class _TypeChip extends StatelessWidget {
     return GestureDetector(
       onTap: () => onTap(value),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.info : AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -601,8 +601,8 @@ class _AnalysisCard extends StatelessWidget {
             .replaceFirst(':id', analysis.id),
       ),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.surface, gradient: kIvSurfaceGradient,
           borderRadius: BorderRadius.circular(AppRadius.lg),

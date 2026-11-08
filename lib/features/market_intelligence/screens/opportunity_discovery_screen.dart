@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -93,8 +94,8 @@ class _OpportunityDiscoveryScreenState
         title: Text(l10n.miOpportunityTitle,
             style: const TextStyle(color: AppColors.ink)),
         iconTheme: const IconThemeData(color: AppColors.ink),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go(
             AppConstants.routeMarketIntelligenceHub
                 .replaceFirst(':id', widget.analysisId),
@@ -120,7 +121,7 @@ class _OpportunityDiscoveryScreenState
           ),
         ],
       ),
-      body: Column(
+      body: IvBody(child: Column(
         children: [
           if (_error != null)
             Container(
@@ -137,8 +138,7 @@ class _OpportunityDiscoveryScreenState
             ),
           Expanded(
             child: asyncList.when(
-              loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.positive)),
+              loading: () => const IvLoadingSkeleton(),
               error: (e, _) => Center(
                   child: Text(
                       l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
@@ -179,12 +179,12 @@ class _OpportunityDiscoveryScreenState
                       padding: const EdgeInsets.all(16),
                       itemCount: opportunities.length,
                       itemBuilder: (_, i) =>
-                          _OpportunityCard(opportunity: opportunities[i]),
+                          FadeSlideIn(index: i, child: _OpportunityCard(opportunity: opportunities[i])),
                     ),
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }
@@ -227,7 +227,7 @@ class _OpportunityCard extends StatelessWidget {
               const SizedBox(width: 8),
               Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: _scoreColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(AppRadius.lg),

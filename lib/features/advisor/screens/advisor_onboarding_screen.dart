@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -120,7 +121,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SafeArea(
+      body: IvBody(child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -152,7 +153,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 
@@ -199,7 +200,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.inkMuted,
                 side: const BorderSide(color: AppColors.inkSubtle),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.lg)),
               ),
@@ -223,7 +224,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
               backgroundColor: _kPrimary,
               foregroundColor: AppColors.onAccent,
               disabledBackgroundColor: _kPrimary.withOpacity(0.4),
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.lg)),
             ),
@@ -260,10 +261,10 @@ class _StepName extends StatelessWidget {
   final ValueChanged<String> onCustom;
 
   static const _avatars = {
-    'Atlas': '🌐',
-    'Iris': '🔮',
-    'Mentor': '🎓',
-    'Nexus': '⚡',
+    'Atlas': Icons.public_rounded,
+    'Iris': Icons.auto_awesome_rounded,
+    'Mentor': Icons.school_rounded,
+    'Nexus': Icons.hub_rounded,
   };
 
   @override
@@ -309,8 +310,9 @@ class _StepName extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(_avatars[name] ?? '🤖',
-                        style: const TextStyle(fontSize: 22)),
+                    IvIconTile(_avatars[name] ?? Icons.smart_toy_rounded,
+                        color: isSelected ? AppColors.accent : AppColors.inkMuted,
+                        size: 36),
                     const SizedBox(width: 10),
                     Text(name,
                         style: TextStyle(
@@ -394,7 +396,7 @@ class _StepRole extends StatelessWidget {
             children: AdvisorProfile.roleOptions.map((role) {
               final isSelected = selected == role;
               return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: GestureDetector(
                   onTap: () => onSelect(role),
                   child: Container(
@@ -479,7 +481,7 @@ class _StepStyle extends StatelessWidget {
             children: AdvisorProfile.styleOptions.map((style) {
               final isSelected = selected == style;
               return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: GestureDetector(
                   onTap: () => onSelect(style),
                   child: Container(

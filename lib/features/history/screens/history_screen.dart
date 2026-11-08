@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
@@ -20,7 +21,7 @@ class HistoryScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.dashShortcutHistory),
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -31,7 +32,7 @@ class HistoryScreen extends ConsumerWidget {
           },
         ),
       ),
-      body: Center(
+      body: IvBody(child: Center(
         child: ConstrainedBox(
           constraints:
               const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
@@ -54,7 +55,7 @@ class HistoryScreen extends ConsumerWidget {
                     const SizedBox(height: 20),
                     ElevatedButton.icon(
                       onPressed: () => ref.invalidate(historyProvider),
-                      icon: const Icon(Icons.refresh, size: 16),
+                      icon: const Icon(Icons.refresh_rounded, size: 16),
                       label: Text(l10n.commonRetry),
                     ),
                   ],
@@ -105,13 +106,13 @@ class HistoryScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, i) => _HistoryCard(item: items[i]),
+                  itemBuilder: (context, i) => FadeSlideIn(index: i, child: _HistoryCard(item: items[i])),
                 ),
               );
             },
           ),
         ),
-      ),
+      )),
     );
   }
 
@@ -120,7 +121,7 @@ class HistoryScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       itemCount: 5,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, __) => Shimmer.fromColors(
+      itemBuilder: (_, __) => FadeSlideIn(index: __, child: Shimmer.fromColors(
         baseColor: AppColors.surface,
         highlightColor: AppColors.line,
         child: Container(
@@ -130,7 +131,7 @@ class HistoryScreen extends ConsumerWidget {
             borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
         ),
-      ),
+      )),
     );
   }
 }
@@ -211,7 +212,7 @@ class _ScoreBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: AppColors.line,
         borderRadius: BorderRadius.circular(AppRadius.sm),

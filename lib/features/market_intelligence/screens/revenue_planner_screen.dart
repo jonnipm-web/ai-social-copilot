@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -109,17 +110,16 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
         title: Text(l10n.miRevenueTitle,
             style: const TextStyle(color: AppColors.ink)),
         iconTheme: const IconThemeData(color: AppColors.ink),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go(
             AppConstants.routeMarketIntelligenceHub
                 .replaceFirst(':id', widget.analysisId),
           ),
         ),
       ),
-      body: asyncPlan.when(
-        loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.info)),
+      body: IvBody(child: asyncPlan.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (e, _) => Center(
             child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: AppColors.negative))),
@@ -391,7 +391,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                   ],
                 ),
               ),
-      ),
+      )),
     );
   }
 }

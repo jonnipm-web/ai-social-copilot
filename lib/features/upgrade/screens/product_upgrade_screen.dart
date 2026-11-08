@@ -4,6 +4,7 @@
 // product, or when the entitlement check fails due to a network/RPC error.
 // Query params: ?product=impact|quant|suite  and optional &state=unavailable.
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -40,7 +41,7 @@ class ProductUpgradeScreen extends StatelessWidget {
         'Faça upgrade para acessar este produto.';
 
     final title = isUnavailable ? 'Produto temporariamente indisponível' : 'Produto não disponível';
-    final icon = isUnavailable ? Icons.cloud_off_outlined : Icons.lock_outline;
+    final icon = isUnavailable ? Icons.cloud_off_outlined : Icons.lock_outline_rounded;
     final bodyText = isUnavailable
         ? 'Não foi possível verificar seu acesso ao $productName no momento (falha de rede ou serviço). '
           'Tente novamente em alguns instantes.'
@@ -58,7 +59,7 @@ class ProductUpgradeScreen extends StatelessWidget {
           }
         }),
       ),
-      body: SafeArea(
+      body: IvBody(child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           child: Column(
@@ -109,7 +110,7 @@ class ProductUpgradeScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }

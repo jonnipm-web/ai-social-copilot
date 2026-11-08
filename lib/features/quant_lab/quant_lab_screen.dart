@@ -10,6 +10,7 @@
 // route_policy redirects non-admins), the screen re-checks admin fail-closed,
 // and the server enforces entitlement on every request regardless.
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -130,7 +131,7 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
     // blank screen (physical finding S25). During a refresh the previous
     // value is kept; a refresh that says "not admin" still denies below.
     if (!profileAsync.hasValue && !profileAsync.hasError) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: IvBody(child: Center(child: CircularProgressIndicator())));
     }
     final isAdmin = profileAsync.hasValue &&
         !profileAsync.hasError &&
@@ -150,11 +151,11 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
     if (!isAdmin || _signedOut()) {
       return Scaffold(
         appBar: AppBar(title: Text(l.quantLabTitle)),
-        body: Center(
+        body: IvBody(child: Center(
             child: Padding(
                 padding: const EdgeInsets.all(24),
                 child:
-                    Text(l.quantLabAccessDenied, textAlign: TextAlign.center))),
+                    Text(l.quantLabAccessDenied, textAlign: TextAlign.center)))),
       );
     }
 
@@ -172,7 +173,7 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
                 text: l.quantLabTabWatchlist),
           ]),
         ),
-        body: SafeArea(
+        body: IvBody(child: SafeArea(
           child: TabBarView(children: [
             _singleTab(l, form, result),
             SingleChildScrollView(
@@ -186,7 +187,7 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
                   ]),
             ),
           ]),
-        ),
+        )),
       ),
     );
   }
@@ -297,7 +298,7 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
         OutlinedButton.icon(
           key: const Key('quantLabPick'),
           onPressed: _busy ? null : () => _pick(l),
-          icon: const Icon(Icons.upload_file),
+          icon: const Icon(Icons.upload_file_rounded),
           label: Text(l.quantLabPickCsv),
         ),
       ]),
@@ -355,7 +356,7 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
           : l.quantLabError(o.errorCode!);
       return Card(
         child: ListTile(
-          leading: Icon(Icons.error_outline,
+          leading: Icon(Icons.error_outline_rounded,
               color: Theme.of(context).colorScheme.error,
               semanticLabel: 'error'),
           title: Text(msg),
@@ -436,10 +437,10 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
   }
 
   IconData _freshIcon(String s) => switch (s) {
-        'FRESH' => Icons.check_circle_outline,
-        'DELAYED' => Icons.schedule,
+        'FRESH' => Icons.check_circle_outline_rounded,
+        'DELAYED' => Icons.schedule_rounded,
         'STALE' => Icons.warning_amber_outlined,
-        _ => Icons.help_outline,
+        _ => Icons.help_outline_rounded,
       };
 }
 
@@ -453,7 +454,7 @@ class _Banner extends StatelessWidget {
     return Container(
       width: double.infinity,
       color: cs.secondaryContainer,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(children: [
         Icon(Icons.science_outlined, color: cs.onSecondaryContainer),
         const SizedBox(width: 8),

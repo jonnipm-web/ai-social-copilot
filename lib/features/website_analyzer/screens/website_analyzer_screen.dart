@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
@@ -95,7 +96,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
       backgroundColor: Colors.transparent,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -113,7 +114,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
         iconTheme: const IconThemeData(color: AppColors.ink),
         elevation: 0,
       ),
-      body: SingleChildScrollView(
+      body: IvBody(child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -131,7 +132,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.language, color: _accent, size: 28),
+                      Icon(Icons.language_rounded, color: _accent, size: 28),
                       const SizedBox(width: 12),
                       Text(
                         l10n.websiteAnalyzerHeaderTitle,
@@ -174,7 +175,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                       hintText: l10n.websiteAnalyzerUrlHint,
                       hintStyle:
                           TextStyle(color: AppColors.ink.withOpacity(0.3)),
-                      prefixIcon: Icon(Icons.link, color: _accent),
+                      prefixIcon: Icon(Icons.link_rounded, color: _accent),
                       filled: true,
                       fillColor: _cardColor,
                       enabledBorder: OutlineInputBorder(
@@ -220,7 +221,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                                 color: AppColors.ink,
                               ),
                             )
-                          : const Icon(Icons.search),
+                          : const Icon(Icons.search_rounded),
                       label: Text(
                         busy
                             ? l10n.websiteAnalyzerAnalyzing
@@ -249,7 +250,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
             // Previous Analyses Section
             Row(
               children: [
-                Icon(Icons.history, color: _primary, size: 20),
+                Icon(Icons.history_rounded, color: _primary, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   l10n.websiteAnalyzerPreviousTitle,
@@ -353,7 +354,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.language, color: _accent, size: 16),
+                                Icon(Icons.language_rounded, color: _accent, size: 16),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -375,7 +376,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                                 ),
                                 const SizedBox(width: 4),
                                 Icon(
-                                  Icons.chevron_right,
+                                  Icons.chevron_right_rounded,
                                   color: AppColors.ink.withOpacity(0.4),
                                   size: 18,
                                 ),
@@ -407,7 +408,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 
@@ -432,7 +433,7 @@ class _ScoreChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(AppRadius.lg),

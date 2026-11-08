@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -19,10 +20,10 @@ class AboutScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(t.aboutTitle)),
-      body: ListView(
+      body: IvBody(child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Icon(Icons.auto_awesome,
+          Icon(Icons.auto_awesome_rounded,
               size: 48, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 12),
           Text(
@@ -75,7 +76,7 @@ class AboutScreen extends StatelessWidget {
             style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
           ),
         ],
-      ),
+      )),
     );
   }
 }

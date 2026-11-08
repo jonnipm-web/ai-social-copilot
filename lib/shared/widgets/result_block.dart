@@ -51,10 +51,10 @@ class ResultBlock extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.copy, size: 18, color: AppColors.inkSubtle),
+                  icon: const Icon(Icons.copy_rounded, size: 18, color: AppColors.inkSubtle),
                   tooltip: AppLocalizations.of(context)!.ctxResultCopyTooltip,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                   onPressed: () => _copy(context),
                 ),
               ],

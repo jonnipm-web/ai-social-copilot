@@ -139,7 +139,7 @@
   "upgradePreviousPlan": "Previous plan",
   "upgradeCurrentPlanBadge": "Your plan",
   "upgradeMostPopular": "Most popular",
-  "upgradeSubscribeCta": "🚀  Subscribe to Pro — R$ 29/month",
+  "upgradeSubscribeCta": "Subscribe to Pro — R$ 29/month",
   "adminModulesTitle": "Module Inventory",
   "adminModulesStatus": "Status",
   "adminModulesCommercial": "Commercial",
@@ -1670,7 +1670,7 @@
   "ecoAllocReasonPause": "Not recommended — consider pausing this project",
   "ecoResourceAllocationTitle": "Resource Allocation",
   "ecoAllocModeHours": "⏱ Time (Hours)",
-  "ecoAllocModeMoney": "💰 Money (R$)",
+  "ecoAllocModeMoney": "Money (R$)",
   "ecoAllocBudgetQuestion": "How much do I have available?",
   "ecoAllocExecutiveRecommendation": "Executive Recommendation",
   "ecoAllocEmpty": "Add projects with analyses to see the allocation.",
@@ -1933,7 +1933,7 @@
   "@ctxDvIndexedCount": {"placeholders": {"indexed": {"type": "int"}, "total": {"type": "int"}}},
   "ctxDvThresholdLabel": "{mark} {score}% (minimum {min}%)",
   "@ctxDvThresholdLabel": {"placeholders": {"mark": {"type": "String"}, "score": {"type": "int"}, "min": {"type": "int"}}},
-  "ctxDvProfileComplete": "✅ Complete",
+  "ctxDvProfileComplete": "Complete",
   "ctxDvProfileIncomplete": "Incomplete — link a market analysis",
   "ctxCoverageExcellent": "Excellent",
   "ctxCoverageGood": "Good",
@@ -2476,5 +2476,10 @@
   "dashScoreChartTitle": "Score by analysis",
   "dashModulesTitle": "Modules",
   "dashOverviewTitle": "Overview",
-  "dashQuotaTitle": "AI usage"
+  "dashQuotaTitle": "AI usage",
+  "authShowPassword": "Show password",
+  "authHidePassword": "Hide password",
+  "authTagline": "AI-powered project and decision intelligence",
+  "commonAdd": "Add",
+  "commonRefresh": "Refresh"
 }

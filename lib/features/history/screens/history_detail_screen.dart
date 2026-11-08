@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
@@ -20,11 +21,11 @@ class HistoryDetailScreen extends ConsumerWidget {
   void _copyAll(BuildContext context, PostGeneration gen) {
     final l10n = AppLocalizations.of(context)!;
     final text = [
-      '✨ ${l10n.uxPostImproved}\n${gen.improvedText}',
-      '💼 ${l10n.uxPostProfessional}\n${gen.professionalVersion}',
-      '😊 ${l10n.uxPostCasual}\n${gen.casualVersion}',
-      '📈 ${l10n.uxPostPersuasive}\n${gen.persuasiveVersion}',
-      '💬 ${l10n.uxPostCommentReply}\n${gen.commentReply}',
+      '${l10n.uxPostImproved}\n${gen.improvedText}',
+      '${l10n.uxPostProfessional}\n${gen.professionalVersion}',
+      '${l10n.uxPostCasual}\n${gen.casualVersion}',
+      '${l10n.uxPostPersuasive}\n${gen.persuasiveVersion}',
+      '${l10n.uxPostCommentReply}\n${gen.commentReply}',
     ].join('\n\n');
     Clipboard.setData(ClipboardData(text: text));
     showSuccessSnack(context, l10n.uxContentCopied);
@@ -58,7 +59,7 @@ class HistoryDetailScreen extends ConsumerWidget {
               const SizedBox.shrink(),
         ],
       ),
-      body: Center(
+      body: IvBody(child: Center(
         child: ConstrainedBox(
           constraints:
               const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
@@ -70,7 +71,7 @@ class HistoryDetailScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline,
+                    const Icon(Icons.error_outline_rounded,
                         size: 48, color: AppColors.inkSubtle),
                     const SizedBox(height: 16),
                     Text(
@@ -87,7 +88,7 @@ class HistoryDetailScreen extends ConsumerWidget {
               children: [
                 // Cabeçalho: texto original + data
                 Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
                     borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(color: AppColors.line),
@@ -107,7 +108,7 @@ class HistoryDetailScreen extends ConsumerWidget {
                           ),
                           const Spacer(),
                           const Icon(
-                            Icons.access_time,
+                            Icons.access_time_rounded,
                             size: 12,
                             color: AppColors.inkSubtle,
                           ),
@@ -150,13 +151,13 @@ class HistoryDetailScreen extends ConsumerWidget {
                 ResultBlock(
                   title: l10n.uxPostImproved,
                   content: gen.improvedText,
-                  icon: Icons.auto_awesome,
+                  icon: Icons.auto_awesome_rounded,
                 ),
                 const SizedBox(height: 12),
                 ResultBlock(
                   title: l10n.uxPostProfessional,
                   content: gen.professionalVersion,
-                  icon: Icons.work_outline,
+                  icon: Icons.work_outline_rounded,
                 ),
                 const SizedBox(height: 12),
                 ResultBlock(
@@ -168,19 +169,19 @@ class HistoryDetailScreen extends ConsumerWidget {
                 ResultBlock(
                   title: l10n.uxPostPersuasive,
                   content: gen.persuasiveVersion,
-                  icon: Icons.trending_up,
+                  icon: Icons.trending_up_rounded,
                 ),
                 const SizedBox(height: 12),
                 ResultBlock(
                   title: l10n.uxPostCommentReply,
                   content: gen.commentReply,
-                  icon: Icons.chat_bubble_outline,
+                  icon: Icons.chat_bubble_outline_rounded,
                 ),
               ],
             ),
           ),
         ),
-      ),
+      )),
     );
   }
 

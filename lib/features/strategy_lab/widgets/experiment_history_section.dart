@@ -101,7 +101,7 @@ class ExperimentHistorySectionState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    margin: const EdgeInsets.only(top: 3, right: 8),
+                    margin: const EdgeInsets.only(top: 2, right: 8),
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(

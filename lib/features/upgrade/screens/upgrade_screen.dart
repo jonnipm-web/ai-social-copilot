@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,7 +25,7 @@ class UpgradeScreen extends ConsumerWidget {
         title: Text(t.upgradePlansTitle),
         leading: const BackButton(),
       ),
-      body: SingleChildScrollView(
+      body: IvBody(child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Center(
           child: ConstrainedBox(
@@ -32,7 +33,7 @@ class UpgradeScreen extends ConsumerWidget {
                 const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
             child: quotaAsync.when(
               loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 60),
+                padding: EdgeInsets.symmetric(vertical: 56),
                 child: Center(child: CircularProgressIndicator()),
               ),
               error: (err, _) => Padding(
@@ -46,7 +47,7 @@ class UpgradeScreen extends ConsumerWidget {
             ),
           ),
         ),
-      ),
+      )),
     );
   }
 }
@@ -297,7 +298,7 @@ class _PlanCard extends StatelessWidget {
         children: [
           if (badge != null)
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               decoration: BoxDecoration(
                 color: isCurrentPlan ? AppColors.accent : _primary,
                 borderRadius:
@@ -393,7 +394,7 @@ class _FeatureRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Icon(

@@ -598,13 +598,13 @@ class _Hero extends StatelessWidget {
         children: [
           ShaderMask(
             shaderCallback: (r) => const LinearGradient(
-              colors: [AppColors.ink, Color(0xFFB8C4CF)],
+              colors: [AppColors.ink, AppColors.inkMuted],
             ).createShader(r),
             child: Text(
               title,
               style: const TextStyle(
-                color: Colors.white,
-                fontSize: 26,
+                color: AppColors.ink,
+                fontSize: 28,
                 height: 1.2,
                 fontWeight: FontWeight.w600,
                 letterSpacing: -0.4,

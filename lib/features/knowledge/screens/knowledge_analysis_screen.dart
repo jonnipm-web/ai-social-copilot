@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -124,8 +125,8 @@ class _KnowledgeAnalysisScreenState
           ),
         ],
       ),
-      body: itemAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+      body: IvBody(child: itemAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (e, _) => Center(
           child: Text(
               l10n.knowledgeStrategyGenericError(extractErrorMessage(e, l10n)),
@@ -139,7 +140,7 @@ class _KnowledgeAnalysisScreenState
             );
           }
           return analysisAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const IvLoadingSkeleton(),
             error: (e, _) => _NoAnalysis(
                 item: item, exec: _exec, error: extractErrorMessage(e, l10n)),
             data: (analysis) => analysis == null
@@ -147,7 +148,7 @@ class _KnowledgeAnalysisScreenState
                 : _AnalysisContent(item: item, analysis: analysis),
           );
         },
-      ),
+      )),
     );
   }
 }
@@ -672,7 +673,7 @@ class _OpportunityScoreCard extends StatelessWidget {
               child: Text(
                 '$score',
                 style: TextStyle(
-                    color: _color, fontSize: 22, fontWeight: FontWeight.w600),
+                    color: _color, fontSize: 24, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -722,7 +723,7 @@ class _HotmartCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const color = AppColors.accent;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withOpacity(0.07),
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -780,7 +781,7 @@ class _ShopifyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const color = AppColors.info;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withOpacity(0.07),
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -825,7 +826,7 @@ class _ShopifyCard extends StatelessWidget {
                 children: (data['categories'] as List)
                     .map((c) => Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                              horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: color.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -852,7 +853,7 @@ class _ScoreBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -875,7 +876,7 @@ class _DataRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -958,7 +959,7 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Text(
         title,
         style: const TextStyle(
@@ -1048,7 +1049,7 @@ class _SummaryCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.surface, gradient: kIvSurfaceGradient,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1148,7 +1149,7 @@ class _ScoreCard extends StatelessWidget {
             '${data.score}',
             style: TextStyle(
               color: _barColor,
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1207,7 +1208,7 @@ class _ChipSection extends StatelessWidget {
                   },
                   child: Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -1242,8 +1243,8 @@ class _ListCards extends StatelessWidget {
       children: items
           .map(
             (item) => Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              margin: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.07),
                 borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1424,7 +1425,7 @@ class _DetailItem extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Icon(Icons.circle, size: 6, color: color.withOpacity(0.7)),
+            child: Icon(Icons.circle_rounded, size: 6, color: color.withOpacity(0.7)),
           ),
           const SizedBox(width: 8),
           Expanded(

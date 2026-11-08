@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
@@ -16,31 +17,31 @@ const _primaryColor = AppColors.accent;
 IconData _platformIcon(String platform) {
   switch (platform.toLowerCase()) {
     case 'instagram':
-      return Icons.camera_alt;
+      return Icons.camera_alt_rounded;
     case 'facebook':
-      return Icons.facebook;
+      return Icons.facebook_rounded;
     case 'linkedin':
-      return Icons.business;
+      return Icons.business_rounded;
     case 'youtube':
-      return Icons.play_arrow;
+      return Icons.play_arrow_rounded;
     case 'tiktok':
-      return Icons.music_note;
+      return Icons.music_note_rounded;
     case 'twitter':
-      return Icons.alternate_email;
+      return Icons.alternate_email_rounded;
     case 'email':
-      return Icons.email;
+      return Icons.email_rounded;
     case 'google':
-      return Icons.search;
+      return Icons.search_rounded;
     case 'blog':
-      return Icons.article;
+      return Icons.article_rounded;
     case 'hotmart':
-      return Icons.storefront;
+      return Icons.storefront_rounded;
     case 'shopify':
-      return Icons.shopping_bag;
+      return Icons.shopping_bag_rounded;
     case 'amazon':
-      return Icons.local_shipping;
+      return Icons.local_shipping_rounded;
     default:
-      return Icons.bar_chart;
+      return Icons.bar_chart_rounded;
   }
 }
 
@@ -67,7 +68,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -91,17 +92,15 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
         backgroundColor: _primaryColor,
         foregroundColor: AppColors.ink,
         onPressed: () => _openAddMetricSheet(context),
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add_rounded),
       ),
-      body: metricsAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: _primaryColor),
-        ),
+      body: IvBody(child: metricsAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (error, _) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline,
+              const Icon(Icons.error_outline_rounded,
                   color: AppColors.negative, size: 48),
               const SizedBox(height: 12),
               Text(
@@ -124,7 +123,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.bar_chart,
+                  Icon(Icons.bar_chart_rounded,
                       size: 72, color: _primaryColor.withOpacity(0.4)),
                   const SizedBox(height: 16),
                   Text(
@@ -142,7 +141,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 64),
             itemCount: metrics.length,
             itemBuilder: (context, index) {
               final metric = metrics[index];
@@ -153,7 +152,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
             },
           );
         },
-      ),
+      )),
     );
   }
 
@@ -264,7 +263,7 @@ class _MetricCard extends StatelessWidget {
           color: AppColors.negative.withOpacity(0.85),
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
-        child: const Icon(Icons.delete, color: AppColors.ink),
+        child: const Icon(Icons.delete_rounded, color: AppColors.ink),
       ),
       confirmDismiss: (_) async {
         onDelete();
@@ -278,7 +277,7 @@ class _MetricCard extends StatelessWidget {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -319,7 +318,7 @@ class _MetricCard extends StatelessWidget {
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: scoreColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -431,7 +430,7 @@ class _MetricCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             ListTile(
-              leading: const Icon(Icons.delete, color: AppColors.negative),
+              leading: const Icon(Icons.delete_rounded, color: AppColors.negative),
               title: Text(l10n.performanceDeleteTitle,
                   style: const TextStyle(color: AppColors.ink)),
               onTap: () {
@@ -457,7 +456,7 @@ class _MetricChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
@@ -474,7 +473,7 @@ class _MetricChip extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
             ),
           ],
         ),
@@ -758,7 +757,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
         borderRadius: BorderRadius.circular(AppRadius.md),
         borderSide: const BorderSide(color: _primaryColor, width: 1.5),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     );
   }
 }

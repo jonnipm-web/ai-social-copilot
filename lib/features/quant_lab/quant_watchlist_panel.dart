@@ -235,7 +235,7 @@ class _QuantWatchlistPanelState extends ConsumerState<QuantWatchlistPanel> {
                   onPressed: _busy || w == null
                       ? null
                       : () => _act({'action': 'delete', 'watchlist_id': w.id}),
-                  icon: const Icon(Icons.delete_outline),
+                  icon: const Icon(Icons.delete_outline_rounded),
                 ),
               ]),
             ),
@@ -293,7 +293,7 @@ class _QuantWatchlistPanelState extends ConsumerState<QuantWatchlistPanel> {
                               'watchlist_id': w.id,
                               'item_id': it.id
                             }),
-                    icon: const Icon(Icons.remove_circle_outline),
+                    icon: const Icon(Icons.remove_circle_outline_rounded),
                   ),
                 ),
               ),
@@ -338,7 +338,7 @@ class _QuantWatchlistPanelState extends ConsumerState<QuantWatchlistPanel> {
             OutlinedButton.icon(
               key: const Key('quantWatchlistAdd'),
               onPressed: _busy ? null : _addItem,
-              icon: const Icon(Icons.add),
+              icon: const Icon(Icons.add_rounded),
               label: Text(l.quantLabAddItem),
             ),
             const SizedBox(height: 16),
@@ -380,7 +380,7 @@ class _MultiResult extends StatelessWidget {
           : l.quantLabError(o.errorCode!);
       return Card(
         child: ListTile(
-          leading: Icon(Icons.error_outline,
+          leading: Icon(Icons.error_outline_rounded,
               color: Theme.of(context).colorScheme.error,
               semanticLabel: 'error'),
           title: Text(msg),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,7 +21,7 @@ class ImpactHomeScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(title: Text(t.impactTitle)),
         drawer: const AppDrawer(),
-        body: _Body(),
+        body: IvBody(child: _Body()),
       ),
     );
   }
@@ -32,7 +33,7 @@ class _Body extends ConsumerWidget {
     final t = AppLocalizations.of(context)!;
     final list = ref.watch(impactInvestigationsProvider);
     return list.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const IvLoadingSkeleton(),
       error: (e, _) => ImpactErrorView(
           error: e,
           onRetry: () => ref.invalidate(impactInvestigationsProvider)),
@@ -42,7 +43,7 @@ class _Body extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           children: [
             ImpactLine(t.impactNoScoreNote,
-                icon: Icons.info_outline, muted: true),
+                icon: Icons.info_outline_rounded, muted: true),
             const SizedBox(height: 8),
             Semantics(
                 header: true,
@@ -61,7 +62,7 @@ class _Body extends ConsumerWidget {
                       '${inv.status == 'ACTIVE' ? t.uxImpactInvestigationActive : inv.status == 'ARCHIVED' ? t.uxImpactInvestigationArchived : inv.status} · ${inv.id}',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: const Icon(Icons.chevron_right_rounded),
                   // push (not go): the dossier keeps a back arrow and system Back returns
                   // here instead of leaving the app (physical finding PF-03).
                   onTap: () =>

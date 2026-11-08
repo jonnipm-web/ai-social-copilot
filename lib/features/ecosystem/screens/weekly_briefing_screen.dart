@@ -41,7 +41,7 @@ class WeeklyBriefingScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon:
               const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
@@ -53,6 +53,7 @@ class WeeklyBriefingScreen extends ConsumerWidget {
                 color: AppColors.ink, fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
+            tooltip: AppLocalizations.of(context)!.commonRefresh,
             icon: const Icon(Icons.refresh_rounded, color: AppColors.inkMuted),
             onPressed: () {
               ref.invalidate(projectsProvider);
@@ -65,18 +66,17 @@ class WeeklyBriefingScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SafeArea(
+      body: IvBody(child: SafeArea(
         top: false,
         child: briefingAsync.when(
-          loading: () =>
-              const Center(child: CircularProgressIndicator(color: _kPrimary)),
+          loading: () => const IvLoadingSkeleton(),
           error: (e, _) => Center(
               child: Text(l10n.ecoBriefingError(extractErrorMessage(e, l10n)),
                   style: const TextStyle(color: _kRed),
                   textAlign: TextAlign.center)),
           data: (b) => _BriefingBody(briefing: b),
         ),
-      ),
+      )),
     );
   }
 }
@@ -233,7 +233,7 @@ class _HealthSideCard extends StatelessWidget {
               const Spacer(),
               Text('${briefing.overallHealthScore}/100',
                   style: TextStyle(
-                      color: hc, fontSize: 22, fontWeight: FontWeight.w600)),
+                      color: hc, fontSize: 24, fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 10),
@@ -344,7 +344,7 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _kCard,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -406,8 +406,8 @@ class _BriefingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: _kCard,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -447,7 +447,7 @@ class _DataOriginCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _kCard,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -464,7 +464,7 @@ class _DataOriginCard extends StatelessWidget {
                 l10n.ecoBriefDataAnalyzed,
                 style: const TextStyle(
                   color: _kPrimary,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 1.2,
                 ),
@@ -472,7 +472,7 @@ class _DataOriginCard extends StatelessWidget {
               const Spacer(),
               Text(
                 l10n.ecoBriefGeneratedAt('$d/$mo/$y', '$h:$m'),
-                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
               ),
             ],
           ),
@@ -512,7 +512,7 @@ class _DataOriginCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               l10n.ecoBriefIncludedProjects,
-              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
             ),
             const SizedBox(height: 6),
             Wrap(
@@ -521,7 +521,7 @@ class _DataOriginCard extends StatelessWidget {
               children: briefing.analyzedProjectNames
                   .map((name) => Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                            horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: _kPrimary.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -531,7 +531,7 @@ class _DataOriginCard extends StatelessWidget {
                         child: Text(
                           name,
                           style: const TextStyle(
-                              color: AppColors.inkMuted, fontSize: 10),
+                              color: AppColors.inkMuted, fontSize: 11),
                         ),
                       ))
                   .toList(),
@@ -573,7 +573,7 @@ class _CountChip extends StatelessWidget {
             const SizedBox(height: 1),
             Text(
               label,
-              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 9),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
               textAlign: TextAlign.center,
             ),
           ],

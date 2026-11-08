@@ -336,7 +336,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get upgradeMostPopular => 'Most popular';
 
   @override
-  String get upgradeSubscribeCta => '🚀  Subscribe to Pro — R\$ 29/month';
+  String get upgradeSubscribeCta => 'Subscribe to Pro — R\$ 29/month';
 
   @override
   String get adminModulesTitle => 'Module Inventory';
@@ -4835,7 +4835,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ecoAllocModeHours => '⏱ Time (Hours)';
 
   @override
-  String get ecoAllocModeMoney => '💰 Money (R\$)';
+  String get ecoAllocModeMoney => 'Money (R\$)';
 
   @override
   String get ecoAllocBudgetQuestion => 'How much do I have available?';
@@ -5608,7 +5608,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ctxDvProfileComplete => '✅ Complete';
+  String get ctxDvProfileComplete => 'Complete';
 
   @override
   String get ctxDvProfileIncomplete => 'Incomplete — link a market analysis';
@@ -7252,4 +7252,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashQuotaTitle => 'AI usage';
+
+  @override
+  String get authShowPassword => 'Show password';
+
+  @override
+  String get authHidePassword => 'Hide password';
+
+  @override
+  String get authTagline => 'AI-powered project and decision intelligence';
+
+  @override
+  String get commonAdd => 'Add';
+
+  @override
+  String get commonRefresh => 'Refresh';
 }

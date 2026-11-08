@@ -53,10 +53,10 @@ class DecisionValidation {
       : l10n.ctxDvIndexedCount(indexedDocuments, documentCount);
 
   String coverageLabel(AppLocalizations l10n) => l10n.ctxDvThresholdLabel(
-      coverageScore >= minCoverage ? '✅' : '❌', coverageScore, minCoverage);
+      coverageScore >= minCoverage ? '✓' : '✗', coverageScore, minCoverage);
 
   String learningLabel(AppLocalizations l10n) => l10n.ctxDvThresholdLabel(
-      learningScore >= minLearning ? '✅' : '❌', learningScore, minLearning);
+      learningScore >= minLearning ? '✓' : '✗', learningScore, minLearning);
 
   String profileLabel(AppLocalizations l10n) =>
       profileComplete ? l10n.ctxDvProfileComplete : l10n.ctxDvProfileIncomplete;

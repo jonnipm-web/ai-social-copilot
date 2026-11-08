@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -51,7 +52,7 @@ class _ResourceAllocationScreenState
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon:
               const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
@@ -62,7 +63,7 @@ class _ResourceAllocationScreenState
             style: const TextStyle(
                 color: AppColors.ink, fontWeight: FontWeight.w600)),
       ),
-      body: SafeArea(
+      body: IvBody(child: SafeArea(
         top: false,
         child: ListView(
           padding: EdgeInsets.fromLTRB(
@@ -86,8 +87,7 @@ class _ResourceAllocationScreenState
 
             // Results
             provider.when(
-              loading: () => const Center(
-                  child: CircularProgressIndicator(color: _kPrimary)),
+              loading: () => const IvLoadingSkeleton(),
               error: (e, _) => Text(
                   l10n.ecoErrorGeneric(extractErrorMessage(e, l10n)),
                   style: const TextStyle(color: _kRed)),
@@ -95,7 +95,7 @@ class _ResourceAllocationScreenState
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 }
@@ -196,7 +196,7 @@ class _BudgetSelector extends StatelessWidget {
               onTap: () => onChanged(v),
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: active ? _kGold.withOpacity(0.2) : _kCard,
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -304,8 +304,8 @@ class _AllocationItem extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _kCard,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -350,7 +350,7 @@ class _AllocationItem extends StatelessWidget {
                   '${item.score.ecosystemScore}',
                   '',
                   ecosystemVerdictLabel(item.score.recommendation, l10n)),
-              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
         ],
       ),
     );

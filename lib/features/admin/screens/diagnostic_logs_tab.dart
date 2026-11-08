@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -98,7 +99,7 @@ class _DiagnosticControlsCardState
             children: [
               Icon(
                 session.isActive
-                    ? Icons.fiber_manual_record
+                    ? Icons.fiber_manual_record_rounded
                     : Icons.circle_outlined,
                 color: session.isActive ? _kGreen : AppColors.inkSubtle,
                 size: 14,
@@ -173,7 +174,7 @@ class _DiagnosticControlsCardState
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _busy ? null : _start,
-                icon: const Icon(Icons.fiber_manual_record, size: 16),
+                icon: const Icon(Icons.fiber_manual_record_rounded, size: 16),
                 label: Text(l10n.uxDiagStartSession),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kGreen,
@@ -291,8 +292,8 @@ class _SessionTile extends StatelessWidget {
       child: ListTile(
         leading: Icon(
           status == 'active'
-              ? Icons.fiber_manual_record
-              : Icons.check_circle_outline,
+              ? Icons.fiber_manual_record_rounded
+              : Icons.check_circle_outline_rounded,
           color: status == 'active' ? _kGreen : AppColors.inkSubtle,
           size: 18,
         ),
@@ -364,7 +365,7 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: IvBody(child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(12),
@@ -400,7 +401,7 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
           ),
           Expanded(
             child: eventsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const IvLoadingSkeleton(),
               error: (e, _) => Center(
                 child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
                     style: const TextStyle(color: _kRed)),
@@ -417,13 +418,13 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   itemCount: filtered.length,
-                  itemBuilder: (_, i) => _EventTile(event: filtered[i]),
+                  itemBuilder: (_, i) => FadeSlideIn(index: i, child: _EventTile(event: filtered[i])),
                 );
               },
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 
@@ -530,8 +531,8 @@ class _EventTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: _kCard, gradient: kIvSurfaceGradient,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -545,14 +546,14 @@ class _EventTile extends StatelessWidget {
               Text(event['severity'] as String? ?? '',
                   style: TextStyle(
                       color: _severityColor,
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600)),
               const SizedBox(width: 6),
               Text(event['category'] as String? ?? '',
-                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
               const Spacer(),
               Text(event['occurred_at'] as String? ?? '',
-                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 9)),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
             ],
           ),
           const SizedBox(height: 4),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -26,7 +27,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -45,7 +46,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         label: Text(l10n.calendarNewPost),
         backgroundColor: AppColors.accent,
       ),
-      body: Column(
+      body: IvBody(child: Column(
         children: [
           // Filtros de status
           SizedBox(
@@ -72,7 +73,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           ),
           Expanded(
             child: itemsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const IvLoadingSkeleton(),
               error: (e, _) => Center(
                 child: Text(l10n.commonError,
                     style: const TextStyle(color: AppColors.inkMuted)),
@@ -102,16 +103,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 64),
                   itemCount: filtered.length,
                   itemBuilder: (_, i) =>
-                      _CalendarCard(item: filtered[i], ref: ref),
+                      FadeSlideIn(index: i, child: _CalendarCard(item: filtered[i], ref: ref)),
                 );
               },
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 
@@ -158,13 +159,13 @@ class _CalendarCard extends StatelessWidget {
 
     return Card(
       color: AppColors.ink.withOpacity(0.05),
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
         side: BorderSide(color: statusColor.withOpacity(0.3)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -191,20 +192,20 @@ class _CalendarCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                     decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text(
                       item.platform!,
                       style:
-                          const TextStyle(color: AppColors.inkMuted, fontSize: 10),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 11),
                     ),
                   ),
                 ],
                 const Spacer(),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert,
+                  icon: const Icon(Icons.more_vert_rounded,
                       color: AppColors.inkSubtle, size: 18),
                   color: AppColors.surface,
                   onSelected: (value) async {

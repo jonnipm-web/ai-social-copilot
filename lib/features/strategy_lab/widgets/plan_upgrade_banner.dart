@@ -40,7 +40,7 @@ class PlanUpgradeBanner extends StatelessWidget {
     final color = AppColors.warning;
     return Container(
       key: const Key('planUpgradeBanner'),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
         border: Border.all(color: color.withOpacity(0.5)),

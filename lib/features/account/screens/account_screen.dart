@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -37,7 +38,7 @@ class AccountScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(t.accountTitle)),
-      body: ListView(
+      body: IvBody(child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           _SectionLabel(t.accountProfile),
@@ -137,7 +138,7 @@ class AccountScreen extends ConsumerWidget {
             },
           ),
         ],
-      ),
+      )),
     );
   }
 }

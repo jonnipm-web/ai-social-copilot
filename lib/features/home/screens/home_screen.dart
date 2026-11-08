@@ -117,7 +117,7 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SafeArea(
+      body: IvBody(child: SafeArea(
         top: false,
         child: ListView(
           padding: EdgeInsets.fromLTRB(
@@ -134,7 +134,7 @@ class HomeScreen extends ConsumerWidget {
             _EcosystemIntelligenceCard(),
           ],
         ),
-      ),
+      )),
     );
   }
 }
@@ -345,7 +345,7 @@ class _NextBestActionCard extends ConsumerWidget {
           }
           final top = recs.first;
           return Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: _kGold.withOpacity(0.08),
               borderRadius: BorderRadius.circular(AppRadius.md),
@@ -357,18 +357,18 @@ class _NextBestActionCard extends ConsumerWidget {
                 Row(children: [
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: _kGold.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text(recommendationTypeLabel(top.type, l10n),
-                        style: const TextStyle(color: _kGold, fontSize: 10)),
+                        style: const TextStyle(color: _kGold, fontSize: 11)),
                   ),
                   const Spacer(),
                   Text(l10n.ctxHomeConfidence(top.confidence),
                       style:
-                          const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
                 ]),
                 const SizedBox(height: 8),
                 Text(top.title,
@@ -528,7 +528,7 @@ class _OsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _kCard,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -576,7 +576,7 @@ class _HealthBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: _color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -584,7 +584,7 @@ class _HealthBadge extends StatelessWidget {
       ),
       child: Text(AppLocalizations.of(context)!.ctxHomeHealth(health),
           style: TextStyle(
-              color: _color, fontSize: 10, fontWeight: FontWeight.w600)),
+              color: _color, fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -604,7 +604,7 @@ class _MetricChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -618,7 +618,7 @@ class _MetricChip extends StatelessWidget {
               style: TextStyle(
                   color: color, fontWeight: FontWeight.w600, fontSize: 13)),
           Text(label,
-              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 9)),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
         ]),
       ]),
     );
@@ -649,7 +649,7 @@ class _QuickAction extends StatelessWidget {
             Icon(icon, color: _kPrimary, size: 16),
             const SizedBox(height: 3),
             Text(label,
-                style: const TextStyle(color: AppColors.inkMuted, fontSize: 10),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 11),
                 textAlign: TextAlign.center),
           ]),
         ),
@@ -705,13 +705,13 @@ class _ProjectRow extends StatelessWidget {
               Row(children: [
                 Text(profile.maturityLabel(l10n),
                     style:
-                        const TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+                        const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
                 const Text(' · ',
-                    style: TextStyle(color: AppColors.inkSubtle, fontSize: 10)),
+                    style: TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
                 Text(
                   l10n.ctxHomeCoverage(
                       '', profile.coverage.score),
-                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
                 ),
               ]),
             ]),
@@ -732,7 +732,7 @@ class _ProjectRow extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       fontSize: 16)),
               Text(recommendation,
-                  style: TextStyle(color: _scoreColor, fontSize: 9)),
+                  style: TextStyle(color: _scoreColor, fontSize: 11)),
             ]),
           ),
         ]),
@@ -750,7 +750,7 @@ class _PersonaRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: _kBg,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -771,7 +771,7 @@ class _PersonaRow extends StatelessWidget {
             Text(
               l10n.ctxHomePersonaStats(
                   profile.trainingCount, profile.vocabularySize),
-              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 10),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
             ),
           ]),
         ),
@@ -782,7 +782,7 @@ class _PersonaRow extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   fontSize: 14)),
           Text(profile.learningLabel(l10n),
-              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 9)),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
         ]),
       ]),
     );
@@ -797,7 +797,7 @@ class _ConnectionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: _kGreen.withOpacity(0.05),
         borderRadius: BorderRadius.circular(AppRadius.sm),

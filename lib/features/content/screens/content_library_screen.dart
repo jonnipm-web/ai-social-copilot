@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -35,7 +36,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -54,7 +55,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
         label: Text(l10n.contentLibraryNewItem),
         backgroundColor: AppColors.accent,
       ),
-      body: Column(
+      body: IvBody(child: Column(
         children: [
           // ── Filtro por projeto ────────────────────────────────
           if (projects.isNotEmpty)
@@ -63,7 +64,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 children: [
                   _FilterChip(
                     label: l10n.commonAll,
@@ -84,7 +85,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
             height: 48,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               children: [
                 _TypeChip(
                   label: l10n.commonAll,
@@ -102,7 +103,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
 
           Expanded(
             child: itemsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const IvLoadingSkeleton(),
               error: (e, _) => Center(
                 child: Text(l10n.commonError,
                     style: const TextStyle(color: AppColors.inkMuted)),
@@ -140,9 +141,9 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 64),
                   itemCount: filtered.length,
-                  itemBuilder: (_, i) => _ContentCard(
+                  itemBuilder: (_, i) => FadeSlideIn(index: i, child: _ContentCard(
                     item: filtered[i],
                     ref: ref,
                     projectName: _projectId != null
@@ -159,13 +160,13 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                         ref.invalidate(contentItemsProvider);
                       }
                     },
-                  ),
+                  )),
                 );
               },
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }
@@ -272,7 +273,7 @@ class _ContentCard extends StatelessWidget {
 
     return Card(
       color: AppColors.ink.withOpacity(0.05),
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
         side: const BorderSide(color: AppColors.line),
@@ -283,7 +284,7 @@ class _ContentCard extends StatelessWidget {
           AppConstants.routeContentEdit.replaceAll(':id', item.id),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -310,7 +311,7 @@ class _ContentCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                          horizontal: 4, vertical: 2),
                       decoration: BoxDecoration(
                         color: AppColors.accent.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -326,7 +327,7 @@ class _ContentCard extends StatelessWidget {
                           Text(
                             projectName!,
                             style: const TextStyle(
-                                color: AppColors.accent, fontSize: 10),
+                                color: AppColors.accent, fontSize: 11),
                           ),
                         ],
                       ),
@@ -334,7 +335,7 @@ class _ContentCard extends StatelessWidget {
                   ],
                   const Spacer(),
                   PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert,
+                    icon: const Icon(Icons.more_vert_rounded,
                         color: AppColors.inkSubtle, size: 18),
                     color: AppColors.surface,
                     onSelected: (value) async {

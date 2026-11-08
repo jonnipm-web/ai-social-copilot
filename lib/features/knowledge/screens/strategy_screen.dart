@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -88,8 +89,8 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
-      body: itemAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+      body: IvBody(child: itemAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (e, _) => Center(
             child: Text(
                 l10n.knowledgeStrategyGenericError(
@@ -102,7 +103,7 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
                     style: const TextStyle(color: AppColors.inkMuted)));
           }
           return analysisAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const IvLoadingSkeleton(),
             error: (e, _) => Center(
                 child: Text(
                     l10n.knowledgeStrategyGenericError(
@@ -113,7 +114,7 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
                 return _NoAnalysis(item: item);
               }
               return strategyAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const IvLoadingSkeleton(),
                 error: (e, _) => _GeneratePrompt(
                     item: item,
                     analysis: analysis,
@@ -131,7 +132,7 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
             },
           );
         },
-      ),
+      )),
     );
   }
 }
@@ -251,7 +252,7 @@ class _GeneratePrompt extends ConsumerWidget {
                   backgroundColor: AppColors.accent,
                   foregroundColor: AppColors.onAccent,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.lg)),
                 ),
@@ -416,7 +417,7 @@ class _StrategyContent extends ConsumerWidget {
             AppColors.accent),
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: AppColors.surface, gradient: kIvSurfaceGradient,
             borderRadius: BorderRadius.circular(AppRadius.md),
@@ -534,7 +535,7 @@ class _HighlightCard extends StatelessWidget {
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -583,8 +584,8 @@ class _ChannelTile extends StatelessWidget {
     final color = _priorityColor(priority);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.surface, gradient: kIvSurfaceGradient,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -592,7 +593,7 @@ class _ChannelTile extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: color.withOpacity(0.15),
               borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -601,7 +602,7 @@ class _ChannelTile extends StatelessWidget {
             child: Text(
                 aiPriorityLabel(priority, AppLocalizations.of(context)!),
                 style: TextStyle(
-                    color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+                    color: color, fontSize: 11, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -660,7 +661,7 @@ class _FunnelCard extends StatelessWidget {
       children: stages
           .where((s) => s.$2 != null && s.$2.toString().isNotEmpty)
           .map((s) => Container(
-                margin: const EdgeInsets.only(bottom: 6),
+                margin: const EdgeInsets.only(bottom: 4),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: s.$3.withOpacity(0.07),
@@ -717,7 +718,7 @@ class _OpportunityTile extends StatelessWidget {
     final color = _potentialColor(potential);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: const EdgeInsets.only(bottom: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.surface, gradient: kIvSurfaceGradient,
@@ -747,7 +748,7 @@ class _OpportunityTile extends StatelessWidget {
           ),
           if (potential.isNotEmpty)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -755,7 +756,7 @@ class _OpportunityTile extends StatelessWidget {
               child: Text(
                   aiLevelLabel(potential, AppLocalizations.of(context)!),
                   style: TextStyle(
-                      color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+                      color: color, fontSize: 11, fontWeight: FontWeight.w600)),
             ),
         ],
       ),
@@ -788,7 +789,7 @@ class _ChipRow extends StatelessWidget {
                 },
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -814,12 +815,12 @@ class _BulletItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 5),
+            padding: const EdgeInsets.only(top: 4),
             child: Icon(Icons.bolt_rounded, size: 14, color: color),
           ),
           const SizedBox(width: 6),
@@ -856,7 +857,7 @@ class _GrowthCard extends StatelessWidget {
         ...months
             .where((m) => m.$2 != null && m.$2.toString().isNotEmpty)
             .map((m) => Container(
-                  margin: const EdgeInsets.only(bottom: 6),
+                  margin: const EdgeInsets.only(bottom: 4),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppColors.surface, gradient: kIvSurfaceGradient,
@@ -894,7 +895,7 @@ class _GrowthCard extends StatelessWidget {
             children: kpiList
                 .map((k) => Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: AppColors.positive.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -922,7 +923,7 @@ class _AudienceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

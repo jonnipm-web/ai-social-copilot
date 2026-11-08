@@ -12672,6 +12672,36 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Uso de IA'**
   String get dashQuotaTitle;
+
+  /// No description provided for @authShowPassword.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mostrar senha'**
+  String get authShowPassword;
+
+  /// No description provided for @authHidePassword.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ocultar senha'**
+  String get authHidePassword;
+
+  /// No description provided for @authTagline.
+  ///
+  /// In pt, this message translates to:
+  /// **'Inteligência de projetos e decisões, guiada por IA'**
+  String get authTagline;
+
+  /// No description provided for @commonAdd.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicionar'**
+  String get commonAdd;
+
+  /// No description provided for @commonRefresh.
+  ///
+  /// In pt, this message translates to:
+  /// **'Atualizar'**
+  String get commonRefresh;
 }
 
 class _AppLocalizationsDelegate

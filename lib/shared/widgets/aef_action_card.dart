@@ -164,18 +164,18 @@ class _AefActionCardState extends State<AefActionCard> {
     final r = _result;
     return switch (_phase) {
       AefPhase.succeeded when r != null && r.isCompleted => (
-          Icons.check_circle,
+          Icons.check_circle_rounded,
           AppColors.positive
         ),
-      AefPhase.unknownOutcome => (Icons.help, AppColors.warning),
-      AefPhase.failed => (Icons.error, AppColors.negative),
+      AefPhase.unknownOutcome => (Icons.help_rounded, AppColors.warning),
+      AefPhase.failed => (Icons.error_rounded, AppColors.negative),
       AefPhase.denied ||
       AefPhase.rejected ||
       AefPhase.expired ||
       AefPhase.cancelled ||
       AefPhase.invalidated =>
-        (Icons.block, AppColors.inkMuted),
-      _ => (Icons.hourglass_top, AppColors.info),
+        (Icons.block_rounded, AppColors.inkMuted),
+      _ => (Icons.hourglass_top_rounded, AppColors.info),
     };
   }
 
@@ -224,7 +224,7 @@ class _AefActionCardState extends State<AefActionCard> {
           const SizedBox(height: 8),
           for (final f in _fields)
             Padding(
-              padding: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.only(bottom: 4),
               child: f.options != null
                   ? DropdownButtonFormField<String>(
                       key: Key('aef-field-${f.name}'),
@@ -277,7 +277,7 @@ class _AefActionCardState extends State<AefActionCard> {
                 style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.positive,
                     foregroundColor: AppColors.ground),
-                icon: const Icon(Icons.check),
+                icon: const Icon(Icons.check_rounded),
                 onPressed: _busy ? null : () => _decide(true),
                 label: Text(l.aefLabApprove),
               ),
@@ -286,7 +286,7 @@ class _AefActionCardState extends State<AefActionCard> {
                 style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.negative,
                     side: const BorderSide(color: AppColors.negative)),
-                icon: const Icon(Icons.close),
+                icon: const Icon(Icons.close_rounded),
                 onPressed: _busy ? null : () => _decide(false),
                 label: Text(l.aefLabReject),
               ),

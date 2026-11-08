@@ -864,7 +864,7 @@ class _IveBubble extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
           decoration: BoxDecoration(
             color: AppColors.surface, gradient: kIvSurfaceGradient,
             borderRadius: const BorderRadius.only(
@@ -1017,7 +1017,7 @@ class _IssueActionChip extends StatelessWidget {
           action.localizedLabel(AppLocalizations.of(context)!),
           style: const TextStyle(
             color: _color,
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
         ),

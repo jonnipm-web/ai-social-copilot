@@ -126,7 +126,7 @@ class IveDetailSheet extends ConsumerWidget {
 
   Widget _handle() => Center(
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 10),
+          margin: const EdgeInsets.symmetric(vertical: 8),
           width: 40,
           height: 4,
           decoration: BoxDecoration(
@@ -150,7 +150,7 @@ class IveDetailSheet extends ConsumerWidget {
               ),
             ),
           ),
-          IconButton(
+          IconButton(tooltip: MaterialLocalizations.of(context).closeButtonTooltip, 
             icon: const Icon(Icons.close_rounded, color: AppColors.inkSubtle),
             onPressed: () => Navigator.of(context).pop(),
           ),
@@ -168,7 +168,7 @@ class IveDetailSheet extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              const Text('💬', style: TextStyle(fontSize: 16)),
+              const Icon(Icons.chat_bubble_outline_rounded, size: 16),
               const SizedBox(width: 6),
               Text(
                 l10n.ctxIveDetailExplanation,
@@ -245,7 +245,7 @@ class IveDetailSheet extends ConsumerWidget {
         tilePadding: EdgeInsets.zero,
         children: expandedData!.entries
             .map((e) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Row(
                     children: [
                       Expanded(
@@ -312,11 +312,11 @@ class IveDetailSheet extends ConsumerWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.accent,
             side: const BorderSide(color: AppColors.accent),
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
           ),
-          icon: const Text('💬', style: TextStyle(fontSize: 16)),
+          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
           label: Text(l10n.iveChatAskLabel),
           onPressed: () {
             Navigator.of(context).pop();

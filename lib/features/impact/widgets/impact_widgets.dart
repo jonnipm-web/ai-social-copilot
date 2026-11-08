@@ -20,11 +20,11 @@ String impactLang(BuildContext context) =>
 IconData impactStatusIcon(String? status) => switch (status) {
       'SUPPORTED' => Icons.fact_check_outlined,
       'PARTIALLY_SUPPORTED' => Icons.rule_outlined,
-      'CONTRADICTED' => Icons.compare_arrows,
-      'INCONCLUSIVE' => Icons.more_horiz,
-      'OUTDATED' => Icons.history,
+      'CONTRADICTED' => Icons.compare_arrows_rounded,
+      'INCONCLUSIVE' => Icons.more_horiz_rounded,
+      'OUTDATED' => Icons.history_rounded,
       'DISPUTED' => Icons.forum_outlined,
-      _ => Icons.help_outline,
+      _ => Icons.help_outline_rounded,
     };
 
 class ImpactChip extends StatelessWidget {
@@ -53,7 +53,7 @@ class ImpactChip extends StatelessWidget {
       label: label,
       excludeSemantics: true,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -148,7 +148,7 @@ class ImpactLine extends StatelessWidget {
             ?.copyWith(color: theme.colorScheme.onSurfaceVariant)
         : theme.textTheme.bodyMedium;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -264,7 +264,7 @@ class ImpactErrorView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.info_outline, size: 32),
+              const Icon(Icons.info_outline_rounded, size: 32),
               const SizedBox(height: 12),
               Text(impactErrorText(t, error), textAlign: TextAlign.center),
               if (retryable && onRetry != null) ...[
@@ -383,7 +383,7 @@ class ImpactEntitlementGate extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.lock_outline, size: 48),
+            const Icon(Icons.lock_outline_rounded, size: 48),
             const SizedBox(height: 12),
             Text(t.impactEntitlementProRequired, style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
             const SizedBox(height: 8),

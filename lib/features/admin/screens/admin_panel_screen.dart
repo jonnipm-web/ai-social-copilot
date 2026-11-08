@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -29,7 +30,7 @@ class AdminPanelScreen extends ConsumerWidget {
     // exigir positivamente `hasValue && isAdmin == true` -- loading/erro/
     // não-admin caem todos no mesmo estado "negado por padrão".
     if (profileAsync.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: IvBody(child: Center(child: CircularProgressIndicator())));
     }
     // Codex Gate (P2, re-verificação): exige explicitamente hasValue &&
     // !hasError -- fecha o caso teórico de um AsyncError reter um valor
@@ -43,10 +44,10 @@ class AdminPanelScreen extends ConsumerWidget {
     if (!isAdmin) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.uxAdminAccessDeniedTitle)),
-        body: Center(
+        body: IvBody(child: Center(
           child: Text(l10n.uxAdminAccessDeniedBody,
               style: const TextStyle(color: AppColors.inkMuted)),
-        ),
+        )),
       );
     }
 
@@ -54,7 +55,7 @@ class AdminPanelScreen extends ConsumerWidget {
       length: 5,
       child: Scaffold(
         appBar: AppBar(
-          leading: IconButton(
+          leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
             onPressed: () {
               if (context.canPop()) {
@@ -78,7 +79,7 @@ class AdminPanelScreen extends ConsumerWidget {
           ),
         ),
         drawer: const AppDrawer(),
-        body: const TabBarView(
+        body: IvBody(child: const TabBarView(
           children: [
             _UsersTab(),
             _PersonasAdminTab(),
@@ -86,7 +87,7 @@ class AdminPanelScreen extends ConsumerWidget {
             _ModulesAdminTab(),
             DiagnosticLogsTab(),
           ],
-        ),
+        )),
       ),
     );
   }
@@ -102,7 +103,7 @@ class _UsersTab extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return usersAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const IvLoadingSkeleton(),
       error: (e, _) => Center(
           child: Text(extractErrorMessage(e, l10n),
               style: const TextStyle(color: AppColors.inkMuted))),
@@ -118,7 +119,7 @@ class _UsersTab extends ConsumerWidget {
           itemCount: users.length,
           separatorBuilder: (_, __) =>
               const Divider(color: AppColors.line, height: 1),
-          itemBuilder: (context, i) => _UserTile(user: users[i], ref: ref),
+          itemBuilder: (context, i) => FadeSlideIn(index: i, child: _UserTile(user: users[i], ref: ref)),
         );
       },
     );
@@ -151,7 +152,7 @@ class _UserTile extends StatelessWidget {
         style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
       ),
       trailing: PopupMenuButton<String>(
-        icon: const Icon(Icons.more_vert, color: AppColors.inkSubtle, size: 20),
+        icon: const Icon(Icons.more_vert_rounded, color: AppColors.inkSubtle, size: 20),
         color: AppColors.surface,
         onSelected: (value) async {
           // IVE-COMMERCIAL-TARGETED-REMEDIATION-06R (Codex adversarial
@@ -259,7 +260,7 @@ class _PersonasAdminTab extends ConsumerWidget {
                   backgroundColor: AppColors.gold,
                   foregroundColor: Colors.black,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   textStyle: const TextStyle(fontSize: 13),
                 ),
               ),
@@ -308,7 +309,7 @@ class _OverviewTab extends ConsumerWidget {
           ...['admin', 'premium', 'pro', 'beta_tester', 'free'].map((role) {
             final count = byRole[role] ?? 0;
             return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.only(bottom: 8),
               child: _RoleBar(role: role, count: count, total: users.length),
             );
           }),
@@ -321,7 +322,7 @@ class _OverviewTab extends ConsumerWidget {
             '${users.length}',
             style: const TextStyle(
               color: AppColors.ink,
-              fontSize: 36,
+              fontSize: 40,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -412,7 +413,7 @@ class _ModulesAdminTab extends StatelessWidget {
         final module = visibleModules[i];
         return ListTile(
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           title: Row(
             children: [
               Expanded(
@@ -490,7 +491,7 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: _color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -499,7 +500,7 @@ class _StatusBadge extends StatelessWidget {
       child: Text(
         isEnglish ? status.labelEn : status.labelPt,
         style:
-            TextStyle(color: _color, fontSize: 10, fontWeight: FontWeight.w600),
+            TextStyle(color: _color, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }

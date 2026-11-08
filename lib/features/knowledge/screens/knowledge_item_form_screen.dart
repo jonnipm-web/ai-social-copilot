@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -231,7 +232,7 @@ class _KnowledgeItemFormScreenState
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
-      body: SingleChildScrollView(
+      body: IvBody(child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
@@ -447,7 +448,7 @@ class _KnowledgeItemFormScreenState
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accent,
                     foregroundColor: AppColors.onAccent,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppRadius.lg)),
                   ),
@@ -470,7 +471,7 @@ class _KnowledgeItemFormScreenState
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }
@@ -579,7 +580,7 @@ class _FileImportSection extends StatelessWidget {
 
     if (importedFileName != null) {
       return Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.positive.withOpacity(0.08),
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -656,7 +657,7 @@ class _FileImportSection extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: AppColors.warning.withOpacity(0.08),
             borderRadius: BorderRadius.circular(AppRadius.md),
@@ -773,7 +774,7 @@ class _DriveImportSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     if (importedFileName != null) {
       return Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.positive.withOpacity(0.08),
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -922,7 +923,7 @@ class _SourceTypeButton extends StatelessWidget {
       onTap: () => onTap(value),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: selected
               ? AppColors.accent.withOpacity(0.2)

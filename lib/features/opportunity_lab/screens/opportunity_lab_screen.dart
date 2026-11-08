@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -75,7 +76,7 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon:
               const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
@@ -96,15 +97,14 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
         label: Text(l10n.oppNewTitle),
         onPressed: () => _showAddDialog(context),
       ),
-      body: flagAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      body: IvBody(child: flagAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (_, __) =>
             _LabBody(projectId: _projectId, onProjectChange: _setProject),
         data: (enabled) => enabled
             ? _LabBody(projectId: _projectId, onProjectChange: _setProject)
             : const _FeatureGated(),
-      ),
+      )),
     );
   }
 }
@@ -126,7 +126,7 @@ class _FeatureGated extends StatelessWidget {
               'Opportunity Lab',
               style: TextStyle(
                   color: AppColors.ink,
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
@@ -183,8 +183,7 @@ class _LabBody extends ConsumerWidget {
         : projects.where((p) => p.id == id).map((p) => p.name).firstOrNull;
 
     return itemsAsync.when(
-      loading: () =>
-          const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      loading: () => const IvLoadingSkeleton(),
       error: (e, _) => Center(
         child: Text(
             l10n.opportunityDetailGenericError(extractErrorMessage(e, l10n)),
@@ -216,7 +215,7 @@ class _LabBody extends ConsumerWidget {
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
                 itemCount: items.length,
-                itemBuilder: (_, i) => Padding(
+                itemBuilder: (_, i) => FadeSlideIn(index: i, child: Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: _LabItemCard(
                     item: items[i],
@@ -323,7 +322,7 @@ class _LabBody extends ConsumerWidget {
                           }
                         : null,
                   ),
-                ),
+                )),
               ),
             ),
           ],
@@ -380,7 +379,7 @@ class _LabItemCard extends StatelessWidget {
               children: [
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: _kPrimary.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -391,7 +390,7 @@ class _LabItemCard extends StatelessWidget {
                         .toUpperCase(),
                     style: const TextStyle(
                         color: _kPrimary,
-                        fontSize: 9,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -410,7 +409,7 @@ class _LabItemCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: c.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -453,7 +452,7 @@ class _LabItemCard extends StatelessWidget {
               children: [
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: _statusColor(item.status).withOpacity(0.12),
                     borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -462,7 +461,7 @@ class _LabItemCard extends StatelessWidget {
                     opportunityStatusLabel(item.status, l10n),
                     style: TextStyle(
                         color: _statusColor(item.status),
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -472,7 +471,7 @@ class _LabItemCard extends StatelessWidget {
                     onPressed: onApprove,
                     style: TextButton.styleFrom(
                         foregroundColor: _kGreen,
-                        minimumSize: Size.zero,
+                        minimumSize: const Size(0, 36),
                         padding: const EdgeInsets.symmetric(horizontal: 8)),
                     child: Text(l10n.oppLabApprove,
                         style: const TextStyle(fontSize: 12)),
@@ -482,17 +481,18 @@ class _LabItemCard extends StatelessWidget {
                     onPressed: onConvertToAction,
                     style: TextButton.styleFrom(
                         foregroundColor: AppColors.info,
-                        minimumSize: Size.zero,
+                        minimumSize: const Size(0, 36),
                         padding: const EdgeInsets.symmetric(horizontal: 8)),
                     child: Text(l10n.oppLabConvertToAction,
                         style: const TextStyle(fontSize: 12)),
                   ),
                 IconButton(
+                  tooltip: AppLocalizations.of(context)!.commonDelete,
                   icon: const Icon(Icons.delete_outline_rounded,
                       color: AppColors.inkSubtle, size: 18),
                   onPressed: onDelete,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                 ),
                 const SizedBox(width: 4),
                 const Icon(Icons.chevron_right_rounded,
@@ -513,45 +513,12 @@ class _EmptyLab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.science_rounded, color: AppColors.inkSubtle, size: 64),
-            const SizedBox(height: 20),
-            Text(
-              l10n.oppLabEmptyTitle,
-              style: const TextStyle(
-                  color: AppColors.inkMuted,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.oppLabEmptyBody,
-              style: const TextStyle(
-                  color: AppColors.inkSubtle, fontSize: 13, height: 1.5),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add_rounded),
-              label: Text(l10n.oppLabAddButton),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kPrimary,
-                foregroundColor: AppColors.onAccent,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.lg)),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return IvEmptyState(
+      icon: Icons.science_rounded,
+      title: l10n.oppLabEmptyTitle,
+      message: l10n.oppLabEmptyBody,
+      actionLabel: l10n.oppLabAddButton,
+      onAction: onAdd,
     );
   }
 }
@@ -609,7 +576,7 @@ class _Chip extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: selected ? _kPrimary : _kCard,
             borderRadius: BorderRadius.circular(AppRadius.lg),
