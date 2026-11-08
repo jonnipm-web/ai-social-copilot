@@ -227,76 +227,57 @@ class _DetailBody extends StatelessWidget {
         _HeroHeader(item: item, projectName: projectName),
 
         const SizedBox(height: 16),
-
-        // ── Score breakdown ────────────────────────────────────
-        _Section(
-          icon: Icons.bar_chart_rounded,
-          title: l10n.actionDetailSectionScoreBreakdown,
-          child: _ScoreBreakdown(item: item),
+        IvSplit(
+          main: [
+            if (item.description != null && item.description!.isNotEmpty)
+              _gap(_Section(
+                icon: Icons.description_rounded,
+                title: l10n.actionDetailSectionDescription,
+                child: Text(
+                  item.description!,
+                  style: const TextStyle(
+                      color: AppColors.inkMuted, fontSize: 14, height: 1.6),
+                ),
+              )),
+            if (item.rationale != null && item.rationale!.isNotEmpty)
+              _gap(_Section(
+                icon: Icons.psychology_rounded,
+                title: l10n.actionDetailSectionRationale,
+                child: _RationaleCard(rationale: item.rationale!),
+              )),
+            if (item.plan.isNotEmpty)
+              _gap(_Section(
+                icon: Icons.list_alt_rounded,
+                title: l10n.actionDetailSectionPlan,
+                child: _PlanList(steps: item.plan),
+              )),
+            if (item.risks.isNotEmpty)
+              _gap(_Section(
+                icon: Icons.warning_amber_rounded,
+                title: l10n.actionDetailSectionRisks,
+                child: _RisksList(risks: item.risks),
+              )),
+            if (item.sources.isNotEmpty)
+              _gap(_Section(
+                icon: Icons.source_rounded,
+                title: l10n.actionDetailSectionSources,
+                child: _SourcesList(sources: item.sources),
+              )),
+          ],
+          side: [
+            _gap(_StatusButtons(item: item, ref: ref)),
+            _gap(_Section(
+              icon: Icons.bar_chart_rounded,
+              title: l10n.actionDetailSectionScoreBreakdown,
+              child: _ScoreBreakdown(item: item),
+            )),
+            _gap(_Section(
+              icon: Icons.track_changes_rounded,
+              title: l10n.actionDetailSectionOrigin,
+              child: _OriginSection(item: item, projectName: projectName),
+            )),
+          ],
         ),
-
-        const SizedBox(height: 12),
-
-        // ── Origem ─────────────────────────────────────────────
-        _Section(
-          icon: Icons.track_changes_rounded,
-          title: l10n.actionDetailSectionOrigin,
-          child: _OriginSection(item: item, projectName: projectName),
-        ),
-
-        if (item.sources.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _Section(
-            icon: Icons.source_rounded,
-            title: l10n.actionDetailSectionSources,
-            child: _SourcesList(sources: item.sources),
-          ),
-        ],
-
-        if (item.description != null && item.description!.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _Section(
-            icon: Icons.description_rounded,
-            title: l10n.actionDetailSectionDescription,
-            child: Text(
-              item.description!,
-              style: const TextStyle(
-                  color: AppColors.inkMuted, fontSize: 13, height: 1.5),
-            ),
-          ),
-        ],
-
-        if (item.rationale != null && item.rationale!.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _Section(
-            icon: Icons.psychology_rounded,
-            title: l10n.actionDetailSectionRationale,
-            child: _RationaleCard(rationale: item.rationale!),
-          ),
-        ],
-
-        if (item.plan.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _Section(
-            icon: Icons.list_alt_rounded,
-            title: l10n.actionDetailSectionPlan,
-            child: _PlanList(steps: item.plan),
-          ),
-        ],
-
-        if (item.risks.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _Section(
-            icon: Icons.warning_amber_rounded,
-            title: l10n.actionDetailSectionRisks,
-            child: _RisksList(risks: item.risks),
-          ),
-        ],
-
-        const SizedBox(height: 20),
-
-        // ── Status actions ─────────────────────────────────────
-        _StatusButtons(item: item, ref: ref),
       ],
     );
   }
@@ -477,9 +458,9 @@ class _ScoreRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 60,
+            width: 96,
             child: Text(label,
-                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 13)),
           ),
           Expanded(
             child: ClipRRect(
@@ -1042,3 +1023,8 @@ class _Btn extends StatelessWidget {
     );
   }
 }
+
+Widget _gap(Widget child) => Padding(
+      padding: const EdgeInsets.only(bottom: AppSpace.s3),
+      child: child,
+    );

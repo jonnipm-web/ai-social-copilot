@@ -1054,3 +1054,56 @@ class IvCardGrid extends StatelessWidget {
     });
   }
 }
+
+// ── Detail split layout ─────────────────────────────────────────────────────
+
+/// Detail pages: reading content in a wide [main] column, scores and
+/// actions in a fixed [side] column. Below [breakpoint] everything stacks
+/// in [narrowOrder] (default: side first, so key numbers come first).
+class IvSplit extends StatelessWidget {
+  const IvSplit({
+    super.key,
+    required this.main,
+    required this.side,
+    this.sideWidth = 380,
+    this.breakpoint = 900,
+    this.gap = AppSpace.s6,
+    this.narrowOrder,
+  });
+
+  final List<Widget> main;
+  final List<Widget> side;
+  final double sideWidth;
+  final double breakpoint;
+  final double gap;
+  final List<Widget>? narrowOrder;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, c) {
+      if (c.maxWidth < breakpoint) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: narrowOrder ?? [...side, ...main],
+        );
+      }
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: main),
+          ),
+          SizedBox(width: gap),
+          SizedBox(
+            width: sideWidth,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: side),
+          ),
+        ],
+      );
+    });
+  }
+}

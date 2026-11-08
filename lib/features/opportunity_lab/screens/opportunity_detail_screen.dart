@@ -237,77 +237,57 @@ class _DetailBody extends StatelessWidget {
         _HeroHeader(item: item),
 
         const SizedBox(height: 16),
-
-        // ── Score breakdown ────────────────────────────────────
-        _Section(
-          icon: Icons.bar_chart_rounded,
-          title: l10n.opportunityDetailScoreBreakdownTitle,
-          child: _ScoreBreakdown(item: item),
+        IvSplit(
+          main: [
+            if (item.rationale != null && item.rationale!.isNotEmpty)
+              _gap(_Section(
+                icon: Icons.psychology_rounded,
+                title: l10n.opportunityDetailAiRationaleTitle,
+                child: _RationaleCard(rationale: item.rationale!),
+              )),
+            if (item.actionSteps.isNotEmpty)
+              _gap(_Section(
+                icon: Icons.checklist_rounded,
+                title: l10n.opportunityDetailNextStepsTitle,
+                child: _ActionStepsList(steps: item.actionSteps),
+              )),
+            if (item.risks.isNotEmpty)
+              _gap(_Section(
+                icon: Icons.warning_amber_rounded,
+                title: l10n.opportunityDetailRisksTitle,
+                child: _RisksList(risks: item.risks),
+              )),
+            if (item.sources.isNotEmpty)
+              _gap(_Section(
+                icon: Icons.source_rounded,
+                title: l10n.opportunityDetailSourcesTitle,
+                child: _SourcesList(sources: item.sources),
+              )),
+          ],
+          side: [
+            _gap(_ActionButtons(item: item, ref: ref)),
+            _gap(_Section(
+              icon: Icons.bar_chart_rounded,
+              title: l10n.opportunityDetailScoreBreakdownTitle,
+              child: _ScoreBreakdown(item: item),
+            )),
+            if (item.confidence > 0)
+              _gap(_Section(
+                icon: Icons.verified_rounded,
+                title: l10n.opportunityDetailConfidenceTitle,
+                child: _ConfidenceMeter(value: item.confidence),
+              )),
+            _gap(_Section(
+              icon: Icons.track_changes_rounded,
+              title: l10n.opportunityDetailOriginTitle,
+              child: _OriginSection(
+                item: item,
+                projectName: projectName,
+                marketAnalysisLabel: marketAnalysisLabel,
+              ),
+            )),
+          ],
         ),
-
-        const SizedBox(height: 12),
-
-        // ── Origem ─────────────────────────────────────────────
-        _Section(
-          icon: Icons.track_changes_rounded,
-          title: l10n.opportunityDetailOriginTitle,
-          child: _OriginSection(
-            item: item,
-            projectName: projectName,
-            marketAnalysisLabel: marketAnalysisLabel,
-          ),
-        ),
-
-        if (item.sources.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _Section(
-            icon: Icons.source_rounded,
-            title: l10n.opportunityDetailSourcesTitle,
-            child: _SourcesList(sources: item.sources),
-          ),
-        ],
-
-        if (item.rationale != null && item.rationale!.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _Section(
-            icon: Icons.psychology_rounded,
-            title: l10n.opportunityDetailAiRationaleTitle,
-            child: _RationaleCard(rationale: item.rationale!),
-          ),
-        ],
-
-        const SizedBox(height: 12),
-
-        // ── Confiança ──────────────────────────────────────────
-        if (item.confidence > 0)
-          _Section(
-            icon: Icons.verified_rounded,
-            title: l10n.opportunityDetailConfidenceTitle,
-            child: _ConfidenceMeter(value: item.confidence),
-          ),
-
-        if (item.risks.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _Section(
-            icon: Icons.warning_amber_rounded,
-            title: l10n.opportunityDetailRisksTitle,
-            child: _RisksList(risks: item.risks),
-          ),
-        ],
-
-        if (item.actionSteps.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _Section(
-            icon: Icons.checklist_rounded,
-            title: l10n.opportunityDetailNextStepsTitle,
-            child: _ActionStepsList(steps: item.actionSteps),
-          ),
-        ],
-
-        const SizedBox(height: 20),
-
-        // ── Action buttons ─────────────────────────────────────
-        _ActionButtons(item: item, ref: ref),
       ],
     );
   }
@@ -1120,3 +1100,8 @@ class _LinkedKnowledgeSection extends ConsumerWidget {
     );
   }
 }
+
+Widget _gap(Widget child) => Padding(
+      padding: const EdgeInsets.only(bottom: AppSpace.s3),
+      child: child,
+    );
