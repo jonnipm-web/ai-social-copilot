@@ -156,8 +156,7 @@ class _PersonaCard extends ConsumerWidget {
               : AppColors.line,
         ),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: _PersonaRow(
         leading: CircleAvatar(
           backgroundColor: AppColors.accent.withOpacity(0.2),
           child: Text(
@@ -227,6 +226,43 @@ class _PersonaCard extends ConsumerWidget {
                 ],
               )
             : null,
+      ),
+    );
+  }
+}
+
+/// ListTile reports unreliable intrinsic heights inside equal-height grid
+/// rows (leading drifts to the bottom), so the card lays itself out.
+class _PersonaRow extends StatelessWidget {
+  const _PersonaRow({
+    required this.leading,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+  });
+  final Widget leading;
+  final Widget title;
+  final Widget subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpace.s4, AppSpace.s3, AppSpace.s2, AppSpace.s3),
+      child: Row(
+        children: [
+          leading,
+          const SizedBox(width: AppSpace.s3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [title, const SizedBox(height: 2), subtitle],
+            ),
+          ),
+          if (trailing != null) trailing!,
+        ],
       ),
     );
   }

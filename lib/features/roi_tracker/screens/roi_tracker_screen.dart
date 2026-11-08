@@ -786,46 +786,20 @@ class _ExecutiveDashboardSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Revenue row
-          if (revenue > 0 || revPotential > 0 || revEstimated > 0)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.roiTrackerRevenueSectionTitle,
-                    style: const TextStyle(
-                        color: AppColors.inkSubtle,
-                        fontSize: 11,
-                        letterSpacing: 1.2,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                IvGrid(
-                  minTileWidth: 180,
-                  children: [
-                    if (revenue > 0)
-                      _ExecStat(l10n.roiTrackerRevenueRegistered,
-                          _fmtBRL(revenue), AppColors.positive),
-                    if (revPotential > 0)
-                      _ExecStat(l10n.roiTrackerRevenuePotentialLabel,
-                          _fmtBRL(revPotential), AppColors.info),
-                    if (revEstimated > 0)
-                      _ExecStat(l10n.roiTrackerRevenueEstimatedLabel,
-                          _fmtBRL(revEstimated), AppColors.positive),
-                  ],
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
-          // Activity row
-          Text(l10n.roiTrackerActivitySectionTitle,
-              style: const TextStyle(
-                  color: AppColors.inkSubtle,
-                  fontSize: 11,
-                  letterSpacing: 1.2,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          // Revenue and activity share one grid so a single KPI per group
+          // never leaves a near-empty row.
           IvGrid(
             minTileWidth: 180,
             children: [
+              if (revenue > 0)
+                _ExecStat(l10n.roiTrackerRevenueRegistered, _fmtBRL(revenue),
+                    AppColors.positive),
+              if (revPotential > 0)
+                _ExecStat(l10n.roiTrackerRevenuePotentialLabel,
+                    _fmtBRL(revPotential), AppColors.info),
+              if (revEstimated > 0)
+                _ExecStat(l10n.roiTrackerRevenueEstimatedLabel,
+                    _fmtBRL(revEstimated), AppColors.positive),
               if (opportunities > 0)
                 _ExecStat(_roiTypeLabel(l10n, 'opportunities'),
                     _fmt(opportunities), AppColors.gold),
