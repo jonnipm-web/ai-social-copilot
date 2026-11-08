@@ -381,10 +381,7 @@ class _ProjectCommandCenterScreenState
         ?.where((p) => p.project.id == project.id)
         .firstOrNull;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => _ProjectDetailSheet(
         project: project,
         ecosystemScore: score,
@@ -437,7 +434,7 @@ class _ProjectCommandCenterScreenState
           _openConfig(project);
         },
       ),
-    );
+    ));
   }
 
   // IVE-COMMERCIAL-EXPERIENCE-14, Phase B Section 08/09 — Project
@@ -513,7 +510,7 @@ class _ProjectCommandCenterScreenState
         ],
       ),
       drawer: const AppDrawer(),
-      body: IvBody(child: Column(
+      body: Column(
         children: [
           AnimatedSize(
             duration: AppMotion.medium,
@@ -545,7 +542,7 @@ class _ProjectCommandCenterScreenState
             ),
           ),
         ],
-      )),
+      ),
     );
   }
 
@@ -705,87 +702,116 @@ class _ProjectCommandCenterScreenState
     final avgOpp =
         opp.isEmpty ? 0 : (opp.reduce((a, b) => a + b) / opp.length).round();
 
-    return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-          AppSpace.s4, AppSpace.s2, AppSpace.s4, AppSpace.s12),
-      itemCount: sorted.length + 1,
-      itemBuilder: (_, i) {
-        if (i == 0) {
-          return Center(
-            child: ConstrainedBox(
-              constraints:
-                  const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: AppSpace.s4),
-                child: IvGrid(
-                  minTileWidth: 150,
-                  maxColumns: 3,
+    Widget card(Project p, int rank, {bool fill = false}) {
+      final score = scoresMap[p.id];
+      return _ProjectCard(
+        project: p,
+        rank: rank,
+        fillHeight: fill,
+        ecosystemScore: score,
+        onTap: () => _openDetail(p, score),
+        onStatusChange: (st) =>
+            ref.read(projectsNotifierProvider.notifier).updateStatus(p.id, st),
+        onDelete: () => _confirmDelete(p),
+        onAnalyze: p.marketAnalysisId != null
+            ? () => context.go(AppConstants.routeMarketIntelligenceHub
+                .replaceFirst(':id', p.marketAnalysisId!))
+            : null,
+        onIveAnalysis: () => context.push(
+          AppConstants.routeProjectAnalysis.replaceFirst(':id', p.id),
+        ),
+      );
+    }
+
+    final kpis = IvGrid(
+      minTileWidth: 180,
+      maxColumns: 3,
+      children: [
+        IvStatCard(
+          label: t.navProjects,
+          value: projects.length,
+          icon: Icons.folder_copy_rounded,
+          color: AppColors.info,
+        ),
+        IvStatCard(
+          label: t.projectCommandStatusActive,
+          value: active,
+          icon: Icons.play_circle_outline_rounded,
+          color: AppColors.accent,
+        ),
+        IvStatCard(
+          label: t.projectCommandStatOpportunity,
+          value: avgOpp,
+          valueText: avgOpp > 0 ? null : '—',
+          icon: Icons.speed_rounded,
+          color: avgOpp > 0 ? ivScoreColor(avgOpp) : AppColors.inkSubtle,
+          trailing: avgOpp > 0
+              ? IvRingGauge(
+                  value: avgOpp.toDouble(),
+                  size: 44,
+                  stroke: 5,
+                  center: const SizedBox.shrink())
+              : null,
+        ),
+      ],
+    );
+
+    return LayoutBuilder(builder: (context, c) {
+      final w = c.maxWidth;
+      final pad = w >= 960 ? AppSpace.s8 : AppSpace.s4;
+      final inner = (w - pad * 2).clamp(0.0, 1240.0);
+      final cols = inner >= 1080
+          ? 3
+          : inner >= 680
+              ? 2
+              : 1;
+      final rows = <List<Project>>[];
+      for (var i = 0; i < sorted.length; i += cols) {
+        rows.add(sorted.sublist(i, (i + cols).clamp(0, sorted.length)));
+      }
+      return ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(pad, AppSpace.s2, pad, AppSpace.s12),
+        itemCount: rows.length + 1,
+        itemBuilder: (_, i) {
+          final Widget child;
+          if (i == 0) {
+            child = Padding(
+              padding: const EdgeInsets.only(bottom: AppSpace.s4),
+              child: kpis,
+            );
+          } else if (cols == 1) {
+            child = card(rows[i - 1].first, i);
+          } else {
+            final row = rows[i - 1];
+            child = Padding(
+              padding: const EdgeInsets.only(bottom: AppSpace.s4),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    IvStatCard(
-                      label: t.navProjects,
-                      value: projects.length,
-                      icon: Icons.folder_copy_rounded,
-                      color: AppColors.info,
-                    ),
-                    IvStatCard(
-                      label: t.projectCommandStatusActive,
-                      value: active,
-                      icon: Icons.play_circle_outline_rounded,
-                      color: AppColors.accent,
-                    ),
-                    IvStatCard(
-                      label: t.projectCommandStatOpportunity,
-                      value: avgOpp,
-                      valueText: avgOpp > 0 ? null : '—',
-                      icon: Icons.speed_rounded,
-                      color: avgOpp > 0
-                          ? ivScoreColor(avgOpp)
-                          : AppColors.inkSubtle,
-                      trailing: avgOpp > 0
-                          ? IvRingGauge(
-                              value: avgOpp.toDouble(),
-                              size: 44,
-                              stroke: 5,
-                              center: const SizedBox.shrink())
-                          : null,
-                    ),
+                    for (var k = 0; k < cols; k++) ...[
+                      if (k > 0) const SizedBox(width: AppSpace.s4),
+                      Expanded(
+                        child: k < row.length
+                            ? card(row[k], (i - 1) * cols + k + 1, fill: true)
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
                   ],
                 ),
               ),
+            );
+          }
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1240),
+              child: FadeSlideIn(index: i, child: child),
             ),
           );
-        }
-        final p = sorted[i - 1];
-        final score = scoresMap[p.id];
-        return Center(
-          child: ConstrainedBox(
-            constraints:
-                const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
-            child: FadeSlideIn(
-              index: i,
-              child: _ProjectCard(
-                project: p,
-                rank: i,
-                ecosystemScore: score,
-                onTap: () => _openDetail(p, score),
-                onStatusChange: (s) => ref
-                    .read(projectsNotifierProvider.notifier)
-                    .updateStatus(p.id, s),
-                onDelete: () => _confirmDelete(p),
-                onAnalyze: p.marketAnalysisId != null
-                    ? () => context.go(AppConstants.routeMarketIntelligenceHub
-                        .replaceFirst(':id', p.marketAnalysisId!))
-                    : null,
-                onIveAnalysis: () => context.push(
-                  AppConstants.routeProjectAnalysis.replaceFirst(':id', p.id),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
+        },
+      );
+    });
   }
 }
 
@@ -873,8 +899,12 @@ class _ProjectCard extends StatelessWidget {
     this.ecosystemScore,
     this.onAnalyze,
     this.onIveAnalysis,
+    this.fillHeight = false,
   });
 
+  /// In the grid every card in a row stretches to the tallest one, with
+  /// the action bar pinned to the bottom.
+  final bool fillHeight;
   final Project project;
   final int rank;
   final EcosystemScore? ecosystemScore;
@@ -935,16 +965,7 @@ class _ProjectCard extends StatelessWidget {
     final ecoScore = s?.ecosystemScore;
     final gaugeValue = (ecoScore ?? oppScore).toDouble();
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpace.s3),
-      child: IvCard(
-        onTap: onTap,
-        accent: _statusColor,
-        padding: EdgeInsets.zero,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
+    final body = Padding(
               padding: const EdgeInsets.fromLTRB(
                   AppSpace.s4, AppSpace.s4, AppSpace.s4, AppSpace.s3),
               child: Column(
@@ -1030,7 +1051,18 @@ class _ProjectCard extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
+            );
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: fillHeight ? 0 : AppSpace.s3),
+      child: IvCard(
+        onTap: onTap,
+        accent: _statusColor,
+        padding: EdgeInsets.zero,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (fillHeight) Expanded(child: body) else body,
             const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -1128,230 +1160,191 @@ class _ProjectDetailSheet extends ConsumerWidget {
     return 'R\$ ${v.toStringAsFixed(0)}';
   }
 
+  /// Data often arrives with its line breaks stripped ("residualEm um
+  /// único"); restore a break where a sentence visibly runs into the next.
+  static String _readable(String text) {
+    if (text.contains('\n') || text.length < 240) return text;
+    return text.replaceAllMapped(
+        RegExp(r'([a-zà-ú0-9\.\)])([A-ZÀ-Ú][a-zà-ú])'),
+        (m) => '${m.group(1)}\n${m.group(2)}');
+  }
+
+  Widget _panel({required String title, required List<Widget> children}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpace.s4),
+      child: IvCard(
+        padding: const EdgeInsets.all(AppSpace.s4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            IvEyebrow(title),
+            const SizedBox(height: AppSpace.s3),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ecosystemScore;
     final t = AppLocalizations.of(context)!;
+    final eco = s?.ecosystemScore ?? project.opportunityScore;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.65,
-      minChildSize: 0.4,
-      maxChildSize: 0.95,
-      builder: (_, ctrl) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface, gradient: kIvSurfaceGradient,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: ListView(
-          controller: ctrl,
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-          children: [
-            // Handle
-            Center(
-              child: Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.inkSubtle,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            // Header
-            Row(
+    // ── Header (full width) ────────────────────────────────────────────────
+    final header = IvCard(
+      highlight: true,
+      padding: const EdgeInsets.all(AppSpace.s6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          IvRingGauge(
+            value: eco.toDouble(),
+            size: 76,
+            stroke: 7,
+            semanticsLabel: '${t.projectCommandEcoScoreLabel}: $eco / 100',
+          ),
+          const SizedBox(width: AppSpace.s6),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(project.name,
-                      style: const TextStyle(
-                          color: AppColors.ink,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 18)),
-                ),
-                if (s != null)
-                  Column(
-                    children: [
-                      Text('${s.ecosystemScore}',
-                          style: TextStyle(
-                              color: _ecoScoreColor(s.ecosystemScore),
-                              fontSize: 28,
-                              fontWeight: FontWeight.w600)),
-                      Text(t.projectCommandEcoScoreLabel,
-                          style: const TextStyle(
-                              color: AppColors.inkSubtle, fontSize: 11)),
-                    ],
-                  ),
-              ],
-            ),
-            TranslatedContentNotice(localizedFrom: project.localizedFrom),
-            if (project.presentedDescription.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(project.presentedDescription,
-                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 13)),
-            ],
-            if (project.url != null) ...[
-              const SizedBox(height: 4),
-              Text(project.url!,
-                  style:
-                      const TextStyle(color: AppColors.accent, fontSize: 12)),
-            ],
-            const SizedBox(height: 16),
-
-            // Briefing Executivo (IVE-COMMERCIAL-EXPERIENCE-14, Phase B,
-            // Section 05/06) — reuses projectBriefingProvider, which reuses
-            // the SAME deterministic generateBriefing() computation
-            // weeklyBriefingProvider already calls, just filtered to this
-            // project only (see ecosystem_intelligence_provider.dart). Not
-            // an AI call, not quota-consuming — no confirmation needed.
-            // Deliberately does NOT repeat Recomendação IA / Scores /
-            // Pontos Fortes / Riscos / Quick Wins / Próximas Ações /
-            // Alocação de Recursos below, which already answer most of
-            // Section 06's questions for this same project — this section
-            // adds only what those don't: a synthesized summary, recent
-            // (7-day) change signals, and how much knowledge is on file.
-            _briefingSection(context, ref),
-            const SizedBox(height: 8),
-
-            // Recomendação
-            if (s != null) ...[
-              _sectionTitle(t.projectCommandSectionRecommendation),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(
-                      color: AppColors.accent.withOpacity(0.3)),
-                ),
-                child: Row(
+                IvEyebrow(t.projectCommandEcoScoreLabel),
+                const SizedBox(height: AppSpace.s1),
+                Text(project.name,
+                    style: const TextStyle(
+                        color: AppColors.ink,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 24,
+                        letterSpacing: -0.3,
+                        height: 1.2)),
+                const SizedBox(height: AppSpace.s2),
+                Wrap(
+                  spacing: AppSpace.s2,
+                  runSpacing: AppSpace.s2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    IvIconTile(_verdictIcon(s.recommendation), size: 32),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(ecosystemVerdictLabel(s.recommendation, t),
+                    if (s != null && s.recommendation.isNotEmpty)
+                      IvBadge(ecosystemVerdictLabel(s.recommendation, t),
+                          color: AppColors.accent,
+                          icon: _verdictIcon(s.recommendation)),
+                    if (project.url != null)
+                      Text(project.url!,
                           style: const TextStyle(
-                              color: AppColors.accent,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14)),
-                    ),
+                              color: AppColors.accent, fontSize: 13)),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-
-              // Score breakdown
-              _sectionTitle(t.projectCommandSectionEcosystemScores),
-              _ScoreRow(t.projectCommandStatOpportunity, s.opportunityScore),
-              _ScoreRow(t.projectCommandScoreStrategicFit, s.strategicFit),
-              _ScoreRow(t.projectCommandScoreSynergy, s.synergyScore),
-              _ScoreRow(t.projectCommandScoreRoi, s.roiScore),
-              _ScoreRow(t.projectCommandScoreMomentum, s.momentumScore),
-              _ScoreRow(t.opportunityDetailScoreMarket, s.marketScore),
-              _ScoreRow(t.projectCommandScoreExecution, s.executionScore),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    t.projectCommandActionsStats(
-                        s.completedActions, s.actionCount, s.completionRate),
-                    style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
-                  ),
-                  Text(
-                    t.projectCommandTotalRoi(_fmtRevenue(s.totalRoi, t)),
-                    style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Scores do projeto (quando sem ecosystemScore ainda)
-            if (s == null) ...[
-              _sectionTitle(t.projectCommandSectionProjectMetrics),
-              Row(
-                children: [
-                  Expanded(
-                    child: _MetricTile(
-                        label: t.projectCommandStatOpportunity,
-                        value: '${project.opportunityScore}',
-                        color: AppColors.info),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _MetricTile(
-                        label: t.projectCommandMetricComplexity,
-                        value: '${project.complexityScore}',
-                        color: AppColors.warning),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _MetricTile(
-                        label: t.projectCommandStatPotential,
-                        value: _fmtRevenue(project.revenuePotential, t),
-                        color: AppColors.positive),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Pontos fortes
-            if (s != null && s.strengths.isNotEmpty) ...[
-              _sectionTitle(t.projectCommandSectionStrengths),
-              ..._bullets(s.strengths, AppColors.positive, '✓ '),
-              const SizedBox(height: 12),
-            ],
-
-            // Riscos
-            if (s != null && s.risks.isNotEmpty) ...[
-              _sectionTitle(t.opportunityDetailRisksTitle),
-              ..._bullets(s.risks, AppColors.negative, '• '),
-              const SizedBox(height: 12),
-            ],
-
-            // Quick wins
-            if (s != null && s.quickWins.isNotEmpty) ...[
-              _sectionTitle(t.projectCommandSectionQuickWins),
-              ..._bullets(s.quickWins, AppColors.warning, '• '),
-              const SizedBox(height: 12),
-            ],
-
-            // Next actions (from detailsJson)
-            if (project.nextActions.isNotEmpty) ...[
-              _sectionTitle(t.projectCommandSectionNextActions),
-              ..._bullets(project.nextActions, AppColors.accent, '→ '),
-              const SizedBox(height: 12),
-            ],
-
-            const SizedBox(height: 8),
-
-            // Intelligence Profile section
-            if (intelligenceProfile != null) ...[
-              const Divider(color: AppColors.line),
-              const SizedBox(height: 12),
-              _sectionTitle(t.projectCommandSectionIntelligenceProfile),
-              _intelligenceSection(context, ref, intelligenceProfile!),
-              const SizedBox(height: 8),
-            ],
-
-            // Resource Allocation section (IVE-COMMERCIAL-EXPERIENCE-12,
-            // Phase B, Section 04/09) — persistent per-project state, not
-            // the unrelated portfolio-wide simulation on
-            // resource_allocation_screen.dart.
-            const Divider(color: AppColors.line),
-            const SizedBox(height: 12),
-            _sectionTitle(t.projectCommandSectionResourceAllocation),
-            _ResourceAllocationSection(
-              projectId: project.id,
-              projectName: project.name,
+              ],
             ),
-            const SizedBox(height: 8),
+          ),
+        ],
+      ),
+    );
 
-            const Divider(color: AppColors.line),
-            const SizedBox(height: 12),
+    // ── Main column: what the project is and what the analysis says ───────
+    final main = <Widget>[
+      if (project.presentedDescription.isNotEmpty)
+        _panel(title: t.projectCommandFieldDescLabel, children: [
+          TranslatedContentNotice(localizedFrom: project.localizedFrom),
+          SelectableText(_readable(project.presentedDescription),
+              style: const TextStyle(
+                  color: AppColors.inkMuted, fontSize: 14, height: 1.6)),
+        ]),
+      _briefingSection(context, ref),
+      const SizedBox(height: AppSpace.s4),
+      if (s != null && (s.strengths.isNotEmpty || s.risks.isNotEmpty))
+        LayoutBuilder(builder: (context, c) {
+          final strengths = _panel(
+              title: t.projectCommandSectionStrengths,
+              children: _bullets(s.strengths, AppColors.positive, '✓ '));
+          final risks = _panel(
+              title: t.opportunityDetailRisksTitle,
+              children: _bullets(s.risks, AppColors.negative, '• '));
+          if (c.maxWidth < 560 || s.strengths.isEmpty || s.risks.isEmpty) {
+            return Column(children: [
+              if (s.strengths.isNotEmpty) strengths,
+              if (s.risks.isNotEmpty) risks,
+            ]);
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: strengths),
+              const SizedBox(width: AppSpace.s4),
+              Expanded(child: risks),
+            ],
+          );
+        }),
+      if (s != null && s.quickWins.isNotEmpty)
+        _panel(
+            title: t.projectCommandSectionQuickWins,
+            children: _bullets(s.quickWins, AppColors.warning, '• ')),
+      if (project.nextActions.isNotEmpty)
+        _panel(
+            title: t.projectCommandSectionNextActions,
+            children: _bullets(project.nextActions, AppColors.accent, '→ ')),
+      if (intelligenceProfile != null)
+        _panel(
+            title: t.projectCommandSectionIntelligenceProfile,
+            children: [_intelligenceSection(context, ref, intelligenceProfile!)]),
+    ];
 
+    // ── Side column: scores, resources and every action ───────────────────
+    final side = <Widget>[
+      if (s != null)
+        _panel(title: t.projectCommandSectionEcosystemScores, children: [
+          _ScoreRow(t.projectCommandStatOpportunity, s.opportunityScore),
+          _ScoreRow(t.projectCommandScoreStrategicFit, s.strategicFit),
+          _ScoreRow(t.projectCommandScoreSynergy, s.synergyScore),
+          _ScoreRow(t.projectCommandScoreRoi, s.roiScore),
+          _ScoreRow(t.projectCommandScoreMomentum, s.momentumScore),
+          _ScoreRow(t.opportunityDetailScoreMarket, s.marketScore),
+          _ScoreRow(t.projectCommandScoreExecution, s.executionScore),
+          const SizedBox(height: AppSpace.s2),
+          Text(
+            t.projectCommandActionsStats(
+                s.completedActions, s.actionCount, s.completionRate),
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
+          ),
+          const SizedBox(height: AppSpace.s1),
+          Text(
+            t.projectCommandTotalRoi(_fmtRevenue(s.totalRoi, t)),
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
+          ),
+        ])
+      else
+        _panel(title: t.projectCommandSectionProjectMetrics, children: [
+          Row(
+            children: [
+              Expanded(
+                child: _MetricTile(
+                    label: t.projectCommandStatOpportunity,
+                    value: '${project.opportunityScore}',
+                    color: AppColors.info),
+              ),
+              const SizedBox(width: AppSpace.s2),
+              Expanded(
+                child: _MetricTile(
+                    label: t.projectCommandMetricComplexity,
+                    value: '${project.complexityScore}',
+                    color: AppColors.warning),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpace.s2),
+          _MetricTile(
+              label: t.projectCommandStatPotential,
+              value: _fmtRevenue(project.revenuePotential, t),
+              color: AppColors.positive),
+        ]),
+      _panel(title: t.projectCommandSectionResourceAllocation, children: [
+        _ResourceAllocationSection(
+          projectId: project.id,
+          projectName: project.name,
+        ),
+      ]),
+      _panel(title: t.projectDetailActionsTitle, children: [
             // Action buttons
             Row(
               children: [
@@ -1469,9 +1462,64 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 ),
               ],
             ),
-          ],
-        ),
+      ]),
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(project.name, overflow: TextOverflow.ellipsis),
       ),
+      body: LayoutBuilder(builder: (context, c) {
+        final wide = c.maxWidth >= 960;
+        final pad = wide ? AppSpace.s8 : AppSpace.s4;
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(pad, AppSpace.s2, pad, AppSpace.s12),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1160),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  FadeSlideIn(child: header),
+                  const SizedBox(height: AppSpace.s4),
+                  if (wide)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: FadeSlideIn(
+                            index: 1,
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: main),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpace.s6),
+                        SizedBox(
+                          width: 380,
+                          child: FadeSlideIn(
+                            index: 2,
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: side),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    FadeSlideIn(
+                      index: 1,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [...side.take(1), ...main, ...side.skip(1)],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }),
     );
   }
 
@@ -2267,7 +2315,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     return DraggableScrollableSheet(
-      initialChildSize: 0.6,
+      initialChildSize: 0.85,
       minChildSize: 0.4,
       maxChildSize: 0.9,
       expand: false,
@@ -2475,9 +2523,11 @@ class _ScoreRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 110,
+            width: 132,
             child: Text(label,
-                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 13)),
           ),
           Expanded(
             child: ClipRRect(
@@ -2486,7 +2536,7 @@ class _ScoreRow extends StatelessWidget {
                 value: value / 100,
                 backgroundColor: AppColors.line,
                 valueColor: AlwaysStoppedAnimation(_color),
-                minHeight: 6,
+                minHeight: 8,
               ),
             ),
           ),
@@ -2496,7 +2546,7 @@ class _ScoreRow extends StatelessWidget {
             child: Text('$value',
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                    color: _color, fontSize: 12, fontWeight: FontWeight.w600)),
+                    color: _color, fontSize: 13, fontWeight: FontWeight.w600)),
           ),
         ],
       ),

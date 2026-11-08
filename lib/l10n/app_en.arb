@@ -2481,5 +2481,6 @@
   "authHidePassword": "Hide password",
   "authTagline": "AI-powered project and decision intelligence",
   "commonAdd": "Add",
-  "commonRefresh": "Refresh"
+  "commonRefresh": "Refresh",
+  "projectDetailActionsTitle": "Project actions"
 }

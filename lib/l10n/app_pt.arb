@@ -2591,5 +2591,6 @@
   "authHidePassword": "Ocultar senha",
   "authTagline": "Inteligência de projetos e decisões, guiada por IA",
   "commonAdd": "Adicionar",
-  "commonRefresh": "Atualizar"
+  "commonRefresh": "Atualizar",
+  "projectDetailActionsTitle": "Ações do projeto"
 }

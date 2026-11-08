@@ -482,7 +482,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   // ── Mobile/tablet: existing draggable bottom sheet ──────────────────────
   Widget _buildMobileSheet(BuildContext ctx) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.55,
+      initialChildSize: 0.8,
       minChildSize: 0.35,
       maxChildSize: 0.92,
       builder: (_, __) => Container(

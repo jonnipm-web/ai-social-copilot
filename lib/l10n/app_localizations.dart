@@ -12702,6 +12702,12 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Atualizar'**
   String get commonRefresh;
+
+  /// No description provided for @projectDetailActionsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ações do projeto'**
+  String get projectDetailActionsTitle;
 }
 
 class _AppLocalizationsDelegate

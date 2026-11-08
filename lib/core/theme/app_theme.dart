@@ -228,9 +228,12 @@ class AppTheme {
             borderRadius: BorderRadius.circular(AppRadius.lg),
             side: const BorderSide(color: AppColors.line)),
       ),
+      // Default M3 sheets cap at 640px, which reads as a sliver on desktop.
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
+        constraints: BoxConstraints(maxWidth: 880),
+        showDragHandle: false,
       ),
       snackBarTheme: const SnackBarThemeData(
         backgroundColor: AppColors.surfaceRaised,

@@ -81,7 +81,7 @@ class IveDetailSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     return DraggableScrollableSheet(
-      initialChildSize: 0.60,
+      initialChildSize: 0.85,
       minChildSize: 0.40,
       maxChildSize: 0.92,
       builder: (_, ctrl) => Container(

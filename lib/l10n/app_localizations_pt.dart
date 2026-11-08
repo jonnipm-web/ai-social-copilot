@@ -7306,4 +7306,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get commonRefresh => 'Atualizar';
+
+  @override
+  String get projectDetailActionsTitle => 'Ações do projeto';
 }
