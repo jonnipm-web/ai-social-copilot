@@ -2604,12 +2604,11 @@ class _SheetButton extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: onTap,
       icon: Icon(icon, size: 16, color: color),
-      label: Flexible(
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(label,
-              maxLines: 1, style: TextStyle(color: color, fontSize: 13)),
-        ),
+      // OutlinedButton.icon already wraps the label in a Flexible.
+      label: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(label,
+            maxLines: 1, style: TextStyle(color: color, fontSize: 13)),
       ),
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
