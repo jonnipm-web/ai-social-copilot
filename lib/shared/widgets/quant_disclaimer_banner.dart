@@ -17,7 +17,7 @@ class QuantDisclaimerBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline, size: 14, color: theme.colorScheme.outline),
+          Icon(Icons.info_outline_rounded, size: 14, color: theme.colorScheme.outline),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
@@ -32,7 +32,7 @@ class QuantDisclaimerBanner extends StatelessWidget {
               context: context,
               builder: (_) => const QuantDisclaimerSheet(),
             ),
-            child: Icon(Icons.help_outline,
+            child: Icon(Icons.help_outline_rounded,
                 size: 14, color: theme.colorScheme.primary),
           ),
         ],
@@ -57,7 +57,7 @@ class QuantDisclaimerSheet extends StatelessWidget {
           children: [
             Text('About This Analysis',
                 style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             Text(
               'InsightValues Quant calculates mathematical properties of '

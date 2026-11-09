@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
@@ -7,47 +8,48 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/performance_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
-const _bgColor = Color(0xFF0F0F1A);
-const _cardColor = Color(0xFF1A1A2E);
-const _primaryColor = Color(0xFF6C63FF);
+const _bgColor = AppColors.ground;
+const _cardColor = AppColors.surface;
+const _primaryColor = AppColors.accent;
 
 IconData _platformIcon(String platform) {
   switch (platform.toLowerCase()) {
     case 'instagram':
-      return Icons.camera_alt;
+      return Icons.camera_alt_rounded;
     case 'facebook':
-      return Icons.facebook;
+      return Icons.facebook_rounded;
     case 'linkedin':
-      return Icons.business;
+      return Icons.business_rounded;
     case 'youtube':
-      return Icons.play_arrow;
+      return Icons.play_arrow_rounded;
     case 'tiktok':
-      return Icons.music_note;
+      return Icons.music_note_rounded;
     case 'twitter':
-      return Icons.alternate_email;
+      return Icons.alternate_email_rounded;
     case 'email':
-      return Icons.email;
+      return Icons.email_rounded;
     case 'google':
-      return Icons.search;
+      return Icons.search_rounded;
     case 'blog':
-      return Icons.article;
+      return Icons.article_rounded;
     case 'hotmart':
-      return Icons.storefront;
+      return Icons.storefront_rounded;
     case 'shopify':
-      return Icons.shopping_bag;
+      return Icons.shopping_bag_rounded;
     case 'amazon':
-      return Icons.local_shipping;
+      return Icons.local_shipping_rounded;
     default:
-      return Icons.bar_chart;
+      return Icons.bar_chart_rounded;
   }
 }
 
 Color _scoreColor(double score) {
-  if (score >= 75) return const Color(0xFF4CAF50);
-  if (score >= 50) return const Color(0xFFFFB74D);
-  if (score >= 25) return const Color(0xFFFF7043);
-  return const Color(0xFFEF5350);
+  if (score >= 75) return AppColors.positive;
+  if (score >= 50) return AppColors.warning;
+  if (score >= 25) return AppColors.warning;
+  return AppColors.negative;
 }
 
 class PerformanceScreen extends ConsumerStatefulWidget {
@@ -64,9 +66,9 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
     final metricsAsync = ref.watch(performanceMetricsProvider);
 
     return Scaffold(
-      backgroundColor: _bgColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -76,37 +78,35 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
             }
           },
         ),
-        backgroundColor: _cardColor,
+        backgroundColor: Colors.transparent,
         title: Text(
           l10n.performanceTitle,
           style:
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: AppColors.ink),
         elevation: 0,
       ),
       drawer: const AppDrawer(),
       floatingActionButton: FloatingActionButton(
         backgroundColor: _primaryColor,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.ink,
         onPressed: () => _openAddMetricSheet(context),
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add_rounded),
       ),
-      body: metricsAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: _primaryColor),
-        ),
+      body: IvBody(child: metricsAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (error, _) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline,
-                  color: Colors.redAccent, size: 48),
+              const Icon(Icons.error_outline_rounded,
+                  color: AppColors.negative, size: 48),
               const SizedBox(height: 12),
               Text(
                 l10n.performanceLoadError(extractErrorMessage(error, l10n)),
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70),
+                style: const TextStyle(color: AppColors.inkMuted),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -123,17 +123,17 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.bar_chart,
+                  Icon(Icons.bar_chart_rounded,
                       size: 72, color: _primaryColor.withOpacity(0.4)),
                   const SizedBox(height: 16),
                   Text(
                     l10n.performanceEmpty,
-                    style: const TextStyle(color: Colors.white54, fontSize: 16),
+                    style: const TextStyle(color: AppColors.inkMuted, fontSize: 16),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     l10n.performanceEmptyHint,
-                    style: const TextStyle(color: Colors.white38, fontSize: 13),
+                    style: const TextStyle(color: AppColors.inkSubtle, fontSize: 13),
                   ),
                 ],
               ),
@@ -141,7 +141,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 64),
             itemCount: metrics.length,
             itemBuilder: (context, index) {
               final metric = metrics[index];
@@ -152,7 +152,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
             },
           );
         },
-      ),
+      )),
     );
   }
 
@@ -163,19 +163,19 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: _cardColor,
         title: Text(l10n.performanceDeleteTitle,
-            style: const TextStyle(color: Colors.white)),
+            style: const TextStyle(color: AppColors.ink)),
         content: Text(
           l10n.performanceDeleteConfirm(metric.platform),
-          style: const TextStyle(color: Colors.white70),
+          style: const TextStyle(color: AppColors.inkMuted),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(l10n.commonCancel,
-                style: const TextStyle(color: Colors.white54)),
+                style: const TextStyle(color: AppColors.inkMuted)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.negative),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.commonDelete),
           ),
@@ -191,7 +191,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(l10n.performanceDeleteSuccess),
-              backgroundColor: Colors.redAccent,
+              backgroundColor: AppColors.negative,
             ),
           );
         }
@@ -201,7 +201,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
             SnackBar(
               content: Text(
                   l10n.performanceDeleteError(extractErrorMessage(e, l10n))),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.negative,
             ),
           );
         }
@@ -260,10 +260,10 @@ class _MetricCard extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
-          color: Colors.redAccent.withOpacity(0.85),
-          borderRadius: BorderRadius.circular(12),
+          color: AppColors.negative.withOpacity(0.85),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: const Icon(Icons.delete_rounded, color: AppColors.ink),
       ),
       confirmDismiss: (_) async {
         onDelete();
@@ -275,9 +275,9 @@ class _MetricCard extends StatelessWidget {
           color: _cardColor,
           margin: const EdgeInsets.only(bottom: 12),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -287,7 +287,7 @@ class _MetricCard extends StatelessWidget {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: _primaryColor.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: Icon(
                         _platformIcon(metric.platform),
@@ -303,31 +303,31 @@ class _MetricCard extends StatelessWidget {
                           Text(
                             metric.platform,
                             style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                              color: AppColors.ink,
+                              fontWeight: FontWeight.w600,
                               fontSize: 15,
                             ),
                           ),
                           Text(
                             dateStr,
                             style: const TextStyle(
-                                color: Colors.white38, fontSize: 12),
+                                color: AppColors.inkSubtle, fontSize: 12),
                           ),
                         ],
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: scoreColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
                       ),
                       child: Text(
                         '${score.toStringAsFixed(1)}',
                         style: TextStyle(
                           color: scoreColor,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
                       ),
@@ -360,15 +360,15 @@ class _MetricCard extends StatelessWidget {
                     Text(
                       l10n.performanceScoreLabel,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 12),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                         child: LinearProgressIndicator(
                           value: score / 100,
-                          backgroundColor: Colors.white12,
+                          backgroundColor: AppColors.line,
                           valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
                           minHeight: 8,
                         ),
@@ -380,7 +380,7 @@ class _MetricCard extends StatelessWidget {
                       style: TextStyle(
                           color: scoreColor,
                           fontSize: 11,
-                          fontWeight: FontWeight.bold),
+                          fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -388,7 +388,7 @@ class _MetricCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     metric.notes!,
-                    style: const TextStyle(color: Colors.white38, fontSize: 12),
+                    style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -424,15 +424,15 @@ class _MetricCard extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: AppColors.inkSubtle,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 12),
             ListTile(
-              leading: const Icon(Icons.delete, color: Colors.redAccent),
+              leading: const Icon(Icons.delete_rounded, color: AppColors.negative),
               title: Text(l10n.performanceDeleteTitle,
-                  style: const TextStyle(color: Colors.white)),
+                  style: const TextStyle(color: AppColors.ink)),
               onTap: () {
                 Navigator.pop(context);
                 onDelete();
@@ -456,25 +456,24 @@ class _MetricChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(8),
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Column(
           children: [
             Text(
               value,
               style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+                color: AppColors.ink,
+                fontWeight: FontWeight.w600,
                 fontSize: 12,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(color: Colors.white38, fontSize: 10),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
             ),
           ],
         ),
@@ -537,7 +536,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.performanceSelectPlatform),
-          backgroundColor: Colors.orangeAccent,
+          backgroundColor: AppColors.warning,
         ),
       );
       return;
@@ -575,7 +574,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
           SnackBar(
             content: Text(AppLocalizations.of(context)!.performanceSaveError(
                 extractErrorMessage(e, AppLocalizations.of(context)!))),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.negative,
           ),
         );
       }
@@ -591,7 +590,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
 
     return Container(
       decoration: const BoxDecoration(
-        color: _cardColor,
+        color: _cardColor, gradient: kIvSurfaceGradient,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + bottomInset),
@@ -606,7 +605,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white24,
+                    color: AppColors.inkSubtle,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -615,9 +614,9 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
               Text(
                 l10n.performanceNewMetricTitle,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.ink,
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 16),
@@ -626,7 +625,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
               DropdownButtonFormField<String>(
                 value: _selectedPlatform,
                 dropdownColor: _bgColor,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: AppColors.ink),
                 decoration: _inputDecoration(l10n.performanceFieldPlatform),
                 items: PerformanceMetrics.platforms.map((p) {
                   return DropdownMenuItem(
@@ -635,7 +634,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                       children: [
                         Icon(_platformIcon(p), color: _primaryColor, size: 18),
                         const SizedBox(width: 8),
-                        Text(p, style: const TextStyle(color: Colors.white)),
+                        Text(p, style: const TextStyle(color: AppColors.ink)),
                       ],
                     ),
                   );
@@ -665,7 +664,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                 controller: _receitaCtrl,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: AppColors.ink),
                 decoration: _inputDecoration(l10n.performanceFieldRevenue),
               ),
               const SizedBox(height: 12),
@@ -673,7 +672,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
               // Notes
               TextFormField(
                 controller: _notasCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: AppColors.ink),
                 maxLines: 3,
                 decoration: _inputDecoration(l10n.performanceFieldNotes),
               ),
@@ -686,9 +685,9 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _primaryColor,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.ink,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                     ),
                   ),
                   onPressed: _saving ? null : _submit,
@@ -698,13 +697,13 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: AppColors.ink,
                           ),
                         )
                       : Text(
                           l10n.commonSave,
                           style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
+                              fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                 ),
               ),
@@ -727,7 +726,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
           child: TextFormField(
             controller: ctrl1,
             keyboardType: TextInputType.number,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: AppColors.ink),
             decoration: _inputDecoration(label1),
           ),
         ),
@@ -736,7 +735,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
           child: TextFormField(
             controller: ctrl2,
             keyboardType: TextInputType.number,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: AppColors.ink),
             decoration: _inputDecoration(label2),
           ),
         ),
@@ -747,18 +746,18 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
   InputDecoration _inputDecoration(String label) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Colors.white54),
+      labelStyle: const TextStyle(color: AppColors.inkMuted),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.06),
+      fillColor: AppColors.ink.withOpacity(0.06),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         borderSide: const BorderSide(color: _primaryColor, width: 1.5),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     );
   }
 }

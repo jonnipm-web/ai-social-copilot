@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,6 +7,7 @@ import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 import '../../../data/models/content_item.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/content_provider.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class ContentFormScreen extends ConsumerStatefulWidget {
   const ContentFormScreen({super.key, this.itemId});
@@ -97,7 +99,7 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
           SnackBar(
               content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix(
                   extractErrorMessage(e, AppLocalizations.of(context)!))),
-              backgroundColor: Colors.red),
+              backgroundColor: AppColors.negative),
         );
       }
     } finally {
@@ -124,7 +126,7 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
         title: Text(
             isEdit ? l10n.uxContentFormEditTitle : l10n.uxContentFormNewTitle),
       ),
-      body: SingleChildScrollView(
+      body: IvBody(child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
@@ -133,7 +135,7 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
             children: [
               Text(
                 l10n.uxContentFormTypeLabel,
-                style: const TextStyle(color: Colors.white54, fontSize: 13),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -147,16 +149,16 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
                       label: Text(
                         ContentItem.localizedTypeLabel(t, l10n),
                         style: TextStyle(
-                          color: selected ? Colors.white : Colors.white54,
+                          color: selected ? AppColors.ink : AppColors.inkMuted,
                           fontSize: 12,
                         ),
                       ),
                       backgroundColor: selected
-                          ? const Color(0xFF6C63FF)
-                          : Colors.white.withOpacity(0.07),
+                          ? AppColors.accent
+                          : AppColors.ink.withOpacity(0.07),
                       side: BorderSide(
                         color:
-                            selected ? const Color(0xFF6C63FF) : Colors.white12,
+                            selected ? AppColors.accent : AppColors.line,
                       ),
                     ),
                   );
@@ -200,11 +202,11 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
               ElevatedButton(
                 onPressed: _loading ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6C63FF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.onAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                 ),
                 child: _loading
@@ -213,7 +215,7 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: AppColors.ink,
                         ),
                       )
                     : Text(
@@ -221,13 +223,13 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
                             ? l10n.uxContentFormSaveChanges
                             : l10n.uxContentFormAddToLibrary,
                         style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.bold),
+                            fontSize: 15, fontWeight: FontWeight.w600),
                       ),
               ),
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }
@@ -253,25 +255,25 @@ class _Field extends StatelessWidget {
       controller: controller,
       maxLines: maxLines,
       validator: validator,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: AppColors.ink),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-        hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+        labelStyle: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
+        hintStyle: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: AppColors.ink.withOpacity(0.05),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.white12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.line),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.white12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF6C63FF)),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.accent),
         ),
       ),
     );

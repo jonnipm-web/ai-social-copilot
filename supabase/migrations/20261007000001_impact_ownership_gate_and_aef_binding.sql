@@ -61,10 +61,15 @@ BEGIN
     RAISE EXCEPTION 'IMPACT_INVESTIGATION_NOT_FOUND' USING ERRCODE = '23503';
   END IF;
 
-  v_actor_id := CASE
-    WHEN TG_OP = 'INSERT' THEN NEW.created_by
-    ELSE NEW.updated_by
-  END;
+  -- IF, not CASE: a PL/pgSQL CASE expression resolves every NEW.<field> it
+  -- names, so NEW.updated_by failed on INSERT into tables without that
+  -- column. On UPDATE the column is read through to_jsonb so a table
+  -- without it yields NULL (-> not the owner -> denied, fail closed).
+  IF TG_OP = 'INSERT' THEN
+    v_actor_id := NEW.created_by;
+  ELSE
+    v_actor_id := (to_jsonb(NEW) ->> 'updated_by')::uuid;
+  END IF;
 
   IF v_actor_id IS DISTINCT FROM v_owner_id THEN
     RAISE EXCEPTION 'IMPACT_ACTOR_NOT_OWNER' USING ERRCODE = '42501';

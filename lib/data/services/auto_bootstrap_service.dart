@@ -165,8 +165,8 @@ class AutoBootstrapService {
         // ── Step 2: Generate actions ────────────────────────────────────
         if (savedOpps.isNotEmpty) {
           onStep?.call(l10n.bootstrapStepGeneratingActions);
-          final oppList = savedOpps
-              .take(3)
+          final sentOpps = savedOpps.take(3).toList();
+          final oppList = sentOpps
               .map((o) => {
                     'title': o.title,
                     'description': o.description,
@@ -189,13 +189,23 @@ class AutoBootstrapService {
             for (int i = 0; i < rawActs.length; i++) {
               final a = rawActs[i];
               if (a is! Map<String, dynamic>) continue;
-              final oppId =
-                  i < savedOpps.length ? savedOpps[i].id : savedOpps.first.id;
+              // The edge function names which opportunity (1-based, in the
+              // order sent) each action advances; older responses don't, so
+              // fall back to position.
+              final idx = _toInt(a['opportunity_index']);
+              final opp = (idx >= 1 && idx <= sentOpps.length)
+                  ? sentOpps[idx - 1]
+                  : (i < sentOpps.length ? sentOpps[i] : sentOpps.first);
+              String? text(Object? v) {
+                final t = (v as String?)?.trim();
+                return (t == null || t.isEmpty) ? null : t;
+              }
+
               final item = ActionQueueItem(
                 id: '',
                 userId: uid,
                 projectId: project.id,
-                opportunityLabId: oppId,
+                opportunityLabId: opp.id,
                 actionType: (a['action_type'] as String?) ?? 'tarefa',
                 title: (a['title'] as String?) ?? '',
                 priority: _toInt(a['priority']),
@@ -204,6 +214,17 @@ class AutoBootstrapService {
                 roiScore: _toInt(a['roi_score']),
                 status: 'pending',
                 createdAt: DateTime.now(),
+                // Created by the system, not the user — and it carries the
+                // why, so the detail page can explain itself.
+                origin: 'auto_bootstrap',
+                description: text(a['description']) ?? text(opp.description),
+                rationale: text(a['rationale']) ?? text(opp.rationale),
+                plan: opp.actionSteps,
+                risks: opp.risks,
+                sources: opp.sources,
+                marketScore: opp.marketScore,
+                confidence: opp.confidence,
+                marketAnalysisId: opp.marketAnalysisId,
               );
               if (item.title.isEmpty) continue;
               await _actSvc.create(item);

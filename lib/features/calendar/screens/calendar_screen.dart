@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +8,7 @@ import '../../../data/models/calendar_item.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/calendar_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -25,7 +27,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -42,9 +44,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         onPressed: () => _showCreateDialog(context),
         icon: const Icon(Icons.add_rounded),
         label: Text(l10n.calendarNewPost),
-        backgroundColor: const Color(0xFF6C63FF),
+        backgroundColor: AppColors.accent,
       ),
-      body: Column(
+      body: IvBody(child: Column(
         children: [
           // Filtros de status
           SizedBox(
@@ -56,7 +58,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 _StatusChip(
                   label: l10n.commonAll,
                   selected: _filterStatus == null,
-                  color: Colors.white54,
+                  color: AppColors.inkMuted,
                   onTap: () => setState(() => _filterStatus = null),
                 ),
                 ...CalendarItem.statuses.map((s) => _StatusChip(
@@ -71,10 +73,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           ),
           Expanded(
             child: itemsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const IvLoadingSkeleton(),
               error: (e, _) => Center(
                 child: Text(l10n.commonError,
-                    style: const TextStyle(color: Colors.white54)),
+                    style: const TextStyle(color: AppColors.inkMuted)),
               ),
               data: (items) {
                 final filtered = _filterStatus == null
@@ -87,30 +89,30 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.calendar_month_rounded,
-                            size: 64, color: Colors.white24),
+                            size: 64, color: AppColors.inkSubtle),
                         const SizedBox(height: 12),
                         Text(l10n.calendarEmpty,
-                            style: const TextStyle(color: Colors.white54)),
+                            style: const TextStyle(color: AppColors.inkMuted)),
                         const SizedBox(height: 4),
                         Text(l10n.calendarEmptyHint,
                             style: const TextStyle(
-                                color: Colors.white38, fontSize: 12)),
+                                color: AppColors.inkSubtle, fontSize: 12)),
                       ],
                     ),
                   );
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 64),
                   itemCount: filtered.length,
                   itemBuilder: (_, i) =>
-                      _CalendarCard(item: filtered[i], ref: ref),
+                      FadeSlideIn(index: i, child: _CalendarCard(item: filtered[i], ref: ref)),
                 );
               },
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 
@@ -118,7 +120,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -156,14 +158,14 @@ class _CalendarCard extends StatelessWidget {
     final statusLabel = CalendarItem.localizedStatusLabel(item.status, l10n);
 
     return Card(
-      color: Colors.white.withOpacity(0.05),
-      margin: const EdgeInsets.only(bottom: 10),
+      color: AppColors.ink.withOpacity(0.05),
+      margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         side: BorderSide(color: statusColor.withOpacity(0.3)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -174,7 +176,7 @@ class _CalendarCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(color: statusColor.withOpacity(0.4)),
                   ),
                   child: Text(
@@ -190,23 +192,22 @@ class _CalendarCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.07),
-                      borderRadius: BorderRadius.circular(6),
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text(
                       item.platform!,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 10),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 11),
                     ),
                   ),
                 ],
                 const Spacer(),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert,
-                      color: Colors.white38, size: 18),
-                  color: const Color(0xFF1A1A2E),
+                  icon: const Icon(Icons.more_vert_rounded,
+                      color: AppColors.inkSubtle, size: 18),
+                  color: AppColors.surface,
                   onSelected: (value) async {
                     if (value == 'delete') {
                       await ref
@@ -228,14 +229,14 @@ class _CalendarCard extends StatelessWidget {
                               child: Text(
                                 '→ ${CalendarItem.localizedStatusLabel(s, AppLocalizations.of(context)!)}',
                                 style: const TextStyle(
-                                    color: Colors.white70, fontSize: 13),
+                                    color: AppColors.inkMuted, fontSize: 13),
                               ),
                             )),
                     const PopupMenuDivider(),
                     PopupMenuItem(
                       value: 'delete',
                       child: Text(l10n.commonDelete,
-                          style: const TextStyle(color: Colors.red)),
+                          style: const TextStyle(color: AppColors.negative)),
                     ),
                   ],
                 ),
@@ -245,7 +246,7 @@ class _CalendarCard extends StatelessWidget {
             Text(
               item.theme ?? l10n.calendarNoTheme,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.ink,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
@@ -254,7 +255,7 @@ class _CalendarCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 item.objective!,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -264,12 +265,12 @@ class _CalendarCard extends StatelessWidget {
               Row(
                 children: [
                   const Icon(Icons.article_rounded,
-                      color: Colors.white24, size: 13),
+                      color: AppColors.inkSubtle, size: 13),
                   const SizedBox(width: 4),
                   Text(
                     CalendarItem.localizedFormatLabel(
                         item.format!, AppLocalizations.of(context)!),
-                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                    style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
                   ),
                 ],
               ),
@@ -279,11 +280,11 @@ class _CalendarCard extends StatelessWidget {
               Row(
                 children: [
                   const Icon(Icons.schedule_rounded,
-                      color: Colors.white38, size: 13),
+                      color: AppColors.inkSubtle, size: 13),
                   const SizedBox(width: 4),
                   Text(
                     _formatDate(item.suggestedDate!),
-                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                    style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
                   ),
                 ],
               ),
@@ -304,17 +305,17 @@ class _CalendarCard extends StatelessWidget {
 Color _statusColor(String status) {
   switch (status) {
     case 'publicado':
-      return Colors.green;
+      return AppColors.positive;
     case 'aprovado':
-      return Colors.teal;
+      return AppColors.accent;
     case 'gerado':
-      return const Color(0xFF6C63FF);
+      return AppColors.accent;
     case 'planejado':
-      return const Color(0xFFB44FE8);
+      return AppColors.accent;
     case 'arquivado':
-      return Colors.white24;
+      return AppColors.inkSubtle;
     default:
-      return Colors.orange;
+      return AppColors.warning;
   }
 }
 
@@ -341,14 +342,14 @@ class _StatusChip extends StatelessWidget {
           label: Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.white : Colors.white54,
+              color: selected ? AppColors.ink : AppColors.inkMuted,
               fontSize: 12,
             ),
           ),
           backgroundColor: selected
               ? color.withOpacity(0.8)
-              : Colors.white.withOpacity(0.07),
-          side: BorderSide(color: selected ? color : Colors.white12),
+              : AppColors.ink.withOpacity(0.07),
+          side: BorderSide(color: selected ? color : AppColors.line),
           padding: const EdgeInsets.symmetric(horizontal: 4),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
@@ -396,8 +397,8 @@ class _CreateCalendarItemSheetState extends State<_CreateCalendarItemSheet> {
           Text(
             l10n.calendarNewPostSheetTitle,
             style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+              color: AppColors.ink,
+              fontWeight: FontWeight.w600,
               fontSize: 16,
             ),
           ),
@@ -417,8 +418,8 @@ class _CreateCalendarItemSheetState extends State<_CreateCalendarItemSheet> {
           DropdownButtonFormField<String>(
             value: _platform,
             decoration: _dropDecoration(l10n.calendarPlatformLabel),
-            dropdownColor: const Color(0xFF1A1A2E),
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            dropdownColor: AppColors.surface,
+            style: const TextStyle(color: AppColors.ink, fontSize: 13),
             items: CalendarItem.platforms
                 .map((p) => DropdownMenuItem(value: p, child: Text(p)))
                 .toList(),
@@ -428,8 +429,8 @@ class _CreateCalendarItemSheetState extends State<_CreateCalendarItemSheet> {
           DropdownButtonFormField<String>(
             value: _format,
             decoration: _dropDecoration(l10n.calendarFormatLabel),
-            dropdownColor: const Color(0xFF1A1A2E),
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            dropdownColor: AppColors.surface,
+            style: const TextStyle(color: AppColors.ink, fontSize: 13),
             items: CalendarItem.formats
                 .map((f) => DropdownMenuItem(
                       value: f,
@@ -453,16 +454,16 @@ class _CreateCalendarItemSheetState extends State<_CreateCalendarItemSheet> {
               }
             },
             icon: const Icon(Icons.schedule_rounded,
-                color: Colors.white54, size: 16),
+                color: AppColors.inkMuted, size: 16),
             label: Text(
               _suggestedDate == null
                   ? l10n.calendarSetSuggestedDate
                   : l10n.calendarSuggestedDateValue(_suggestedDate!.day,
                       _suggestedDate!.month, _suggestedDate!.year),
-              style: const TextStyle(color: Colors.white54, fontSize: 13),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
             ),
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.white12),
+              side: const BorderSide(color: AppColors.line),
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
           ),
@@ -481,15 +482,15 @@ class _CreateCalendarItemSheetState extends State<_CreateCalendarItemSheet> {
               });
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6C63FF),
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.accent,
+              foregroundColor: AppColors.onAccent,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
             ),
             child: Text(l10n.calendarAddButton,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+                style: const TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -499,16 +500,16 @@ class _CreateCalendarItemSheetState extends State<_CreateCalendarItemSheet> {
   InputDecoration _dropDecoration(String label) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+      labelStyle: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.05),
+      fillColor: AppColors.ink.withOpacity(0.05),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.white12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderSide: const BorderSide(color: AppColors.line),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.white12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderSide: const BorderSide(color: AppColors.line),
       ),
     );
   }
@@ -530,25 +531,25 @@ class _SheetField extends StatelessWidget {
     return TextField(
       controller: controller,
       maxLines: 1,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: AppColors.ink),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-        hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+        labelStyle: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
+        hintStyle: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: AppColors.ink.withOpacity(0.05),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.white12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.line),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.white12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF6C63FF)),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.accent),
         ),
       ),
     );

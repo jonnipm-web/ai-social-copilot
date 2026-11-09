@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart'
     show extractErrorMessage, showErrorSnack;
 import '../../../data/models/quota_info.dart';
 import '../../../data/services/billing_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/quota_provider.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class UpgradeScreen extends ConsumerWidget {
   const UpgradeScreen({super.key});
@@ -23,29 +24,28 @@ class UpgradeScreen extends ConsumerWidget {
         title: Text(t.upgradePlansTitle),
         leading: const BackButton(),
       ),
-      body: SingleChildScrollView(
+      body: IvBody(child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Center(
           child: ConstrainedBox(
-            constraints:
-                const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+            constraints: const BoxConstraints(maxWidth: 960),
             child: quotaAsync.when(
               loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 60),
+                padding: EdgeInsets.symmetric(vertical: 56),
                 child: Center(child: CircularProgressIndicator()),
               ),
               error: (err, _) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 40),
                 child: Text(
                   t.upgradeLoadError,
-                  style: const TextStyle(color: Colors.white54),
+                  style: const TextStyle(color: AppColors.inkMuted),
                 ),
               ),
               data: (quota) => _UpgradeContent(quota: quota),
             ),
           ),
         ),
-      ),
+      )),
     );
   }
 }
@@ -81,57 +81,62 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
       children: [
         _UsageBanner(quota: quota),
         const SizedBox(height: 28),
-        _PlanCard(
-          title: t.planFree,
-          subtitle: quota.isAdmin ? '' : t.upgradeFreeSubtitle,
-          price: t.planFreePrice,
-          period: '',
-          isHighlighted: false,
-          isCurrentPlan: !quota.isCommercialPro && !quota.isAdmin,
-          badge: null,
-          features: [
-            _Feature(t.planFreeAnalyses(_UpgradeContent._freeLimit), true),
-            _Feature(t.upgradeFeatureWebsiteAnalysis, true),
-            _Feature(t.upgradeFeatureStrategyActions, true),
-            _Feature(t.upgradeFeatureUnlimited, false),
-            _Feature(t.upgradeFeaturePriority, false),
-            _Feature(t.upgradeFeatureSupport, false),
+        IvCardGrid(
+          minTileWidth: 360,
+          maxColumns: 2,
+          children: [
+            _PlanCard(
+              title: t.planFree,
+              subtitle: quota.isAdmin ? '' : t.upgradeFreeSubtitle,
+              price: t.planFreePrice,
+              period: '',
+              isHighlighted: false,
+              isCurrentPlan: !quota.isCommercialPro && !quota.isAdmin,
+              badge: null,
+              features: [
+                _Feature(t.planFreeAnalyses(_UpgradeContent._freeLimit), true),
+                _Feature(t.upgradeFeatureWebsiteAnalysis, true),
+                _Feature(t.upgradeFeatureStrategyActions, true),
+                _Feature(t.upgradeFeatureUnlimited, false),
+                _Feature(t.upgradeFeaturePriority, false),
+                _Feature(t.upgradeFeatureSupport, false),
+              ],
+              buttonLabel:
+                  quota.isCommercialPro ? t.upgradePreviousPlan : t.planCurrentPlan,
+              onPressed: null,
+            ),
+            _PlanCard(
+              title: t.planPro,
+              subtitle: t.upgradeProSubtitle,
+              price: t.planProPriceAmount,
+              period: t.planProPricePeriod,
+              isHighlighted: !quota.isCommercialPro,
+              isCurrentPlan: quota.isCommercialPro,
+              badge: quota.isCommercialPro
+                  ? t.upgradeCurrentPlanBadge
+                  : t.upgradeMostPopular,
+              features: [
+                _Feature(t.planProAnalyses(displayedProLimit), true),
+                _Feature(t.upgradeFeatureWebsiteAnalysis, true),
+                _Feature(t.upgradeFeatureStrategyActions, true),
+                _Feature(t.upgradeFeaturePriority, true),
+                _Feature(t.upgradeFeatureSupportEmail, true),
+                _Feature(t.upgradeFeatureEarlyAccess, true),
+              ],
+              buttonLabel: quota.isCommercialPro
+                  ? t.planCurrentPlan
+                  : (_isRedirecting ? t.checkoutOpening : t.upgradeSubscribeCta),
+              onPressed: quota.isCommercialPro || quota.isAdmin || _isRedirecting
+                  ? null
+                  : _onUpgradeTap,
+            ),
           ],
-          buttonLabel:
-              quota.isCommercialPro ? t.upgradePreviousPlan : t.planCurrentPlan,
-          onPressed: null,
-        ),
-        const SizedBox(height: 16),
-        _PlanCard(
-          title: t.planPro,
-          subtitle: t.upgradeProSubtitle,
-          price: t.planProPriceAmount,
-          period: t.planProPricePeriod,
-          isHighlighted: !quota.isCommercialPro,
-          isCurrentPlan: quota.isCommercialPro,
-          badge: quota.isCommercialPro
-              ? t.upgradeCurrentPlanBadge
-              : t.upgradeMostPopular,
-          features: [
-            _Feature(t.planProAnalyses(displayedProLimit), true),
-            _Feature(t.upgradeFeatureWebsiteAnalysis, true),
-            _Feature(t.upgradeFeatureStrategyActions, true),
-            _Feature(t.upgradeFeaturePriority, true),
-            _Feature(t.upgradeFeatureSupportEmail, true),
-            _Feature(t.upgradeFeatureEarlyAccess, true),
-          ],
-          buttonLabel: quota.isCommercialPro
-              ? t.planCurrentPlan
-              : (_isRedirecting ? t.checkoutOpening : t.upgradeSubscribeCta),
-          onPressed: quota.isCommercialPro || quota.isAdmin || _isRedirecting
-              ? null
-              : _onUpgradeTap,
         ),
         const SizedBox(height: 12),
         Text(
           t.planFounderNote,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white38, fontSize: 11),
+          style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
         ),
         const SizedBox(height: 32),
         _FaqSection(
@@ -173,9 +178,9 @@ class _UsageBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white12),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,14 +188,14 @@ class _UsageBanner extends StatelessWidget {
           Row(
             children: [
               const Icon(Icons.bolt_rounded,
-                  size: 18, color: Color(0xFF6C63FF)),
+                  size: 18, color: AppColors.accent),
               const SizedBox(width: 6),
               Text(
                 t.upgradeUsageThisMonth,
                 style: Theme.of(context)
                     .textTheme
                     .titleSmall
-                    ?.copyWith(color: Colors.white70),
+                    ?.copyWith(color: AppColors.inkMuted),
               ),
               const Spacer(),
               Text(
@@ -198,21 +203,21 @@ class _UsageBanner extends StatelessWidget {
                     ? '${quota.used} / 99.999'
                     : '${quota.used} / ${quota.limit}',
                 style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.ink,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             child: LinearProgressIndicator(
               value: quota.fractionUsed,
               minHeight: 8,
-              backgroundColor: Colors.white12,
+              backgroundColor: AppColors.line,
               valueColor: AlwaysStoppedAnimation<Color>(
-                quota.isExhausted ? Colors.red : const Color(0xFF6C63FF),
+                quota.isExhausted ? AppColors.negative : AppColors.accent,
               ),
             ),
           ),
@@ -227,8 +232,8 @@ class _UsageBanner extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               color: remaining > 0 || quota.isAdmin
-                  ? Colors.white54
-                  : Colors.red.shade300,
+                  ? AppColors.inkMuted
+                  : AppColors.negative,
             ),
           ),
         ],
@@ -268,17 +273,17 @@ class _PlanCard extends StatelessWidget {
   final String buttonLabel;
   final VoidCallback? onPressed;
 
-  static const _primary = Color(0xFF6C63FF);
-  static const _gold = Color(0xFFFFD700);
+  static const _primary = AppColors.accent;
+  static const _gold = AppColors.gold;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
-          color: isHighlighted ? _primary : Colors.white12,
+          color: isHighlighted ? _primary : AppColors.line,
           width: isHighlighted ? 2 : 1,
         ),
         boxShadow: isHighlighted
@@ -296,9 +301,9 @@ class _PlanCard extends StatelessWidget {
         children: [
           if (badge != null)
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               decoration: BoxDecoration(
-                color: isCurrentPlan ? const Color(0xFF03DAC6) : _primary,
+                color: isCurrentPlan ? AppColors.accent : _primary,
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(14)),
               ),
@@ -307,8 +312,8 @@ class _PlanCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.ink,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -324,7 +329,7 @@ class _PlanCard extends StatelessWidget {
                       title,
                       style: const TextStyle(
                         fontSize: 20,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     if (isHighlighted) ...[
@@ -335,7 +340,7 @@ class _PlanCard extends StatelessWidget {
                 ),
                 Text(
                   subtitle,
-                  style: const TextStyle(fontSize: 13, color: Colors.white54),
+                  style: const TextStyle(fontSize: 13, color: AppColors.inkMuted),
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -345,7 +350,7 @@ class _PlanCard extends StatelessWidget {
                       price,
                       style: const TextStyle(
                         fontSize: 32,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     if (period.isNotEmpty)
@@ -355,14 +360,14 @@ class _PlanCard extends StatelessWidget {
                           period,
                           style: const TextStyle(
                             fontSize: 14,
-                            color: Colors.white54,
+                            color: AppColors.inkMuted,
                           ),
                         ),
                       ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Divider(color: Colors.white12),
+                const Divider(color: AppColors.line),
                 const SizedBox(height: 12),
                 ...features.map((f) => _FeatureRow(feature: f)),
                 const SizedBox(height: 20),
@@ -370,8 +375,8 @@ class _PlanCard extends StatelessWidget {
                   onPressed: onPressed,
                   style: onPressed == null
                       ? ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white10,
-                          foregroundColor: Colors.white38,
+                          backgroundColor: AppColors.line,
+                          foregroundColor: AppColors.inkSubtle,
                         )
                       : null,
                   child: Text(buttonLabel),
@@ -392,7 +397,7 @@ class _FeatureRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Icon(
@@ -400,7 +405,7 @@ class _FeatureRow extends StatelessWidget {
                 ? Icons.check_circle_rounded
                 : Icons.cancel_rounded,
             size: 18,
-            color: feature.included ? const Color(0xFF03DAC6) : Colors.white24,
+            color: feature.included ? AppColors.accent : AppColors.inkSubtle,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -408,7 +413,7 @@ class _FeatureRow extends StatelessWidget {
               feature.label,
               style: TextStyle(
                 fontSize: 14,
-                color: feature.included ? Colors.white : Colors.white38,
+                color: feature.included ? AppColors.ink : AppColors.inkSubtle,
                 decoration:
                     feature.included ? null : TextDecoration.lineThrough,
               ),
@@ -442,7 +447,7 @@ class _FaqSection extends StatelessWidget {
           style: Theme.of(context)
               .textTheme
               .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700),
+              ?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
         ...items.map((item) => _FaqTile(item: item)),
@@ -473,7 +478,7 @@ class _FaqTile extends StatelessWidget {
       children: [
         Text(
           item.a,
-          style: const TextStyle(fontSize: 13, color: Colors.white70),
+          style: const TextStyle(fontSize: 13, color: AppColors.inkMuted),
         ),
       ],
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
@@ -7,6 +8,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/models/post_generation.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/post_provider.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class HistoryScreen extends ConsumerWidget {
   const HistoryScreen({super.key});
@@ -19,7 +21,7 @@ class HistoryScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.dashShortcutHistory),
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -30,10 +32,12 @@ class HistoryScreen extends ConsumerWidget {
           },
         ),
       ),
-      body: Center(
+      // topCenter, not Center: a short list must start at the top, not
+      // float in the middle of the page.
+      body: IvBody(child: Align(
+        alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          constraints:
-              const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+          constraints: const BoxConstraints(maxWidth: 1120),
           child: historyAsync.when(
             loading: () => _buildShimmer(),
             error: (e, _) => Center(
@@ -43,17 +47,17 @@ class HistoryScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(Icons.wifi_off_rounded,
-                        size: 48, color: Colors.white24),
+                        size: 48, color: AppColors.inkSubtle),
                     const SizedBox(height: 16),
                     Text(
                       l10n.uxHistoryLoadError,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white70),
+                      style: const TextStyle(color: AppColors.inkMuted),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton.icon(
                       onPressed: () => ref.invalidate(historyProvider),
-                      icon: const Icon(Icons.refresh, size: 16),
+                      icon: const Icon(Icons.refresh_rounded, size: 16),
                       label: Text(l10n.commonRetry),
                     ),
                   ],
@@ -71,13 +75,13 @@ class HistoryScreen extends ConsumerWidget {
                         const Icon(
                           Icons.auto_awesome_outlined,
                           size: 64,
-                          color: Colors.white12,
+                          color: AppColors.line,
                         ),
                         const SizedBox(height: 20),
                         Text(
                           l10n.uxHistoryEmptyTitle,
                           style: const TextStyle(
-                            color: Colors.white70,
+                            color: AppColors.inkMuted,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -87,7 +91,7 @@ class HistoryScreen extends ConsumerWidget {
                           l10n.uxHistoryEmptyBody,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            color: Colors.white38,
+                            color: AppColors.inkSubtle,
                             fontSize: 13,
                             height: 1.5,
                           ),
@@ -100,17 +104,22 @@ class HistoryScreen extends ConsumerWidget {
 
               return RefreshIndicator(
                 onRefresh: () async => ref.invalidate(historyProvider),
-                child: ListView.separated(
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
-                  itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, i) => _HistoryCard(item: items[i]),
+                  child: IvCardGrid(
+                    minTileWidth: 340,
+                    children: [
+                      for (var i = 0; i < items.length; i++)
+                        FadeSlideIn(index: i, child: _HistoryCard(item: items[i])),
+                    ],
+                  ),
                 ),
               );
             },
           ),
         ),
-      ),
+      )),
     );
   }
 
@@ -119,17 +128,17 @@ class HistoryScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       itemCount: 5,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, __) => Shimmer.fromColors(
-        baseColor: const Color(0xFF1A1A2E),
-        highlightColor: const Color(0xFF2A2A4E),
+      itemBuilder: (_, __) => FadeSlideIn(index: __, child: Shimmer.fromColors(
+        baseColor: AppColors.surface,
+        highlightColor: AppColors.line,
         child: Container(
           height: 90,
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1A2E),
-            borderRadius: BorderRadius.circular(16),
+            color: AppColors.surface, gradient: kIvSurfaceGradient,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
         ),
-      ),
+      )),
     );
   }
 }
@@ -143,7 +152,7 @@ class _HistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         onTap: () => context.push('/history/${item.id}'),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -180,7 +189,7 @@ class _HistoryCard extends StatelessWidget {
                     _formatDateTime(item.createdAt),
                     style: const TextStyle(
                       fontSize: 11,
-                      color: Colors.white38,
+                      color: AppColors.inkSubtle,
                     ),
                   ),
                 ],
@@ -210,14 +219,14 @@ class _ScoreBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.white10,
-        borderRadius: BorderRadius.circular(6),
+        color: AppColors.line,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
         '$label ${value.toStringAsFixed(0)}',
-        style: const TextStyle(fontSize: 11, color: Colors.white60),
+        style: const TextStyle(fontSize: 11, color: AppColors.inkMuted),
       ),
     );
   }

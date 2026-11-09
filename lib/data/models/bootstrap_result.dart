@@ -24,7 +24,7 @@ class BootstrapProjectResult {
   bool get hasIssue => !success || error != null;
 
   String get summary {
-    if (!success) return '❌ Falha: ${error ?? "erro desconhecido"}';
+    if (!success) return 'Falha: ${error ?? "erro desconhecido"}';
     final parts = <String>[];
     if (opportunitiesCreated > 0)
       parts.add('$opportunitiesCreated oportunidades');
@@ -32,7 +32,7 @@ class BootstrapProjectResult {
     if (revenuePlanCreated) parts.add('plano de receita');
     if (roadmapCreated) parts.add('roadmap');
     if (personasTrained > 0) parts.add('$personasTrained personas treinadas');
-    return parts.isEmpty ? '⚠️ Nada gerado' : '✅ ${parts.join(', ')}';
+    return parts.isEmpty ? 'Nada gerado' : parts.join(', ');
   }
 }
 

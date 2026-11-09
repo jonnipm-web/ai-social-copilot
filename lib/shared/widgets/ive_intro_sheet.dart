@@ -6,6 +6,7 @@ import '../../features/ive/visual/ive_avatar.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/diagnostic_session_provider.dart';
 import '../../providers/ive_intro_provider.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // IVE-EXPERIENCE-V1-06 (Sections 13-19) — first-use "Meet IVE" experience.
 // TEXT-FIRST, VIDEO-READY: this sheet renders correctly with zero video
@@ -96,7 +97,7 @@ class _IveIntroSheetContent extends StatelessWidget {
         expand: false,
         builder: (_, scrollCtrl) => Container(
           decoration: const BoxDecoration(
-            color: Color(0xFF1E1B2E),
+            color: AppColors.surface, gradient: kIvSurfaceGradient,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
@@ -107,7 +108,7 @@ class _IveIntroSheetContent extends StatelessWidget {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white24,
+                    color: AppColors.inkSubtle,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -129,8 +130,8 @@ class _IveIntroSheetContent extends StatelessWidget {
                         l10n.ivIntroTitle,
                         style:
                             Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.ink,
+                                  fontWeight: FontWeight.w600,
                                 ),
                         textAlign: TextAlign.center,
                       ),
@@ -157,7 +158,7 @@ class _IveIntroSheetContent extends StatelessWidget {
                         onPressed: onSkip,
                         child: Text(
                           l10n.ivIntroSkipButton,
-                          style: const TextStyle(color: Colors.white54),
+                          style: const TextStyle(color: AppColors.inkMuted),
                         ),
                       ),
                     ),
@@ -167,13 +168,13 @@ class _IveIntroSheetContent extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: onContinue,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6C63FF),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: AppColors.accent,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: Text(
                           l10n.ivIntroContinueButton,
                           style: const TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
+                              color: AppColors.onAccent, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
@@ -188,12 +189,12 @@ class _IveIntroSheetContent extends StatelessWidget {
   }
 
   Widget _paragraph(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.only(bottom: 8),
         child: Text(
           text,
           textAlign: TextAlign.center,
           style:
-              const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+              const TextStyle(color: AppColors.inkMuted, fontSize: 14, height: 1.4),
         ),
       );
 }

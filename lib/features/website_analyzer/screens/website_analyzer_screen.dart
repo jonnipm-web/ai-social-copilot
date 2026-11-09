@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
@@ -8,6 +9,7 @@ import '../../../providers/website_analyzer_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class WebsiteAnalyzerScreen extends ConsumerStatefulWidget {
   const WebsiteAnalyzerScreen({super.key});
@@ -24,11 +26,9 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
   final TextEditingController _urlController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final _exec = AiExecutionController();
-
-  static const Color _background = Color(0xFF0F0F1A);
-  static const Color _cardColor = Color(0xFF1A1A2E);
-  static const Color _primary = Color(0xFF6C63FF);
-  static const Color _accent = Color(0xFF00BCD4);
+  static const Color _cardColor = AppColors.surface;
+  static const Color _primary = AppColors.accent;
+  static const Color _accent = AppColors.info;
 
   @override
   void dispose() {
@@ -38,9 +38,9 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
   }
 
   Color _scoreColor(num score) {
-    if (score > 70) return Colors.green;
-    if (score > 40) return Colors.orange;
-    return Colors.red;
+    if (score > 70) return AppColors.positive;
+    if (score > 40) return AppColors.warning;
+    return AppColors.negative;
   }
 
   Future<void> _analyze() async {
@@ -71,7 +71,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
           SnackBar(
             content: Text(
                 l10n.websiteAnalyzerAnalyzeError(extractErrorMessage(e, l10n))),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.negative,
           ),
         );
       }
@@ -93,10 +93,10 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
     final busy = analyzerState.isLoading || _exec.isBusy;
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Colors.transparent,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -106,15 +106,15 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
             }
           },
         ),
-        backgroundColor: _cardColor,
+        backgroundColor: Colors.transparent,
         title: Text(
           l10n.navWebsiteAnalyzer,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: AppColors.ink),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: AppColors.ink),
         elevation: 0,
       ),
-      body: SingleChildScrollView(
+      body: IvBody(child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -124,7 +124,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: _cardColor,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 border: Border.all(color: _accent.withOpacity(0.3)),
               ),
               child: Column(
@@ -132,14 +132,14 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.language, color: _accent, size: 28),
+                      Icon(Icons.language_rounded, color: _accent, size: 28),
                       const SizedBox(width: 12),
                       Text(
                         l10n.websiteAnalyzerHeaderTitle,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -148,7 +148,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                   Text(
                     l10n.websiteAnalyzerHeaderBody,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                      color: AppColors.ink.withOpacity(0.7),
                       fontSize: 14,
                     ),
                   ),
@@ -166,34 +166,34 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                 children: [
                   TextFormField(
                     controller: _urlController,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: AppColors.ink),
                     keyboardType: TextInputType.url,
                     decoration: InputDecoration(
                       labelText: l10n.websiteAnalyzerUrlLabel,
                       labelStyle:
-                          TextStyle(color: Colors.white.withOpacity(0.6)),
+                          TextStyle(color: AppColors.ink.withOpacity(0.6)),
                       hintText: l10n.websiteAnalyzerUrlHint,
                       hintStyle:
-                          TextStyle(color: Colors.white.withOpacity(0.3)),
-                      prefixIcon: Icon(Icons.link, color: _accent),
+                          TextStyle(color: AppColors.ink.withOpacity(0.3)),
+                      prefixIcon: Icon(Icons.link_rounded, color: _accent),
                       filled: true,
                       fillColor: _cardColor,
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         borderSide: BorderSide(color: _accent.withOpacity(0.4)),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         borderSide: BorderSide(color: _accent, width: 2),
                       ),
                       errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Colors.red),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: const BorderSide(color: AppColors.negative),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         borderSide:
-                            const BorderSide(color: Colors.red, width: 2),
+                            const BorderSide(color: AppColors.negative, width: 2),
                       ),
                     ),
                     validator: (value) {
@@ -218,25 +218,25 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: AppColors.ink,
                               ),
                             )
-                          : const Icon(Icons.search),
+                          : const Icon(Icons.search_rounded),
                       label: Text(
                         busy
                             ? l10n.websiteAnalyzerAnalyzing
                             : l10n.websiteAnalyzerAnalyzeButton,
                         style: const TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _accent,
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.ink,
                         disabledBackgroundColor: _accent.withOpacity(0.5),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                       ),
                     ),
@@ -250,14 +250,14 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
             // Previous Analyses Section
             Row(
               children: [
-                Icon(Icons.history, color: _primary, size: 20),
+                Icon(Icons.history_rounded, color: _primary, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   l10n.websiteAnalyzerPreviousTitle,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -276,12 +276,12 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: _cardColor,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Text(
                   l10n.websiteAnalyzerLoadError(
                       extractErrorMessage(error, l10n)),
-                  style: const TextStyle(color: Colors.red),
+                  style: const TextStyle(color: AppColors.negative),
                 ),
               ),
               data: (analyses) {
@@ -290,21 +290,21 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
                       color: _cardColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                      border: Border.all(color: AppColors.ink.withOpacity(0.1)),
                     ),
                     child: Column(
                       children: [
                         Icon(
                           Icons.language_outlined,
                           size: 48,
-                          color: Colors.white.withOpacity(0.3),
+                          color: AppColors.ink.withOpacity(0.3),
                         ),
                         const SizedBox(height: 12),
                         Text(
                           l10n.websiteAnalyzerEmptyTitle,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
+                            color: AppColors.ink.withOpacity(0.5),
                             fontSize: 16,
                           ),
                         ),
@@ -312,7 +312,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                         Text(
                           l10n.websiteAnalyzerEmptyBody,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.3),
+                            color: AppColors.ink.withOpacity(0.3),
                             fontSize: 13,
                           ),
                         ),
@@ -321,12 +321,11 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                   );
                 }
 
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: analyses.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
+                return IvCardGrid(
+                  minTileWidth: 420,
+                  maxColumns: 2,
+                  gap: AppSpace.s3,
+                  children: List.generate(analyses.length, (index) {
                     final analysis = analyses[index];
                     final websiteScore = analysis.scoreWebsite;
                     final adsenseScore = analysis.scoreAdsense;
@@ -339,12 +338,12 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                     return InkWell(
                       onTap: () =>
                           context.go('/website-analyzer/${analysis.id}'),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: _cardColor,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           border: Border.all(
                             color: _primary.withOpacity(0.2),
                           ),
@@ -354,13 +353,13 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.language, color: _accent, size: 16),
+                                Icon(Icons.language_rounded, color: _accent, size: 16),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     displayUrl,
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: AppColors.ink,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
                                     ),
@@ -370,14 +369,14 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                                 Text(
                                   dateStr,
                                   style: TextStyle(
-                                    color: Colors.white.withOpacity(0.4),
+                                    color: AppColors.ink.withOpacity(0.4),
                                     fontSize: 12,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
                                 Icon(
-                                  Icons.chevron_right,
-                                  color: Colors.white.withOpacity(0.4),
+                                  Icons.chevron_right_rounded,
+                                  color: AppColors.ink.withOpacity(0.4),
                                   size: 18,
                                 ),
                               ],
@@ -402,13 +401,13 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                         ),
                       ),
                     );
-                  },
+                  }),
                 );
               },
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 
@@ -433,10 +432,10 @@ class _ScoreChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Text(
@@ -444,7 +443,7 @@ class _ScoreChip extends StatelessWidget {
         style: TextStyle(
           color: color,
           fontSize: 12,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

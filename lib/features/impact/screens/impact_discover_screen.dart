@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -75,7 +76,7 @@ class _ImpactDiscoverScreenState extends ConsumerState<ImpactDiscoverScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(t.impactDiscoverTitle)),
-      body: ImpactPage(
+      body: IvBody(child: ImpactPage(
         maxWidth: 720,
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -90,7 +91,7 @@ class _ImpactDiscoverScreenState extends ConsumerState<ImpactDiscoverScreen> {
             else                    _ResultCard(result: _result!, isPro: isPro, t: t),
           ],
         ),
-      ),
+      )),
     );
   }
 }
@@ -116,7 +117,7 @@ class _SearchBar extends StatelessWidget {
           onSubmitted: (_) => onSearch(),
           decoration: InputDecoration(
             hintText:    t.impactDiscoverHint,
-            prefixIcon:  const Icon(Icons.search),
+            prefixIcon:  const Icon(Icons.search_rounded),
             border:      const OutlineInputBorder(),
           ),
         ),
@@ -170,10 +171,10 @@ class _ResultCard extends StatelessWidget {
           if (result.identityStatus != null)
             _Row(label: t.impactDiscoverConfidence, value: result.identityStatus!),
           const SizedBox(height: 8),
-          ImpactLine(t.impactDiscoverAbsenceNote, icon: Icons.info_outline, muted: true),
+          ImpactLine(t.impactDiscoverAbsenceNote, icon: Icons.info_outline_rounded, muted: true),
           const Divider(height: 24),
           if (!isPro) ...[
-            ImpactLine(t.impactDiscoverProGate, icon: Icons.lock_outline),
+            ImpactLine(t.impactDiscoverProGate, icon: Icons.lock_outline_rounded),
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: () => context.push(AppConstants.routeUpgrade),
@@ -197,7 +198,7 @@ class _Row extends StatelessWidget {
   final String label, value;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3),
+    padding: const EdgeInsets.symmetric(vertical: 2),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SizedBox(width: 160, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500))),
       Expanded(child: Text(value)),

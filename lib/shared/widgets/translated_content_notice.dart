@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/language_utils.dart';
 import '../../data/services/content_localization_service.dart';
 import '../../l10n/app_localizations.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 /// R16 §9 — makes cross-language content EXPLICIT instead of an accidental
 /// language leak:
@@ -34,19 +35,18 @@ class TranslatedContentNotice extends ConsumerWidget {
     return Padding(
       padding: padding ?? const EdgeInsets.only(bottom: 12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.line),
         ),
         child: Row(
           children: [
-            const Icon(Icons.translate, size: 16, color: Colors.white54),
+            const Icon(Icons.translate_rounded, size: 16, color: AppColors.inkMuted),
             const SizedBox(width: 8),
             Expanded(
               child: Text(message,
-                  style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
             ),
             TextButton(
               key: const Key('r16_toggle_original'),

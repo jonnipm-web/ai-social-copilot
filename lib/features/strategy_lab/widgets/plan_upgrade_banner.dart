@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../l10n/app_localizations.dart';
 import '../data/strategy_builder_api.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 String planDisplayName(AppLocalizations l, String? plan) => switch (plan) {
       'pro' => l.planNamePro,
@@ -36,14 +37,14 @@ class PlanUpgradeBanner extends StatelessWidget {
     final l = AppLocalizations.of(context)!;
     final required = planDisplayName(l, requiredPlan);
     final current = planDisplayName(l, currentPlan);
-    final color = Colors.amber.shade700;
+    final color = AppColors.warning;
     return Container(
       key: const Key('planUpgradeBanner'),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
         border: Border.all(color: color.withOpacity(0.5)),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(
         children: [
@@ -56,7 +57,7 @@ class PlanUpgradeBanner extends StatelessWidget {
                 Text(l.planUpgradeBannerTitle(required),
                     style: TextStyle(
                         fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                         color: color)),
                 Text(l.planUpgradeBannerBody(current, required),
                     style: TextStyle(fontSize: 12, color: color)),
@@ -70,7 +71,7 @@ class PlanUpgradeBanner extends StatelessWidget {
             style: TextButton.styleFrom(
                 foregroundColor: color,
                 textStyle:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
             child: Text(l.planUpgradeBannerCta),
           ),
         ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,6 +12,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class OpportunityDiscoveryScreen extends ConsumerStatefulWidget {
   const OpportunityDiscoveryScreen({super.key, required this.analysisId});
@@ -86,14 +88,14 @@ class _OpportunityDiscoveryScreenState
         ref.watch(opportunitiesByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F1A),
+        backgroundColor: Colors.transparent,
         title: Text(l10n.miOpportunityTitle,
-            style: const TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+            style: const TextStyle(color: AppColors.ink)),
+        iconTheme: const IconThemeData(color: AppColors.ink),
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go(
             AppConstants.routeMarketIntelligenceHub
                 .replaceFirst(':id', widget.analysisId),
@@ -107,58 +109,57 @@ class _OpportunityDiscoveryScreenState
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                        color: Color(0xFF6BCB77), strokeWidth: 2),
+                        color: AppColors.positive, strokeWidth: 2),
                   )
-                : const Icon(Icons.star_rounded, color: Color(0xFF6BCB77)),
+                : const Icon(Icons.star_rounded, color: AppColors.positive),
             label: Text(
               _running
                   ? l10n.miOpportunitySearching
                   : l10n.miOpportunityDiscoverButton,
-              style: const TextStyle(color: Color(0xFF6BCB77)),
+              style: const TextStyle(color: AppColors.positive),
             ),
           ),
         ],
       ),
-      body: Column(
+      body: IvBody(child: Column(
         children: [
           if (_error != null)
             Container(
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
+                color: AppColors.negative.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.negative.withOpacity(0.3)),
               ),
               child: Text(_error!,
                   style:
-                      const TextStyle(color: Colors.redAccent, fontSize: 13)),
+                      const TextStyle(color: AppColors.negative, fontSize: 13)),
             ),
           Expanded(
             child: asyncList.when(
-              loading: () => const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF6BCB77))),
+              loading: () => const IvLoadingSkeleton(),
               error: (e, _) => Center(
                   child: Text(
                       l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
-                      style: const TextStyle(color: Colors.redAccent))),
+                      style: const TextStyle(color: AppColors.negative))),
               data: (opportunities) => opportunities.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(Icons.star_outline_rounded,
-                              color: Colors.white24, size: 64),
+                              color: AppColors.inkSubtle, size: 64),
                           const SizedBox(height: 16),
                           Text(l10n.miOpportunityEmptyTitle,
-                              style: const TextStyle(color: Colors.white38)),
+                              style: const TextStyle(color: AppColors.inkSubtle)),
                           const SizedBox(height: 8),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Text(l10n.miOpportunityEmptyBody,
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
-                                    color: Colors.white24,
+                                    color: AppColors.inkSubtle,
                                     fontSize: 12,
                                     height: 1.4)),
                           ),
@@ -166,7 +167,7 @@ class _OpportunityDiscoveryScreenState
                           ElevatedButton(
                             onPressed: _running ? null : _discover,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF6BCB77),
+                              backgroundColor: AppColors.positive,
                               foregroundColor: Colors.black,
                             ),
                             child: Text(l10n.miOpportunityEmptyButton),
@@ -178,12 +179,12 @@ class _OpportunityDiscoveryScreenState
                       padding: const EdgeInsets.all(16),
                       itemCount: opportunities.length,
                       itemBuilder: (_, i) =>
-                          _OpportunityCard(opportunity: opportunities[i]),
+                          FadeSlideIn(index: i, child: _OpportunityCard(opportunity: opportunities[i])),
                     ),
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }
@@ -194,10 +195,10 @@ class _OpportunityCard extends StatelessWidget {
 
   Color get _scoreColor {
     final s = opportunity.opportunityScore;
-    if (s >= 80) return const Color(0xFF6BCB77);
-    if (s >= 60) return const Color(0xFF00BCD4);
-    if (s >= 40) return const Color(0xFFFFD93D);
-    return const Color(0xFFFF6B6B);
+    if (s >= 80) return AppColors.positive;
+    if (s >= 60) return AppColors.info;
+    if (s >= 40) return AppColors.warning;
+    return AppColors.negative;
   }
 
   @override
@@ -207,8 +208,8 @@ class _OpportunityCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _scoreColor.withOpacity(0.2)),
       ),
       child: Column(
@@ -219,24 +220,24 @@ class _OpportunityCard extends StatelessWidget {
               Expanded(
                 child: Text(opportunity.title,
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                        color: AppColors.ink,
+                        fontWeight: FontWeight.w600,
                         fontSize: 14)),
               ),
               const SizedBox(width: 8),
               Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: _scoreColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                   border: Border.all(color: _scoreColor),
                 ),
                 child: Text(
                   '${opportunity.opportunityScore}',
                   style: TextStyle(
                       color: _scoreColor,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 14),
                 ),
               ),
@@ -246,7 +247,7 @@ class _OpportunityCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(opportunity.description,
                 style: const TextStyle(
-                    color: Colors.white60, fontSize: 12, height: 1.4),
+                    color: AppColors.inkMuted, fontSize: 12, height: 1.4),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis),
           ],
@@ -258,19 +259,19 @@ class _OpportunityCard extends StatelessWidget {
               _MiniScore(
                   label: l10n.miOpportunityScoreMarket,
                   value: opportunity.marketScore,
-                  color: const Color(0xFF4D96FF)),
+                  color: AppColors.info),
               _MiniScore(
                   label: l10n.miOpportunityScoreGrowth,
                   value: opportunity.growthScore,
-                  color: const Color(0xFF6BCB77)),
+                  color: AppColors.positive),
               _MiniScore(
                   label: l10n.miOpportunityScoreMonetization,
                   value: opportunity.monetizationScore,
-                  color: const Color(0xFFFFD93D)),
+                  color: AppColors.warning),
               _MiniScore(
                   label: l10n.miOpportunityScoreDifficulty,
                   value: opportunity.difficultyScore,
-                  color: const Color(0xFFFF6B6B)),
+                  color: AppColors.negative),
             ],
           ),
           if (opportunity.timeframe.isNotEmpty) ...[
@@ -278,19 +279,19 @@ class _OpportunityCard extends StatelessWidget {
             Row(
               children: [
                 const Icon(Icons.schedule_rounded,
-                    color: Colors.white38, size: 14),
+                    color: AppColors.inkSubtle, size: 14),
                 const SizedBox(width: 4),
                 Text(aiTimeframeLabel(opportunity.timeframe, l10n),
                     style:
-                        const TextStyle(color: Colors.white38, fontSize: 12)),
+                        const TextStyle(color: AppColors.inkSubtle, fontSize: 12)),
                 if (opportunity.effort.isNotEmpty) ...[
                   const SizedBox(width: 12),
                   const Icon(Icons.fitness_center_rounded,
-                      color: Colors.white38, size: 14),
+                      color: AppColors.inkSubtle, size: 14),
                   const SizedBox(width: 4),
                   Text(aiLevelLabel(opportunity.effort, l10n),
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 12)),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 12)),
                 ],
               ],
             ),
@@ -314,7 +315,7 @@ class _MiniScore extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(

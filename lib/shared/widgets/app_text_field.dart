@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class AppTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -30,12 +31,12 @@ class AppTextField extends StatelessWidget {
       obscureText: obscureText,
       maxLines: maxLines,
       validator: validator,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: AppColors.ink),
       decoration: InputDecoration(
         labelText: label,
         hintText: hintText,
-        hintStyle: const TextStyle(color: Colors.white30),
-        labelStyle: const TextStyle(color: Colors.white54),
+        hintStyle: const TextStyle(color: AppColors.inkSubtle),
+        labelStyle: const TextStyle(color: AppColors.inkMuted),
         suffixIcon: suffixIcon,
       ),
     );

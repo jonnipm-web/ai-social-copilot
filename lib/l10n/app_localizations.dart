@@ -10936,7 +10936,7 @@ abstract class AppLocalizations {
   /// No description provided for @uxOriginAutoBootstrap.
   ///
   /// In pt, this message translates to:
-  /// **'Bootstrap Automático'**
+  /// **'Criada automaticamente (análise inicial do projeto)'**
   String get uxOriginAutoBootstrap;
 
   /// No description provided for @uxKnowledgeFormSourceLanguageLabel.
@@ -12648,6 +12648,150 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'A IVE pode resumir evidências existentes, mas não pode inventar, pressupor ou verificar evidências por conta própria.'**
   String get impactIveCannotInvent;
+
+  /// No description provided for @dashScoreChartTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Score por análise'**
+  String get dashScoreChartTitle;
+
+  /// No description provided for @dashModulesTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Módulos'**
+  String get dashModulesTitle;
+
+  /// No description provided for @dashOverviewTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Visão geral'**
+  String get dashOverviewTitle;
+
+  /// No description provided for @dashQuotaTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Uso de IA'**
+  String get dashQuotaTitle;
+
+  /// No description provided for @authShowPassword.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mostrar senha'**
+  String get authShowPassword;
+
+  /// No description provided for @authHidePassword.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ocultar senha'**
+  String get authHidePassword;
+
+  /// No description provided for @authTagline.
+  ///
+  /// In pt, this message translates to:
+  /// **'Inteligência de projetos e decisões, guiada por IA'**
+  String get authTagline;
+
+  /// No description provided for @commonAdd.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicionar'**
+  String get commonAdd;
+
+  /// No description provided for @commonRefresh.
+  ///
+  /// In pt, this message translates to:
+  /// **'Atualizar'**
+  String get commonRefresh;
+
+  /// No description provided for @projectDetailActionsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ações do projeto'**
+  String get projectDetailActionsTitle;
+
+  /// No description provided for @commonShowMore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver mais'**
+  String get commonShowMore;
+
+  /// No description provided for @commonShowLess.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver menos'**
+  String get commonShowLess;
+
+  /// No description provided for @actionDetailWhyTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Por que esta ação existe'**
+  String get actionDetailWhyTitle;
+
+  /// No description provided for @actionDetailWhyFromOpportunity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Motivo da oportunidade que originou esta ação'**
+  String get actionDetailWhyFromOpportunity;
+
+  /// No description provided for @actionDetailWhyOpenOpportunity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver oportunidade'**
+  String get actionDetailWhyOpenOpportunity;
+
+  /// No description provided for @actionDetailWhyNone.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum motivo foi registrado para esta ação.'**
+  String get actionDetailWhyNone;
+
+  /// No description provided for @actionDetailPriorityRankHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Posição na fila — 1 é a mais importante'**
+  String get actionDetailPriorityRankHint;
+
+  /// No description provided for @actionDetailRoiShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'ROI'**
+  String get actionDetailRoiShort;
+
+  /// No description provided for @actionDetailHintRevenue.
+  ///
+  /// In pt, this message translates to:
+  /// **'Potencial de faturamento'**
+  String get actionDetailHintRevenue;
+
+  /// No description provided for @actionDetailHintRoi.
+  ///
+  /// In pt, this message translates to:
+  /// **'Retorno em relação ao esforço'**
+  String get actionDetailHintRoi;
+
+  /// No description provided for @actionDetailHintEffort.
+  ///
+  /// In pt, this message translates to:
+  /// **'Trabalho necessário — quanto maior, mais difícil'**
+  String get actionDetailHintEffort;
+
+  /// No description provided for @actionDetailHintMarket.
+  ///
+  /// In pt, this message translates to:
+  /// **'Força do mercado da oportunidade'**
+  String get actionDetailHintMarket;
+
+  /// No description provided for @actionDetailHintConfidence.
+  ///
+  /// In pt, this message translates to:
+  /// **'Confiança da IA na estimativa'**
+  String get actionDetailHintConfidence;
+
+  /// No description provided for @actionDetailScoresSource.
+  ///
+  /// In pt, this message translates to:
+  /// **'Notas de 0 a 100 estimadas pela IA quando a ação foi criada. Servem para comparar ações entre si.'**
+  String get actionDetailScoresSource;
 }
 
 class _AppLocalizationsDelegate

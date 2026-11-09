@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,6 +12,7 @@ import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../competitor_type_labels.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class CompetitorDiscoveryScreen extends ConsumerStatefulWidget {
   const CompetitorDiscoveryScreen({super.key, required this.analysisId});
@@ -88,14 +90,14 @@ class _CompetitorDiscoveryScreenState
         ref.watch(competitorsByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F1A),
+        backgroundColor: Colors.transparent,
         title: Text(l10n.miCompetitorTitle,
-            style: const TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+            style: const TextStyle(color: AppColors.ink)),
+        iconTheme: const IconThemeData(color: AppColors.ink),
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go(
             AppConstants.routeMarketIntelligenceHub
                 .replaceFirst(':id', widget.analysisId),
@@ -109,58 +111,57 @@ class _CompetitorDiscoveryScreenState
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                        color: Color(0xFFFF6B6B), strokeWidth: 2),
+                        color: AppColors.negative, strokeWidth: 2),
                   )
-                : const Icon(Icons.search_rounded, color: Color(0xFFFF6B6B)),
+                : const Icon(Icons.search_rounded, color: AppColors.negative),
             label: Text(
               _running
                   ? l10n.miCompetitorSearching
                   : l10n.miCompetitorDiscoverButton,
-              style: const TextStyle(color: Color(0xFFFF6B6B)),
+              style: const TextStyle(color: AppColors.negative),
             ),
           ),
         ],
       ),
-      body: Column(
+      body: IvBody(child: Column(
         children: [
           if (_error != null)
             Container(
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
+                color: AppColors.negative.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.negative.withOpacity(0.3)),
               ),
               child: Text(_error!,
                   style:
-                      const TextStyle(color: Colors.redAccent, fontSize: 13)),
+                      const TextStyle(color: AppColors.negative, fontSize: 13)),
             ),
           Expanded(
             child: asyncList.when(
-              loading: () => const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFFF6B6B))),
+              loading: () => const IvLoadingSkeleton(),
               error: (e, _) => Center(
                   child: Text(
                       l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
-                      style: const TextStyle(color: Colors.redAccent))),
+                      style: const TextStyle(color: AppColors.negative))),
               data: (competitors) => competitors.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(Icons.people_alt_outlined,
-                              color: Colors.white24, size: 64),
+                              color: AppColors.inkSubtle, size: 64),
                           const SizedBox(height: 16),
                           Text(l10n.miCompetitorEmptyTitle,
-                              style: const TextStyle(color: Colors.white38)),
+                              style: const TextStyle(color: AppColors.inkSubtle)),
                           const SizedBox(height: 8),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Text(l10n.miCompetitorEmptyBody,
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
-                                    color: Colors.white24,
+                                    color: AppColors.inkSubtle,
                                     fontSize: 12,
                                     height: 1.4)),
                           ),
@@ -168,8 +169,8 @@ class _CompetitorDiscoveryScreenState
                           ElevatedButton(
                             onPressed: _running ? null : _discover,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFF6B6B),
-                              foregroundColor: Colors.white,
+                              backgroundColor: AppColors.negative,
+                              foregroundColor: AppColors.ground,
                             ),
                             child: Text(l10n.miCompetitorEmptyButton),
                           ),
@@ -180,12 +181,12 @@ class _CompetitorDiscoveryScreenState
                       padding: const EdgeInsets.all(16),
                       itemCount: competitors.length,
                       itemBuilder: (_, i) =>
-                          _CompetitorCard(competitor: competitors[i]),
+                          FadeSlideIn(index: i, child: _CompetitorCard(competitor: competitors[i])),
                     ),
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }
@@ -197,11 +198,11 @@ class _CompetitorCard extends StatelessWidget {
   Color get _typeColor {
     switch (competitor.type) {
       case 'direct':
-        return const Color(0xFFFF6B6B);
+        return AppColors.negative;
       case 'indirect':
-        return const Color(0xFFFFD93D);
+        return AppColors.warning;
       default:
-        return const Color(0xFF6BCB77);
+        return AppColors.positive;
     }
   }
 
@@ -212,8 +213,8 @@ class _CompetitorCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _typeColor.withOpacity(0.2)),
       ),
       child: Column(
@@ -227,13 +228,13 @@ class _CompetitorCard extends StatelessWidget {
                   children: [
                     Text(competitor.name,
                         style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                            color: AppColors.ink,
+                            fontWeight: FontWeight.w600,
                             fontSize: 15)),
                     const SizedBox(height: 2),
                     Text(competitor.url,
                         style: const TextStyle(
-                            color: Colors.white54, fontSize: 12),
+                            color: AppColors.inkMuted, fontSize: 12),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                   ],
@@ -243,15 +244,15 @@ class _CompetitorCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: _typeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                   border: Border.all(color: _typeColor.withOpacity(0.4)),
                 ),
                 child: Text(
                   competitorTypeLabel(competitor.type, l10n).toUpperCase(),
                   style: TextStyle(
                       color: _typeColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -262,36 +263,36 @@ class _CompetitorCard extends StatelessWidget {
               _ScoreItem(
                   label: l10n.miCompetitorScoreSimilarity,
                   value: competitor.similarityScore,
-                  color: const Color(0xFF4D96FF)),
+                  color: AppColors.info),
               const SizedBox(width: 12),
               _ScoreItem(
                   label: l10n.miCompetitorScoreAuthority,
                   value: competitor.authorityScore,
-                  color: const Color(0xFFFFD93D)),
+                  color: AppColors.warning),
               const SizedBox(width: 12),
               _ScoreItem(
                   label: l10n.miCompetitorScoreRelevance,
                   value: competitor.relevanceScore,
-                  color: const Color(0xFF6BCB77)),
+                  color: AppColors.positive),
               const SizedBox(width: 12),
               _ScoreItem(
                   label: l10n.miCompetitorScoreOverall,
                   value: competitor.overallScore,
-                  color: const Color(0xFFFF6B6B)),
+                  color: AppColors.negative),
             ],
           ),
           if (competitor.description.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(competitor.description,
                 style: const TextStyle(
-                    color: Colors.white60, fontSize: 12, height: 1.4),
+                    color: AppColors.inkMuted, fontSize: 12, height: 1.4),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis),
           ],
           if (competitor.strengths.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(l10n.miCompetitorStrengthsLabel,
-                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
             const SizedBox(height: 4),
             ...competitor.strengths.take(3).map(
                   (s) => Padding(
@@ -299,12 +300,12 @@ class _CompetitorCard extends StatelessWidget {
                     child: Row(
                       children: [
                         const Icon(Icons.check_circle_rounded,
-                            color: Color(0xFF6BCB77), size: 12),
+                            color: AppColors.positive, size: 12),
                         const SizedBox(width: 6),
                         Expanded(
                             child: Text(s,
                                 style: const TextStyle(
-                                    color: Colors.white70, fontSize: 12))),
+                                    color: AppColors.inkMuted, fontSize: 12))),
                       ],
                     ),
                   ),
@@ -319,7 +320,7 @@ class _CompetitorCard extends StatelessWidget {
           if (competitor.weaknesses.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(l10n.miCompetitorWeaknessesLabel,
-                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
             const SizedBox(height: 4),
             ...competitor.weaknesses.take(3).map(
                   (w) => Padding(
@@ -327,12 +328,12 @@ class _CompetitorCard extends StatelessWidget {
                     child: Row(
                       children: [
                         const Icon(Icons.cancel_rounded,
-                            color: Color(0xFFFF6B6B), size: 12),
+                            color: AppColors.negative, size: 12),
                         const SizedBox(width: 6),
                         Expanded(
                             child: Text(w,
                                 style: const TextStyle(
-                                    color: Colors.white70, fontSize: 12))),
+                                    color: AppColors.inkMuted, fontSize: 12))),
                       ],
                     ),
                   ),
@@ -357,9 +358,9 @@ class _ScoreItem extends StatelessWidget {
       children: [
         Text('$value',
             style: TextStyle(
-                color: color, fontWeight: FontWeight.bold, fontSize: 16)),
+                color: color, fontWeight: FontWeight.w600, fontSize: 16)),
         Text(label,
-            style: const TextStyle(color: Colors.white38, fontSize: 10)),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
       ],
     );
   }

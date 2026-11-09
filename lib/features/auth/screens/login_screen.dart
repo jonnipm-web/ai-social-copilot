@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,6 +11,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/loading_button.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -95,39 +97,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final isLoading = authState.isLoading;
 
     return Scaffold(
-      body: SafeArea(
+      body: IvBody(child: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Form(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpace.s6, vertical: AppSpace.s8),
+            child: ConstrainedBox(
+             constraints: const BoxConstraints(maxWidth: 420),
+             child: FadeSlideIn(
+             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 32),
-                  Icon(
-                    Icons.auto_awesome,
-                    size: 52,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    AppConstants.appName,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
+                  Center(
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [AppColors.accent, AppColors.info],
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accent.withOpacity(0.35),
+                            blurRadius: 28,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.insights_rounded,
+                          size: 30, color: AppColors.onAccent),
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpace.s6),
                   Text(
                     _isSignUp ? t.authCreateAccount : t.authWelcomeBack,
                     textAlign: TextAlign.center,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Colors.white54),
+                    style: const TextStyle(
+                      color: AppColors.ink,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.5,
+                      height: 1.15,
+                    ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: AppSpace.s2),
+                  Text(
+                    '${AppConstants.appName} · ${t.authTagline}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: AppColors.inkMuted, fontSize: 14, height: 1.5),
+                  ),
+                  const SizedBox(height: AppSpace.s8),
                   // GATE-17-FINAL-CLOSURE (Section 11, text-scale physical
                   // regression, 2026-09-22) — OutlinedButton.icon's own Row
                   // (icon + label) has no width guard on the label: at 1.3x
@@ -143,8 +168,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: isLoading ? null : _submitGoogle,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
-                      side: const BorderSide(color: Colors.white24),
+                          horizontal: 16, vertical: 12),
+                      minimumSize: const Size.fromHeight(48),
+                      side: const BorderSide(color: AppColors.controlBorder),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -171,7 +197,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      const Expanded(child: Divider(color: Colors.white12)),
+                      const Expanded(child: Divider(color: AppColors.line)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
@@ -179,10 +205,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
-                              ?.copyWith(color: Colors.white38),
+                              ?.copyWith(color: AppColors.inkSubtle),
                         ),
                       ),
-                      const Expanded(child: Divider(color: Colors.white12)),
+                      const Expanded(child: Divider(color: AppColors.line)),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -204,11 +230,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     label: t.authPassword,
                     obscureText: _obscurePassword,
                     suffixIcon: IconButton(
+                      tooltip: _obscurePassword
+                          ? t.authShowPassword
+                          : t.authHidePassword,
                       icon: Icon(
                         _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: Colors.white38,
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                        color: AppColors.inkSubtle,
                       ),
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),
@@ -221,7 +250,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppSpace.s6),
                   LoadingButton(
                     label: _isSignUp ? t.authSignUp : t.authSignIn,
                     isLoading: isLoading,
@@ -239,13 +268,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 32),
                 ],
               ),
+             ),
+             ),
             ),
           ),
         ),
       ),
-    );
+    ));
   }
 }

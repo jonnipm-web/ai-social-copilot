@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/persona_training.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/persona_training_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
-const _bgColor = Color(0xFF0F0F1A);
-const _primaryColor = Color(0xFF6C63FF);
-const _cardColor = Color(0xFF1A1A2E);
-const _surfaceColor = Color(0xFF16213E);
-const _textSecondary = Color(0xFF9E9E9E);
+const _primaryColor = AppColors.accent;
+const _cardColor = AppColors.surface;
+const _surfaceColor = AppColors.surface;
+const _textSecondary = AppColors.inkMuted;
 
 class PersonaTrainingScreen extends ConsumerWidget {
   final String personaId;
@@ -28,38 +29,36 @@ class PersonaTrainingScreen extends ConsumerWidget {
     final trainingAsync = ref.watch(personaTrainingProvider(personaId));
 
     return Scaffold(
-      backgroundColor: _bgColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(
           l10n.personaTrainingTitle(personaName),
           style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+            color: AppColors.ink,
+            fontWeight: FontWeight.w600,
             fontSize: 18,
           ),
         ),
-        backgroundColor: _cardColor,
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: AppColors.ink),
         elevation: 0,
       ),
       drawer: const AppDrawer(),
-      body: trainingAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: _primaryColor),
-        ),
+      body: IvBody(child: trainingAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline,
-                    color: Colors.redAccent, size: 48),
+                const Icon(Icons.error_outline_rounded,
+                    color: AppColors.negative, size: 48),
                 const SizedBox(height: 16),
                 Text(
                   l10n.personaTrainingLoadError(
                       extractErrorMessage(error, l10n)),
-                  style: const TextStyle(color: Colors.white70),
+                  style: const TextStyle(color: AppColors.inkMuted),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -76,7 +75,7 @@ class PersonaTrainingScreen extends ConsumerWidget {
             ref: ref,
           );
         },
-      ),
+      )),
     );
   }
 }
@@ -135,8 +134,8 @@ class _TrainingContent extends StatelessWidget {
         Text(
           l10n.personaTrainingHistoryTitle,
           style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+            color: AppColors.ink,
+            fontWeight: FontWeight.w600,
             fontSize: 16,
           ),
         ),
@@ -172,11 +171,11 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+          colors: [AppColors.surface, AppColors.surface],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _primaryColor.withOpacity(0.4), width: 1.5),
         boxShadow: [
           BoxShadow(
@@ -196,17 +195,17 @@ class _SummaryCard extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: _primaryColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
-                child: const Icon(Icons.psychology,
+                child: const Icon(Icons.psychology_rounded,
                     color: _primaryColor, size: 22),
               ),
               const SizedBox(width: 12),
               Text(
                 l10n.personaTrainingSummaryTitle,
                 style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                  color: AppColors.ink,
+                  fontWeight: FontWeight.w600,
                   fontSize: 16,
                 ),
               ),
@@ -214,7 +213,7 @@ class _SummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _SummaryRow(
-            icon: Icons.layers,
+            icon: Icons.layers_rounded,
             label: l10n.personaTrainingItemsLabel,
             value: l10n.personaTrainingItemsCount(count),
           ),
@@ -260,7 +259,7 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 8),
             _ChipWrap(
               items: values,
-              color: const Color(0xFF9C27B0),
+              color: AppColors.accent,
             ),
           ],
         ],
@@ -293,7 +292,7 @@ class _SummaryRow extends StatelessWidget {
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.ink,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -320,10 +319,10 @@ class _ToneProfileDisplay extends StatelessWidget {
             ? '${(value * 100).toStringAsFixed(0)}%'
             : value.toString();
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: _primaryColor.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(color: _primaryColor.withOpacity(0.3)),
           ),
           child: Text(
@@ -354,10 +353,10 @@ class _ChipWrap extends StatelessWidget {
       children: items
           .map(
             (item) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 border: Border.all(color: color.withOpacity(0.4)),
               ),
               child: Text(
@@ -401,15 +400,15 @@ class _TrainingItemCard extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
         title: Text(
           l10n.personaTrainingDeleteTitle,
           style:
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
         ),
         content: Text(
           l10n.personaTrainingDeleteBody,
-          style: const TextStyle(color: Colors.white70),
+          style: const TextStyle(color: AppColors.inkMuted),
         ),
         actions: [
           TextButton(
@@ -420,7 +419,7 @@ class _TrainingItemCard extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(l10n.personaTrainingRemove,
-                style: const TextStyle(color: Colors.redAccent)),
+                style: const TextStyle(color: AppColors.negative)),
           ),
         ],
       ),
@@ -444,14 +443,14 @@ class _TrainingItemCard extends StatelessWidget {
       background: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: Colors.redAccent.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+          color: AppColors.negative.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.negative.withOpacity(0.4)),
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child:
-            const Icon(Icons.delete_outline, color: Colors.redAccent, size: 28),
+            const Icon(Icons.delete_outline_rounded, color: AppColors.negative, size: 28),
       ),
       confirmDismiss: (_) async {
         await _delete(context);
@@ -460,8 +459,8 @@ class _TrainingItemCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: _surfaceColor,
-          borderRadius: BorderRadius.circular(14),
+          color: _surfaceColor, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
             color: _primaryColor.withOpacity(0.25),
             width: 1,
@@ -479,7 +478,7 @@ class _TrainingItemCard extends StatelessWidget {
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: _primaryColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     child: const Icon(
                       Icons.article_outlined,
@@ -496,7 +495,7 @@ class _TrainingItemCard extends StatelessWidget {
                           training.trainingSummary ??
                               l10n.personaTrainingNoTitle,
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.ink,
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
@@ -516,8 +515,8 @@ class _TrainingItemCard extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: () => _delete(context),
-                    icon: const Icon(Icons.delete_outline,
-                        color: Colors.redAccent, size: 20),
+                    icon: const Icon(Icons.delete_outline_rounded,
+                        color: AppColors.negative, size: 20),
                     tooltip: l10n.personaTrainingRemove,
                     padding: EdgeInsets.zero,
                     constraints:
@@ -529,7 +528,7 @@ class _TrainingItemCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.record_voice_over,
+                    const Icon(Icons.record_voice_over_rounded,
                         color: _textSecondary, size: 14),
                     const SizedBox(width: 6),
                     Text(
@@ -539,10 +538,10 @@ class _TrainingItemCard extends StatelessWidget {
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 3),
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: _primaryColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
                         border:
                             Border.all(color: _primaryColor.withOpacity(0.4)),
                       ),
@@ -574,20 +573,20 @@ class _TrainingItemCard extends StatelessWidget {
                         (word) => Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
-                            vertical: 3,
+                            vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF9C27B0).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
+                            color: AppColors.accent.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
                             border: Border.all(
-                              color: const Color(0xFF9C27B0).withOpacity(0.35),
+                              color: AppColors.accent.withOpacity(0.35),
                             ),
                           ),
                           child: Text(
                             word,
                             style: const TextStyle(
-                              color: Color(0xFFCE93D8),
-                              fontSize: 10,
+                              color: AppColors.accent,
+                              fontSize: 11,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -602,7 +601,7 @@ class _TrainingItemCard extends StatelessWidget {
                       l10n.personaTrainingMoreWords(vocabulary.length - 6),
                       style: const TextStyle(
                         color: _textSecondary,
-                        fontSize: 10,
+                        fontSize: 11,
                       ),
                     ),
                   ),
@@ -619,51 +618,10 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: _primaryColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: _primaryColor.withOpacity(0.3),
-                  width: 2,
-                ),
-              ),
-              child: const Icon(
-                Icons.psychology_outlined,
-                color: _primaryColor,
-                size: 56,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              l10n.personaTrainingEmptyTitle,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.personaTrainingEmptyBody,
-              style: const TextStyle(
-                color: _textSecondary,
-                fontSize: 14,
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return IvEmptyState(
+      icon: Icons.psychology_rounded,
+      title: l10n.personaTrainingEmptyTitle,
+      message: l10n.personaTrainingEmptyBody,
     );
   }
 }

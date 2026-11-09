@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'context_copilot_widget.dart' show showCopilotChat;
@@ -6,6 +7,7 @@ import '../../data/models/copilot_context_data.dart';
 import '../../data/models/ive_interaction_request.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/ive_context_provider.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 /// Generic drill-down sheet IVE opens when user taps any data item.
 ///
@@ -79,12 +81,12 @@ class IveDetailSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     return DraggableScrollableSheet(
-      initialChildSize: 0.60,
+      initialChildSize: 0.85,
       minChildSize: 0.40,
       maxChildSize: 0.92,
       builder: (_, ctrl) => Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF1A1635),
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -124,11 +126,11 @@ class IveDetailSheet extends ConsumerWidget {
 
   Widget _handle() => Center(
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 10),
+          margin: const EdgeInsets.symmetric(vertical: 8),
           width: 40,
           height: 4,
           decoration: BoxDecoration(
-            color: Colors.white24,
+            color: AppColors.inkSubtle,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -136,20 +138,20 @@ class IveDetailSheet extends ConsumerWidget {
 
   Widget _header(BuildContext context) => Row(
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 32)),
+          IvEmojiIcon(emoji, size: 44),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               title,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.ink,
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.close_rounded, color: Colors.white38),
+          IconButton(tooltip: MaterialLocalizations.of(context).closeButtonTooltip, 
+            icon: const Icon(Icons.close_rounded, color: AppColors.inkSubtle),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -158,21 +160,21 @@ class IveDetailSheet extends ConsumerWidget {
   Widget _explanation(AppLocalizations l10n) => Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF2A2450),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.accent.withOpacity(0.3)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              const Text('💬', style: TextStyle(fontSize: 16)),
+              const Icon(Icons.chat_bubble_outline_rounded, size: 16),
               const SizedBox(width: 6),
               Text(
                 l10n.ctxIveDetailExplanation,
                 style: const TextStyle(
-                    color: Color(0xFF6C63FF),
-                    fontWeight: FontWeight.bold,
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.w600,
                     fontSize: 13),
               ),
             ]),
@@ -180,7 +182,7 @@ class IveDetailSheet extends ConsumerWidget {
             Text(
               humanExplanation,
               style: const TextStyle(
-                  color: Colors.white, fontSize: 14, height: 1.5),
+                  color: AppColors.ink, fontSize: 14, height: 1.5),
             ),
           ],
         ),
@@ -192,9 +194,9 @@ class IveDetailSheet extends ConsumerWidget {
           Text(
             l10n.impactEvidence,
             style: const TextStyle(
-                color: Colors.white70,
+                color: AppColors.inkMuted,
                 fontSize: 13,
-                fontWeight: FontWeight.bold),
+                fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           ...evidence.map((e) => _evidenceCard(e)),
@@ -205,13 +207,13 @@ class IveDetailSheet extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF12101E),
-          borderRadius: BorderRadius.circular(10),
+          color: AppColors.ground,
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(e.emoji, style: const TextStyle(fontSize: 18)),
+            IvEmojiIcon(e.emoji, size: 28),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -219,13 +221,13 @@ class IveDetailSheet extends ConsumerWidget {
                 children: [
                   Text(e.label,
                       style: const TextStyle(
-                          color: Colors.white70,
+                          color: AppColors.inkMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
                   Text(e.value,
                       style:
-                          const TextStyle(color: Colors.white, fontSize: 13)),
+                          const TextStyle(color: AppColors.ink, fontSize: 13)),
                 ],
               ),
             ),
@@ -236,23 +238,23 @@ class IveDetailSheet extends ConsumerWidget {
   Widget _expandedSection(AppLocalizations l10n) => ExpansionTile(
         title: Text(
           l10n.ctxIveDetailNumbers,
-          style: const TextStyle(color: Colors.white54, fontSize: 13),
+          style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
         ),
-        iconColor: Colors.white38,
-        collapsedIconColor: Colors.white24,
+        iconColor: AppColors.inkSubtle,
+        collapsedIconColor: AppColors.inkSubtle,
         tilePadding: EdgeInsets.zero,
         children: expandedData!.entries
             .map((e) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Row(
                     children: [
                       Expanded(
                           child: Text(e.key,
                               style: const TextStyle(
-                                  color: Colors.white38, fontSize: 12))),
+                                  color: AppColors.inkSubtle, fontSize: 12))),
                       Text(e.value.toString(),
                           style: const TextStyle(
-                              color: Colors.white60, fontSize: 12)),
+                              color: AppColors.inkMuted, fontSize: 12)),
                     ],
                   ),
                 ))
@@ -265,9 +267,9 @@ class IveDetailSheet extends ConsumerWidget {
           Text(
             l10n.ctxIveDetailSuggestedActions,
             style: const TextStyle(
-                color: Colors.white70,
+                color: AppColors.inkMuted,
                 fontSize: 13,
-                fontWeight: FontWeight.bold),
+                fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           ...suggestedActions.map((a) => _actionTile(context, a)),
@@ -276,17 +278,17 @@ class IveDetailSheet extends ConsumerWidget {
 
   Widget _actionTile(BuildContext context, IveAction action) => ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        leading: Text(action.emoji, style: const TextStyle(fontSize: 20)),
+        leading: IvEmojiIcon(action.emoji, size: 32),
         title: Text(action.label,
-            style: const TextStyle(color: Colors.white, fontSize: 13)),
+            style: const TextStyle(color: AppColors.ink, fontSize: 13)),
         subtitle: action.description != null
             ? Text(action.description!,
-                style: const TextStyle(color: Colors.white38, fontSize: 11))
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11))
             : null,
         trailing: action.onTap != null
             ? IconButton(
                 icon: const Icon(Icons.arrow_forward_ios_rounded,
-                    size: 14, color: Color(0xFF6C63FF)),
+                    size: 14, color: AppColors.accent),
                 onPressed: () {
                   Navigator.of(context).pop();
                   action.onTap!();
@@ -308,13 +310,13 @@ class IveDetailSheet extends ConsumerWidget {
         width: double.infinity,
         child: OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF6C63FF),
-            side: const BorderSide(color: Color(0xFF6C63FF)),
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            foregroundColor: AppColors.accent,
+            side: const BorderSide(color: AppColors.accent),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
           ),
-          icon: const Text('💬', style: TextStyle(fontSize: 16)),
+          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
           label: Text(l10n.iveChatAskLabel),
           onPressed: () {
             Navigator.of(context).pop();

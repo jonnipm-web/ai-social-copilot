@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/breakpoints.dart';
@@ -31,10 +33,10 @@ class ImpactDossierScreen extends ConsumerWidget {
       title: t.impactTitle,
       child: Scaffold(
         appBar: AppBar(title: Text(t.impactTitle)),
-        body: _uuid.hasMatch(investigationId)
+        body: IvBody(child: _uuid.hasMatch(investigationId)
             ? _DossierLoader(id: investigationId.toLowerCase())
             : const ImpactErrorView(
-                error: ImpactApiException(ImpactErrorKind.notAvailable)),
+                error: ImpactApiException(ImpactErrorKind.notAvailable))),
       ),
     );
   }
@@ -49,7 +51,7 @@ class _DossierLoader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final key = (id: id, lang: impactLang(context));
     return ref.watch(impactDossierProvider(key)).when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const IvLoadingSkeleton(),
           error: (e, _) => ImpactErrorView(
               error: e,
               onRetry: () => ref.invalidate(impactDossierProvider(key))),
@@ -163,7 +165,7 @@ class _Header extends StatelessWidget {
           Wrap(spacing: 8, runSpacing: 8, children: [
             ImpactChip(
               label: snapshot ? t.impactSnapshot : t.impactLiveView,
-              icon: snapshot ? Icons.photo_camera_outlined : Icons.sync,
+              icon: snapshot ? Icons.photo_camera_outlined : Icons.sync_rounded,
             ),
             ImpactChip(
               label:
@@ -175,7 +177,7 @@ class _Header extends StatelessWidget {
           ImpactLine(snapshot ? t.impactSnapshotHint : t.impactLiveViewHint,
               muted: true),
           ImpactLine(t.impactNoScoreNote,
-              icon: Icons.info_outline, muted: true),
+              icon: Icons.info_outline_rounded, muted: true),
         ],
       ),
     );
@@ -213,11 +215,11 @@ class _SummarySection extends StatelessWidget {
           if (notVerified > 0)
             ImpactChip(
                 label: '${t.impactNotVerifiedYet} $notVerified',
-                icon: Icons.hourglass_empty),
+                icon: Icons.hourglass_empty_rounded),
           if (pending > 0)
             ImpactChip(
                 label: '${t.impactReverifyPending}: $pending',
-                icon: Icons.update,
+                icon: Icons.update_rounded,
                 attention: true),
           if (d.openDisputes > 0)
             ImpactChip(
@@ -252,7 +254,7 @@ class _NotEstablishedSection extends StatelessWidget {
       emphasis: true,
       children: [
         for (final code in d.doesNotEstablish)
-          ImpactLine(d.labels.nonFinding(code), icon: Icons.remove)
+          ImpactLine(d.labels.nonFinding(code), icon: Icons.remove_rounded)
       ],
     ));
   }
@@ -279,7 +281,7 @@ class _LimitationsSection extends StatelessWidget {
             g.value.isEmpty
                 ? d.labels.limitation(g.key)
                 : '${d.labels.limitation(g.key)} (${g.value.join(', ')})',
-            icon: Icons.remove,
+            icon: Icons.remove_rounded,
           ),
       ],
     ));
@@ -302,7 +304,7 @@ class _IdentitySection extends StatelessWidget {
       children: [
         ImpactChip(
           label: l.identity(s.identityStatus),
-          icon: s.identityConfirmed ? Icons.badge_outlined : Icons.help_outline,
+          icon: s.identityConfirmed ? Icons.badge_outlined : Icons.help_outline_rounded,
           attention: !s.identityConfirmed,
         ),
         ImpactLine(t.impactIdentityScopeNote, muted: true),
@@ -312,8 +314,8 @@ class _IdentitySection extends StatelessWidget {
               text: s.legalName,
               attribution: null,
               caption: t.impactDeclaredQuote),
-        for (final r in s.registrations) ImpactLine(r, icon: Icons.numbers),
-        for (final dm in s.domains) ImpactLine(dm, icon: Icons.language),
+        for (final r in s.registrations) ImpactLine(r, icon: Icons.numbers_rounded),
+        for (final dm in s.domains) ImpactLine(dm, icon: Icons.language_rounded),
         const SizedBox(height: 8),
         Semantics(
             header: true,
@@ -321,7 +323,7 @@ class _IdentitySection extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleSmall)),
         const SizedBox(height: 4),
         if (d.registryFacts.isEmpty)
-          ImpactLine(t.impactNoRegistry, icon: Icons.info_outline),
+          ImpactLine(t.impactNoRegistry, icon: Icons.info_outline_rounded),
         for (final f in d.registryFacts)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -348,7 +350,7 @@ class _IdentitySection extends StatelessWidget {
         for (final c in d.registryConflicts)
           ImpactLine(
               '${l.limitation('REGISTRY_CONFLICT')} ${c.kind}: ${c.sourceRef} ↔ ${c.otherSourceRef}',
-              icon: Icons.compare_arrows),
+              icon: Icons.compare_arrows_rounded),
       ],
     );
   }
@@ -417,7 +419,7 @@ class ImpactClaimTile extends StatelessWidget {
         button: true,
         label: '${t.impactClaimDetail} ${claim.ref}',
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
             builder: (_) => ImpactClaimScreen(dossier: dossier, claim: claim),
           )),
@@ -439,19 +441,19 @@ class ImpactClaimTile extends StatelessWidget {
                   if (v == null)
                     ImpactChip(
                         label: t.impactNotVerifiedYet,
-                        icon: Icons.hourglass_empty)
+                        icon: Icons.hourglass_empty_rounded)
                   else ...[
                     ImpactChip(
                         label: l.status(v.status),
                         icon: impactStatusIcon(v.status)),
                     ImpactChip(
                         label: l.displayClass(v.displayClass),
-                        icon: Icons.label_outline),
+                        icon: Icons.label_outline_rounded),
                   ],
                   if (claim.reverificationPending)
                     ImpactChip(
                         label: t.impactReverifyPending,
-                        icon: Icons.update,
+                        icon: Icons.update_rounded,
                         attention: true),
                   if (claim.disputeRefs.isNotEmpty)
                     ImpactChip(
@@ -461,7 +463,7 @@ class ImpactClaimTile extends StatelessWidget {
                 ]),
                 const Align(
                   alignment: Alignment.centerRight,
-                  child: ExcludeSemantics(child: Icon(Icons.chevron_right)),
+                  child: ExcludeSemantics(child: Icon(Icons.chevron_right_rounded)),
                 ),
               ],
             ),
@@ -494,7 +496,7 @@ class _DisputesSection extends StatelessWidget {
               x.open ? t.impactOpenDisputes : (x.resolution ?? '—'),
               x.openedAt ?? ''
             ].join(' · '),
-            icon: x.open ? Icons.forum_outlined : Icons.check,
+            icon: x.open ? Icons.forum_outlined : Icons.check_rounded,
           ),
       ],
     );
@@ -530,7 +532,7 @@ class ImpactSourceTile extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     final s = source;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -563,9 +565,9 @@ class _IntegritySection extends StatelessWidget {
         ?.copyWith(fontFamily: 'monospace');
     return ImpactSection(
       title: d.labels.section('INTEGRITY'),
-      icon: Icons.fingerprint,
+      icon: Icons.fingerprint_rounded,
       children: [
-        ImpactLine(t.impactHashNotTruth, icon: Icons.info_outline),
+        ImpactLine(t.impactHashNotTruth, icon: Icons.info_outline_rounded),
         Text(
             '${t.impactContentHash} (${d.integrity.algorithm}, ${d.integrity.canonicalization})',
             style: Theme.of(context).textTheme.labelMedium),

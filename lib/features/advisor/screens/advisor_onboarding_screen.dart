@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +8,7 @@ import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 import '../../../data/models/advisor_profile.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/advisor_provider.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // R16 — the persisted advisor role/style values (AdvisorProfile.roleOptions
 // / styleOptions) are canonical PT codes; only their DISPLAY is localized.
@@ -64,10 +66,9 @@ String advisorStyleDescription(String style, AppLocalizations l10n) {
 }
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg = Color(0xFF0F0F1A);
-const _kCard = Color(0xFF1A1A2E);
-const _kPrimary = Color(0xFF6C63FF);
-const _kGold = Color(0xFFFFD700);
+const _kCard = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGold = AppColors.gold;
 
 // ════════════════════════════════════════════════════════════════════════════
 // Advisor Onboarding Screen (M2)
@@ -108,7 +109,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
           SnackBar(
               content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix(
                   extractErrorMessage(e, AppLocalizations.of(context)!))),
-              backgroundColor: Colors.red),
+              backgroundColor: AppColors.negative),
         );
       }
     } finally {
@@ -119,8 +120,8 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBg,
-      body: SafeArea(
+      backgroundColor: Colors.transparent,
+      body: IvBody(child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -139,8 +140,8 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
                             width: i == _step ? 28 : 8,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: i <= _step ? _kPrimary : Colors.white12,
-                              borderRadius: BorderRadius.circular(4),
+                              color: i <= _step ? _kPrimary : AppColors.line,
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
                             ),
                           ),
                         )),
@@ -152,7 +153,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 
@@ -197,11 +198,11 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
             child: OutlinedButton(
               onPressed: () => setState(() => _step--),
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white54,
-                side: const BorderSide(color: Colors.white24),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                foregroundColor: AppColors.inkMuted,
+                side: const BorderSide(color: AppColors.inkSubtle),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(AppRadius.lg)),
               ),
               child: Text(l10n.commonBack),
             ),
@@ -221,22 +222,22 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
                   },
             style: ElevatedButton.styleFrom(
               backgroundColor: _kPrimary,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.onAccent,
               disabledBackgroundColor: _kPrimary.withOpacity(0.4),
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(AppRadius.lg)),
             ),
             child: _saving
                 ? const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2, color: AppColors.ink),
                   )
                 : Text(_step < 2 ? l10n.uxAdvisorNext : l10n.uxAdvisorActivate,
                     style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.bold)),
+                        fontSize: 15, fontWeight: FontWeight.w600)),
           ),
         ),
       ],
@@ -260,10 +261,10 @@ class _StepName extends StatelessWidget {
   final ValueChanged<String> onCustom;
 
   static const _avatars = {
-    'Atlas': '🌐',
-    'Iris': '🔮',
-    'Mentor': '🎓',
-    'Nexus': '⚡',
+    'Atlas': Icons.public_rounded,
+    'Iris': Icons.auto_awesome_rounded,
+    'Mentor': Icons.school_rounded,
+    'Nexus': Icons.hub_rounded,
   };
 
   @override
@@ -275,15 +276,15 @@ class _StepName extends StatelessWidget {
         Text(
           l10n.uxAdvisorNameTitle,
           style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.ink,
               fontSize: 24,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               height: 1.3),
         ),
         const SizedBox(height: 8),
         Text(
           l10n.uxAdvisorNameSubtitle,
-          style: const TextStyle(color: Colors.white54, fontSize: 14),
+          style: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
         ),
         const SizedBox(height: 32),
         GridView.count(
@@ -300,24 +301,25 @@ class _StepName extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: isSelected ? _kPrimary.withOpacity(0.2) : _kCard,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                   border: Border.all(
-                    color: isSelected ? _kPrimary : Colors.white12,
+                    color: isSelected ? _kPrimary : AppColors.line,
                     width: isSelected ? 2 : 1,
                   ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(_avatars[name] ?? '🤖',
-                        style: const TextStyle(fontSize: 22)),
+                    IvIconTile(_avatars[name] ?? Icons.smart_toy_rounded,
+                        color: isSelected ? AppColors.accent : AppColors.inkMuted,
+                        size: 36),
                     const SizedBox(width: 10),
                     Text(name,
                         style: TextStyle(
-                          color: isSelected ? _kPrimary : Colors.white70,
+                          color: isSelected ? _kPrimary : AppColors.inkMuted,
                           fontSize: 16,
                           fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
                         )),
                   ],
                 ),
@@ -329,21 +331,21 @@ class _StepName extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: _kCard,
-            borderRadius: BorderRadius.circular(12),
+            color: _kCard, gradient: kIvSurfaceGradient,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
-              color: useCustom ? _kGold : Colors.white12,
+              color: useCustom ? _kGold : AppColors.line,
               width: useCustom ? 2 : 1,
             ),
           ),
           child: TextField(
             onChanged: onCustom,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: AppColors.ink),
             decoration: InputDecoration(
               hintText: l10n.uxAdvisorCustomNameHint,
-              hintStyle: const TextStyle(color: Colors.white38),
+              hintStyle: const TextStyle(color: AppColors.inkSubtle),
               prefixIcon: const Icon(Icons.edit_rounded,
-                  color: Colors.white38, size: 18),
+                  color: AppColors.inkSubtle, size: 18),
               border: InputBorder.none,
               isDense: true,
             ),
@@ -378,15 +380,15 @@ class _StepRole extends StatelessWidget {
         Text(
           l10n.uxAdvisorRoleTitle,
           style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.ink,
               fontSize: 24,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               height: 1.3),
         ),
         const SizedBox(height: 8),
         Text(
           l10n.uxAdvisorRoleSubtitle,
-          style: const TextStyle(color: Colors.white54, fontSize: 14),
+          style: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
         ),
         const SizedBox(height: 32),
         Expanded(
@@ -394,16 +396,16 @@ class _StepRole extends StatelessWidget {
             children: AdvisorProfile.roleOptions.map((role) {
               final isSelected = selected == role;
               return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: GestureDetector(
                   onTap: () => onSelect(role),
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: isSelected ? _kPrimary.withOpacity(0.15) : _kCard,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(
-                        color: isSelected ? _kPrimary : Colors.white12,
+                        color: isSelected ? _kPrimary : AppColors.line,
                         width: isSelected ? 2 : 1,
                       ),
                     ),
@@ -411,17 +413,17 @@ class _StepRole extends StatelessWidget {
                       children: [
                         Icon(
                           _icons[role] ?? Icons.auto_awesome_rounded,
-                          color: isSelected ? _kPrimary : Colors.white38,
+                          color: isSelected ? _kPrimary : AppColors.inkSubtle,
                           size: 22,
                         ),
                         const SizedBox(width: 14),
                         Text(
                           advisorRoleLabel(role, l10n),
                           style: TextStyle(
-                            color: isSelected ? _kPrimary : Colors.white70,
+                            color: isSelected ? _kPrimary : AppColors.inkMuted,
                             fontSize: 15,
                             fontWeight: isSelected
-                                ? FontWeight.bold
+                                ? FontWeight.w600
                                 : FontWeight.normal,
                           ),
                         ),
@@ -463,15 +465,15 @@ class _StepStyle extends StatelessWidget {
         Text(
           l10n.uxAdvisorStyleTitle(name),
           style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.ink,
               fontSize: 24,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               height: 1.3),
         ),
         const SizedBox(height: 8),
         Text(
           l10n.uxAdvisorStyleSubtitle,
-          style: const TextStyle(color: Colors.white54, fontSize: 14),
+          style: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
         ),
         const SizedBox(height: 32),
         Expanded(
@@ -479,16 +481,16 @@ class _StepStyle extends StatelessWidget {
             children: AdvisorProfile.styleOptions.map((style) {
               final isSelected = selected == style;
               return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: GestureDetector(
                   onTap: () => onSelect(style),
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: isSelected ? _kGold.withOpacity(0.1) : _kCard,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(
-                        color: isSelected ? _kGold : Colors.white12,
+                        color: isSelected ? _kGold : AppColors.line,
                         width: isSelected ? 2 : 1,
                       ),
                     ),
@@ -500,9 +502,9 @@ class _StepStyle extends StatelessWidget {
                             Text(
                               advisorStyleLabel(style, l10n),
                               style: TextStyle(
-                                color: isSelected ? _kGold : Colors.white,
+                                color: isSelected ? _kGold : AppColors.ink,
                                 fontSize: 15,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                             if (isSelected) ...[
@@ -516,7 +518,7 @@ class _StepStyle extends StatelessWidget {
                         Text(
                           advisorStyleDescription(style, l10n),
                           style: const TextStyle(
-                              color: Colors.white54, fontSize: 12, height: 1.4),
+                              color: AppColors.inkMuted, fontSize: 12, height: 1.4),
                         ),
                       ],
                     ),

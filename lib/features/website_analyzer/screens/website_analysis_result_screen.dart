@@ -13,21 +13,25 @@ import '../../../providers/website_analyzer_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/canonical_back_button.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
+import 'package:ai_social_copilot/core/theme/app_motion.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
+import 'package:ai_social_copilot/shared/ui/iv_charts.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 
 class WebsiteAnalysisResultScreen extends ConsumerWidget {
   final String analysisId;
 
   const WebsiteAnalysisResultScreen({super.key, required this.analysisId});
 
-  static const Color _background = Color(0xFF0F0F1A);
-  static const Color _cardColor = Color(0xFF1A1A2E);
-  static const Color _primary = Color(0xFF6C63FF);
-  static const Color _accent = Color(0xFF00BCD4);
+  static const Color _background = AppColors.ground;
+  static const Color _cardColor = AppColors.surface;
+  static const Color _primary = AppColors.accent;
+  static const Color _accent = AppColors.info;
 
   Color _scoreColor(num score) {
-    if (score >= 70) return Colors.green;
-    if (score >= 40) return Colors.orange;
-    return Colors.red;
+    if (score >= 70) return AppColors.positive;
+    if (score >= 40) return AppColors.warning;
+    return AppColors.negative;
   }
 
   @override
@@ -36,15 +40,15 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Colors.transparent,
       drawer: const AppDrawer(),
       appBar: AppBar(
-        backgroundColor: _cardColor,
+        backgroundColor: Colors.transparent,
         title: Text(
           l10n.websiteResultTitle,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: AppColors.ink),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: AppColors.ink),
         elevation: 0,
         // IVE-COMMERCIAL-FOUNDATION-11 — root cause of the confirmed "no
         // Back button" defect (docs/commercial/
@@ -66,11 +70,11 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(l10n.websiteResultSavedSnack),
-                            backgroundColor: Colors.green,
+                            backgroundColor: AppColors.positive,
                           ),
                         );
                       },
-                      icon: const Icon(Icons.lock, size: 16, color: _accent),
+                      icon: const Icon(Icons.lock_rounded, size: 16, color: _accent),
                       label: Text(
                         l10n.websiteResultSaveToVault,
                         style: const TextStyle(color: _accent, fontSize: 13),
@@ -83,7 +87,7 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
                           extra: {'prefillUrl': analysis.url},
                         );
                       },
-                      icon: const Icon(Icons.auto_awesome,
+                      icon: const Icon(Icons.auto_awesome_rounded,
                           size: 16, color: _primary),
                       label: Text(
                         l10n.websiteResultCreateStrategy,
@@ -157,7 +161,7 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               Text(
                 l10n.websiteResultLoadingAnalysis,
-                style: const TextStyle(color: Colors.white70),
+                style: const TextStyle(color: AppColors.inkMuted),
               ),
             ],
           ),
@@ -168,20 +172,20 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                const Icon(Icons.error_outline_rounded, color: AppColors.negative, size: 48),
                 const SizedBox(height: 16),
                 Text(
                   l10n.websiteResultLoadError,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   extractErrorMessage(error, l10n),
-                  style: TextStyle(color: Colors.white.withOpacity(0.6)),
+                  style: TextStyle(color: AppColors.ink.withOpacity(0.6)),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -234,39 +238,38 @@ class _AnalysisContent extends StatelessWidget {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: Column(
+      child: Center(
+       child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1080),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // URL Header
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: accent.withOpacity(0.3)),
-            ),
+          IvCard(
+            highlight: true,
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpace.s4, vertical: AppSpace.s3),
             child: Row(
               children: [
-                Icon(Icons.language, color: accent, size: 18),
-                const SizedBox(width: 8),
+                IvIconTile(Icons.language_rounded, color: accent, size: 36),
+                const SizedBox(width: AppSpace.s3),
                 Expanded(
                   child: Text(
                     analysis.url,
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
+                      color: AppColors.ink,
+                      fontWeight: FontWeight.w600,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.copy,
-                      color: Colors.white.withOpacity(0.5), size: 18),
+                  icon: const Icon(Icons.copy_rounded,
+                      color: AppColors.inkMuted, size: 18),
+                  tooltip: MaterialLocalizations.of(context).copyButtonLabel,
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: analysis.url));
                   },
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
@@ -281,7 +284,7 @@ class _AnalysisContent extends StatelessWidget {
                 child: _ScoreCard(
                   label: l10n.websiteResultScoreWebsite,
                   score: websiteScore,
-                  icon: Icons.language,
+                  icon: Icons.language_rounded,
                   color: scoreColor(websiteScore),
                   cardColor: cardColor,
                 ),
@@ -291,7 +294,7 @@ class _AnalysisContent extends StatelessWidget {
                 child: _ScoreCard(
                   label: l10n.websiteAnalyzerScoreAdsense,
                   score: adsenseScore,
-                  icon: Icons.monetization_on,
+                  icon: Icons.monetization_on_rounded,
                   color: scoreColor(adsenseScore),
                   cardColor: cardColor,
                 ),
@@ -301,7 +304,7 @@ class _AnalysisContent extends StatelessWidget {
                 child: _ScoreCard(
                   label: l10n.websiteResultScoreSeo,
                   score: seoScore,
-                  icon: Icons.search,
+                  icon: Icons.search_rounded,
                   color: scoreColor(seoScore),
                   cardColor: cardColor,
                 ),
@@ -311,7 +314,7 @@ class _AnalysisContent extends StatelessWidget {
                 child: _ScoreCard(
                   label: l10n.websiteResultScoreMonetization,
                   score: monetizationScore,
-                  icon: Icons.payments,
+                  icon: Icons.payments_rounded,
                   color: scoreColor(monetizationScore),
                   cardColor: cardColor,
                 ),
@@ -324,120 +327,120 @@ class _AnalysisContent extends StatelessWidget {
           // Expandable Sections
           _ExpandableSection(
             title: l10n.websiteResultSectionDiagnostic,
-            icon: Icons.analytics,
+            icon: Icons.analytics_rounded,
             iconColor: primary,
             cardColor: cardColor,
             initiallyExpanded: true,
             child: _DiagnosticContent(analysis: analysis, l10n: l10n),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpace.s3),
 
           if (analysis.strengths.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionStrengths,
-              icon: Icons.thumb_up,
-              iconColor: Colors.green,
+              icon: Icons.thumb_up_rounded,
+              iconColor: AppColors.positive,
               cardColor: cardColor,
               child: _BulletList(
                 items: analysis.strengths,
-                color: Colors.green,
+                color: AppColors.positive,
               ),
             ),
 
-          if (analysis.strengths.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.strengths.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.weaknesses.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionWeaknesses,
-              icon: Icons.thumb_down,
-              iconColor: Colors.orange,
+              icon: Icons.thumb_down_rounded,
+              iconColor: AppColors.warning,
               cardColor: cardColor,
               child: _BulletList(
                 items: analysis.weaknesses,
-                color: Colors.orange,
+                color: AppColors.warning,
               ),
             ),
 
-          if (analysis.weaknesses.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.weaknesses.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.criticalIssues.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionCriticalIssues,
-              icon: Icons.warning_amber,
-              iconColor: Colors.red,
+              icon: Icons.warning_amber_rounded,
+              iconColor: AppColors.negative,
               cardColor: cardColor,
               child: _BulletList(
                 items: analysis.criticalIssues,
-                color: Colors.red,
+                color: AppColors.negative,
               ),
             ),
 
-          if (analysis.criticalIssues.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.criticalIssues.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.seoAnalysis.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionSeoAnalysis,
-              icon: Icons.search,
+              icon: Icons.search_rounded,
               iconColor: accent,
               cardColor: cardColor,
               child: _MapContent(data: analysis.seoAnalysis),
             ),
 
-          if (analysis.seoAnalysis.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.seoAnalysis.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.adsenseAnalysis.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionAdsenseAnalysis,
-              icon: Icons.monetization_on,
-              iconColor: Colors.amber,
+              icon: Icons.monetization_on_rounded,
+              iconColor: AppColors.warning,
               cardColor: cardColor,
               child: _AdsenseContent(analysis: analysis, l10n: l10n),
             ),
 
-          if (analysis.adsenseAnalysis.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.adsenseAnalysis.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.quickWins.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionQuickWins,
-              icon: Icons.bolt,
-              iconColor: Colors.yellow,
+              icon: Icons.bolt_rounded,
+              iconColor: AppColors.warning,
               cardColor: cardColor,
               child: _BulletList(
                 items: analysis.quickWins,
-                color: Colors.green,
+                color: AppColors.positive,
                 bulletChar: '✓',
               ),
             ),
 
-          if (analysis.quickWins.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.quickWins.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.plan7Days.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionPlan7Days,
-              icon: Icons.calendar_today,
+              icon: Icons.calendar_today_rounded,
               iconColor: primary,
               cardColor: cardColor,
               child: _NumberedList(items: analysis.plan7Days),
             ),
 
-          if (analysis.plan7Days.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.plan7Days.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.plan30Days.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionPlan30Days,
-              icon: Icons.date_range,
+              icon: Icons.date_range_rounded,
               iconColor: primary,
               cardColor: cardColor,
               child: _NumberedList(items: analysis.plan30Days),
             ),
 
-          if (analysis.plan30Days.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.plan30Days.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.articleIdeas.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionArticleIdeas,
-              icon: Icons.article,
+              icon: Icons.article_rounded,
               iconColor: accent,
               cardColor: cardColor,
               child: _BulletList(
@@ -446,38 +449,40 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.articleIdeas.isNotEmpty) const SizedBox(height: 8),
+          if (analysis.articleIdeas.isNotEmpty) const SizedBox(height: AppSpace.s3),
 
           if (analysis.monetizationOpportunities.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionMonetizationOpportunities,
-              icon: Icons.attach_money,
-              iconColor: Colors.green,
+              icon: Icons.attach_money_rounded,
+              iconColor: AppColors.positive,
               cardColor: cardColor,
               child: _BulletList(
                 items: analysis.monetizationOpportunities,
-                color: Colors.green,
+                color: AppColors.positive,
               ),
             ),
 
           if (analysis.monetizationOpportunities.isNotEmpty)
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpace.s3),
 
           if (analysis.commercialOpportunities.isNotEmpty)
             _ExpandableSection(
               title: l10n.websiteResultSectionCommercialOpportunities,
-              icon: Icons.business_center,
-              iconColor: Colors.amber,
+              icon: Icons.business_center_rounded,
+              iconColor: AppColors.warning,
               cardColor: cardColor,
               child: _BulletList(
                 items: analysis.commercialOpportunities,
-                color: Colors.amber,
+                color: AppColors.warning,
               ),
             ),
 
           // Bottom padding for the bottom bar
           const SizedBox(height: 80),
         ],
+      ),
+       ),
       ),
     );
   }
@@ -504,33 +509,39 @@ class _ScoreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.4)),
-      ),
+    return IvCard(
+      accent: color,
+      padding: const EdgeInsets.symmetric(
+          vertical: AppSpace.s3 + 2, horizontal: AppSpace.s2),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 22),
-          const SizedBox(height: 6),
-          Text(
-            score.toStringAsFixed(0),
-            style: TextStyle(
-              color: color,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          IvRingGauge(
+            value: score.toDouble(),
+            size: 54,
+            stroke: 5,
+            color: color,
+            semanticsLabel: '$label: ${score.toStringAsFixed(0)} / 100',
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
-              fontSize: 10,
-            ),
-            textAlign: TextAlign.center,
+          const SizedBox(height: AppSpace.s2),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: AppColors.inkSubtle, size: 12),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.inkMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -574,48 +585,56 @@ class _ExpandableSectionState extends State<_ExpandableSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: widget.cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
+    return IvCard(
+      padding: EdgeInsets.zero,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             child: Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpace.s4, vertical: AppSpace.s3 + 2),
               child: Row(
                 children: [
-                  Icon(widget.icon, color: widget.iconColor, size: 20),
-                  const SizedBox(width: 10),
+                  IvIconTile(widget.icon, color: widget.iconColor, size: 32),
+                  const SizedBox(width: AppSpace.s3),
                   Expanded(
                     child: Text(
                       widget.title,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontWeight: FontWeight.w600,
-                        fontSize: 15,
+                        fontSize: 16,
                       ),
                     ),
                   ),
-                  Icon(
-                    _expanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: Colors.white.withOpacity(0.5),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: AppMotion.short,
+                    child: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.inkMuted),
                   ),
                 ],
               ),
             ),
           ),
-          if (_expanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-              child: widget.child,
-            ),
+          AnimatedSize(
+            duration: AppMotion.medium,
+            curve: AppMotion.emphasized,
+            alignment: Alignment.topCenter,
+            child: _expanded
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpace.s4, 0,
+                        AppSpace.s4, AppSpace.s4),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: widget.child,
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
         ],
       ),
     );
@@ -647,8 +666,8 @@ class _DiagnosticContent extends StatelessWidget {
           Text(
             analysis.title!,
             style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+              color: AppColors.ink,
+              fontWeight: FontWeight.w600,
               fontSize: 15,
             ),
           ),
@@ -658,7 +677,7 @@ class _DiagnosticContent extends StatelessWidget {
           Text(
             analysis.description!,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
+              color: AppColors.ink.withOpacity(0.8),
               fontSize: 14,
               height: 1.5,
             ),
@@ -669,7 +688,7 @@ class _DiagnosticContent extends StatelessWidget {
           Text(
             l10n.websiteResultMainTopicsLabel,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
+              color: AppColors.ink.withOpacity(0.6),
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -682,18 +701,18 @@ class _DiagnosticContent extends StatelessWidget {
                 .map(
                   (topic) => Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6C63FF).withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
+                      color: AppColors.accent.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(
-                        color: const Color(0xFF6C63FF).withOpacity(0.4),
+                        color: AppColors.accent.withOpacity(0.4),
                       ),
                     ),
                     child: Text(
                       topic,
                       style:
-                          const TextStyle(color: Colors.white70, fontSize: 12),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                     ),
                   ),
                 )
@@ -731,14 +750,14 @@ class _BulletList extends StatelessWidget {
                 style: TextStyle(
                   color: color,
                   fontSize: 14,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               Expanded(
                 child: Text(
                   item,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
+                    color: AppColors.ink.withOpacity(0.85),
                     fontSize: 14,
                     height: 1.4,
                   ),
@@ -763,7 +782,7 @@ class _NumberedList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: items.asMap().entries.map((entry) {
         return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(bottom: 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -772,15 +791,15 @@ class _NumberedList extends StatelessWidget {
                 height: 24,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6C63FF).withOpacity(0.3),
+                  color: AppColors.accent.withOpacity(0.3),
                   shape: BoxShape.circle,
                 ),
                 child: Text(
                   '${entry.key + 1}',
                   style: const TextStyle(
-                    color: Color(0xFF6C63FF),
+                    color: AppColors.accent,
                     fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -789,7 +808,7 @@ class _NumberedList extends StatelessWidget {
                 child: Text(
                   entry.value,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
+                    color: AppColors.ink.withOpacity(0.85),
                     fontSize: 14,
                     height: 1.4,
                   ),
@@ -822,14 +841,14 @@ class _MapContent extends StatelessWidget {
         final value = entry.value;
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(bottom: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 key,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: AppColors.ink.withOpacity(0.6),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -847,14 +866,14 @@ class _MapContent extends StatelessWidget {
                           Text(
                             '• ',
                             style: TextStyle(
-                              color: const Color(0xFF00BCD4).withOpacity(0.7),
+                              color: AppColors.info.withOpacity(0.7),
                             ),
                           ),
                           Expanded(
                             child: Text(
                               '$item',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
+                                color: AppColors.ink.withOpacity(0.8),
                                 fontSize: 13,
                               ),
                             ),
@@ -868,12 +887,12 @@ class _MapContent extends StatelessWidget {
                 Text(
                   '$value',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
+                    color: AppColors.ink.withOpacity(0.85),
                     fontSize: 14,
                     height: 1.4,
                   ),
                 ),
-              Divider(color: Colors.white.withOpacity(0.08), height: 12),
+              Divider(color: AppColors.ink.withOpacity(0.08), height: 12),
             ],
           ),
         );
@@ -937,27 +956,27 @@ class _PolicyIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         decoration: BoxDecoration(
-          color: (hasIt ? Colors.green : Colors.red).withOpacity(0.15),
-          borderRadius: BorderRadius.circular(8),
+          color: (hasIt ? AppColors.positive : AppColors.negative).withOpacity(0.15),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
-            color: (hasIt ? Colors.green : Colors.red).withOpacity(0.4),
+            color: (hasIt ? AppColors.positive : AppColors.negative).withOpacity(0.4),
           ),
         ),
         child: Column(
           children: [
             Icon(
-              hasIt ? Icons.check_circle : Icons.cancel,
-              color: hasIt ? Colors.green : Colors.red,
+              hasIt ? Icons.check_circle_rounded : Icons.cancel_rounded,
+              color: hasIt ? AppColors.positive : AppColors.negative,
               size: 18,
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 10,
+                color: AppColors.ink.withOpacity(0.7),
+                fontSize: 11,
               ),
               textAlign: TextAlign.center,
             ),
@@ -990,25 +1009,26 @@ class _BottomActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.s4, vertical: AppSpace.s3),
       decoration: BoxDecoration(
-        color: cardColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
+        color: AppColors.surface.withOpacity(0.92),
+        border: const Border(top: BorderSide(color: AppColors.line)),
       ),
       child: SafeArea(
         top: false,
+        // heightFactor: 1 — a bare Center fills the whole height the Scaffold
+        // offers a bottom bar, covering the page with this bar's background.
+        child: Center(
+         heightFactor: 1,
+         child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1080),
         child: Row(
           children: [
             Expanded(
               child: _ActionButton(
                 label: l10n.websiteResultCreateStrategy,
-                icon: Icons.auto_awesome,
+                icon: Icons.auto_awesome_rounded,
                 color: primary,
                 onTap: () => context.go(
                   '/knowledge/new',
@@ -1016,11 +1036,11 @@ class _BottomActionBar extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpace.s2),
             Expanded(
               child: _ActionButton(
                 label: l10n.websiteResultCreateCampaign,
-                icon: Icons.campaign,
+                icon: Icons.campaign_rounded,
                 color: accent,
                 onTap: () => context.go(
                   '/campaigns/new',
@@ -1028,23 +1048,25 @@ class _BottomActionBar extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpace.s2),
             Expanded(
               child: _ActionButton(
                 label: l10n.websiteResultSeoPlan,
-                icon: Icons.search,
-                color: Colors.green,
+                icon: Icons.search_rounded,
+                color: AppColors.positive,
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpace.s2),
             Expanded(
               child: _ActionButton(
                 label: l10n.websiteResultAdsensePlan,
-                icon: Icons.monetization_on,
-                color: Colors.amber,
+                icon: Icons.monetization_on_rounded,
+                color: AppColors.warning,
               ),
             ),
           ],
+        ),
+         ),
         ),
       ),
     );
@@ -1068,34 +1090,41 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDisabled = onTap == null;
-    final effectiveColor = isDisabled ? Colors.white24 : color;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: effectiveColor.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: effectiveColor.withOpacity(0.25)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: effectiveColor, size: 18),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                color: effectiveColor,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+    final effectiveColor = isDisabled ? AppColors.inkSubtle : color;
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.s2),
+          decoration: BoxDecoration(
+            color: isDisabled
+                ? AppColors.surfaceRaised.withOpacity(0.5)
+                : effectiveColor.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: effectiveColor.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: effectiveColor, size: 18),
+              const SizedBox(width: AppSpace.s2),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isDisabled ? AppColors.inkSubtle : AppColors.ink,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

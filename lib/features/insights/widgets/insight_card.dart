@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../data/models/opportunity_lab_item.dart';
 import '../../../l10n/app_localizations.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class InsightCard extends StatelessWidget {
   const InsightCard({
@@ -24,15 +25,15 @@ class InsightCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: elevated ? const Color(0xFF1E1E35) : const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(12),
+        color: elevated ? AppColors.surface : AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
-          color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
+          color: AppColors.accent.withValues(alpha: 0.3),
         ),
         boxShadow: elevated
             ? [
                 BoxShadow(
-                  color: const Color(0xFF6C63FF).withValues(alpha: 0.08),
+                  color: AppColors.accent.withValues(alpha: 0.08),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 )
@@ -43,19 +44,19 @@ class InsightCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Icon(Icons.psychology_rounded,
-                    color: Color(0xFF6C63FF), size: 18),
+                    color: AppColors.accent, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     item.title,
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                      color: AppColors.ink,
+                      fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
                   ),
@@ -66,27 +67,27 @@ class InsightCard extends StatelessWidget {
           ),
           if (item.description.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               child: Text(
                 item.description,
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
               ),
             ),
           if (item.sources.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               child:
                   _SourcesRow(label: t.insightSources, sources: item.sources),
             ),
           if (item.actionSteps.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(t.insightRecommendedAction,
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 11)),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
                   const SizedBox(height: 4),
                   ...item.actionSteps.map((s) => Padding(
                         padding: const EdgeInsets.only(bottom: 2),
@@ -95,11 +96,11 @@ class InsightCard extends StatelessWidget {
                           children: [
                             const Text('• ',
                                 style: TextStyle(
-                                    color: Color(0xFF6BCB77), fontSize: 12)),
+                                    color: AppColors.positive, fontSize: 12)),
                             Expanded(
                               child: Text(s,
                                   style: const TextStyle(
-                                      color: Colors.white60, fontSize: 12)),
+                                      color: AppColors.inkMuted, fontSize: 12)),
                             ),
                           ],
                         ),
@@ -108,26 +109,26 @@ class InsightCard extends StatelessWidget {
               ),
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
             child: Row(
               children: [
                 Text(
                   _fmtDate(item.createdAt),
-                  style: const TextStyle(color: Colors.white24, fontSize: 11),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
                 ),
                 const Spacer(),
                 if (onAddToActions != null)
                   _SmallBtn(
                     icon: Icons.add_task_rounded,
                     label: t.insightAddToActions,
-                    color: const Color(0xFF6BCB77),
+                    color: AppColors.positive,
                     onTap: onAddToActions!,
                   ),
                 if (onDelete != null)
                   _SmallBtn(
                     icon: Icons.delete_outline_rounded,
                     label: '',
-                    color: const Color(0xFFFF6B6B),
+                    color: AppColors.negative,
                     onTap: onDelete!,
                   ),
               ],
@@ -150,18 +151,18 @@ class _ConfidenceBadge extends StatelessWidget {
   final int confidence;
 
   Color get _color {
-    if (confidence >= 80) return const Color(0xFF6BCB77);
-    if (confidence >= 50) return const Color(0xFFFFD93D);
-    return const Color(0xFFFF6B6B);
+    if (confidence >= 80) return AppColors.positive;
+    if (confidence >= 50) return AppColors.warning;
+    return AppColors.negative;
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: _color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _color.withValues(alpha: 0.4)),
       ),
       child: Text(
@@ -169,7 +170,7 @@ class _ConfidenceBadge extends StatelessWidget {
         style: TextStyle(
           color: _color,
           fontSize: 11,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -187,7 +188,7 @@ class _SourcesRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(color: Colors.white38, fontSize: 11)),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
         const SizedBox(height: 4),
         Wrap(
           spacing: 6,
@@ -197,14 +198,14 @@ class _SourcesRow extends StatelessWidget {
               .map(
                 (s) => Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF6C63FF).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
+                    color: AppColors.accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(s,
                       style: const TextStyle(
-                          color: Color(0xFFAB83FF), fontSize: 10)),
+                          color: AppColors.accent, fontSize: 11)),
                 ),
               )
               .toList(),
@@ -233,7 +234,7 @@ class _SmallBtn extends StatelessWidget {
       style: TextButton.styleFrom(
         foregroundColor: color,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        minimumSize: Size.zero,
+        minimumSize: const Size(0, 36),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       icon: Icon(icon, size: 14),

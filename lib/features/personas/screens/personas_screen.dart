@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,6 +9,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class PersonasScreen extends ConsumerWidget {
   const PersonasScreen({super.key});
@@ -21,7 +23,7 @@ class PersonasScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -38,13 +40,13 @@ class PersonasScreen extends ConsumerWidget {
         onPressed: () => context.push(AppConstants.routePersonaNew),
         icon: const Icon(Icons.add_rounded),
         label: Text(l10n.personasNewPersona),
-        backgroundColor: const Color(0xFF6C63FF),
+        backgroundColor: AppColors.accent,
       ),
-      body: personasAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+      body: IvBody(child: personasAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (e, _) => Center(
             child: Text(l10n.commonError,
-                style: const TextStyle(color: Colors.white54))),
+                style: const TextStyle(color: AppColors.inkMuted))),
         data: (personas) {
           if (personas.isEmpty) {
             return Center(
@@ -52,14 +54,14 @@ class PersonasScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.person_pin_rounded,
-                      size: 64, color: Colors.white24),
+                      size: 64, color: AppColors.inkSubtle),
                   const SizedBox(height: 12),
                   Text(l10n.personasEmpty,
-                      style: const TextStyle(color: Colors.white54)),
+                      style: const TextStyle(color: AppColors.inkMuted)),
                   const SizedBox(height: 4),
                   Text(l10n.personasEmptyHint,
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 12)),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 12)),
                 ],
               ),
             );
@@ -75,27 +77,31 @@ class PersonasScreen extends ConsumerWidget {
                 _SectionHeader(
                   label: l10n.personasGlobalSection,
                   icon: Icons.public_rounded,
-                  color: const Color(0xFFFFD700),
+                  color: AppColors.gold,
                 ),
                 const SizedBox(height: 8),
-                ...globals.map((p) =>
-                    _PersonaCard(persona: p, isAdmin: isAdmin, ref: ref)),
+                IvCardGrid(minTileWidth: 340, gap: AppSpace.s3, children: [
+                  for (final p in globals)
+                    _PersonaCard(persona: p, isAdmin: isAdmin, ref: ref),
+                ]),
                 const SizedBox(height: 20),
               ],
               if (mine.isNotEmpty) ...[
                 _SectionHeader(
                   label: l10n.personasMineSection,
                   icon: Icons.person_rounded,
-                  color: const Color(0xFF6C63FF),
+                  color: AppColors.accent,
                 ),
                 const SizedBox(height: 8),
-                ...mine.map((p) =>
-                    _PersonaCard(persona: p, isAdmin: isAdmin, ref: ref)),
+                IvCardGrid(minTileWidth: 340, gap: AppSpace.s3, children: [
+                  for (final p in mine)
+                    _PersonaCard(persona: p, isAdmin: isAdmin, ref: ref),
+                ]),
               ],
             ],
           );
         },
-      ),
+      )),
     );
   }
 }
@@ -118,7 +124,7 @@ class _SectionHeader extends StatelessWidget {
           style: TextStyle(
             color: color,
             fontSize: 12,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
             letterSpacing: 1,
           ),
         ),
@@ -140,51 +146,50 @@ class _PersonaCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
-      color: Colors.white.withOpacity(0.05),
-      margin: const EdgeInsets.only(bottom: 10),
+      color: AppColors.ink.withOpacity(0.05),
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         side: BorderSide(
           color: persona.isGlobal
-              ? const Color(0xFFFFD700).withOpacity(0.3)
-              : Colors.white12,
+              ? AppColors.gold.withOpacity(0.3)
+              : AppColors.line,
         ),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: _PersonaRow(
         leading: CircleAvatar(
-          backgroundColor: const Color(0xFF6C63FF).withOpacity(0.2),
+          backgroundColor: AppColors.accent.withOpacity(0.2),
           child: Text(
             persona.name.isNotEmpty ? persona.name[0].toUpperCase() : '?',
             style: const TextStyle(
-              color: Color(0xFF6C63FF),
-              fontWeight: FontWeight.bold,
+              color: AppColors.accent,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
         title: Text(
           persona.name,
           style:
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (persona.niche != null)
               Text(persona.niche!,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 12)),
             if (persona.voiceTone != null)
               Text(
                   AppLocalizations.of(context)!
                       .personasToneLabel(persona.voiceTone!),
-                  style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
           ],
         ),
         trailing: (isAdmin || !persona.isGlobal)
             ? PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert,
-                    color: Colors.white38, size: 20),
-                color: const Color(0xFF1A1A2E),
+                icon: const Icon(Icons.more_vert_rounded,
+                    color: AppColors.inkSubtle, size: 20),
+                color: AppColors.surface,
                 onSelected: (value) async {
                   final l10n = AppLocalizations.of(context)!;
                   if (value == 'delete') {
@@ -200,7 +205,7 @@ class _PersonaCard extends ConsumerWidget {
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, true),
                             child: Text(l10n.commonDelete,
-                                style: const TextStyle(color: Colors.red)),
+                                style: const TextStyle(color: AppColors.negative)),
                           ),
                         ],
                       ),
@@ -217,10 +222,47 @@ class _PersonaCard extends ConsumerWidget {
                   PopupMenuItem(
                       value: 'delete',
                       child: Text(AppLocalizations.of(context)!.commonDelete,
-                          style: const TextStyle(color: Colors.red))),
+                          style: const TextStyle(color: AppColors.negative))),
                 ],
               )
             : null,
+      ),
+    );
+  }
+}
+
+/// ListTile reports unreliable intrinsic heights inside equal-height grid
+/// rows (leading drifts to the bottom), so the card lays itself out.
+class _PersonaRow extends StatelessWidget {
+  const _PersonaRow({
+    required this.leading,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+  });
+  final Widget leading;
+  final Widget title;
+  final Widget subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpace.s4, AppSpace.s3, AppSpace.s2, AppSpace.s3),
+      child: Row(
+        children: [
+          leading,
+          const SizedBox(width: AppSpace.s3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [title, const SizedBox(height: 2), subtitle],
+            ),
+          ),
+          if (trailing != null) trailing!,
+        ],
       ),
     );
   }

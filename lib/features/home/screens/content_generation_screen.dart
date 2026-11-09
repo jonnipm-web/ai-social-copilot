@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,6 +16,7 @@ import '../../../providers/quota_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/loading_button.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class ContentGenerationScreen extends ConsumerStatefulWidget {
   const ContentGenerationScreen({super.key});
@@ -147,7 +149,7 @@ class _ContentGenerationScreenState
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.improvePostClearConfirm,
-                style: const TextStyle(color: Colors.redAccent)),
+                style: const TextStyle(color: AppColors.negative)),
           ),
         ],
       ),
@@ -161,27 +163,27 @@ class _ContentGenerationScreenState
   }
 
   Color _counterColor() {
-    if (_charCount >= AppConstants.maxTextLength) return Colors.red;
-    if (_charCount >= AppConstants.maxTextLength - 200) return Colors.orange;
-    if (_charCount >= AppConstants.maxTextLength - 500) return Colors.amber;
-    return Colors.white38;
+    if (_charCount >= AppConstants.maxTextLength) return AppColors.negative;
+    if (_charCount >= AppConstants.maxTextLength - 200) return AppColors.warning;
+    if (_charCount >= AppConstants.maxTextLength - 500) return AppColors.warning;
+    return AppColors.inkSubtle;
   }
 
   Widget _buildCreditsBanner(AppLocalizations l10n, int used, int limit) {
     final remaining = limit - used;
     final isFull = remaining <= 0;
     final color = isFull
-        ? Colors.red.shade700
+        ? AppColors.negative
         : remaining == 1
-            ? Colors.orange.shade700
-            : Colors.teal.shade700;
+            ? AppColors.warning
+            : AppColors.accent;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.15),
         border: Border.all(color: color.withOpacity(0.5)),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(
         children: [
@@ -206,7 +208,7 @@ class _ContentGenerationScreenState
               foregroundColor: color,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               textStyle:
-                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
             child: Text(
                 isFull ? l10n.improvePostUpgradeCta : l10n.improvePostSeePlans),
@@ -233,7 +235,7 @@ class _ContentGenerationScreenState
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.improvePostTitle),
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.canPop()
               ? context.pop()
@@ -253,10 +255,10 @@ class _ContentGenerationScreenState
         ],
       ),
       drawer: const AppDrawer(),
-      body: Center(
+      body: IvBody(child: Center(
         child: ConstrainedBox(
           constraints:
-              const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+              const BoxConstraints(maxWidth: 880),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -277,7 +279,7 @@ class _ContentGenerationScreenState
                   style: Theme.of(context)
                       .textTheme
                       .titleMedium
-                      ?.copyWith(color: Colors.white70),
+                      ?.copyWith(color: AppColors.inkMuted),
                 ),
                 const SizedBox(height: 12),
                 Expanded(
@@ -311,10 +313,10 @@ class _ContentGenerationScreenState
                     if (_charCount > 0)
                       TextButton.icon(
                         onPressed: isLoading ? null : _clear,
-                        icon: const Icon(Icons.clear, size: 14),
+                        icon: const Icon(Icons.clear_rounded, size: 14),
                         label: Text(l10n.improvePostClearConfirm),
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.white38,
+                          foregroundColor: AppColors.inkSubtle,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           textStyle: const TextStyle(fontSize: 12),
                         ),
@@ -335,7 +337,7 @@ class _ContentGenerationScreenState
             ),
           ),
         ),
-      ),
+      )),
     );
   }
 }

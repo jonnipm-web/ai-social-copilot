@@ -25,6 +25,7 @@
 // variants, run_research_loop, run_simulation) still gate on Pro/Premium
 // at the point of use (see PlanUpgradeBanner), not here.
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/strategy/strategy_lab_reference.dart';
@@ -92,7 +93,7 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
     final l = AppLocalizations.of(context)!;
     final profileAsync = ref.watch(currentProfileProvider);
     if (!profileAsync.hasValue && !profileAsync.hasError) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: IvBody(child: Center(child: CircularProgressIndicator())));
     }
     // Macro-08 continuation §12: strategy-builder is COMMERCIAL/free -- any
     // resolved, non-error profile (free/pro/premium/beta_tester/admin) may
@@ -101,11 +102,11 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
     if (profileAsync.hasError) {
       return Scaffold(
         appBar: AppBar(title: Text(l.strategyLabTitle)),
-        body: Center(
+        body: IvBody(child: Center(
             child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(l.strategyLabAccessDenied,
-                    textAlign: TextAlign.center))),
+                    textAlign: TextAlign.center)))),
       );
     }
 
@@ -133,7 +134,7 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(l.strategyLabTitle)),
-      body: SafeArea(
+      body: IvBody(child: SafeArea(
         child: SingleChildScrollView(
           key: const Key('strategyLabScroll'),
           padding: const EdgeInsets.all(16),
@@ -148,7 +149,7 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
                 FilledButton.icon(
                   key: const Key('strategyLabNewButton'),
                   onPressed: _openNew,
-                  icon: const Icon(Icons.add),
+                  icon: const Icon(Icons.add_rounded),
                   label: Text(l.strategyBuilderNewButton),
                 ),
                 OutlinedButton(
@@ -182,7 +183,7 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
                       title: Text(s['name'] as String),
                       subtitle:
                           Text('${s['status']} · v${s['currentVersion']}'),
-                      trailing: const Icon(Icons.chevron_right),
+                      trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => _openDetail(s['id'] as String),
                     ),
                 ]),
@@ -218,7 +219,7 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
             ]),
           ]),
         ),
-      ),
+      )),
     );
   }
 }
@@ -233,7 +234,7 @@ class _Banner extends StatelessWidget {
     return Container(
       width: double.infinity,
       color: cs.secondaryContainer,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(children: [
         Icon(Icons.science_outlined, color: cs.onSecondaryContainer),
         const SizedBox(width: 8),

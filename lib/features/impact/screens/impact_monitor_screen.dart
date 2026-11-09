@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -7,6 +8,7 @@ import '../data/impact_lab_api.dart';
 import '../domain/dossier_models.dart';
 import '../providers/impact_providers.dart';
 import '../widgets/impact_widgets.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 /// IV-IMPACT-MACRO-08 Phase 10 — Monitor vertical.
 ///
@@ -71,7 +73,7 @@ class _ImpactMonitorScreenState extends ConsumerState<ImpactMonitorScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(t.impactMonitorTitle)),
-      body: ImpactPage(
+      body: IvBody(child: ImpactPage(
         maxWidth: 720,
         child: ListView(padding: const EdgeInsets.all(16), children: [
           // PARTIAL capability banner — always visible, honest about what is not available
@@ -80,7 +82,7 @@ class _ImpactMonitorScreenState extends ConsumerState<ImpactMonitorScreen> {
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Icon(Icons.info_outline, size: 18),
+                const Icon(Icons.info_outline_rounded, size: 18),
                 const SizedBox(width: 8),
                 Expanded(child: Text(t.impactMonitorPartialNote,
                     style: Theme.of(context).textTheme.bodySmall)),
@@ -107,14 +109,14 @@ class _ImpactMonitorScreenState extends ConsumerState<ImpactMonitorScreen> {
           // Re-check button
           FilledButton.icon(
             icon:      _rechecking
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.refresh),
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.ink))
+                : const Icon(Icons.refresh_rounded),
             label:     Text(t.impactMonitorRecheck),
             onPressed: _rechecking ? null : _recheck,
           ),
           if (_recheckError != null) ...[
             const SizedBox(height: 8),
-            ImpactLine(_recheckError!, icon: Icons.error_outline),
+            ImpactLine(_recheckError!, icon: Icons.error_outline_rounded),
           ],
           const SizedBox(height: 24),
 
@@ -124,7 +126,7 @@ class _ImpactMonitorScreenState extends ConsumerState<ImpactMonitorScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(children: [
-                  const Icon(Icons.lock_outline),
+                  const Icon(Icons.lock_outline_rounded),
                   const SizedBox(width: 8),
                   Expanded(child: Text(t.impactMonitorPro)),
                 ]),
@@ -137,12 +139,12 @@ class _ImpactMonitorScreenState extends ConsumerState<ImpactMonitorScreen> {
           Text(t.impactMonitorHistory, style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 8),
           dossierAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error:   (e, _) => ImpactLine(e.toString(), icon: Icons.error_outline),
+            loading: () => const IvLoadingSkeleton(),
+            error:   (e, _) => ImpactLine(e.toString(), icon: Icons.error_outline_rounded),
             data:    (dossier) => _VerificationHistory(dossier: dossier, t: t),
           ),
         ]),
-      ),
+      )),
     );
   }
 
@@ -157,7 +159,7 @@ class _StatusRow extends StatelessWidget {
   final IconData icon;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
+    padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(children: [
       Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
       const SizedBox(width: 8),
@@ -191,10 +193,10 @@ class _VerificationHistory extends StatelessWidget {
     return Column(
       children: entries.take(10).map((e) => ListTile(
         dense:    true,
-        leading:  const Icon(Icons.check_circle_outline, size: 18),
+        leading:  const Icon(Icons.check_circle_outline_rounded, size: 18),
         title:    Text(e.status, style: Theme.of(context).textTheme.bodySmall),
         subtitle: Text('${e.ref} · ${e.evaluatedAt}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.inkMuted)),
       )).toList(),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,15 +17,15 @@ import '../../action_engine/screens/action_detail_screen.dart';
 import '../opportunity_type_labels.dart';
 import 'opportunity_detail_screen.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg = Color(0xFF0F0F1A);
-const _kCard = Color(0xFF1A1A2E);
-const _kPrimary = Color(0xFF6C63FF);
-const _kGreen = Color(0xFF4CAF50);
-const _kOrange = Color(0xFFFF9800);
-const _kRed = Color(0xFFF44336);
-const _kGold = Color(0xFFFFD700);
+const _kCard = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGreen = AppColors.positive;
+const _kOrange = AppColors.warning;
+const _kRed = AppColors.negative;
+const _kGold = AppColors.gold;
 
 Color _scoreColor(int s) {
   if (s >= 80) return _kGreen;
@@ -71,13 +72,13 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon:
-              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+              const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeDashboard),
@@ -85,26 +86,25 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
         title: const Text(
           'Opportunity Lab',
           style: TextStyle(
-              color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
       drawer: const AppDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: _kPrimary,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.ink,
         icon: const Icon(Icons.add_rounded),
         label: Text(l10n.oppNewTitle),
         onPressed: () => _showAddDialog(context),
       ),
-      body: flagAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      body: IvBody(child: flagAsync.when(
+        loading: () => const IvLoadingSkeleton(),
         error: (_, __) =>
             _LabBody(projectId: _projectId, onProjectChange: _setProject),
         data: (enabled) => enabled
             ? _LabBody(projectId: _projectId, onProjectChange: _setProject)
             : const _FeatureGated(),
-      ),
+      )),
     );
   }
 }
@@ -120,20 +120,20 @@ class _FeatureGated extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.science_rounded, color: Colors.white24, size: 64),
+            const Icon(Icons.science_rounded, color: AppColors.inkSubtle, size: 64),
             const SizedBox(height: 20),
             const Text(
               'Opportunity Lab',
               style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold),
+                  color: AppColors.ink,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
             Text(
               AppLocalizations.of(context)!.oppLabFeatureGatedBody,
               style: const TextStyle(
-                  color: Colors.white54, fontSize: 13, height: 1.5),
+                  color: AppColors.inkMuted, fontSize: 13, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -141,7 +141,7 @@ class _FeatureGated extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: _kGold.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 border: Border.all(color: _kGold.withOpacity(0.25)),
               ),
               child: Column(
@@ -183,12 +183,11 @@ class _LabBody extends ConsumerWidget {
         : projects.where((p) => p.id == id).map((p) => p.name).firstOrNull;
 
     return itemsAsync.when(
-      loading: () =>
-          const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      loading: () => const IvLoadingSkeleton(),
       error: (e, _) => Center(
         child: Text(
             l10n.opportunityDetailGenericError(extractErrorMessage(e, l10n)),
-            style: const TextStyle(color: Colors.white54)),
+            style: const TextStyle(color: AppColors.inkMuted)),
       ),
       data: (items) {
         if (items.isEmpty) {
@@ -213,11 +212,10 @@ class _LabBody extends ConsumerWidget {
           children: [
             _ProjectFilter(selected: projectId, onSelect: onProjectChange),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-                itemCount: items.length,
-                itemBuilder: (_, i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+              child: SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+      child: IvCardGrid(children: List.generate(items.length, (i) => FadeSlideIn(index: i, child: Padding(
+                  padding: EdgeInsets.zero,
                   child: _LabItemCard(
                     item: items[i],
                     projectName: projectNameFor(items[i].projectId),
@@ -250,10 +248,10 @@ class _LabBody extends ConsumerWidget {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content:
                                   Text(l10n.opportunityDetailApprovedSentTitle),
-                              backgroundColor: const Color(0xFF4CAF50),
+                              backgroundColor: AppColors.positive,
                               action: SnackBarAction(
                                 label: l10n.opportunityDetailViewAction,
-                                textColor: Colors.white,
+                                textColor: AppColors.ink,
                                 onPressed: () => Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (_) =>
@@ -270,7 +268,7 @@ class _LabBody extends ConsumerWidget {
                                 content: Text(l10n
                                     .opportunityDetailApprovedCreateActionError(
                                         extractErrorMessage(e, l10n))),
-                                backgroundColor: Colors.orange,
+                                backgroundColor: AppColors.warning,
                               ),
                             );
                           }
@@ -296,10 +294,10 @@ class _LabBody extends ConsumerWidget {
                                     .showSnackBar(SnackBar(
                                   content: Text(
                                       l10n.opportunityDetailActionCreatedTitle),
-                                  backgroundColor: const Color(0xFF4CAF50),
+                                  backgroundColor: AppColors.positive,
                                   action: SnackBarAction(
                                     label: l10n.oppLabViewActionShort,
-                                    textColor: Colors.white,
+                                    textColor: AppColors.ink,
                                     onPressed: () => Navigator.of(context).push(
                                       MaterialPageRoute(
                                         builder: (_) => ActionDetailScreen(
@@ -316,15 +314,15 @@ class _LabBody extends ConsumerWidget {
                                       content: Text(
                                           l10n.opportunityDetailGenericError(
                                               extractErrorMessage(e, l10n))),
-                                      backgroundColor: Colors.red),
+                                      backgroundColor: AppColors.negative),
                                 );
                               }
                             }
                           }
                         : null,
                   ),
-                ),
-              ),
+                )))),
+    ),
             ),
           ],
         );
@@ -351,11 +349,11 @@ class _LabItemCard extends StatelessWidget {
 
   static Color _statusColor(String s) {
     const m = {
-      'approved': Color(0xFF4CAF50),
-      'executing': Color(0xFF00BCD4),
-      'rejected': Color(0xFFF44336),
+      'approved': AppColors.positive,
+      'executing': AppColors.info,
+      'rejected': AppColors.negative,
     };
-    return m[s] ?? const Color(0xFFFF9800);
+    return m[s] ?? AppColors.warning;
   }
 
   @override
@@ -369,9 +367,9 @@ class _LabItemCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.07)),
+          color: _kCard, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.ink.withOpacity(0.07)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,10 +378,10 @@ class _LabItemCard extends StatelessWidget {
               children: [
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: _kPrimary.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(
                     opportunityTypeLabel(
@@ -391,8 +389,8 @@ class _LabItemCard extends StatelessWidget {
                         .toUpperCase(),
                     style: const TextStyle(
                         color: _kPrimary,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -400,7 +398,7 @@ class _LabItemCard extends StatelessWidget {
                   child: Text(
                     item.title,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 14,
                         fontWeight: FontWeight.w600),
                     overflow: TextOverflow.ellipsis,
@@ -410,16 +408,16 @@ class _LabItemCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: c.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text('$score',
                         style: TextStyle(
                             color: c,
                             fontSize: 13,
-                            fontWeight: FontWeight.bold)),
+                            fontWeight: FontWeight.w600)),
                   ),
                 ],
               ],
@@ -427,7 +425,7 @@ class _LabItemCard extends StatelessWidget {
             if (item.description.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(item.description,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis),
             ],
@@ -436,12 +434,12 @@ class _LabItemCard extends StatelessWidget {
               Row(
                 children: [
                   const Icon(Icons.folder_outlined,
-                      size: 12, color: Colors.white38),
+                      size: 12, color: AppColors.inkSubtle),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(projectName!,
                         style: const TextStyle(
-                            color: Colors.white38, fontSize: 11),
+                            color: AppColors.inkSubtle, fontSize: 11),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                   ),
@@ -453,16 +451,16 @@ class _LabItemCard extends StatelessWidget {
               children: [
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: _statusColor(item.status).withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(
                     opportunityStatusLabel(item.status, l10n),
                     style: TextStyle(
                         color: _statusColor(item.status),
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -472,7 +470,7 @@ class _LabItemCard extends StatelessWidget {
                     onPressed: onApprove,
                     style: TextButton.styleFrom(
                         foregroundColor: _kGreen,
-                        minimumSize: Size.zero,
+                        minimumSize: const Size(0, 36),
                         padding: const EdgeInsets.symmetric(horizontal: 8)),
                     child: Text(l10n.oppLabApprove,
                         style: const TextStyle(fontSize: 12)),
@@ -481,22 +479,23 @@ class _LabItemCard extends StatelessWidget {
                   TextButton(
                     onPressed: onConvertToAction,
                     style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF00BCD4),
-                        minimumSize: Size.zero,
+                        foregroundColor: AppColors.info,
+                        minimumSize: const Size(0, 36),
                         padding: const EdgeInsets.symmetric(horizontal: 8)),
                     child: Text(l10n.oppLabConvertToAction,
                         style: const TextStyle(fontSize: 12)),
                   ),
                 IconButton(
+                  tooltip: AppLocalizations.of(context)!.commonDelete,
                   icon: const Icon(Icons.delete_outline_rounded,
-                      color: Colors.white24, size: 18),
+                      color: AppColors.inkSubtle, size: 18),
                   onPressed: onDelete,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                 ),
                 const SizedBox(width: 4),
                 const Icon(Icons.chevron_right_rounded,
-                    color: Colors.white24, size: 18),
+                    color: AppColors.inkSubtle, size: 18),
               ],
             ),
           ],
@@ -513,45 +512,12 @@ class _EmptyLab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.science_rounded, color: Colors.white24, size: 64),
-            const SizedBox(height: 20),
-            Text(
-              l10n.oppLabEmptyTitle,
-              style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.oppLabEmptyBody,
-              style: const TextStyle(
-                  color: Colors.white38, fontSize: 13, height: 1.5),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add_rounded),
-              label: Text(l10n.oppLabAddButton),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kPrimary,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return IvEmptyState(
+      icon: Icons.science_rounded,
+      title: l10n.oppLabEmptyTitle,
+      message: l10n.oppLabEmptyBody,
+      actionLabel: l10n.oppLabAddButton,
+      onAction: onAdd,
     );
   }
 }
@@ -609,18 +575,18 @@ class _Chip extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: selected ? _kPrimary : _kCard,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
-              color: selected ? _kPrimary : Colors.white.withOpacity(0.12),
+              color: selected ? _kPrimary : AppColors.ink.withOpacity(0.12),
             ),
           ),
           child: Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.white : Colors.white54,
+              color: selected ? AppColors.ink : AppColors.inkMuted,
               fontSize: 12,
               fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
             ),
@@ -677,7 +643,7 @@ class _AddOpportunityDialogState extends ConsumerState<_AddOpportunityDialog> {
     return AlertDialog(
       backgroundColor: _kCard,
       title:
-          Text(l10n.oppNewTitle, style: const TextStyle(color: Colors.white)),
+          Text(l10n.oppNewTitle, style: const TextStyle(color: AppColors.ink)),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
@@ -688,12 +654,12 @@ class _AddOpportunityDialogState extends ConsumerState<_AddOpportunityDialog> {
               DropdownButtonFormField<String>(
                 value: _type,
                 dropdownColor: _kCard,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: AppColors.ink),
                 decoration: InputDecoration(
                   labelText: l10n.oppTypeLabel,
-                  labelStyle: const TextStyle(color: Colors.white54),
+                  labelStyle: const TextStyle(color: AppColors.inkMuted),
                   enabledBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white24)),
+                      borderSide: BorderSide(color: AppColors.inkSubtle)),
                 ),
                 items: OpportunityLabItem.types
                     .map((t) => DropdownMenuItem(
@@ -706,24 +672,24 @@ class _AddOpportunityDialogState extends ConsumerState<_AddOpportunityDialog> {
               const SizedBox(height: 12),
               TextField(
                 controller: _titleCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: AppColors.ink),
                 decoration: InputDecoration(
                   labelText: l10n.oppTitleLabel,
-                  labelStyle: const TextStyle(color: Colors.white54),
+                  labelStyle: const TextStyle(color: AppColors.inkMuted),
                   enabledBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white24)),
+                      borderSide: BorderSide(color: AppColors.inkSubtle)),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _descCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: AppColors.ink),
                 maxLines: 3,
                 decoration: InputDecoration(
                   labelText: l10n.oppDescriptionLabel,
-                  labelStyle: const TextStyle(color: Colors.white54),
+                  labelStyle: const TextStyle(color: AppColors.inkMuted),
                   enabledBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white24)),
+                      borderSide: BorderSide(color: AppColors.inkSubtle)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -736,7 +702,7 @@ class _AddOpportunityDialogState extends ConsumerState<_AddOpportunityDialog> {
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(l10n.oppCancel,
-              style: const TextStyle(color: Colors.white54)),
+              style: const TextStyle(color: AppColors.inkMuted)),
         ),
         ElevatedButton(
           onPressed: _saving || _titleCtrl.text.trim().isEmpty
@@ -775,13 +741,12 @@ class _AddOpportunityDialogState extends ConsumerState<_AddOpportunityDialog> {
     if (widget.projectId == null) {
       return Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(10),
+        decoration: BoxDecoration(color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Text(
           l10n.oppKnowledgeSelectProjectFirst,
-          style: const TextStyle(color: Colors.white54, fontSize: 12),
+          style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
         ),
       );
     }
@@ -795,12 +760,12 @@ class _AddOpportunityDialogState extends ConsumerState<_AddOpportunityDialog> {
         Text(
           l10n.oppKnowledgeSectionTitle,
           style: const TextStyle(
-              color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+              color: AppColors.inkMuted, fontSize: 13, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 4),
         Text(
           l10n.oppKnowledgeSectionHint,
-          style: const TextStyle(color: Colors.white38, fontSize: 11),
+          style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
         ),
         const SizedBox(height: 8),
         knowledgeAsync.when(
@@ -817,7 +782,7 @@ class _AddOpportunityDialogState extends ConsumerState<_AddOpportunityDialog> {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   l10n.oppKnowledgeEmpty,
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
                 ),
               );
             }
@@ -845,7 +810,7 @@ class _AddOpportunityDialogState extends ConsumerState<_AddOpportunityDialog> {
                 const SizedBox(height: 4),
                 Text(
                   l10n.oppKnowledgeCountSelected(_selectedKnowledgeIds.length),
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
                 ),
               ],
             );
@@ -870,14 +835,14 @@ class _KnowledgeCheckTile extends StatelessWidget {
       value: selected,
       onChanged: (v) => onChanged(v ?? false),
       activeColor: _kPrimary,
-      checkColor: Colors.white,
+      checkColor: AppColors.ink,
       controlAffinity: ListTileControlAffinity.leading,
       contentPadding: EdgeInsets.zero,
       title: Text(
         item.title.isEmpty
             ? (item.fileName ?? item.sourceUrl ?? item.id)
             : item.title,
-        style: const TextStyle(color: Colors.white, fontSize: 13),
+        style: const TextStyle(color: AppColors.ink, fontSize: 13),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),

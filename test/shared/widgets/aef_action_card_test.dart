@@ -316,7 +316,7 @@ void main() {
             'outcome': 'UNKNOWN_OUTCOME'
           }),
           'Resultado desconhecido',
-          Icons.help
+          Icons.help_rounded
         ),
         (
           _reply('FAILED', receipt: {
@@ -325,12 +325,12 @@ void main() {
             'outcome': 'FAILURE'
           }),
           'Falhou',
-          Icons.error
+          Icons.error_rounded
         ),
         (
           _reply('SUCCEEDED', completed: false),
           'não confirmada',
-          Icons.hourglass_top
+          Icons.hourglass_top_rounded
         ),
       ]) {
         final api = FakeApi(executeReply: reply);

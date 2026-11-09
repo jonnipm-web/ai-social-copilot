@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class LoadingButton extends StatelessWidget {
   final String label;
@@ -28,7 +29,7 @@ class LoadingButton extends StatelessWidget {
                   width: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: AppColors.ink,
                   ),
                 ),
                 if (loadingLabel != null) ...[

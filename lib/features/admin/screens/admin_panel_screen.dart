@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,6 +12,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import 'diagnostic_logs_tab.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class AdminPanelScreen extends ConsumerWidget {
   const AdminPanelScreen({super.key});
@@ -28,7 +30,7 @@ class AdminPanelScreen extends ConsumerWidget {
     // exigir positivamente `hasValue && isAdmin == true` -- loading/erro/
     // não-admin caem todos no mesmo estado "negado por padrão".
     if (profileAsync.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: IvBody(child: Center(child: CircularProgressIndicator())));
     }
     // Codex Gate (P2, re-verificação): exige explicitamente hasValue &&
     // !hasError -- fecha o caso teórico de um AsyncError reter um valor
@@ -42,10 +44,10 @@ class AdminPanelScreen extends ConsumerWidget {
     if (!isAdmin) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.uxAdminAccessDeniedTitle)),
-        body: Center(
+        body: IvBody(child: Center(
           child: Text(l10n.uxAdminAccessDeniedBody,
-              style: const TextStyle(color: Colors.white54)),
-        ),
+              style: const TextStyle(color: AppColors.inkMuted)),
+        )),
       );
     }
 
@@ -53,7 +55,7 @@ class AdminPanelScreen extends ConsumerWidget {
       length: 5,
       child: Scaffold(
         appBar: AppBar(
-          leading: IconButton(
+          leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
             onPressed: () {
               if (context.canPop()) {
@@ -77,7 +79,7 @@ class AdminPanelScreen extends ConsumerWidget {
           ),
         ),
         drawer: const AppDrawer(),
-        body: const TabBarView(
+        body: IvBody(child: const TabBarView(
           children: [
             _UsersTab(),
             _PersonasAdminTab(),
@@ -85,7 +87,7 @@ class AdminPanelScreen extends ConsumerWidget {
             _ModulesAdminTab(),
             DiagnosticLogsTab(),
           ],
-        ),
+        )),
       ),
     );
   }
@@ -101,23 +103,23 @@ class _UsersTab extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return usersAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const IvLoadingSkeleton(),
       error: (e, _) => Center(
           child: Text(extractErrorMessage(e, l10n),
-              style: const TextStyle(color: Colors.white54))),
+              style: const TextStyle(color: AppColors.inkMuted))),
       data: (users) {
         if (users.isEmpty) {
           return Center(
             child: Text(l10n.uxAdminNoUsers,
-                style: const TextStyle(color: Colors.white54)),
+                style: const TextStyle(color: AppColors.inkMuted)),
           );
         }
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: users.length,
           separatorBuilder: (_, __) =>
-              const Divider(color: Colors.white12, height: 1),
-          itemBuilder: (context, i) => _UserTile(user: users[i], ref: ref),
+              const Divider(color: AppColors.line, height: 1),
+          itemBuilder: (context, i) => FadeSlideIn(index: i, child: _UserTile(user: users[i], ref: ref)),
         );
       },
     );
@@ -142,16 +144,16 @@ class _UserTile extends StatelessWidget {
       ),
       title: Text(
         user.email ?? l10n.uxAdminNoEmail,
-        style: const TextStyle(color: Colors.white, fontSize: 14),
+        style: const TextStyle(color: AppColors.ink, fontSize: 14),
         overflow: TextOverflow.ellipsis,
       ),
       subtitle: Text(
         l10n.uxAdminUserPlanLine(user.roleLabel, '${user.monthlyLimit}'),
-        style: const TextStyle(color: Colors.white54, fontSize: 12),
+        style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
       ),
       trailing: PopupMenuButton<String>(
-        icon: const Icon(Icons.more_vert, color: Colors.white38, size: 20),
-        color: const Color(0xFF1A1A2E),
+        icon: const Icon(Icons.more_vert_rounded, color: AppColors.inkSubtle, size: 20),
+        color: AppColors.surface,
         onSelected: (value) async {
           // IVE-COMMERCIAL-TARGETED-REMEDIATION-06R (Codex adversarial
           // review) -- this only ever invalidated allProfilesProvider (the
@@ -183,30 +185,30 @@ class _UserTile extends StatelessWidget {
           PopupMenuItem(
               value: 'free',
               child: Text(l10n.uxfAdminSetRole(l10n.planNameFree),
-                  style: const TextStyle(color: Colors.white70))),
+                  style: const TextStyle(color: AppColors.inkMuted))),
           PopupMenuItem(
               value: 'pro',
               child: Text(l10n.uxfAdminSetRole(l10n.planNamePro),
-                  style: const TextStyle(color: Colors.white70))),
+                  style: const TextStyle(color: AppColors.inkMuted))),
           PopupMenuItem(
               value: 'premium',
               child: Text(l10n.uxfAdminSetRole(l10n.planNamePremium),
-                  style: const TextStyle(color: Colors.white70))),
+                  style: const TextStyle(color: AppColors.inkMuted))),
           PopupMenuItem(
               value: 'beta_tester',
               child: Text(l10n.uxfAdminSetRole(l10n.uxfAdminRoleBetaTester),
-                  style: const TextStyle(color: Colors.white70))),
+                  style: const TextStyle(color: AppColors.inkMuted))),
           PopupMenuItem(
               value: 'admin',
               child: Text(l10n.uxfAdminSetRole(l10n.uxfAdminRoleAdmin),
-                  style: const TextStyle(color: Color(0xFFFFD700)))),
+                  style: const TextStyle(color: AppColors.gold))),
           const PopupMenuDivider(),
           PopupMenuItem(
             value: 'toggle',
             child: Text(
               user.isActive ? l10n.uxAdminDeactivate : l10n.uxAdminActivate,
               style:
-                  TextStyle(color: user.isActive ? Colors.red : Colors.green),
+                  TextStyle(color: user.isActive ? AppColors.negative : AppColors.positive),
             ),
           ),
         ],
@@ -217,15 +219,15 @@ class _UserTile extends StatelessWidget {
   Color _roleColor(String role) {
     switch (role) {
       case 'admin':
-        return const Color(0xFFFFD700);
+        return AppColors.gold;
       case 'premium':
-        return const Color(0xFFB44FE8);
+        return AppColors.accent;
       case 'pro':
-        return const Color(0xFF6C63FF);
+        return AppColors.accent;
       case 'beta_tester':
-        return Colors.teal;
+        return AppColors.accent;
       default:
-        return Colors.white38;
+        return AppColors.inkSubtle;
     }
   }
 }
@@ -247,7 +249,7 @@ class _PersonasAdminTab extends ConsumerWidget {
               Expanded(
                 child: Text(
                   l10n.uxAdminManagePersonas,
-                  style: const TextStyle(color: Colors.white54, fontSize: 13),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
                 ),
               ),
               ElevatedButton.icon(
@@ -255,10 +257,10 @@ class _PersonasAdminTab extends ConsumerWidget {
                 icon: const Icon(Icons.add_rounded, size: 16),
                 label: Text(l10n.uxAdminNewPersona),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFD700),
+                  backgroundColor: AppColors.gold,
                   foregroundColor: Colors.black,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   textStyle: const TextStyle(fontSize: 13),
                 ),
               ),
@@ -301,27 +303,27 @@ class _OverviewTab extends ConsumerWidget {
           Text(
             l10n.uxAdminUserDistribution,
             style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                color: AppColors.ink, fontWeight: FontWeight.w600, fontSize: 16),
           ),
           const SizedBox(height: 16),
           ...['admin', 'premium', 'pro', 'beta_tester', 'free'].map((role) {
             final count = byRole[role] ?? 0;
             return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.only(bottom: 8),
               child: _RoleBar(role: role, count: count, total: users.length),
             );
           }),
           const SizedBox(height: 24),
           Text(
             l10n.uxAdminTotalUsers,
-            style: const TextStyle(color: Colors.white54, fontSize: 13),
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
           ),
           Text(
             '${users.length}',
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
+              color: AppColors.ink,
+              fontSize: 40,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -347,13 +349,13 @@ class _RoleBar extends StatelessWidget {
       'free': 'Free',
     };
     final colors = {
-      'admin': const Color(0xFFFFD700),
-      'premium': const Color(0xFFB44FE8),
-      'pro': const Color(0xFF6C63FF),
-      'beta_tester': Colors.teal,
-      'free': Colors.white38,
+      'admin': AppColors.gold,
+      'premium': AppColors.accent,
+      'pro': AppColors.accent,
+      'beta_tester': AppColors.accent,
+      'free': AppColors.inkSubtle,
     };
-    final color = colors[role] ?? Colors.white38;
+    final color = colors[role] ?? AppColors.inkSubtle;
     final pct = total > 0 ? count / total : 0.0;
 
     return Row(
@@ -365,10 +367,10 @@ class _RoleBar extends StatelessWidget {
         ),
         Expanded(
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             child: LinearProgressIndicator(
               value: pct,
-              backgroundColor: Colors.white12,
+              backgroundColor: AppColors.line,
               color: color,
               minHeight: 8,
             ),
@@ -406,18 +408,18 @@ class _ModulesAdminTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       itemCount: visibleModules.length,
       separatorBuilder: (_, __) =>
-          const Divider(color: Colors.white12, height: 1),
+          const Divider(color: AppColors.line, height: 1),
       itemBuilder: (context, i) {
         final module = visibleModules[i];
         return ListTile(
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           title: Row(
             children: [
               Expanded(
                 child: Text(
                   isEnglish ? module.nameEn : module.namePt,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  style: const TextStyle(color: AppColors.ink, fontSize: 14),
                 ),
               ),
               _StatusBadge(status: module.status, isEnglish: isEnglish),
@@ -433,34 +435,34 @@ class _ModulesAdminTab extends StatelessWidget {
                       : Icons.remove_circle_outline_rounded,
                   size: 13,
                   color: module.commercialEnabled
-                      ? Colors.tealAccent
-                      : Colors.white24,
+                      ? AppColors.accent
+                      : AppColors.inkSubtle,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   module.commercialEnabled
                       ? l10n.adminModulesCommercial
                       : l10n.uxAdminModuleNotCommercial,
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
                 ),
                 const SizedBox(width: 10),
                 Text(
                   isEnglish
                       ? module.minimumPlan.labelEn
                       : module.minimumPlan.labelPt,
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
                 ),
               ],
             ),
           ),
           trailing: module.adminClickable
-              ? const Icon(Icons.chevron_right_rounded, color: Colors.white38)
+              ? const Icon(Icons.chevron_right_rounded, color: AppColors.inkSubtle)
               : const Icon(Icons.block_rounded,
-                  color: Colors.white12, size: 18),
+                  color: AppColors.line, size: 18),
           onTap: module.adminClickable
               ? () => showModalBottomSheet(
                     context: context,
-                    backgroundColor: const Color(0xFF141425),
+                    backgroundColor: AppColors.surface,
                     isScrollControlled: true,
                     builder: (_) => AdminModuleDetailSheet(
                         module: module, isEnglish: isEnglish),
@@ -478,27 +480,27 @@ class _StatusBadge extends StatelessWidget {
   final bool isEnglish;
 
   Color get _color => switch (status) {
-        ModuleStatus.active => Colors.tealAccent,
-        ModuleStatus.beta => const Color(0xFF6C63FF),
-        ModuleStatus.inDevelopment => Colors.amber,
-        ModuleStatus.disabled => Colors.white38,
-        ModuleStatus.planned => Colors.white24,
-        ModuleStatus.internal => const Color(0xFFFFD700),
+        ModuleStatus.active => AppColors.accent,
+        ModuleStatus.beta => AppColors.accent,
+        ModuleStatus.inDevelopment => AppColors.warning,
+        ModuleStatus.disabled => AppColors.inkSubtle,
+        ModuleStatus.planned => AppColors.inkSubtle,
+        ModuleStatus.internal => AppColors.gold,
       };
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: _color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _color.withOpacity(0.4)),
       ),
       child: Text(
         isEnglish ? status.labelEn : status.labelPt,
         style:
-            TextStyle(color: _color, fontSize: 10, fontWeight: FontWeight.w700),
+            TextStyle(color: _color, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -541,9 +543,9 @@ class AdminModuleDetailSheet extends StatelessWidget {
                   child: Text(
                     isEnglish ? module.nameEn : module.namePt,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 18,
-                        fontWeight: FontWeight.w700),
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
                 _StatusBadge(status: module.status, isEnglish: isEnglish),
@@ -552,10 +554,10 @@ class AdminModuleDetailSheet extends StatelessWidget {
             const SizedBox(height: 4),
             Text(module.moduleId,
                 style: const TextStyle(
-                    color: Colors.white24,
+                    color: AppColors.inkSubtle,
                     fontSize: 11,
                     fontFamily: 'monospace')),
-            const Divider(color: Colors.white12, height: 28),
+            const Divider(color: AppColors.line, height: 28),
             _DetailRow(
                 label: t.adminModulesCommercial,
                 value: module.commercialEnabled
@@ -584,22 +586,22 @@ class AdminModuleDetailSheet extends StatelessWidget {
             const SizedBox(height: 12),
             Text(t.adminModulesReadiness,
                 style: const TextStyle(
-                    color: Colors.white38,
+                    color: AppColors.inkSubtle,
                     fontSize: 12,
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             Text(isEnglish ? module.readinessEn : module.readinessPt,
-                style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 13)),
             if (module.notes.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(t.adminModulesNotes,
                   style: const TextStyle(
-                      color: Colors.white38,
+                      color: AppColors.inkSubtle,
                       fontSize: 12,
                       fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Text(module.notes,
-                  style: const TextStyle(color: Colors.amber, fontSize: 13)),
+                  style: const TextStyle(color: AppColors.warning, fontSize: 13)),
             ],
             if (moduleOpenRoute(module) != null) ...[
               const SizedBox(height: 16),
@@ -643,10 +645,10 @@ class _DetailRow extends StatelessWidget {
           SizedBox(
               width: 110,
               child: Text(label,
-                  style: const TextStyle(color: Colors.white38, fontSize: 12))),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12))),
           Expanded(
               child: Text(value,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12))),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 12))),
         ],
       ),
     );

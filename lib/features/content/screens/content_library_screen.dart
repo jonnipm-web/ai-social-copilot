@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +10,7 @@ import '../../../providers/content_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class ContentLibraryScreen extends ConsumerStatefulWidget {
   const ContentLibraryScreen({super.key});
@@ -34,7 +36,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
+        leading: IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
             if (context.canPop()) {
@@ -51,9 +53,9 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
         onPressed: () => context.push(AppConstants.routeContentNew),
         icon: const Icon(Icons.add_rounded),
         label: Text(l10n.contentLibraryNewItem),
-        backgroundColor: const Color(0xFF6C63FF),
+        backgroundColor: AppColors.accent,
       ),
-      body: Column(
+      body: IvBody(child: Column(
         children: [
           // ── Filtro por projeto ────────────────────────────────
           if (projects.isNotEmpty)
@@ -62,7 +64,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 children: [
                   _FilterChip(
                     label: l10n.commonAll,
@@ -83,7 +85,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
             height: 48,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               children: [
                 _TypeChip(
                   label: l10n.commonAll,
@@ -101,10 +103,10 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
 
           Expanded(
             child: itemsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const IvLoadingSkeleton(),
               error: (e, _) => Center(
                 child: Text(l10n.commonError,
-                    style: const TextStyle(color: Colors.white54)),
+                    style: const TextStyle(color: AppColors.inkMuted)),
               ),
               data: (items) {
                 final filtered = _selectedType == null
@@ -117,7 +119,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.library_books_rounded,
-                            size: 64, color: Colors.white24),
+                            size: 64, color: AppColors.inkSubtle),
                         const SizedBox(height: 12),
                         Text(
                           _selectedType != null
@@ -125,23 +127,26 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                               : _projectId != null
                                   ? l10n.contentLibraryEmptyProject
                                   : l10n.contentLibraryEmpty,
-                          style: const TextStyle(color: Colors.white54),
+                          style: const TextStyle(color: AppColors.inkMuted),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           l10n.contentLibraryEmptyHint,
                           style: const TextStyle(
-                              color: Colors.white38, fontSize: 12),
+                              color: AppColors.inkSubtle, fontSize: 12),
                         ),
                       ],
                     ),
                   );
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-                  itemCount: filtered.length,
-                  itemBuilder: (_, i) => _ContentCard(
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 64),
+                  child: IvCardGrid(
+                      minTileWidth: 440,
+                      maxColumns: 2,
+                      gap: AppSpace.s3,
+                      children: List.generate(filtered.length, (i) => FadeSlideIn(index: i, child: _ContentCard(
                     item: filtered[i],
                     ref: ref,
                     projectName: _projectId != null
@@ -158,13 +163,13 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                         ref.invalidate(contentItemsProvider);
                       }
                     },
-                  ),
+                  )))),
                 );
               },
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }
@@ -191,14 +196,14 @@ class _FilterChip extends StatelessWidget {
         child: Chip(
           label: Text(label,
               style: TextStyle(
-                color: selected ? Colors.white : Colors.white54,
+                color: selected ? AppColors.ink : AppColors.inkMuted,
                 fontSize: 12,
               )),
           backgroundColor: selected
-              ? const Color(0xFF6C63FF)
-              : Colors.white.withOpacity(0.07),
+              ? AppColors.accent
+              : AppColors.ink.withOpacity(0.07),
           side: BorderSide(
-              color: selected ? const Color(0xFF6C63FF) : Colors.white12),
+              color: selected ? AppColors.accent : AppColors.line),
           padding: const EdgeInsets.symmetric(horizontal: 4),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
@@ -230,15 +235,15 @@ class _TypeChip extends StatelessWidget {
           label: Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.white : Colors.white54,
+              color: selected ? AppColors.ink : AppColors.inkMuted,
               fontSize: 12,
             ),
           ),
           backgroundColor: selected
-              ? const Color(0xFF9C27B0)
-              : Colors.white.withOpacity(0.07),
+              ? AppColors.accent
+              : AppColors.ink.withOpacity(0.07),
           side: BorderSide(
-            color: selected ? const Color(0xFF9C27B0) : Colors.white12,
+            color: selected ? AppColors.accent : AppColors.line,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 4),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -270,19 +275,19 @@ class _ContentCard extends StatelessWidget {
     final typeColor = _typeColor(item.type);
 
     return Card(
-      color: Colors.white.withOpacity(0.05),
-      margin: const EdgeInsets.only(bottom: 10),
+      color: AppColors.ink.withOpacity(0.05),
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Colors.white12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        side: const BorderSide(color: AppColors.line),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         onTap: () => context.push(
           AppConstants.routeContentEdit.replaceAll(':id', item.id),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -293,7 +298,7 @@ class _ContentCard extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: typeColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                       border: Border.all(color: typeColor.withOpacity(0.3)),
                     ),
                     child: Text(
@@ -309,23 +314,23 @@ class _ContentCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                          horizontal: 4, vertical: 2),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF6C63FF).withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(6),
+                        color: AppColors.accent.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                         border: Border.all(
-                            color: const Color(0xFF6C63FF).withOpacity(0.25)),
+                            color: AppColors.accent.withOpacity(0.25)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(Icons.folder_rounded,
-                              size: 10, color: Color(0xFF6C63FF)),
+                              size: 10, color: AppColors.accent),
                           const SizedBox(width: 3),
                           Text(
                             projectName!,
                             style: const TextStyle(
-                                color: Color(0xFF6C63FF), fontSize: 10),
+                                color: AppColors.accent, fontSize: 11),
                           ),
                         ],
                       ),
@@ -333,9 +338,9 @@ class _ContentCard extends StatelessWidget {
                   ],
                   const Spacer(),
                   PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert,
-                        color: Colors.white38, size: 18),
-                    color: const Color(0xFF1A1A2E),
+                    icon: const Icon(Icons.more_vert_rounded,
+                        color: AppColors.inkSubtle, size: 18),
+                    color: AppColors.surface,
                     onSelected: (value) async {
                       if (value == 'delete') {
                         final ok = await showDialog<bool>(
@@ -352,7 +357,7 @@ class _ContentCard extends StatelessWidget {
                               TextButton(
                                 onPressed: () => Navigator.pop(ctx, true),
                                 child: Text(l10n.commonDelete,
-                                    style: const TextStyle(color: Colors.red)),
+                                    style: const TextStyle(color: AppColors.negative)),
                               ),
                             ],
                           ),
@@ -369,7 +374,7 @@ class _ContentCard extends StatelessWidget {
                                   .showSnackBar(SnackBar(
                                 content: Text(l10n.contentLibraryDeleteError(
                                     extractErrorMessage(e, l10n))),
-                                backgroundColor: const Color(0xFFF44336),
+                                backgroundColor: AppColors.negative,
                               ));
                             }
                           }
@@ -380,7 +385,7 @@ class _ContentCard extends StatelessWidget {
                       PopupMenuItem(
                         value: 'delete',
                         child: Text(l10n.commonDelete,
-                            style: const TextStyle(color: Colors.red)),
+                            style: const TextStyle(color: AppColors.negative)),
                       ),
                     ],
                   ),
@@ -390,7 +395,7 @@ class _ContentCard extends StatelessWidget {
               Text(
                 item.title,
                 style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontWeight: FontWeight.w600,
                     fontSize: 14),
               ),
@@ -398,7 +403,7 @@ class _ContentCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   item.description!,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -408,12 +413,12 @@ class _ContentCard extends StatelessWidget {
                 Row(
                   children: [
                     const Icon(Icons.tag_rounded,
-                        color: Colors.white24, size: 12),
+                        color: AppColors.inkSubtle, size: 12),
                     const SizedBox(width: 4),
                     Text(
                       item.niche!,
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 11),
+                          const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
                     ),
                   ],
                 ),
@@ -428,16 +433,16 @@ class _ContentCard extends StatelessWidget {
   Color _typeColor(String type) {
     switch (type) {
       case 'produto':
-        return const Color(0xFF6C63FF);
+        return AppColors.accent;
       case 'campanha':
-        return const Color(0xFFB44FE8);
+        return AppColors.accent;
       case 'marca':
-        return const Color(0xFFFFD700);
+        return AppColors.gold;
       case 'livro':
       case 'ebook':
-        return Colors.teal;
+        return AppColors.accent;
       default:
-        return Colors.white54;
+        return AppColors.inkMuted;
     }
   }
 }

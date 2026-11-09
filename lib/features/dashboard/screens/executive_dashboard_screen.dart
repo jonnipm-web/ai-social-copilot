@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,17 +21,17 @@ import '../../../providers/ive_context_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart'
     show showCopilotChat;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg = Color(0xFF0F0F1A);
-const _kCard = Color(0xFF1A1A2E);
-const _kPrimary = Color(0xFF6C63FF);
-const _kGreen = Color(0xFF4CAF50);
-const _kOrange = Color(0xFFFF9800);
-const _kRed = Color(0xFFF44336);
-const _kCyan = Color(0xFF00BCD4);
-const _kGold = Color(0xFFFFD700);
-const _kPink = Color(0xFFE91E63);
+const _kCard = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGreen = AppColors.positive;
+const _kOrange = AppColors.warning;
+const _kRed = AppColors.negative;
+const _kCyan = AppColors.info;
+const _kGold = AppColors.gold;
+const _kPink = AppColors.accent;
 
 // ── Responsive Breakpoints ────────────────────────────────────────────────────
 class _Bp {
@@ -77,13 +78,13 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: _kBg,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: Builder(
           builder: (ctx) => IconButton(
-            icon: const Icon(Icons.menu_rounded, color: Colors.white),
+            icon: const Icon(Icons.menu_rounded, color: AppColors.ink),
             onPressed: () => Scaffold.of(ctx).openDrawer(),
           ),
         ),
@@ -92,17 +93,17 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
           children: [
             const Text('Business OS',
                 style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.ink,
                     fontSize: 16,
-                    fontWeight: FontWeight.bold)),
+                    fontWeight: FontWeight.w600)),
             Text(l10n.ctxExecSubtitle,
-                style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
           ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline_rounded,
-                color: Colors.white54),
+                color: AppColors.inkMuted),
             tooltip: l10n.ctxExecAskIve,
             // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 (achado do Codex Gate,
             // 2ª rodada) -- outro ponto de entrada do chat sem contextData
@@ -125,7 +126,7 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white54),
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.inkMuted),
             tooltip: l10n.ctxExecReload,
             onPressed: () {
               ref.invalidate(projectsProvider);
@@ -138,7 +139,7 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
         ],
       ),
       drawer: const AppDrawer(),
-      body: LayoutBuilder(
+      body: IvBody(child: LayoutBuilder(
         builder: (ctx, constraints) {
           final w = constraints.maxWidth;
           return _DashboardBody(
@@ -153,7 +154,7 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
             isWide: _Bp.isWide(w),
           );
         },
-      ),
+      )),
     );
   }
 }
@@ -429,7 +430,7 @@ class _ExecModuleGrid extends StatelessWidget {
       return Column(
         children: cards
             .map((c) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: c,
                 ))
             .toList(),
@@ -476,10 +477,10 @@ class _ExecModule extends StatelessWidget {
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: _kCard,
-            borderRadius: BorderRadius.circular(14),
+            color: _kCard, gradient: kIvSurfaceGradient,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(color: color.withOpacity(0.25)),
           ),
           child: Column(
@@ -494,7 +495,7 @@ class _ExecModule extends StatelessWidget {
                         style: TextStyle(
                             color: color,
                             fontSize: 13,
-                            fontWeight: FontWeight.bold)),
+                            fontWeight: FontWeight.w600)),
                   ),
                   Icon(Icons.arrow_forward_ios_rounded,
                       color: color.withOpacity(0.5), size: 12),
@@ -510,7 +511,7 @@ class _ExecModule extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text(emptyMessage,
                           style: const TextStyle(
-                              color: Colors.white38, fontSize: 10, height: 1.4),
+                              color: AppColors.inkSubtle, fontSize: 11, height: 1.4),
                           textAlign: TextAlign.center),
                     ],
                   ),
@@ -522,18 +523,18 @@ class _ExecModule extends StatelessWidget {
                     children: items.map((item) {
                       final (label, value) = item;
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 5),
+                        padding: const EdgeInsets.only(bottom: 4),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(label,
                                 style: const TextStyle(
-                                    color: Colors.white54, fontSize: 11)),
+                                    color: AppColors.inkMuted, fontSize: 11)),
                             Text(value,
                                 style: TextStyle(
                                     color: color,
                                     fontSize: 12,
-                                    fontWeight: FontWeight.bold)),
+                                    fontWeight: FontWeight.w600)),
                           ],
                         ),
                       );
@@ -544,10 +545,10 @@ class _ExecModule extends StatelessWidget {
               const SizedBox(height: 6),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Text(cta,
                     style: TextStyle(
@@ -580,19 +581,19 @@ class _SidebarKpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
               style: const TextStyle(
-                  color: Colors.white38,
-                  fontSize: 10,
+                  color: AppColors.inkSubtle,
+                  fontSize: 11,
                   letterSpacing: 1.2,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
@@ -603,12 +604,12 @@ class _SidebarKpiCard extends StatelessWidget {
                   children: [
                     Text(item.label,
                         style: const TextStyle(
-                            color: Colors.white60, fontSize: 12)),
+                            color: AppColors.inkMuted, fontSize: 12)),
                     Text(item.value,
                         style: TextStyle(
                             color: item.color,
                             fontSize: 13,
-                            fontWeight: FontWeight.bold)),
+                            fontWeight: FontWeight.w600)),
                   ],
                 ),
               )),
@@ -650,19 +651,19 @@ class _QuickNavCard extends StatelessWidget {
       ),
     ];
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(l10n.ctxExecQuickAccess,
               style: const TextStyle(
-                  color: Colors.white38,
-                  fontSize: 10,
+                  color: AppColors.inkSubtle,
+                  fontSize: 11,
                   letterSpacing: 1.2,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
@@ -679,7 +680,7 @@ class _QuickNavCard extends StatelessWidget {
                     Expanded(
                       child: Text(label,
                           style: const TextStyle(
-                              color: Colors.white70, fontSize: 12)),
+                              color: AppColors.inkMuted, fontSize: 12)),
                     ),
                     Icon(Icons.chevron_right_rounded,
                         color: color.withOpacity(0.5), size: 16),
@@ -706,9 +707,9 @@ class _PendingActionsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.ink.withOpacity(0.07)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -720,14 +721,14 @@ class _PendingActionsCard extends StatelessWidget {
               Expanded(
                 child: Text(l10n.dashPendingActionsTitle,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 14,
-                        fontWeight: FontWeight.bold)),
+                        fontWeight: FontWeight.w600)),
               ),
               TextButton(
                 onPressed: () => context.push(AppConstants.routeActionEngine),
                 style: TextButton.styleFrom(
-                    minimumSize: Size.zero,
+                    minimumSize: const Size(0, 36),
                     padding: const EdgeInsets.symmetric(horizontal: 8)),
                 child: Text(l10n.dashPendingActionsViewAll,
                     style: const TextStyle(color: _kPrimary, fontSize: 12)),
@@ -741,7 +742,7 @@ class _PendingActionsCard extends StatelessWidget {
               child: Text(
                 l10n.ctxExecPendingEmpty,
                 style: const TextStyle(
-                    color: Colors.white38, fontSize: 12, height: 1.5),
+                    color: AppColors.inkSubtle, fontSize: 12, height: 1.5),
               ),
             )
           else
@@ -759,13 +760,13 @@ class _PendingActionsCard extends StatelessWidget {
                       Expanded(
                         child: Text(item.title,
                             style: const TextStyle(
-                                color: Colors.white70, fontSize: 13),
+                                color: AppColors.inkMuted, fontSize: 13),
                             overflow: TextOverflow.ellipsis),
                       ),
                       if (item.roiScore > 0)
                         Text('ROI: ${item.roiScore}',
                             style:
-                                const TextStyle(color: _kGold, fontSize: 10)),
+                                const TextStyle(color: _kGold, fontSize: 11)),
                     ],
                   ),
                 )),
@@ -834,7 +835,7 @@ class _ModuleGrid extends StatelessWidget {
       children: [
         Text(l10n.ctxExecModulesTitle,
             style: const TextStyle(
-                color: Colors.white38,
+                color: AppColors.inkSubtle,
                 fontSize: 11,
                 letterSpacing: 1.4,
                 fontWeight: FontWeight.w600)),
@@ -862,12 +863,12 @@ class _ModuleGrid extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: active
                           ? color.withOpacity(0.08)
-                          : Colors.white.withOpacity(0.02),
-                      borderRadius: BorderRadius.circular(12),
+                          : AppColors.ink.withOpacity(0.02),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(
                           color: active
                               ? color.withOpacity(0.25)
-                              : Colors.white12),
+                              : AppColors.line),
                     ),
                     child: Stack(
                       children: [
@@ -875,7 +876,7 @@ class _ModuleGrid extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(icon,
-                                color: active ? color : Colors.white24,
+                                color: active ? color : AppColors.inkSubtle,
                                 size: 22),
                             const SizedBox(height: 5),
                             Padding(
@@ -883,8 +884,8 @@ class _ModuleGrid extends StatelessWidget {
                                   const EdgeInsets.symmetric(horizontal: 4),
                               child: Text(label,
                                   style: TextStyle(
-                                      color: active ? color : Colors.white24,
-                                      fontSize: 10,
+                                      color: active ? color : AppColors.inkSubtle,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.w600),
                                   textAlign: TextAlign.center,
                                   maxLines: 2,
@@ -897,7 +898,7 @@ class _ModuleGrid extends StatelessWidget {
                               top: 4,
                               right: 4,
                               child: Icon(Icons.lock_rounded,
-                                  color: Colors.white24, size: 10)),
+                                  color: AppColors.inkSubtle, size: 10)),
                       ],
                     ),
                   ),
@@ -1010,8 +1011,8 @@ class _ExecutiveRecommendations extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard, gradient: kIvSurfaceGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kGold.withOpacity(0.25)),
       ),
       child: Column(
@@ -1023,19 +1024,19 @@ class _ExecutiveRecommendations extends StatelessWidget {
               const SizedBox(width: 8),
               Text(l10n.dashRecommendationsTitle,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 14,
-                      fontWeight: FontWeight.bold)),
+                      fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 12),
           ...recs.map((r) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                           color: r.color.withOpacity(0.12),
                           shape: BoxShape.circle),
@@ -1048,13 +1049,13 @@ class _ExecutiveRecommendations extends StatelessWidget {
                         children: [
                           Text(r.title,
                               style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.ink,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600)),
                           const SizedBox(height: 2),
                           Text(r.body,
                               style: const TextStyle(
-                                  color: Colors.white54,
+                                  color: AppColors.inkMuted,
                                   fontSize: 11,
                                   height: 1.4)),
                         ],
@@ -1064,8 +1065,8 @@ class _ExecutiveRecommendations extends StatelessWidget {
                     Text('${r.confidence}%',
                         style: TextStyle(
                             color: r.color,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold)),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600)),
                   ],
                 ),
               )),

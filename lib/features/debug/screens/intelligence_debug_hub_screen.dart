@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/project.dart';
@@ -21,22 +22,22 @@ import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../data/models/knowledge_coverage.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 // R16: internal debug hub stays in Portuguese (not a commercial surface).
 final AppLocalizations _dbgL10n = lookupAppLocalizations(const Locale('pt'));
 
 // ─── Palette ───────────────────────────────────────────────────────────────
-const _kBg = Color(0xFF080810);
-const _kCard = Color(0xFF0E0E1C);
-const _kBorder = Color(0xFF1A1A2E);
-const _kPrimary = Color(0xFF7C4DFF);
-const _kGreen = Color(0xFF00E676);
-const _kOrange = Color(0xFFFF9100);
-const _kRed = Color(0xFFFF1744);
-const _kCyan = Color(0xFF00E5FF);
-const _kGold = Color(0xFFFFD700);
+const _kCard = AppColors.ground;
+const _kBorder = AppColors.surface;
+const _kPrimary = AppColors.accent;
+const _kGreen = AppColors.positive;
+const _kOrange = AppColors.warning;
+const _kRed = AppColors.negative;
+const _kCyan = AppColors.info;
+const _kGold = AppColors.gold;
 const _kMono =
-    TextStyle(fontFamily: 'monospace', fontSize: 11, color: Color(0xFF9E9EBF));
+    TextStyle(fontFamily: 'monospace', fontSize: 11, color: AppColors.inkMuted);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Intelligence Debug Hub
@@ -76,7 +77,7 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
     // exigir positivamente `hasValue && isAdmin == true`.
     final profileAsync = ref.watch(currentProfileProvider);
     if (profileAsync.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: IvBody(child: Center(child: CircularProgressIndicator())));
     }
     // Codex Gate (P2, re-verificação): mesma correção defensiva de
     // admin_panel_screen.dart -- exige hasValue && !hasError, fechando o
@@ -88,36 +89,36 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
       final t = AppLocalizations.of(context)!;
       return Scaffold(
         appBar: AppBar(title: Text(t.uxAdminAccessDeniedTitle)),
-        body: Center(
+        body: IvBody(child: Center(
           child: Text(t.uxAdminAccessDeniedBody,
-              style: const TextStyle(color: Colors.white54)),
-        ),
+              style: const TextStyle(color: AppColors.inkMuted)),
+        )),
       );
     }
 
     return DefaultTabController(
       length: _tabs.length,
       child: Scaffold(
-        backgroundColor: _kBg,
+        backgroundColor: Colors.transparent,
         drawer: const AppDrawer(),
         appBar: AppBar(
-          backgroundColor: _kBg,
+          backgroundColor: Colors.transparent,
           elevation: 0,
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
               Text('Intelligence Debug Center',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                      color: AppColors.ink,
+                      fontWeight: FontWeight.w600,
                       fontSize: 15)),
               Text('Observabilidade · Rastreabilidade · Auditoria',
-                  style: TextStyle(color: Colors.white38, fontSize: 10)),
+                  style: TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
             ],
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: Colors.white38),
+              icon: const Icon(Icons.refresh_rounded, color: AppColors.inkSubtle),
               tooltip: 'Atualizar tudo',
               onPressed: () {
                 ref.invalidate(scoreBreakdownsProvider);
@@ -133,14 +134,14 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
             isScrollable: true,
             tabAlignment: TabAlignment.start,
             labelColor: _kPrimary,
-            unselectedLabelColor: Colors.white38,
+            unselectedLabelColor: AppColors.inkSubtle,
             indicatorColor: _kPrimary,
             labelStyle:
                 const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             tabs: _tabs,
           ),
         ),
-        body: const TabBarView(
+        body: IvBody(child: const TabBarView(
           children: [
             _ProjectsTab(),
             _PersonasTab(),
@@ -151,7 +152,7 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
             _HealthTab(),
             _TestsTab(),
           ],
-        ),
+        )),
       ),
     );
   }
@@ -218,7 +219,7 @@ class _ProjectsTab extends ConsumerWidget {
               _debugRow('Ativos (ações)', '${pActs.length}'),
               _debugRow('Oportunidades (Lab)', '${pLab.length}'),
               _debugRow('Análise de mercado',
-                  linked.isNotEmpty ? '✅ Vinculada' : '❌ Não vinculada'),
+                  linked.isNotEmpty ? '✓ Vinculada' : '✗ Não vinculada'),
               _debugRow('Personas vinculadas', 'via nicho'),
               const _Divider(),
               _sectionLabel('INDEXAÇÃO'),
@@ -268,7 +269,7 @@ class _ProjectsTab extends ConsumerWidget {
                     'Gaps detectados',
                     profile.first.coverage.gaps
                         .map((g) =>
-                            '⚠ ${KnowledgeCoverage.gapLabel(g, _dbgL10n)}')
+                            '• ${KnowledgeCoverage.gapLabel(g, _dbgL10n)}')
                         .join('\n')),
             ],
           );
@@ -328,7 +329,7 @@ class _PersonasTab extends ConsumerWidget {
                   p.lastTrainedAt?.toIso8601String().substring(0, 16) ??
                       'Nunca'),
               _debugRow('Treinamento recente (30d)',
-                  p.hasRecentTraining ? '✅ Sim' : '❌ Não'),
+                  p.hasRecentTraining ? '✓ Sim' : '✗ Não'),
               const _Divider(),
               _sectionLabel('FONTES'),
               _debugRow(
@@ -416,8 +417,8 @@ class _OpportunitiesTab extends ConsumerWidget {
               _debugRow(
                   'Análise vinculada',
                   analysis.isNotEmpty
-                      ? '✅ ${analysis.first.input.substring(0, 30)}...'
-                      : '❌ Não'),
+                      ? '✓ ${analysis.first.input.substring(0, 30)}...'
+                      : '✗ Não'),
               _debugRow('Origem', opp.opportunityType),
               _debugRow('Criado em',
                   opp.createdAt.toIso8601String().substring(0, 16)),
@@ -513,13 +514,13 @@ class _DecisionsTab extends ConsumerWidget {
                 const _Divider(),
                 _sectionLabel('REGRAS QUE DISPARARAM'),
                 _debugRow('Limiar ACELERAR',
-                    '≥ 70pts  →  ${s.ecosystemScore >= 70 ? "✅ disparou" : "não disparou"}'),
+                    '≥ 70pts  →  ${s.ecosystemScore >= 70 ? "✓ disparou" : "não disparou"}'),
                 _debugRow('Limiar MANTER',
-                    '45–69pts →  ${s.ecosystemScore >= 45 && s.ecosystemScore < 70 ? "✅ disparou" : "não disparou"}'),
+                    '45–69pts →  ${s.ecosystemScore >= 45 && s.ecosystemScore < 70 ? "✓ disparou" : "não disparou"}'),
                 _debugRow('Limiar REVISAR',
-                    '25–44pts →  ${s.ecosystemScore >= 25 && s.ecosystemScore < 45 ? "✅ disparou" : "não disparou"}'),
+                    '25–44pts →  ${s.ecosystemScore >= 25 && s.ecosystemScore < 45 ? "✓ disparou" : "não disparou"}'),
                 _debugRow('Limiar PAUSAR',
-                    '< 25pts  →  ${s.ecosystemScore < 25 ? "✅ disparou" : "não disparou"}'),
+                    '< 25pts  →  ${s.ecosystemScore < 25 ? "✓ disparou" : "não disparou"}'),
                 const _Divider(),
                 _sectionLabel('FÓRMULA'),
                 if (bd.isNotEmpty) _monoText(bd.first.weightedFormula),
@@ -621,7 +622,7 @@ class _ScoresTab extends ConsumerWidget {
               _debugRow('Confiança', '${bd.confidence}%'),
               if (bd.missingData.isNotEmpty)
                 _debugRow('Dados ausentes',
-                    bd.missingData.map((m) => '⚠ $m').join('\n')),
+                    bd.missingData.map((m) => '• $m').join('\n')),
             ],
           );
         }),
@@ -631,7 +632,7 @@ class _ScoresTab extends ConsumerWidget {
 
   Widget _scoreComponentWidget(ScoreComponent c) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -641,17 +642,17 @@ class _ScoresTab extends ConsumerWidget {
             Text('${c.rawValue}/100',
                 style: TextStyle(
                     color: c.hasData ? _kCyan : _kOrange,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     fontSize: 12)),
           ]),
           Text(c.formula, style: _kMono),
           const SizedBox(height: 4),
           Text(c.explanation,
-              style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
           const SizedBox(height: 4),
           ...c.dataSources.map((s) => Text('  › $s', style: _kMono)),
           if (!c.hasData)
-            const Text('  ⚠ Sem dados suficientes para este componente',
+            const Text('Sem dados suficientes para este componente',
                 style: TextStyle(color: _kOrange, fontSize: 11)),
         ],
       ),
@@ -742,13 +743,13 @@ class _GraphTab extends ConsumerWidget {
             subtitle:
                 '${pEdges.length} conexões · ${pLab.length} oportunidades · ${isOrphan ? "ÓRFÃO" : "Conectado"}',
             children: [
-              _graphNodeRow('📁 PROJETO', project.name, project.id),
+              _graphNodeRow('PROJETO', project.name, project.id),
               const SizedBox(height: 4),
               _debugRow(
                   '  ↓ Análise de mercado',
                   profile.isNotEmpty && profile.first.analysis != null
-                      ? '✅ ${profile.first.analysis!.input.substring(0, 30)}...'
-                      : '❌ Não vinculada'),
+                      ? '✓ ${profile.first.analysis!.input.substring(0, 30)}...'
+                      : '✗ Não vinculada'),
               _debugRow(
                   '  ↓ Estágio',
                   profile.isNotEmpty
@@ -769,7 +770,7 @@ class _GraphTab extends ConsumerWidget {
                 const Padding(
                   padding: EdgeInsets.only(top: 8),
                   child: Text(
-                      '⚠ Projeto sem conexões detectadas no grafo de conhecimento.',
+                      'Projeto sem conexões detectadas no grafo de conhecimento.',
                       style: TextStyle(color: _kOrange, fontSize: 11)),
                 ),
             ],
@@ -783,7 +784,7 @@ class _GraphTab extends ConsumerWidget {
                 subtitle: '${l.opportunityType} · score: ${l.finalScore}',
                 children: [
                   _debugRow('ID', l.id),
-                  _debugRow('Projeto', '❌ Não vinculado'),
+                  _debugRow('Projeto', '✗ Não vinculado'),
                   _debugRow('Ação',
                       'Vincule esta oportunidade a um projeto existente.'),
                 ],
@@ -798,7 +799,7 @@ class _GraphTab extends ConsumerWidget {
                 children: [
                   _debugRow('ID', k.id),
                   _debugRow('Status', k.status),
-                  _debugRow('Persona', k.personaId ?? '❌ Não vinculado'),
+                  _debugRow('Persona', k.personaId ?? '✗ Não vinculado'),
                   _debugRow('Ação',
                       'Treine uma persona com este documento no Cofre de Conhecimento.'),
                 ],
@@ -946,10 +947,10 @@ class _HealthTab extends ConsumerWidget {
               _debugRow(
                   'Status',
                   marketHealth >= 60
-                      ? '🟢 Saudável'
+                      ? 'Saudável'
                       : marketHealth >= 40
-                          ? '🟡 Atenção'
-                          : '🔴 Crítico'),
+                          ? 'Atenção'
+                          : 'Crítico'),
             ],
           );
         }),
@@ -976,10 +977,10 @@ class _HealthTab extends ConsumerWidget {
               _debugRow(
                   'Status',
                   roiHealth >= 60
-                      ? '🟢 Saudável'
+                      ? 'Saudável'
                       : roiHealth >= 40
-                          ? '🟡 Atenção'
-                          : '🔴 Crítico'),
+                          ? 'Atenção'
+                          : 'Crítico'),
             ],
           );
         }),
@@ -1009,10 +1010,10 @@ class _HealthTab extends ConsumerWidget {
               _debugRow(
                   'Status',
                   execHealth >= 60
-                      ? '🟢 Saudável'
+                      ? 'Saudável'
                       : execHealth >= 40
-                          ? '🟡 Atenção'
-                          : '🔴 Crítico'),
+                          ? 'Atenção'
+                          : 'Crítico'),
             ],
           );
         }),
@@ -1041,10 +1042,10 @@ class _HealthTab extends ConsumerWidget {
               _debugRow(
                   'Status',
                   avgFit >= 40
-                      ? '🟢 Saudável'
+                      ? 'Saudável'
                       : avgFit >= 20
-                          ? '🟡 Atenção'
-                          : '🔴 Crítico'),
+                          ? 'Atenção'
+                          : 'Crítico'),
             ],
           );
         }),
@@ -1053,11 +1054,11 @@ class _HealthTab extends ConsumerWidget {
   }
 
   String _healthLabel(int passed, int total) {
-    if (total == 0) return '⚪ Sem dados';
+    if (total == 0) return 'Sem dados';
     final r = passed / total;
-    if (r >= 0.8) return '🟢 Saudável';
-    if (r >= 0.5) return '🟡 Atenção necessária';
-    return '🔴 Crítico';
+    if (r >= 0.8) return 'Saudável';
+    if (r >= 0.5) return 'Atenção necessária';
+    return 'Crítico';
   }
 
   Widget _healthMetric(String label, int value, int max) {
@@ -1072,7 +1073,7 @@ class _HealthTab extends ConsumerWidget {
       child: Row(children: [
         Expanded(
             child: Text(label,
-                style: const TextStyle(color: Colors.white54, fontSize: 11))),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 11))),
         Text('$value/$max',
             style: TextStyle(
                 color: color, fontSize: 11, fontWeight: FontWeight.w600)),
@@ -1081,7 +1082,7 @@ class _HealthTab extends ConsumerWidget {
           width: 60,
           child: LinearProgressIndicator(
             value: pct.clamp(0, 1),
-            backgroundColor: Colors.white10,
+            backgroundColor: AppColors.line,
             valueColor: AlwaysStoppedAnimation(color),
           ),
         ),
@@ -1109,7 +1110,7 @@ class _TestsTab extends ConsumerWidget {
           CircularProgressIndicator(color: _kPrimary),
           SizedBox(height: 12),
           Text('Executando testes de validação...',
-              style: TextStyle(color: Colors.white38)),
+              style: TextStyle(color: AppColors.inkSubtle)),
         ]),
       );
     }
@@ -1133,7 +1134,7 @@ class _TestsTab extends ConsumerWidget {
           ref: ref,
         ),
         const SizedBox(height: 16),
-        const Divider(color: Color(0xFF1A1A2E), height: 1),
+        const Divider(color: AppColors.surface, height: 1),
         const SizedBox(height: 12),
         // Summary header
         _TestSummaryCard(report: report),
@@ -1170,8 +1171,8 @@ class _BootstrapEngineCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0E0E1C),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.ground,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kOrange.withOpacity(0.4)),
       ),
       child: Column(
@@ -1179,14 +1180,14 @@ class _BootstrapEngineCard extends StatelessWidget {
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: _kOrange.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child:
                       const Icon(Icons.bolt_rounded, color: _kOrange, size: 18),
@@ -1198,13 +1199,13 @@ class _BootstrapEngineCard extends StatelessWidget {
                     children: [
                       Text('Knowledge → Action Engine',
                           style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                              color: AppColors.ink,
+                              fontWeight: FontWeight.w600,
                               fontSize: 13)),
                       Text(
                           'Converte documentos em oportunidades, ações e roadmap',
                           style:
-                              TextStyle(color: Colors.white38, fontSize: 10)),
+                              TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -1217,9 +1218,9 @@ class _BootstrapEngineCard extends StatelessWidget {
           // Status / pending info
           needsBootstrapAsync.when(
             loading: () => const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 14),
+              padding: EdgeInsets.symmetric(horizontal: 12),
               child: Text('Verificando projetos...',
-                  style: TextStyle(color: Colors.white38, fontSize: 11)),
+                  style: TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
             ),
             error: (_, __) => const SizedBox.shrink(),
             data: (projects) {
@@ -1227,7 +1228,7 @@ class _BootstrapEngineCard extends StatelessWidget {
               if (isRunning) return const SizedBox.shrink();
               if (projects.isEmpty) {
                 return const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 14),
+                  padding: EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     children: [
                       Icon(Icons.check_circle_rounded,
@@ -1240,9 +1241,9 @@ class _BootstrapEngineCard extends StatelessWidget {
                 );
               }
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  '⚡ ${projects.length} projeto${projects.length != 1 ? "s" : ""} com documentos mas sem oportunidades ou ações.',
+                  '${projects.length} projeto${projects.length != 1 ? "s" : ""} com documentos mas sem oportunidades ou ações.',
                   style: const TextStyle(color: _kOrange, fontSize: 11),
                 ),
               );
@@ -1253,7 +1254,7 @@ class _BootstrapEngineCard extends StatelessWidget {
           if (isRunning) ...[
             const SizedBox(height: 10),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1262,14 +1263,14 @@ class _BootstrapEngineCard extends StatelessWidget {
                         ? bootstrapState.currentProject /
                             bootstrapState.totalProjects
                         : null,
-                    backgroundColor: Colors.white10,
+                    backgroundColor: AppColors.line,
                     valueColor: const AlwaysStoppedAnimation(_kOrange),
                     minHeight: 3,
                   ),
                   const SizedBox(height: 6),
                   Text(bootstrapState.progressLabel,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 10)),
+                          const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
                 ],
               ),
             ),
@@ -1279,20 +1280,20 @@ class _BootstrapEngineCard extends StatelessWidget {
           if (isDone && report != null) ...[
             const SizedBox(height: 10),
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 14),
-              child: Divider(color: Colors.white12, height: 1),
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: Divider(color: AppColors.line, height: 1),
             ),
             const SizedBox(height: 8),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Resultado do Bootstrap',
                       style: TextStyle(
-                          color: Colors.white54,
+                          color: AppColors.inkMuted,
                           fontWeight: FontWeight.w600,
-                          fontSize: 10)),
+                          fontSize: 11)),
                   const SizedBox(height: 6),
                   _resultRow(
                       'Projetos processados', '${report.projectsBootstrapped}'),
@@ -1304,11 +1305,11 @@ class _BootstrapEngineCard extends StatelessWidget {
                   _resultRow(
                       'Personas treinadas', '${report.personasTrainedTotal}'),
                   ...report.projectResults.map((r) => Padding(
-                        padding: const EdgeInsets.only(top: 3),
+                        padding: const EdgeInsets.only(top: 2),
                         child: Text('  ${r.projectName}: ${r.summary}',
                             style: TextStyle(
-                                color: r.success ? Colors.white54 : _kRed,
-                                fontSize: 10)),
+                                color: r.success ? AppColors.inkMuted : _kRed,
+                                fontSize: 11)),
                       )),
                 ],
               ),
@@ -1318,14 +1319,14 @@ class _BootstrapEngineCard extends StatelessWidget {
           // Error
           if (bootstrapState.error != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               child: Text('Erro: ${bootstrapState.error}',
-                  style: const TextStyle(color: _kRed, fontSize: 10)),
+                  style: const TextStyle(color: _kRed, fontSize: 11)),
             ),
 
           // Action button
           Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -1374,10 +1375,10 @@ class _BootstrapEngineCard extends StatelessWidget {
                         : '▶ Executar Knowledge → Action Engine'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      isRunning ? Colors.white10 : _kOrange.withOpacity(0.2),
+                      isRunning ? AppColors.line : _kOrange.withOpacity(0.2),
                   foregroundColor: _kOrange,
                   side: BorderSide(color: _kOrange.withOpacity(0.4)),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   textStyle: const TextStyle(
                       fontSize: 12, fontWeight: FontWeight.w600),
                 ),
@@ -1396,12 +1397,12 @@ class _BootstrapEngineCard extends StatelessWidget {
             SizedBox(
               width: 140,
               child: Text(label,
-                  style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
             ),
             Text(value,
                 style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10,
+                    color: AppColors.inkMuted,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600)),
           ],
         ),
@@ -1438,17 +1439,17 @@ class _DebugCardState extends State<_DebugCard> {
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: _kBorder),
       ),
       child: Column(children: [
         InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           onTap: () => setState(() => _expanded = !_expanded),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(children: [
-              Text(widget.leading, style: const TextStyle(fontSize: 18)),
+              IvEmojiIcon(widget.leading, size: 28),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -1456,20 +1457,20 @@ class _DebugCardState extends State<_DebugCard> {
                     children: [
                       Text(widget.title,
                           style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.ink,
                               fontWeight: FontWeight.w600,
                               fontSize: 13)),
                       const SizedBox(height: 2),
                       Text(widget.subtitle,
                           style: const TextStyle(
-                              color: Colors.white38, fontSize: 11)),
+                              color: AppColors.inkSubtle, fontSize: 11)),
                     ]),
               ),
               Icon(
                   _expanded
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
-                  color: Colors.white38,
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.inkSubtle,
                   size: 18),
             ]),
           ),
@@ -1480,7 +1481,7 @@ class _DebugCardState extends State<_DebugCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Divider(color: Colors.white12, height: 12),
+                const Divider(color: AppColors.line, height: 12),
                 ...widget.children,
               ],
             ),
@@ -1494,7 +1495,7 @@ class _Divider extends StatelessWidget {
   const _Divider();
   @override
   Widget build(BuildContext context) =>
-      const Divider(color: Colors.white12, height: 20);
+      const Divider(color: AppColors.line, height: 20);
 }
 
 class _HealthGauge extends StatelessWidget {
@@ -1516,22 +1517,22 @@ class _HealthGauge extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Row(children: [
-        Text(icon, style: const TextStyle(fontSize: 28)),
+        IvEmojiIcon(icon, size: 40),
         const SizedBox(width: 14),
         Expanded(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(label,
               style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.w600)),
+                  color: AppColors.ink, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
           LinearProgressIndicator(
             value: value / 100,
-            backgroundColor: Colors.white10,
+            backgroundColor: AppColors.line,
             valueColor: AlwaysStoppedAnimation(color),
             minHeight: 6,
             borderRadius: BorderRadius.circular(3),
@@ -1540,7 +1541,7 @@ class _HealthGauge extends StatelessWidget {
         const SizedBox(width: 14),
         Text('$value',
             style: TextStyle(
-                color: color, fontWeight: FontWeight.bold, fontSize: 24)),
+                color: color, fontWeight: FontWeight.w600, fontSize: 24)),
       ]),
     );
   }
@@ -1563,7 +1564,7 @@ class _TestResultCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border(left: BorderSide(color: color, width: 3)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1575,28 +1576,28 @@ class _TestResultCard extends StatelessWidget {
           Expanded(
               child: Text(test.name,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontWeight: FontWeight.w600,
                       fontSize: 13))),
           Text('${test.passed}/${test.total}',
               style: TextStyle(
-                  color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+                  color: color, fontSize: 12, fontWeight: FontWeight.w600)),
         ]),
         const SizedBox(height: 4),
         Text(test.description,
-            style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 11)),
         if (test.failedItems.isNotEmpty) ...[
           const SizedBox(height: 8),
           ...test.failedItems.take(5).map((item) =>
               Text('  › $item', style: _kMono.copyWith(color: _kOrange))),
           if (test.failedItems.length > 5)
             Text('  ... e mais ${test.failedItems.length - 5}',
-                style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
         ],
         if (test.suggestion != null &&
             test.status != ValidationStatus.pass) ...[
           const SizedBox(height: 6),
-          Text('💡 ${test.suggestion}',
+          Text('${test.suggestion}',
               style: const TextStyle(
                   color: _kCyan, fontSize: 11, fontStyle: FontStyle.italic)),
         ],
@@ -1621,24 +1622,24 @@ class _TestSummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Text(
               report.failedTests == 0
-                  ? '✅'
+                  ? '✓'
                   : report.failedTests <= 2
-                      ? '⚠️'
-                      : '❌',
-              style: const TextStyle(fontSize: 22)),
+                      ? '!'
+                      : '✗',
+              style: const TextStyle(fontSize: 24)),
           const SizedBox(width: 10),
           Expanded(
               child: Text(report.overallLabel,
                   style: TextStyle(
                       color: color,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 16))),
           Text('${report.passedTests}/${report.tests.length} testes passaram',
               style: TextStyle(color: color, fontSize: 12)),
@@ -1646,16 +1647,16 @@ class _TestSummaryCard extends StatelessWidget {
         const SizedBox(height: 10),
         LinearProgressIndicator(
           value: report.healthRatio,
-          backgroundColor: Colors.white10,
+          backgroundColor: AppColors.line,
           valueColor: AlwaysStoppedAnimation(color),
           minHeight: 5,
           borderRadius: BorderRadius.circular(3),
         ),
         const SizedBox(height: 12),
         Wrap(spacing: 8, runSpacing: 6, children: [
-          _chip('✅ ${report.passedTests}', _kGreen),
-          _chip('⚠ ${report.warningTests}', _kOrange),
-          _chip('❌ ${report.failedTests}', _kRed),
+          _chip('✓ ${report.passedTests}', _kGreen),
+          _chip('• ${report.warningTests}', _kOrange),
+          _chip('✗ ${report.failedTests}', _kRed),
         ]),
       ]),
     );
@@ -1665,7 +1666,7 @@ class _TestSummaryCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Text(label,
@@ -1681,10 +1682,10 @@ class _FinalReportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: _kBorder),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1695,46 +1696,46 @@ class _FinalReportCard extends StatelessWidget {
         _reportRow('Ativos encontrados', '${report.assetsFound}'),
         _reportRow('Ativos órfãos', '${report.orphanAssets}',
             warn: report.orphanAssets > 0),
-        const Divider(color: Colors.white12, height: 16),
+        const Divider(color: AppColors.line, height: 16),
         _reportRow('Personas auditadas', '${report.personasAudited}'),
         _reportRow(
             'Personas com aprendizado real', '${report.personasWithLearning}'),
         _reportRow(
             'Personas sem aprendizado', '${report.personasWithoutLearning}',
             warn: report.personasWithoutLearning > 0),
-        const Divider(color: Colors.white12, height: 16),
+        const Divider(color: AppColors.line, height: 16),
         _reportRow('Oportunidades auditadas', '${report.opportunitiesAudited}'),
         _reportRow(
             'Recomendações auditadas', '${report.recommendationsAudited}'),
         _reportRow('Scores auditados', '${report.scoresAudited}'),
         _reportRow('Scores inválidos', '${report.invalidScores}',
             warn: report.invalidScores > 0),
-        const Divider(color: Colors.white12, height: 16),
+        const Divider(color: AppColors.line, height: 16),
         _reportRow('Regras quebradas', '${report.brokenRules}',
             warn: report.brokenRules > 0),
         _reportRow('Problemas encontrados', '${report.problemsFound}',
             warn: report.problemsFound > 0),
-        const Divider(color: Colors.white12, height: 16),
+        const Divider(color: AppColors.line, height: 16),
         _reportRow('Inteligência (health score)',
             '${report.intelligenceScoreBefore}/100'),
         const SizedBox(height: 8),
         Text(
             'Relatório gerado em ${report.runAt.toIso8601String().substring(0, 19).replaceAll("T", " ")}',
-            style: const TextStyle(color: Colors.white24, fontSize: 10)),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11)),
       ]),
     );
   }
 
   Widget _reportRow(String label, String value, {bool warn = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(children: [
         Expanded(
             child: Text(label,
-                style: const TextStyle(color: Colors.white54, fontSize: 12))),
+                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12))),
         Text(value,
             style: TextStyle(
-                color: warn ? _kOrange : Colors.white,
+                color: warn ? _kOrange : AppColors.ink,
                 fontSize: 12,
                 fontWeight: FontWeight.w600)),
       ]),
@@ -1747,12 +1748,12 @@ class _FinalReportCard extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════════════════════
 
 Widget _sectionHeader(String text) => Padding(
-      padding: const EdgeInsets.fromLTRB(0, 8, 0, 10),
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
       child: Text(text,
           style: const TextStyle(
-              color: Colors.white54,
+              color: AppColors.inkMuted,
               fontSize: 11,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.5)),
     );
 
@@ -1761,8 +1762,8 @@ Widget _sectionLabel(String text) => Padding(
       child: Text(text,
           style: const TextStyle(
               color: _kCyan,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.8)),
     );
 
@@ -1777,9 +1778,9 @@ Widget _debugRow(String label, String value, {bool highlight = false}) =>
         Expanded(
           child: Text(value,
               style: TextStyle(
-                  color: highlight ? _kGold : Colors.white70,
+                  color: highlight ? _kGold : AppColors.inkMuted,
                   fontSize: 11,
-                  fontWeight: highlight ? FontWeight.bold : FontWeight.normal)),
+                  fontWeight: highlight ? FontWeight.w600 : FontWeight.normal)),
         ),
       ]),
     );
@@ -1789,7 +1790,7 @@ Widget _monoText(String text) => Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.black38,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: _kBorder),
       ),
       child: Text(text, style: _kMono.copyWith(height: 1.6)),
@@ -1797,20 +1798,20 @@ Widget _monoText(String text) => Container(
 
 Widget _graphNodeRow(String type, String name, String id) => Row(children: [
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         decoration: BoxDecoration(
           color: _kPrimary.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(color: _kPrimary.withOpacity(0.3)),
         ),
         child: Text(type,
             style: const TextStyle(
-                color: _kPrimary, fontSize: 10, fontWeight: FontWeight.bold)),
+                color: _kPrimary, fontSize: 11, fontWeight: FontWeight.w600)),
       ),
       const SizedBox(width: 8),
       Expanded(
           child: Text(name,
-              style: const TextStyle(color: Colors.white, fontSize: 12))),
+              style: const TextStyle(color: AppColors.ink, fontSize: 12))),
       Text(id.substring(0, 8), style: _kMono),
     ]);
 
@@ -1818,15 +1819,15 @@ Widget _empty(String msg, String hint) => Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.search_off_rounded, color: Colors.white24, size: 48),
+          const Icon(Icons.search_off_rounded, color: AppColors.inkSubtle, size: 48),
           const SizedBox(height: 12),
           Text(msg,
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
+              style: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
               textAlign: TextAlign.center),
           if (hint.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(hint,
-                style: const TextStyle(color: Colors.white24, fontSize: 12),
+                style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
                 textAlign: TextAlign.center),
           ],
         ]),

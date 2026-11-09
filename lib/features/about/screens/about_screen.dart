@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../l10n/app_localizations.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 /// IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 — "Sobre o InsightValues".
 /// Nunca expõe infraestrutura técnica ou segredos -- só informação
@@ -18,10 +20,10 @@ class AboutScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(t.aboutTitle)),
-      body: ListView(
+      body: IvBody(child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Icon(Icons.auto_awesome,
+          Icon(Icons.auto_awesome_rounded,
               size: 48, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 12),
           Text(
@@ -29,13 +31,19 @@ class AboutScreen extends StatelessWidget {
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
-          Text(t.aboutTagline, style: const TextStyle(color: Colors.white54)),
+          Text(t.aboutTagline, style: const TextStyle(color: AppColors.inkMuted)),
           const SizedBox(height: 28),
-          _VersionTile(t: t),
-          const Divider(color: Colors.white12, height: 32),
+          IvCard(
+            padding: const EdgeInsets.symmetric(vertical: AppSpace.s2),
+            child: _VersionTile(t: t),
+          ),
+          const SizedBox(height: AppSpace.s4),
+          IvCard(
+            padding: const EdgeInsets.symmetric(vertical: AppSpace.s2),
+            child: Column(children: [
           _LinkTile(
             icon: Icons.public_rounded,
             label: t.aboutWebsite,
@@ -61,20 +69,22 @@ class AboutScreen extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.workspace_premium_outlined,
-                color: Colors.white70),
+                color: AppColors.inkMuted),
             title: Text(t.aboutPlanInfo),
             trailing:
-                const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.inkSubtle),
             onTap: () => context.push(AppConstants.routeUpgrade),
+          ),
+            ]),
           ),
           const SizedBox(height: 24),
           Text(
             t.aboutCopyright(DateTime.now().year),
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white38, fontSize: 12),
+            style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
           ),
         ],
-      ),
+      )),
     );
   }
 }
@@ -94,10 +104,10 @@ class _VersionTile extends StatelessWidget {
             : '${info.version} (build ${info.buildNumber})';
         return ListTile(
           leading:
-              const Icon(Icons.info_outline_rounded, color: Colors.white70),
+              const Icon(Icons.info_outline_rounded, color: AppColors.inkMuted),
           title: Text(t.aboutVersion),
           trailing:
-              Text(versionText, style: const TextStyle(color: Colors.white54)),
+              Text(versionText, style: const TextStyle(color: AppColors.inkMuted)),
         );
       },
     );
@@ -123,19 +133,19 @@ class _LinkTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final available = url != null && url!.isNotEmpty;
     return ListTile(
-      leading: Icon(icon, color: available ? Colors.white70 : Colors.white24),
+      leading: Icon(icon, color: available ? AppColors.inkMuted : AppColors.inkSubtle),
       title: Text(label,
-          style: TextStyle(color: available ? Colors.white : Colors.white38)),
+          style: TextStyle(color: available ? AppColors.ink : AppColors.inkSubtle)),
       subtitle: available
           ? (subtitle != null
               ? Text(subtitle!,
-                  style: const TextStyle(color: Colors.white38, fontSize: 12))
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12))
               : null)
           : Text(unavailableText ?? '',
-              style: const TextStyle(color: Colors.white24, fontSize: 12)),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12)),
       trailing: available
           ? const Icon(Icons.open_in_new_rounded,
-              color: Colors.white38, size: 18)
+              color: AppColors.inkSubtle, size: 18)
           : null,
       onTap: available ? () => launchUrl(Uri.parse(url!)) : null,
     );

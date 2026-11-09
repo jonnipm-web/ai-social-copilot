@@ -17,6 +17,7 @@ import 'widgets/experiment_history_section.dart';
 import 'widgets/plan_upgrade_banner.dart';
 import 'widgets/robustness_evidence_section.dart';
 import 'widgets/simulation_governance_section.dart';
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class StrategyDetailScreen extends ConsumerStatefulWidget {
   const StrategyDetailScreen({super.key, required this.strategyId});
@@ -330,7 +331,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                     ? const SizedBox.square(
                         dimension: 16,
                         child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.play_arrow),
+                    : const Icon(Icons.play_arrow_rounded),
                 label: Text(l.strategyBuilderRunBacktest),
               ),
             ),
@@ -533,7 +534,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                                     dimension: 16,
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2))
-                                : const Icon(Icons.insights),
+                                : const Icon(Icons.insights_rounded),
                             label: Text(l.strategyDetailAnalyzeFit),
                           ),
                         ),
@@ -570,7 +571,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                                 key: const Key(
                                     'strategyDetailUnsupportedParameter'),
                                 style: const TextStyle(
-                                    fontSize: 11, color: Colors.white54),
+                                    fontSize: 11, color: AppColors.inkMuted),
                               ),
                           ],
                         ],

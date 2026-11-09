@@ -93,7 +93,15 @@ class ActionQueueItem {
   /// R16 — origin label in the presentation language of [l10n]; unknown
   /// origins are shown verbatim.
   String localizedOriginLabel(AppLocalizations l10n) =>
-      originLabelFor(origin, l10n);
+      originLabelFor(effectiveOrigin, l10n);
+
+  /// Rows written by AutoBootstrapService before it set `origin` landed on
+  /// the default 'manual' while carrying an opportunity id — a combination
+  /// no manual path produces (see migration
+  /// 20261109000001_action_queue_backfill_auto_bootstrap_origin). Read them
+  /// as what they are until that backfill has run.
+  String get effectiveOrigin =>
+      origin == 'manual' && opportunityLabId != null ? 'auto_bootstrap' : origin;
 
   static String originLabelFor(String origin, AppLocalizations l10n) {
     switch (origin) {

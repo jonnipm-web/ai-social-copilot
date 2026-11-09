@@ -28,8 +28,8 @@ class CanonicalBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.arrow_back),
+    return IconButton(tooltip: MaterialLocalizations.of(context).backButtonTooltip, 
+      icon: const Icon(Icons.arrow_back_rounded),
       onPressed: () =>
           context.canPop() ? context.pop() : context.go(fallbackRoute),
     );

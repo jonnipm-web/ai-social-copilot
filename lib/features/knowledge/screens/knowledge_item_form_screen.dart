@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -13,6 +14,7 @@ import '../../../providers/knowledge_provider.dart';
 import '../../../providers/project_provider.dart';
 import 'drive_picker_screen.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import 'package:ai_social_copilot/core/theme/app_tokens.dart';
 
 class KnowledgeItemFormScreen extends ConsumerStatefulWidget {
   const KnowledgeItemFormScreen({super.key, this.itemId});
@@ -128,7 +130,7 @@ class _KnowledgeItemFormScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.knowledgeFormContentEmptyError),
-          backgroundColor: const Color(0xFFF44336),
+          backgroundColor: AppColors.negative,
         ),
       );
       return;
@@ -194,7 +196,7 @@ class _KnowledgeItemFormScreenState
                   ? l10n.knowledgeFormSavedWithProject(projectName)
                   : l10n.knowledgeFormSavedNoProject,
             ),
-            backgroundColor: const Color(0xFF4CAF50),
+            backgroundColor: AppColors.positive,
             duration: const Duration(seconds: 3),
           ),
         );
@@ -206,7 +208,7 @@ class _KnowledgeItemFormScreenState
           SnackBar(
             content:
                 Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n))),
-            backgroundColor: const Color(0xFFF44336),
+            backgroundColor: AppColors.negative,
           ),
         );
       }
@@ -221,16 +223,16 @@ class _KnowledgeItemFormScreenState
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F0F1A),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppColors.ink,
         title: Text(
           _isEdit ? l10n.knowledgeFormEditTitle : l10n.knowledgeFormNewTitle,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
-      body: SingleChildScrollView(
+      body: IvBody(child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
@@ -344,10 +346,10 @@ class _KnowledgeItemFormScreenState
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF6C63FF).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(
-                        color: const Color(0xFF6C63FF).withOpacity(0.3)),
+                        color: AppColors.accent.withOpacity(0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,7 +357,7 @@ class _KnowledgeItemFormScreenState
                       Text(
                         l10n.knowledgeFormGoogleDocsHintTitle,
                         style: const TextStyle(
-                            color: Color(0xFF6C63FF),
+                            color: AppColors.accent,
                             fontSize: 12,
                             fontWeight: FontWeight.w600),
                       ),
@@ -363,7 +365,7 @@ class _KnowledgeItemFormScreenState
                       Text(
                         l10n.knowledgeFormGoogleDocsHintBody,
                         style: const TextStyle(
-                            color: Colors.white54, fontSize: 12, height: 1.5),
+                            color: AppColors.inkMuted, fontSize: 12, height: 1.5),
                       ),
                     ],
                   ),
@@ -411,13 +413,13 @@ class _KnowledgeItemFormScreenState
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _sourceLanguage,
-                dropdownColor: const Color(0xFF1A1A2E),
-                style: const TextStyle(color: Colors.white),
+                dropdownColor: AppColors.surface,
+                style: const TextStyle(color: AppColors.ink),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: const Color(0xFF1A1A2E),
+                  fillColor: AppColors.surface,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     borderSide: BorderSide.none,
                   ),
                 ),
@@ -444,18 +446,18 @@ class _KnowledgeItemFormScreenState
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C63FF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.onAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(AppRadius.lg)),
                   ),
                   icon: _loading
                       ? const SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
+                              strokeWidth: 2, color: AppColors.ink),
                         )
                       : const Icon(Icons.save_rounded),
                   label: Text(_loading
@@ -469,7 +471,7 @@ class _KnowledgeItemFormScreenState
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }
@@ -484,7 +486,7 @@ class _Label extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        color: Colors.white70,
+        color: AppColors.inkMuted,
         fontSize: 13,
         fontWeight: FontWeight.w500,
       ),
@@ -514,17 +516,17 @@ class _Field extends StatelessWidget {
       maxLines: maxLines,
       keyboardType: keyboardType,
       validator: validator,
-      style: const TextStyle(color: Colors.white, fontSize: 14),
+      style: const TextStyle(color: AppColors.ink, fontSize: 14),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
+        hintStyle: const TextStyle(color: AppColors.inkSubtle, fontSize: 13),
         filled: true,
-        fillColor: const Color(0xFF1A1A2E),
+        fillColor: AppColors.surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: BorderSide.none,
         ),
-        errorStyle: const TextStyle(color: Color(0xFFF44336)),
+        errorStyle: const TextStyle(color: AppColors.negative),
       ),
     );
   }
@@ -556,8 +558,8 @@ class _FileImportSection extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.circular(10),
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -566,11 +568,11 @@ class _FileImportSection extends StatelessWidget {
               width: 18,
               height: 18,
               child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Color(0xFF6C63FF)),
+                  strokeWidth: 2, color: AppColors.accent),
             ),
             const SizedBox(width: 12),
             Text(l10n.knowledgeFormExtracting,
-                style: const TextStyle(color: Colors.white54)),
+                style: const TextStyle(color: AppColors.inkMuted)),
           ],
         ),
       );
@@ -578,16 +580,16 @@ class _FileImportSection extends StatelessWidget {
 
     if (importedFileName != null) {
       return Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF4CAF50).withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.4)),
+          color: AppColors.positive.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.positive.withOpacity(0.4)),
         ),
         child: Row(
           children: [
             const Icon(Icons.check_circle_rounded,
-                color: Color(0xFF4CAF50), size: 20),
+                color: AppColors.positive, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -596,13 +598,13 @@ class _FileImportSection extends StatelessWidget {
                   Text(
                     importedFileName!,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 13,
                         fontWeight: FontWeight.w500),
                   ),
                   Text(
                     l10n.knowledgeFormCharsExtracted(contentCtrl.text.length),
-                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                    style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
                   ),
                 ],
               ),
@@ -611,7 +613,7 @@ class _FileImportSection extends StatelessWidget {
               onPressed: () => _pickFile(context),
               child: Text(l10n.knowledgeFormChangeFile,
                   style:
-                      const TextStyle(color: Color(0xFF6C63FF), fontSize: 12)),
+                      const TextStyle(color: AppColors.accent, fontSize: 12)),
             ),
           ],
         ),
@@ -626,28 +628,28 @@ class _FileImportSection extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A1A2E),
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.surface, gradient: kIvSurfaceGradient,
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(
-                  color: const Color(0xFF6C63FF).withOpacity(0.3),
+                  color: AppColors.accent.withOpacity(0.3),
                   style: BorderStyle.solid),
             ),
             child: Column(
               children: [
                 const Icon(Icons.upload_file_rounded,
-                    color: Color(0xFF6C63FF), size: 40),
+                    color: AppColors.accent, size: 40),
                 const SizedBox(height: 8),
                 Text(
                   l10n.knowledgeFormClickToSelectFile,
                   style: const TextStyle(
-                      color: Color(0xFF6C63FF),
+                      color: AppColors.accent,
                       fontSize: 14,
                       fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   l10n.knowledgeFormFileTypes,
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
                 ),
               ],
             ),
@@ -655,17 +657,17 @@ class _FileImportSection extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFFFF9800).withOpacity(0.08),
-            borderRadius: BorderRadius.circular(8),
+            color: AppColors.warning.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(AppRadius.md),
             border:
-                Border.all(color: const Color(0xFFFF9800).withOpacity(0.25)),
+                Border.all(color: AppColors.warning.withOpacity(0.25)),
           ),
           child: Text(
             l10n.knowledgeFormPdfWarning,
             style: const TextStyle(
-                color: Colors.white38, fontSize: 11, height: 1.4),
+                color: AppColors.inkSubtle, fontSize: 11, height: 1.4),
           ),
         ),
       ],
@@ -731,7 +733,7 @@ class _FileImportSection extends StatelessWidget {
           SnackBar(
             content: Text(
                 l10n.knowledgeFormImportError(extractErrorMessage(e, l10n))),
-            backgroundColor: const Color(0xFFF44336),
+            backgroundColor: AppColors.negative,
           ),
         );
       }
@@ -772,16 +774,16 @@ class _DriveImportSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     if (importedFileName != null) {
       return Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF4CAF50).withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.4)),
+          color: AppColors.positive.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.positive.withOpacity(0.4)),
         ),
         child: Row(
           children: [
             const Icon(Icons.check_circle_rounded,
-                color: Color(0xFF4CAF50), size: 20),
+                color: AppColors.positive, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -789,12 +791,12 @@ class _DriveImportSection extends StatelessWidget {
                 children: [
                   Text(importedFileName!,
                       style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontSize: 13,
                           fontWeight: FontWeight.w500)),
                   Text(
                     l10n.knowledgeFormCharsExtracted(contentCtrl.text.length),
-                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                    style: const TextStyle(color: AppColors.inkSubtle, fontSize: 11),
                   ),
                 ],
               ),
@@ -803,7 +805,7 @@ class _DriveImportSection extends StatelessWidget {
               onPressed: () => _openPicker(context),
               child: Text(l10n.knowledgeFormChangeFile,
                   style:
-                      const TextStyle(color: Color(0xFF6C63FF), fontSize: 12)),
+                      const TextStyle(color: AppColors.accent, fontSize: 12)),
             ),
           ],
         ),
@@ -816,26 +818,26 @@ class _DriveImportSection extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+          color: AppColors.surface, gradient: kIvSurfaceGradient,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.accent.withOpacity(0.3)),
         ),
         child: Column(
           children: [
             const Icon(Icons.add_to_drive_rounded,
-                color: Color(0xFF6C63FF), size: 40),
+                color: AppColors.accent, size: 40),
             const SizedBox(height: 8),
             Text(
               l10n.knowledgeFormSelectDriveFile,
               style: const TextStyle(
-                  color: Color(0xFF6C63FF),
+                  color: AppColors.accent,
                   fontSize: 14,
                   fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 4),
             Text(
               l10n.knowledgeFormDriveFileTypes,
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
+              style: const TextStyle(color: AppColors.inkSubtle, fontSize: 12),
             ),
           ],
         ),
@@ -868,28 +870,28 @@ class _ProjectSelector extends ConsumerWidget {
         const SizedBox(height: 8),
         DropdownButtonFormField<String?>(
           value: selectedId,
-          dropdownColor: const Color(0xFF1A1A2E),
-          style: const TextStyle(color: Colors.white),
+          dropdownColor: AppColors.surface,
+          style: const TextStyle(color: AppColors.ink),
           decoration: InputDecoration(
             filled: true,
-            fillColor: const Color(0xFF1A1A2E),
+            fillColor: AppColors.surface,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               borderSide: BorderSide.none,
             ),
           ),
           hint: Text(l10n.knowledgeFormNoProject,
-              style: const TextStyle(color: Colors.white38)),
+              style: const TextStyle(color: AppColors.inkSubtle)),
           items: [
             DropdownMenuItem<String?>(
               value: null,
               child: Text(l10n.knowledgeFormNoProject,
-                  style: const TextStyle(color: Colors.white54)),
+                  style: const TextStyle(color: AppColors.inkMuted)),
             ),
             ...projects.map((p) => DropdownMenuItem<String?>(
                   value: p.id,
                   child:
-                      Text(p.name, style: const TextStyle(color: Colors.white)),
+                      Text(p.name, style: const TextStyle(color: AppColors.ink)),
                 )),
           ],
           onChanged: onChanged,
@@ -921,27 +923,27 @@ class _SourceTypeButton extends StatelessWidget {
       onTap: () => onTap(value),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: selected
-              ? const Color(0xFF6C63FF).withOpacity(0.2)
-              : const Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.circular(10),
+              ? AppColors.accent.withOpacity(0.2)
+              : AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
-            color: selected ? const Color(0xFF6C63FF) : Colors.white12,
+            color: selected ? AppColors.accent : AppColors.line,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon,
-                color: selected ? const Color(0xFF6C63FF) : Colors.white38,
+                color: selected ? AppColors.accent : AppColors.inkSubtle,
                 size: 18),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: selected ? const Color(0xFF6C63FF) : Colors.white54,
+                color: selected ? AppColors.accent : AppColors.inkMuted,
                 fontSize: 13,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
               ),

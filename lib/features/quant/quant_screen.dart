@@ -10,6 +10,7 @@
 //   - Any numeric output not sourced from the deterministic quant engine
 // See: docs/quant/QUANT_RESEARCH_ADVICE_BOUNDARY.md
 import 'package:flutter/material.dart';
+import 'package:ai_social_copilot/shared/ui/iv_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -57,7 +58,7 @@ class _QuantScreenState extends ConsumerState<QuantScreen> {
           actions: [
             // Research/Advice boundary disclosure
             IconButton(
-              icon: const Icon(Icons.info_outline),
+              icon: const Icon(Icons.info_outline_rounded),
               tooltip: 'About Quant Research',
               onPressed: () => showDialog(
                 context: context,
@@ -77,7 +78,7 @@ class _QuantScreenState extends ConsumerState<QuantScreen> {
             ),
           ],
         ),
-        body: SafeArea(
+        body: IvBody(child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -91,7 +92,7 @@ class _QuantScreenState extends ConsumerState<QuantScreen> {
                       Text(
                         'Market Analytics',
                         style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold),
+                            fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -115,7 +116,8 @@ class _QuantScreenState extends ConsumerState<QuantScreen> {
                           labelText: 'Symbol',
                           border: const OutlineInputBorder(),
                           suffixIcon: IconButton(
-                            icon: const Icon(Icons.search),
+                            tooltip: MaterialLocalizations.of(context).searchFieldLabel,
+            icon: const Icon(Icons.search_rounded),
                             onPressed: _goToAnalyze,
                           ),
                         ),
@@ -132,7 +134,7 @@ class _QuantScreenState extends ConsumerState<QuantScreen> {
 
                       // ── Journey cards ─────────────────────────────────────
                       _JourneyCard(
-                        icon: Icons.show_chart,
+                        icon: Icons.show_chart_rounded,
                         title: 'Analyse',
                         subtitle: 'Upload CSV or connect your watchlist for server-side OHLCV data.',
                       ),
@@ -144,7 +146,7 @@ class _QuantScreenState extends ConsumerState<QuantScreen> {
                       ),
                       const SizedBox(height: 10),
                       _JourneyCard(
-                        icon: Icons.lightbulb_outline,
+                        icon: Icons.lightbulb_outline_rounded,
                         title: 'Explanation',
                         subtitle: 'IVE narrates the engine output. It never fabricates numbers.',
                       ),
@@ -163,7 +165,7 @@ class _QuantScreenState extends ConsumerState<QuantScreen> {
                                 children: [
                                   Chip(
                                     label: Text('Role: ${p.role.toUpperCase()}'),
-                                    avatar: const Icon(Icons.person, size: 16),
+                                    avatar: const Icon(Icons.person_rounded, size: 16),
                                   ),
                                   const SizedBox(width: 8),
                                   const Chip(
@@ -185,7 +187,7 @@ class _QuantScreenState extends ConsumerState<QuantScreen> {
               const QuantDisclaimerBanner(),
             ],
           ),
-        ),
+        )),
       ),
     );
   }
