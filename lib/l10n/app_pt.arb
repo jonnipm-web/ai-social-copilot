@@ -2269,7 +2269,7 @@
   "uxErrorServiceUnavailable": "Serviço temporariamente indisponível. Tente novamente.",
   "uxOriginManual": "Adicionado manualmente",
   "uxOriginMarketAnalysis": "Análise de Mercado",
-  "uxOriginAutoBootstrap": "Bootstrap Automático",
+  "uxOriginAutoBootstrap": "Criada automaticamente (análise inicial do projeto)",
   "uxKnowledgeFormSourceLanguageLabel": "Idioma do documento",
   "uxAdminAccessDeniedTitle": "Acesso negado",
   "uxAdminAccessDeniedBody": "Você não tem permissão para acessar esta área.",
@@ -2594,5 +2594,17 @@
   "commonRefresh": "Atualizar",
   "projectDetailActionsTitle": "Ações do projeto",
   "commonShowMore": "Ver mais",
-  "commonShowLess": "Ver menos"
+  "commonShowLess": "Ver menos",
+  "actionDetailWhyTitle": "Por que esta ação existe",
+  "actionDetailWhyFromOpportunity": "Motivo da oportunidade que originou esta ação",
+  "actionDetailWhyOpenOpportunity": "Ver oportunidade",
+  "actionDetailWhyNone": "Nenhum motivo foi registrado para esta ação.",
+  "actionDetailPriorityRankHint": "Posição na fila — 1 é a mais importante",
+  "actionDetailRoiShort": "ROI",
+  "actionDetailHintRevenue": "Potencial de faturamento",
+  "actionDetailHintRoi": "Retorno em relação ao esforço",
+  "actionDetailHintEffort": "Trabalho necessário — quanto maior, mais difícil",
+  "actionDetailHintMarket": "Força do mercado da oportunidade",
+  "actionDetailHintConfidence": "Confiança da IA na estimativa",
+  "actionDetailScoresSource": "Notas de 0 a 100 estimadas pela IA quando a ação foi criada. Servem para comparar ações entre si."
 }

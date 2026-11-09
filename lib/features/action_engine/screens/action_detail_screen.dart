@@ -12,6 +12,7 @@ import '../../../data/models/ive_interaction_request.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/ive_context_provider.dart';
+import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/context_copilot_widget.dart'
     show showCopilotChat, IveInlineAskPresence;
@@ -245,6 +246,12 @@ class _DetailBody extends StatelessWidget {
                 title: l10n.actionDetailSectionRationale,
                 child: _RationaleCard(rationale: item.rationale!),
               )),
+            // Actions created without their own description/reason (all
+            // bootstrap rows before the fix) explain themselves through the
+            // opportunity that produced them.
+            if ((item.description ?? '').trim().isEmpty &&
+                (item.rationale ?? '').trim().isEmpty)
+              _gap(_WhyPanel(item: item)),
             if (item.plan.isNotEmpty)
               _gap(_Section(
                 icon: Icons.list_alt_rounded,
@@ -292,7 +299,10 @@ class _HeroHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sc = _scoreColor(item.priority);
+    // The ring shows ROI (a 0–100 score). Priority is a queue position
+    // (1 = most important), so it is a badge, never a progress ring.
+    final sc = _scoreColor(item.roiScore);
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -308,17 +318,17 @@ class _HeroHeader extends StatelessWidget {
             width: 68,
             height: 68,
             child: CustomPaint(
-              painter: _RingPainter(score: item.priority, color: sc),
+              painter: _RingPainter(score: item.roiScore, color: sc),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '${item.priority}',
+                      '${item.roiScore}',
                       style: TextStyle(
                           color: sc, fontSize: 18, fontWeight: FontWeight.w600),
                     ),
-                    Text(AppLocalizations.of(context)!.uxActionPriorityShort,
+                    Text(l10n.actionDetailRoiShort,
                         style:
                             TextStyle(color: sc.withOpacity(0.7), fontSize: 11)),
                   ],
@@ -336,6 +346,10 @@ class _HeroHeader extends StatelessWidget {
                     _TypeBadge(type: item.actionType),
                     const SizedBox(width: 6),
                     _StatusBadge(status: item.status),
+                    if (item.priority > 0) ...[
+                      const SizedBox(width: 6),
+                      _PriorityBadge(priority: item.priority),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -343,7 +357,7 @@ class _HeroHeader extends StatelessWidget {
                   item.title,
                   style: const TextStyle(
                       color: AppColors.ink,
-                      fontSize: 15,
+                      fontSize: 18,
                       fontWeight: FontWeight.w600,
                       height: 1.3),
                 ),
@@ -412,82 +426,219 @@ class _ScoreBreakdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final fromLab = item.origin == 'opportunity_lab';
-    final dims = [
-      if (fromLab && item.marketScore > 0)
-        (
-          l10n.actionDetailScoreMarket,
-          item.marketScore,
-          AppColors.accent
-        ),
-      (
-        l10n.actionDetailScoreRevenue,
-        item.impactScore,
-        AppColors.positive
-      ),
-      (l10n.actionDetailScoreRoiFinal, item.roiScore, AppColors.accent),
-      (l10n.actionEngineScoreEffort, item.effortScore, AppColors.warning),
-      (l10n.actionDetailScorePriority, item.priority, AppColors.info),
-      if (fromLab && item.confidence > 0)
-        (
-          l10n.actionDetailScoreConfidence,
-          item.confidence,
-          AppColors.gold
-        ),
-    ];
+    // Effort is the one score where higher is worse: colour it inverted.
+    final effortColor = item.effortScore >= 70
+        ? AppColors.negative
+        : item.effortScore >= 40
+            ? AppColors.warning
+            : AppColors.positive;
     return Column(
-      children: dims
-          .map((d) => _ScoreRow(label: d.$1, value: d.$2, color: d.$3))
-          .toList(),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (item.priority > 0) ...[
+          Row(
+            children: [
+              _PriorityBadge(priority: item.priority),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(l10n.actionDetailPriorityRankHint,
+                    style: const TextStyle(
+                        color: AppColors.inkMuted, fontSize: 12)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+        ],
+        if (item.marketScore > 0)
+          _ScoreRow(
+              label: l10n.actionDetailScoreMarket,
+              hint: l10n.actionDetailHintMarket,
+              value: item.marketScore,
+              color: AppColors.accent),
+        _ScoreRow(
+            label: l10n.actionDetailScoreRevenue,
+            hint: l10n.actionDetailHintRevenue,
+            value: item.impactScore,
+            color: AppColors.positive),
+        _ScoreRow(
+            label: l10n.actionDetailScoreRoiFinal,
+            hint: l10n.actionDetailHintRoi,
+            value: item.roiScore,
+            color: AppColors.accent),
+        _ScoreRow(
+            label: l10n.actionEngineScoreEffort,
+            hint: l10n.actionDetailHintEffort,
+            value: item.effortScore,
+            color: effortColor),
+        if (item.confidence > 0)
+          _ScoreRow(
+              label: l10n.actionDetailScoreConfidence,
+              hint: l10n.actionDetailHintConfidence,
+              value: item.confidence,
+              color: AppColors.gold),
+        const SizedBox(height: 4),
+        Text(l10n.actionDetailScoresSource,
+            style: const TextStyle(
+                color: AppColors.inkSubtle, fontSize: 12, height: 1.4)),
+      ],
     );
   }
 }
 
 class _ScoreRow extends StatelessWidget {
-  const _ScoreRow(
-      {required this.label, required this.value, required this.color});
+  const _ScoreRow({
+    required this.label,
+    required this.hint,
+    required this.value,
+    required this.color,
+  });
 
   final String label;
+  final String hint;
   final int value;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 96,
-            child: Text(label,
-                style: const TextStyle(color: AppColors.inkMuted, fontSize: 13)),
-          ),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              child: LinearProgressIndicator(
-                value: value / 100,
-                backgroundColor: AppColors.line,
-                valueColor: AlwaysStoppedAnimation(color),
-                minHeight: 8,
+          Row(
+            children: [
+              Expanded(
+                child: Text(label,
+                    style: const TextStyle(
+                        color: AppColors.ink,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500)),
               ),
+              Text('$value',
+                  style: TextStyle(
+                      color: color,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: AppType.tabular)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: LinearProgressIndicator(
+              value: (value / 100).clamp(0, 1).toDouble(),
+              backgroundColor: AppColors.line,
+              valueColor: AlwaysStoppedAnimation(color),
+              minHeight: 6,
             ),
           ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 32,
-            child: Text('$value',
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                    color: color, fontSize: 12, fontWeight: FontWeight.w600)),
-          ),
+          const SizedBox(height: 3),
+          Text(hint,
+              style: const TextStyle(
+                  color: AppColors.inkSubtle, fontSize: 12, height: 1.3)),
         ],
       ),
     );
   }
 }
 
-// ── Origin section ────────────────────────────────────────────────────────────
+/// "#1" — a rank, not a score.
+class _PriorityBadge extends StatelessWidget {
+  const _PriorityBadge({required this.priority});
+  final int priority;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Tooltip(
+      message: l10n.actionDetailPriorityRankHint,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: AppColors.gold.withOpacity(0.14),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: AppColors.gold.withOpacity(0.35)),
+        ),
+        child: Text('${l10n.actionDetailScorePriority} #$priority',
+            style: const TextStyle(
+                color: AppColors.gold,
+                fontSize: 11,
+                fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+}
+
+/// Why the action exists, taken from the opportunity that produced it when
+/// the action itself carries no description or reason.
+class _WhyPanel extends ConsumerWidget {
+  const _WhyPanel({required this.item});
+  final ActionQueueItem item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final oppId = item.opportunityLabId;
+    Widget none() => Text(l10n.actionDetailWhyNone,
+        style: const TextStyle(color: AppColors.inkMuted, fontSize: 14));
+
+    Widget body;
+    if (oppId == null) {
+      body = none();
+    } else {
+      body = ref.watch(opportunityLabItemByIdProvider(oppId)).when(
+            loading: () => const IvSkeleton(height: 72),
+            error: (_, __) => none(),
+            data: (opp) {
+              if (opp == null) return none();
+              final why = (opp.rationale ?? '').trim();
+              final what = opp.description.trim();
+              if (why.isEmpty && what.isEmpty) return none();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.actionDetailWhyFromOpportunity,
+                      style: const TextStyle(
+                          color: AppColors.inkSubtle, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  Text(opp.title,
+                      style: const TextStyle(
+                          color: AppColors.ink,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600)),
+                  if (what.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(what,
+                        style: const TextStyle(
+                            color: AppColors.inkMuted,
+                            fontSize: 14,
+                            height: 1.6)),
+                  ],
+                  if (why.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _RationaleCard(rationale: why),
+                  ],
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () => context.push(AppConstants
+                        .routeOpportunityDetail
+                        .replaceFirst(':id', opp.id)),
+                    icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                    label: Text(l10n.actionDetailWhyOpenOpportunity),
+                  ),
+                ],
+              );
+            },
+          );
+    }
+    return _Section(
+      icon: Icons.help_outline_rounded,
+      title: l10n.actionDetailWhyTitle,
+      child: body,
+    );
+  }
+}
+
 class _OriginSection extends StatelessWidget {
   const _OriginSection({required this.item, this.projectName});
 

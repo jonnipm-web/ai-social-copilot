@@ -6280,7 +6280,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uxOriginMarketAnalysis => 'Market Analysis';
 
   @override
-  String get uxOriginAutoBootstrap => 'Automatic Bootstrap';
+  String get uxOriginAutoBootstrap =>
+      'Created automatically (initial project analysis)';
 
   @override
   String get uxKnowledgeFormSourceLanguageLabel => 'Document language';
@@ -7276,4 +7277,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonShowLess => 'Show less';
+
+  @override
+  String get actionDetailWhyTitle => 'Why this action exists';
+
+  @override
+  String get actionDetailWhyFromOpportunity => 'Reason from the opportunity this action came from';
+
+  @override
+  String get actionDetailWhyOpenOpportunity => 'Open opportunity';
+
+  @override
+  String get actionDetailWhyNone => 'No reason was recorded for this action.';
+
+  @override
+  String get actionDetailPriorityRankHint => 'Queue position — 1 is the most important';
+
+  @override
+  String get actionDetailRoiShort => 'ROI';
+
+  @override
+  String get actionDetailHintRevenue => 'Revenue potential';
+
+  @override
+  String get actionDetailHintRoi => 'Return relative to effort';
+
+  @override
+  String get actionDetailHintEffort => 'Work required — higher means harder';
+
+  @override
+  String get actionDetailHintMarket => 'Market strength of the opportunity';
+
+  @override
+  String get actionDetailHintConfidence => 'AI confidence in the estimate';
+
+  @override
+  String get actionDetailScoresSource => '0–100 scores estimated by the AI when the action was created. Use them to compare actions.';
 }

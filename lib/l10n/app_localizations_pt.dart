@@ -6309,7 +6309,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get uxOriginMarketAnalysis => 'Análise de Mercado';
 
   @override
-  String get uxOriginAutoBootstrap => 'Bootstrap Automático';
+  String get uxOriginAutoBootstrap =>
+      'Criada automaticamente (análise inicial do projeto)';
 
   @override
   String get uxKnowledgeFormSourceLanguageLabel => 'Idioma do documento';
@@ -7315,4 +7316,40 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get commonShowLess => 'Ver menos';
+
+  @override
+  String get actionDetailWhyTitle => 'Por que esta ação existe';
+
+  @override
+  String get actionDetailWhyFromOpportunity => 'Motivo da oportunidade que originou esta ação';
+
+  @override
+  String get actionDetailWhyOpenOpportunity => 'Ver oportunidade';
+
+  @override
+  String get actionDetailWhyNone => 'Nenhum motivo foi registrado para esta ação.';
+
+  @override
+  String get actionDetailPriorityRankHint => 'Posição na fila — 1 é a mais importante';
+
+  @override
+  String get actionDetailRoiShort => 'ROI';
+
+  @override
+  String get actionDetailHintRevenue => 'Potencial de faturamento';
+
+  @override
+  String get actionDetailHintRoi => 'Retorno em relação ao esforço';
+
+  @override
+  String get actionDetailHintEffort => 'Trabalho necessário — quanto maior, mais difícil';
+
+  @override
+  String get actionDetailHintMarket => 'Força do mercado da oportunidade';
+
+  @override
+  String get actionDetailHintConfidence => 'Confiança da IA na estimativa';
+
+  @override
+  String get actionDetailScoresSource => 'Notas de 0 a 100 estimadas pela IA quando a ação foi criada. Servem para comparar ações entre si.';
 }

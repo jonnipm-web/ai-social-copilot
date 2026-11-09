@@ -62,6 +62,9 @@ Retorne APENAS JSON válido no formato abaixo, sem texto adicional:
   "actions": [
     {
       "title": "Verbo + objeto concreto (ex: Criar landing page de captura)",
+      "description": "O que exatamente será feito, em 1-2 frases",
+      "rationale": "Por que esta ação existe: qual oportunidade ela avança e por que agora, em 1-2 frases",
+      "opportunity_index": 1,
       "action_type": "tarefa",
       "priority": 1,
       "impact_score": 80,
@@ -73,6 +76,8 @@ Retorne APENAS JSON válido no formato abaixo, sem texto adicional:
 
 Regras:
 - Gere exatamente 5 ações
+- opportunity_index: número (1, 2, 3...) da oportunidade da lista acima que a ação avança
+- description e rationale: obrigatórios, concretos, sem repetir o título
 - priority: 1 (mais urgente/importante) a 5 (menos urgente)
 - impact_score: impacto esperado no negócio, 0-100
 - effort_score: esforço necessário, 0-100 (menor = mais fácil de executar)
@@ -102,7 +107,7 @@ Regras:
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.6,
-        max_completion_tokens: 1024,
+        max_completion_tokens: 2048,
         response_format: { type: 'json_object' },
       }),
     });

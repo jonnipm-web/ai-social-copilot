@@ -2159,7 +2159,7 @@
   "uxErrorServiceUnavailable": "Service temporarily unavailable. Please try again.",
   "uxOriginManual": "Added manually",
   "uxOriginMarketAnalysis": "Market Analysis",
-  "uxOriginAutoBootstrap": "Automatic Bootstrap",
+  "uxOriginAutoBootstrap": "Created automatically (initial project analysis)",
   "uxKnowledgeFormSourceLanguageLabel": "Document language",
   "uxAdminAccessDeniedTitle": "Access denied",
   "uxAdminAccessDeniedBody": "You don't have permission to access this area.",
@@ -2484,5 +2484,17 @@
   "commonRefresh": "Refresh",
   "projectDetailActionsTitle": "Project actions",
   "commonShowMore": "Show more",
-  "commonShowLess": "Show less"
+  "commonShowLess": "Show less",
+  "actionDetailWhyTitle": "Why this action exists",
+  "actionDetailWhyFromOpportunity": "Reason from the opportunity this action came from",
+  "actionDetailWhyOpenOpportunity": "Open opportunity",
+  "actionDetailWhyNone": "No reason was recorded for this action.",
+  "actionDetailPriorityRankHint": "Queue position — 1 is the most important",
+  "actionDetailRoiShort": "ROI",
+  "actionDetailHintRevenue": "Revenue potential",
+  "actionDetailHintRoi": "Return relative to effort",
+  "actionDetailHintEffort": "Work required — higher means harder",
+  "actionDetailHintMarket": "Market strength of the opportunity",
+  "actionDetailHintConfidence": "AI confidence in the estimate",
+  "actionDetailScoresSource": "0–100 scores estimated by the AI when the action was created. Use them to compare actions."
 }
