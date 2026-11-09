@@ -1081,6 +1081,12 @@ class IvSplit extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, c) {
+      // No reading content (e.g. an action without description): don't leave
+      // an empty left column — show the side panels as a 2-column grid.
+      if (main.isEmpty && c.maxWidth >= breakpoint) {
+        return IvCardGrid(
+            minTileWidth: 360, maxColumns: 2, gap: gap, children: side);
+      }
       if (c.maxWidth < breakpoint) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
