@@ -15,6 +15,22 @@ import type { KnowledgeRow } from './knowledge_retrieval.ts';
 import type { MemoryRow } from './memory_policy.ts';
 import { type ChatMessage, type IntelligenceProvider, ProviderUnavailableError } from './provider.ts';
 import { mapLegacyProfileRole } from '../entitlement.ts';
+import { MODULE_POLICY } from '../module_policy.ts';
+
+/** strategy-builder is INTERNAL (Owner: HOLD/POST_V1), so a free user's IVE
+ * context never includes strategies. Tests that pin HOW strategies are
+ * grounded (once the module is promoted) run with the policy temporarily
+ * COMMERCIAL and restore it. */
+async function asCommercial(fn: () => Promise<void>): Promise<void> {
+  const m = MODULE_POLICY.modules['strategy-builder'] as unknown as { lifecycle: string };
+  const previous = m.lifecycle;
+  m.lifecycle = 'COMMERCIAL';
+  try {
+    await fn();
+  } finally {
+    m.lifecycle = previous;
+  }
+}
 
 const A = 'a0000000-0000-4000-8000-00000000000a';
 const B = 'b0000000-0000-4000-8000-00000000000b';
@@ -194,13 +210,25 @@ Deno.test('IC-02 free user, own project: answered with server-built context and 
   assert(r.prompt.includes('Espresso pricing'));
   assert(r.prompt.includes('Coffee subscription'));
   assert(r.prompt.includes('Alpha Coffee aims for 3 stores'));
-  assert(r.prompt.includes('Alpha Coffee EMA Cross'));
   const types = r.json.sources.map((s: { sourceType: string }) => s.sourceType);
-  for (const t of ['project', 'knowledge_document', 'opportunity', 'action', 'strategy', 'memory']) assert(types.includes(t), t);
-  assert(r.json.capabilitiesUsed.includes('strategy-builder'));
+  for (const t of ['project', 'knowledge_document', 'opportunity', 'action', 'memory']) assert(types.includes(t), t);
+  // strategy-builder is INTERNAL: a free user's context never carries strategies.
+  assertFalse(r.prompt.includes('Alpha Coffee EMA Cross'));
+  assertFalse(types.includes('strategy'));
+  assertFalse(r.json.capabilitiesUsed.includes('strategy-builder'));
+  assertEquals(r.json.contextStatus.strategies, 'not_authorized');
   assertEquals(r.quota.reserved, 1);
   assertEquals(r.json.locale, 'pt-BR');
 });
+
+Deno.test('IC-02b once strategy-builder is promoted, the same free user gets their strategy as a grounded source', () => asCommercial(async () => {
+  const r = await run('jwt-a', base({ project_id: PA1 }));
+  assertEquals(r.res.status, 200);
+  assert(r.prompt.includes('Alpha Coffee EMA Cross'));
+  const types = r.json.sources.map((s: { sourceType: string }) => s.sourceType);
+  assert(types.includes('strategy'));
+  assert(r.json.capabilitiesUsed.includes('strategy-builder'));
+}));
 
 Deno.test('IC-02b Result->Learning memory (verified AEF receipt) gets server_verified_user_data trust; an unverified/plain memory stays untrusted_user_content -- never "system" (reserved for authoritative policy)', async () => {
   const ctx = await assembleContext(
@@ -268,7 +296,7 @@ Deno.test('IC-08 degraded optional context: knowledge failure still answers, fla
   const r = await run('jwt-a', base({ project_id: PA1 }), { data: src });
   assertEquals(r.res.status, 200);
   assertEquals(r.json.degraded, ['knowledge']);
-  assertEquals(r.json.contextStatus, { opportunities: 'included', actions: 'included', strategies: 'included', knowledge: 'unavailable', memory: 'included' });
+  assertEquals(r.json.contextStatus, { opportunities: 'included', actions: 'included', strategies: 'not_authorized', knowledge: 'unavailable', memory: 'included' });
   const noProject = await run('jwt-a', base());
   assertEquals(noProject.json.contextStatus.opportunities, 'not_applicable');
 });
@@ -281,7 +309,7 @@ Deno.test('IC-09 session resumed: conversation is budgeted, newest turns kept', 
   assertFalse(r.prompt.includes('turn-0 '));
 });
 
-Deno.test('IC-10 (Macro-08 §17-21) strategies are user-level, not project-required: unassigned ones show with no project AND with any owned project, but a sibling project never shows another project-scoped strategy', async () => {
+Deno.test('IC-10 (Macro-08 §17-21) strategies are user-level, not project-required: unassigned ones show with no project AND with any owned project, but a sibling project never shows another project-scoped strategy', () => asCommercial(async () => {
   const noProject = await run('jwt-a', base());
   assert(noProject.prompt.includes('Unassigned Trend Strategy'));
   assertFalse(noProject.prompt.includes('Alpha Coffee EMA Cross'));
@@ -293,9 +321,9 @@ Deno.test('IC-10 (Macro-08 §17-21) strategies are user-level, not project-requi
   const pa2 = await run('jwt-a', base({ project_id: PA2 }));
   assert(pa2.prompt.includes('Unassigned Trend Strategy'));
   assertFalse(pa2.prompt.includes('Alpha Coffee EMA Cross'));
-});
+}));
 
-Deno.test('IC-11 (Macro-08 continuation §14) IVE grounds a strategy question in the REAL latest backtest result -- exact netPnl/tradeCount/methodology, never a fabricated number', async () => {
+Deno.test('IC-11 (Macro-08 continuation §14) IVE grounds a strategy question in the REAL latest backtest result -- exact netPnl/tradeCount/methodology, never a fabricated number', () => asCommercial(async () => {
   const r = await run('jwt-a', base({ project_id: PA1, message: 'Por que essa estratégia perdeu dinheiro?' }));
   assertEquals(r.res.status, 200);
   assert(r.prompt.includes('netPnl=-270.75'));
@@ -303,14 +331,14 @@ Deno.test('IC-11 (Macro-08 continuation §14) IVE grounds a strategy question in
   assert(r.prompt.includes('COST_ADJUSTED'));
   // A strategy with no recorded result yet shows no fabricated numbers.
   assertFalse(r.prompt.includes('Unassigned Trend Strategy]') && r.prompt.includes('ultimo_resultado'));
-});
+}));
 
-Deno.test('IC-12 (Macro-08 continuation §14) another users backtest result never leaks through the enrichment step, even though it is fetched per-strategy after the base list is already scoped', async () => {
+Deno.test('IC-12 (Macro-08 continuation §14) another users backtest result never leaks through the enrichment step, even though it is fetched per-strategy after the base list is already scoped', () => asCommercial(async () => {
   const r = await run('jwt-a', base({ project_id: PA1 }));
   assertEquals(r.res.status, 200);
   assertFalse(r.prompt.includes('9999'), 'Bravo Secret Strategy\'s netPnl must never appear in A\'s prompt');
   assertFalse(r.prompt.includes('ZERO_COST_RESEARCH'), 'only A\'s own COST_ADJUSTED result should appear');
-});
+}));
 
 // ── Adversarial matrix (mission §43) ─────────────────────────────────────
 
