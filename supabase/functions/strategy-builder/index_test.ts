@@ -197,6 +197,21 @@ async function call(payload: Record<string, unknown>, token: string | null = 'jw
   return { status: res.status, json: await res.json() };
 }
 
+/** Plan-tier tests: strategy-builder is INTERNAL today (admin-only), so a
+ * non-admin persona never reaches the plan gate. These tests pin the plan
+ * rules (free/pro/premium) that apply once the Owner promotes the module;
+ * they run with the policy temporarily set to COMMERCIAL and restore it. */
+async function asCommercial(fn: () => Promise<void>): Promise<void> {
+  const m = MODULE_POLICY.modules['strategy-builder'] as unknown as { lifecycle: string };
+  const previous = m.lifecycle;
+  m.lifecycle = 'COMMERCIAL';
+  try {
+    await fn();
+  } finally {
+    m.lifecycle = previous;
+  }
+}
+
 Deno.test('SB-01 validate returns valid:true for the V10 reference spec', async () => {
   const r = await call({ op: 'validate', spec: V10_REFERENCE_SPEC_INPUT });
   assertEquals(r.status, 200);
@@ -256,13 +271,19 @@ Deno.test('SB-07 anonymous, forged token and an unrecognized plan are denied bef
   assertEquals(store.strategies.length, 0);
 });
 
-Deno.test('SB-43 (Macro-08 §5-6) strategy-builder is COMMERCIAL/free -- a real free/pro/premium/beta_tester user (no admin role) can now create a strategy directly', async () => {
+Deno.test('SB-43 strategy-builder is INTERNAL (Owner: HOLD/POST_V1) -- a real free/pro/premium/beta_tester user is refused MODULE_NOT_AVAILABLE before the store is touched; admin still passes', async () => {
+  assertEquals(MODULE_POLICY.modules['strategy-builder'].lifecycle, 'INTERNAL');
   for (const role of ['free', 'pro', 'premium', 'beta_tester']) {
     store = new MemoryStore();
     const r = await call({ op: 'create', spec: V10_REFERENCE_SPEC_INPUT }, 'jwt-a', role);
-    assertEquals(r.status, 200, role);
-    assertEquals(store.strategies.length, 1, role);
+    assertEquals(r.status, 403, role);
+    assertEquals(r.json.error, 'MODULE_NOT_AVAILABLE', role);
+    assertEquals(store.strategies.length, 0, role);
   }
+  store = new MemoryStore();
+  const admin = await call({ op: 'create', spec: V10_REFERENCE_SPEC_INPUT }, 'jwt-a', 'admin');
+  assertEquals(admin.status, 200);
+  assertEquals(store.strategies.length, 1);
 });
 
 Deno.test('SB-08 an unknown op / malformed body is a structured 400, never a 500', async () => {
@@ -803,7 +824,7 @@ Deno.test('SB-41 (Codex final audit, P1-02 fix) analyze_backtest_result never se
   assertEquals(r.status, 404);
 });
 
-Deno.test('SB-16 (Macro-08 §5-7) a real free user reaches every SAFE_USER_CAPABILITY op -- never MODULE_NOT_AVAILABLE, never PLAN_UPGRADE_REQUIRED', async () => {
+Deno.test('SB-16 (Macro-08 §5-7) a real free user reaches every SAFE_USER_CAPABILITY op -- never MODULE_NOT_AVAILABLE, never PLAN_UPGRADE_REQUIRED', () => asCommercial(async () => {
   store = new MemoryStore();
   for (const payload of [
     { op: 'clone_reference', reference: 'V10' },
@@ -817,9 +838,9 @@ Deno.test('SB-16 (Macro-08 §5-7) a real free user reaches every SAFE_USER_CAPAB
     const r = await call(payload, 'jwt-a', 'free');
     assert(r.status !== 403 || !['MODULE_NOT_AVAILABLE', 'PLAN_UPGRADE_REQUIRED'].includes(r.json.error), JSON.stringify(payload) + ' -> ' + JSON.stringify(r.json));
   }
-});
+}));
 
-Deno.test('SB-44 (Macro-08 §7, §10) a real free user is refused PLAN_UPGRADE_REQUIRED (not MODULE_NOT_AVAILABLE) on every research/simulation op, with the correct requiredPlan', async () => {
+Deno.test('SB-44 (Macro-08 §7, §10) a real free user is refused PLAN_UPGRADE_REQUIRED (not MODULE_NOT_AVAILABLE) on every research/simulation op, with the correct requiredPlan', () => asCommercial(async () => {
   store = new MemoryStore();
   for (const [payload, expectedPlan] of [
     [{ op: 'propose_variants', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1' }, 'pro'],
@@ -839,9 +860,9 @@ Deno.test('SB-44 (Macro-08 §7, §10) a real free user is refused PLAN_UPGRADE_R
   }
   assertEquals(store.strategies.length, 0);
   assertEquals(store.jobs.length, 0);
-});
+}));
 
-Deno.test('SB-45 (Macro-08 §7) a real Pro user passes every research op but is still refused run_simulation (Premium-only)', async () => {
+Deno.test('SB-45 (Macro-08 §7) a real Pro user passes every research op but is still refused run_simulation (Premium-only)', () => asCommercial(async () => {
   store = new MemoryStore();
   const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-a', 'pro');
   const versionId = created.json.version.id;
@@ -851,38 +872,31 @@ Deno.test('SB-45 (Macro-08 §7) a real Pro user passes every research op but is 
   assertEquals(simResult.status, 403);
   assertEquals(simResult.json.error, 'PLAN_UPGRADE_REQUIRED');
   assertEquals(simResult.json.requiredPlan, 'premium');
-});
+}));
 
-Deno.test('SB-46 (Macro-08 §7) a real Premium user passes run_simulation', async () => {
+Deno.test('SB-46 (Macro-08 §7) a real Premium user passes run_simulation', () => asCommercial(async () => {
   store = new MemoryStore();
   const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-a', 'premium');
   const versionId = created.json.version.id;
   const simResult = await call({ op: 'run_simulation', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' }, 'jwt-a', 'premium');
   assertEquals(simResult.status, 200);
   assertEquals(simResult.json.label, 'SIMULATION');
-});
+}));
 
-Deno.test('SB-48 drift: the DB entitlement predicate of strategy-builder matches its server COMMERCIAL/free lifecycle (Codex adversarial review, Macro-08 diff vs 15d4177)', async () => {
-  // Codex found: module_policy.ts promotes strategy-builder to COMMERCIAL/
-  // free (real non-admin users pass the Edge Function's entitlement gate),
-  // but the migration's own DB predicate was still hardcoded to
-  // role='admin' -- every RLS policy on strategies/strategy_versions/
-  // strategy_backtest_results depends on it, so a real free/pro/premium
-  // user would pass the handler gate and then get a bare RLS failure on
-  // every read/write. This test pins BOTH sides of that contract so they
-  // cannot silently diverge again: mirrors QB-16
-  // (_shared/quant/boundary_test.ts) for quant-watchlists's own
-  // INTERNAL/EXPERIMENTAL predicate, inverted for a COMMERCIAL module.
+Deno.test('SB-48 drift: the DB entitlement predicate of strategy-builder matches its server lifecycle (INTERNAL = admin-only)', async () => {
+  // Mirrors QB-16 (quant-watchlists). INTERNAL/EXPERIMENTAL = admin-only in
+  // BOTH the Edge Function gate and every RLS policy. Promoting the module
+  // needs a NEW migration that re-admits the plans, and this test with it.
   const lifecycle = MODULE_POLICY.modules['strategy-builder'].lifecycle;
-  assertEquals(lifecycle, 'COMMERCIAL', `lifecycle changed to ${lifecycle} -- update this test's expected predicate before re-pinning`);
-  const sql = await Deno.readTextFile(new URL('../../migrations/20261002000000_strategy_builder.sql', import.meta.url));
-  const fn = sql.slice(sql.indexOf('FUNCTION public.strategy_builder_access_allowed()'), sql.indexOf('-- ── RLS'));
-  assert(/p\.role IN \([^)]*'free'[^)]*\)/.test(fn), 'predicate must admit free');
-  for (const role of ['free', 'pro', 'premium', 'beta_tester', 'admin']) {
-    assert(fn.includes(`'${role}'`), `predicate must admit ${role} (mapLegacyProfileRole's five resolvable-plan roles)`);
-  }
+  assert(lifecycle === 'INTERNAL' || lifecycle === 'EXPERIMENTAL', `lifecycle ${lifecycle} needs a new DB predicate migration`);
+  const latest = await Deno.readTextFile(new URL('../../migrations/20261109000002_strategy_builder_access_admin_only.sql', import.meta.url));
+  const fn = latest.slice(latest.indexOf('FUNCTION public.strategy_builder_access_allowed()'), latest.indexOf('-- ── end predicate'));
+  assert(/p\.role = 'admin'/.test(fn) && /r\.role = ''admin''/.test(fn), 'predicate must be admin-only');
+  assert(!/beta_tester|'pro'|'premium'|'free'/.test(fn), 'predicate must not admit plans or beta testers while INTERNAL');
   assert(/SECURITY INVOKER/.test(fn) && !/SECURITY DEFINER/.test(fn), 'predicate must not expand privilege');
-  const policies = [...sql.matchAll(/CREATE POLICY (\w+)[\s\S]*?;/g)];
+  // Every RLS policy still routes through the same predicate.
+  const base = await Deno.readTextFile(new URL('../../migrations/20261002000000_strategy_builder.sql', import.meta.url));
+  const policies = [...base.matchAll(/CREATE POLICY (\w+)[\s\S]*?;/g)];
   assertEquals(policies.length, 8, 'strategies(4) + strategy_versions(2) + strategy_backtest_results(2)');
   for (const p of policies) assert(p[0].includes('strategy_builder_access_allowed()'), `${p[1]} lacks the entitlement predicate`);
 });
@@ -900,7 +914,7 @@ Deno.test('SB-49 (Codex adversarial review re-verification) strategy creation is
   assert(/IDEMPOTENCY_KEY_CONFLICT/.test(fn), 'a key reused with a different spec must be rejected, never silently return the wrong row');
 });
 
-Deno.test('SB-50 (2nd Codex re-verification) the same idempotency key + the same spec on retry returns the ORIGINAL strategy, never a duplicate', async () => {
+Deno.test('SB-50 (2nd Codex re-verification) the same idempotency key + the same spec on retry returns the ORIGINAL strategy, never a duplicate', () => asCommercial(async () => {
   store = new MemoryStore();
   const first = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT, idempotencyKey: 'retry-key-1' }, 'jwt-a', 'free');
   assertEquals(first.status, 200);
@@ -909,9 +923,9 @@ Deno.test('SB-50 (2nd Codex re-verification) the same idempotency key + the same
   assertEquals(retry.json.strategy.id, first.json.strategy.id);
   const list = await call({ op: 'list' }, 'jwt-a', 'free');
   assertEquals((list.json.strategies as unknown[]).length, 1, 'a genuine retry must never create a second strategy');
-});
+}));
 
-Deno.test('SB-51 (2nd Codex re-verification) the same idempotency key reused with a DIFFERENT spec is rejected, never silently satisfied with the wrong strategy', async () => {
+Deno.test('SB-51 (2nd Codex re-verification) the same idempotency key reused with a DIFFERENT spec is rejected, never silently satisfied with the wrong strategy', () => asCommercial(async () => {
   store = new MemoryStore();
   const first = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT, idempotencyKey: 'reused-key' }, 'jwt-a', 'free');
   assertEquals(first.status, 200);
@@ -919,9 +933,9 @@ Deno.test('SB-51 (2nd Codex re-verification) the same idempotency key reused wit
   const conflict = await call({ op: 'create', spec: differentSpec, idempotencyKey: 'reused-key' }, 'jwt-a', 'free');
   assertEquals(conflict.status, 409);
   assertEquals(conflict.json.error, 'IDEMPOTENCY_KEY_CONFLICT');
-});
+}));
 
-Deno.test('SB-52 a malformed idempotencyKey (empty or oversized) is a 400, and clone_reference honors the same key end-to-end', async () => {
+Deno.test('SB-52 a malformed idempotencyKey (empty or oversized) is a 400, and clone_reference honors the same key end-to-end', () => asCommercial(async () => {
   store = new MemoryStore();
   const empty = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT, idempotencyKey: '' }, 'jwt-a', 'free');
   assertEquals(empty.status, 400);
@@ -932,14 +946,14 @@ Deno.test('SB-52 a malformed idempotencyKey (empty or oversized) is a 400, and c
   const retryClone = await call({ op: 'clone_reference', reference: 'GENERIC', idempotencyKey: 'clone-retry-1' }, 'jwt-a', 'free');
   assertEquals(retryClone.status, 200);
   assertEquals(retryClone.json.strategy.id, firstClone.json.strategy.id);
-});
+}));
 
 // ── Adversarial entitlement re-validation (Macro-08 continuation §29-30) ──
 // After removing the global admin-only shield, every one of these must
 // fail closed for a REAL non-admin persona, not just admin (the earlier
 // forgery tests SB-38/39 used the implicit admin default).
 
-Deno.test('SB-53 a real (non-admin) free user still cannot forge record_experiment category vs the actual result_kind', async () => {
+Deno.test('SB-53 a real (non-admin) free user still cannot forge record_experiment category vs the actual result_kind', () => asCommercial(async () => {
   store = new MemoryStore();
   const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-a', 'pro');
   const versionId = created.json.version.id;
@@ -950,9 +964,9 @@ Deno.test('SB-53 a real (non-admin) free user still cannot forge record_experime
   }, 'jwt-a', 'pro');
   assertEquals(forged.status, 400);
   assertEquals(store.experiments.length, 0);
-});
+}));
 
-Deno.test('SB-54 a real (non-admin) user cannot run any pro/premium research op against a strategy version owned by another user', async () => {
+Deno.test('SB-54 a real (non-admin) user cannot run any pro/premium research op against a strategy version owned by another user', () => asCommercial(async () => {
   store = new MemoryStore();
   const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-a', 'free');
   const versionId = created.json.version.id;
@@ -962,9 +976,9 @@ Deno.test('SB-54 a real (non-admin) user cannot run any pro/premium research op 
   assertEquals(otherResearchLoop.status, 404);
   const otherSimulation = await call({ op: 'run_simulation', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' }, 'jwt-b', 'premium');
   assertEquals(otherSimulation.status, 404);
-});
+}));
 
-Deno.test('SB-55 compare_versions and analyze_backtest_result refuse a version that belongs to another user, even for a real paying persona', async () => {
+Deno.test('SB-55 compare_versions and analyze_backtest_result refuse a version that belongs to another user, even for a real paying persona', () => asCommercial(async () => {
   store = new MemoryStore();
   const mine = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-a', 'pro');
   const myVersionId = mine.json.version.id;
@@ -978,16 +992,16 @@ Deno.test('SB-55 compare_versions and analyze_backtest_result refuse a version t
 
   const crossAnalyze = await call({ op: 'analyze_backtest_result', strategyVersionId: theirVersionId }, 'jwt-a', 'pro');
   assertEquals(crossAnalyze.status, 404);
-});
+}));
 
-Deno.test('SB-56 two different users reusing the IDENTICAL idempotency key string get independent strategies, never a cross-user collision', async () => {
+Deno.test('SB-56 two different users reusing the IDENTICAL idempotency key string get independent strategies, never a cross-user collision', () => asCommercial(async () => {
   store = new MemoryStore();
   const mine = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT, idempotencyKey: 'shared-string-both-users-typed' }, 'jwt-a', 'free');
   const theirs = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT, idempotencyKey: 'shared-string-both-users-typed' }, 'jwt-b', 'free');
   assertEquals(mine.status, 200);
   assertEquals(theirs.status, 200);
   assert(mine.json.strategy.id !== theirs.json.strategy.id, 'the idempotency key must be scoped per-user, never global');
-});
+}));
 
 Deno.test('SB-57 (§29: immutable version mutation, lifecycle self-promotion) the DB grants structurally forbid both, independent of any application logic bug', async () => {
   const base = await Deno.readTextFile(new URL('../../migrations/20261002000000_strategy_builder.sql', import.meta.url));

@@ -45,15 +45,39 @@ MEMORY_MIGRATION="20260924000000_ive_memory_governance.sql"
 
 # --single-transaction: a migration that fails anywhere leaves nothing behind
 # (the deploy mode AEF_PRODUCTION_DEPLOYMENT_PRECONDITIONS.md requires).
-apply() { run -d "$1" -1 -c "SET search_path = public, extensions;" -f "$2" >/dev/null; }
+# app.external_scheduler_confirmed: 20261016000004_cron_schedule refuses to
+# apply without pg_cron unless an operator confirms an external scheduler.
+# A disposable CI cluster has no pg_cron and no paid users whose entitlement
+# replays could pile up, so CI confirms it here. The gate itself is still
+# proven to fire without the confirmation (CRON_GATE check below).
+apply() { run -d "$1" -1 -c "SET search_path = public, extensions; SET app.external_scheduler_confirmed = 'confirmed';" -f "$2" >/dev/null; }
 
 run -d "$DB" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
 for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
   apply "$DB" "$m"
   echo "applied $(basename "$m")"
 done
+# The production gate of the cron migration must still fail closed when no
+# scheduler is confirmed (expect_fail does not set the confirmation).
+if ! run -d "$DB" -tA -c "SELECT 1 FROM pg_extension WHERE extname = 'pg_cron'" | grep -q 1; then
+  expect_fail_cron_out="$(run -d "$DB" -1 -c "SET search_path = public, extensions;" -f "$ROOT/supabase/migrations/20261016000004_cron_schedule.sql" 2>&1 || true)"
+  echo "$expect_fail_cron_out" | grep -qF "DEPLOYMENT_GATE_FAILURE" || { echo "cron migration gate did not fire without a confirmed scheduler: $expect_fail_cron_out" >&2; exit 1; }
+  echo "CRON_GATE: PASS (fails closed without pg_cron or a confirmed external scheduler)"
+fi
+# Idempotency is a LAB-migration requirement (they get re-run while being
+# authored). APPLIED_PRODUCTION migrations ran exactly once through Supabase's
+# history and their content is frozen by the manifest, so they are not
+# re-applied here (20261016000000_product_subscriptions, for one, creates its
+# policies without IF NOT EXISTS and can no longer be edited).
+applied_production() {
+  awk -F'\t' -v n="$1" '$1==n && $3=="APPLIED_PRODUCTION"{f=1} END{exit !f}' "$ROOT/supabase/migration_manifest.tsv"
+}
 for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
   if [[ "$(basename "$m")" > "$LAB_FROM" || "$(basename "$m")" == "$LAB_FROM"* ]]; then
+    if applied_production "$(basename "$m")"; then
+      echo "skipped re-apply of $(basename "$m") (APPLIED_PRODUCTION, applied once)"
+      continue
+    fi
     apply "$DB" "$m" 2>/dev/null
     echo "re-applied $(basename "$m") (idempotency)"
   fi
